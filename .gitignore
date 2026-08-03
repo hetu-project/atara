@@ -1,0 +1,9 @@
+# Internal positioning and design-research notes — deliberately not published.
+# These describe messaging strategy and competitive analysis; the repo is public.
+landing-content.md
+design-direction.md
+.impeccable.md
+
+# Local tooling
+.claude/
+.DS_Store
