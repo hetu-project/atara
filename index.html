@@ -500,19 +500,30 @@ p.body{color:var(--muted)}
    section width and 500–750px tall. The earlier versions failed at
    opposite ends — a big empty box, then a dense but tiny strip. This
    is big AND full: a real screen with enough content to earn its size. */
-.wb{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);
-  gap:clamp(2rem,4vw,4.5rem);align-items:center;
+/* 50/50, not 41/59: measured feature visuals sit at 29–52% of the section
+   width, and past that the copy column starves. */
+.wb{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.04fr);
+  gap:clamp(2rem,4vw,4.5rem);
+  /* start, not center — a 200px block centred against a 700px figure has
+     no shared axis, it just floats in a void */
+  align-items:start;
   padding-block:clamp(2.6rem,5vw,4.5rem);box-shadow:0 1px 0 var(--line)}
 .wb:first-of-type{margin-top:clamp(2rem,3.5vw,3rem);box-shadow:0 1px 0 var(--line),0 -1px 0 var(--line)}
+/* the widths have to swap with the order, or the figure lands in the narrow
+   column and the copy cannot fill the wide one */
+.wb.flip{grid-template-columns:minmax(0,1.04fr) minmax(0,1fr)}
 .wb.flip .wb-txt{order:2}
+/* optical: line the copy up with the screen's first content row, not its chrome */
+.wb-txt{padding-top:.4rem}
 @media (max-width:900px){
-  .wb{grid-template-columns:1fr;gap:1.8rem}
+  .wb,.wb.flip{grid-template-columns:1fr;gap:1.8rem}
   .wb.flip .wb-txt{order:0}
+  .wb-txt{padding-top:0}
 }
 .wb-n{display:block;font-family:var(--mono);font-size:.6875rem;letter-spacing:.16em;
   color:var(--accent-2);margin-bottom:1rem}
 .wb-txt h3{margin-bottom:.75rem}
-.wb-txt p{color:var(--muted);font-size:.9688rem;max-width:42ch}
+.wb-txt p{color:var(--muted);font-size:.9688rem;max-width:46ch}
 .wb-txt .replay{margin-top:1.4rem;display:inline-block}
 .wb-fig{min-width:0}
 .wb-fig-split{display:grid;grid-template-columns:1fr 1fr;gap:clamp(.8rem,1.4vw,1.1rem)}
