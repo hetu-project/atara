@@ -2450,6 +2450,7 @@ git commit -m "feat: 侧边栏布局与完整路由表"
 **Interfaces:**
 - Consumes: `supabase`、`toFriendlyError`、`Counterparty` / `CounterpartyInput` / `Role`、UI 组件
 - Produces:
+  - `sanitizeKeyword(raw: string | undefined): string` —— 剔除会破坏 PostgREST or 语法的字符（Task 9 复用）
   - `buildCounterpartyQuery(params)` —— 纯函数，把筛选参数转成 `{ from, to, orFilter }`，供测试
   - `listCounterparties(params: { role: Role; keyword?: string; page: number; pageSize: number }): Promise<{ rows: Counterparty[]; total: number }>`
   - `getCounterparty(id: string): Promise<Counterparty>`
@@ -2463,8 +2464,26 @@ git commit -m "feat: 侧边栏布局与完整路由表"
 
 `src/features/counterparties/__tests__/api.test.ts`：
 
+**测试隔离（Task 9 同样照做）：** `api.ts` 顶层 import 了 `@/lib/supabase`，而那个模块在缺少环境变量时
+会在 import 期就抛错 —— 这是刻意的 fail-fast，不要削弱它。本测试只验证纯函数，根本不需要真的 client，
+所以在测试文件顶部把整个模块 mock 掉：
+
 ```ts
-import { describe, expect, it } from 'vitest';
+vi.mock('@/lib/supabase', () => ({ supabase: {} }));
+```
+
+**不要**改成在 `src/test/setup.ts` 里全局 `vi.stubEnv` 塞假环境变量。那样每个测试文件都会带着一份
+"看起来有效"的凭证启动，`createClient` 会真的被构造出来（可观察到 localStorage 相关的
+ExperimentalWarning 污染输出），后续任何测试都可能悄悄发起指向假地址的真实网络请求，
+把原本"立即、明确、同步抛错"的失败模式换成"异步、困惑"的那种。文件级 mock 把影响锁在一个文件里。
+
+完整测试文件：
+
+```ts
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@/lib/supabase', () => ({ supabase: {} }));
+
 import { buildCounterpartyQuery } from '@/features/counterparties/api';
 
 describe('buildCounterpartyQuery', () => {
@@ -2496,10 +2515,19 @@ describe('buildCounterpartyQuery', () => {
     );
   });
 
-  it('关键词里的逗号被剔除，避免破坏 or 语法', () => {
+  it('剔除会破坏 PostgREST or 语法的字符', () => {
+    // 逗号是 or 的分隔符
     expect(buildCounterpartyQuery({ role: 'buyer', keyword: 'a,b', page: 1, pageSize: 20 }).orFilter).toContain(
       '%ab%',
     );
+    // 右括号会提前闭合 supabase-js 包在外层的那对括号
+    expect(
+      buildCounterpartyQuery({ role: 'buyer', keyword: 'ABC (HK) Ltd', page: 1, pageSize: 20 }).orFilter,
+    ).toContain('%ABC HK Ltd%');
+    // 双引号与反斜杠是 PostgREST 的引用/转义字符
+    expect(
+      buildCounterpartyQuery({ role: 'buyer', keyword: 'a"b\\c', page: 1, pageSize: 20 }).orFilter,
+    ).toContain('%abc%');
   });
 });
 ```
@@ -2525,6 +2553,17 @@ export interface ListParams {
 
 const SEARCH_FIELDS = ['full_name', 'display_id', 'email', 'phone'];
 
+/**
+ * PostgREST 的 or 过滤是拼字符串的，语法字符必须从用户输入里剔除，否则会生成畸形查询。
+ * supabase-js 会把整个 or 串再包一层 `(...)`，所以输入里的 `)` 会提前闭合这个组；
+ * `,` 是 or 的分隔符；`"` 和 `\` 是 PostgREST 的引用/转义字符。
+ * 这类畸形查询报错在 toFriendlyError 里没有对应规则，会把后端原始报错直接抛给用户 ——
+ * 正是本层要防的事，所以在源头剔除。
+ */
+export function sanitizeKeyword(raw: string | undefined): string {
+  return (raw ?? '').replace(/[(),"\\]/g, '').trim();
+}
+
 /** 纯函数：把筛选参数转成 supabase 查询片段 */
 export function buildCounterpartyQuery(params: ListParams): {
   from: number;
@@ -2534,7 +2573,7 @@ export function buildCounterpartyQuery(params: ListParams): {
   const from = (params.page - 1) * params.pageSize;
   const to = from + params.pageSize - 1;
 
-  const keyword = (params.keyword ?? '').replace(/,/g, '').trim();
+  const keyword = sanitizeKeyword(params.keyword);
   if (!keyword) return { from, to };
 
   return {
@@ -3148,7 +3187,7 @@ git commit -m "feat: 买卖家档案表单页"
 **Interfaces:**
 - Consumes: `supabase`、`toFriendlyError`、`Order` / `OrderWithParties` / `OrderInput` / `OrderStatus` / `OrderType`、UI 组件
 - Produces:
-  - `buildOrderQuery(params: OrderListParams): { from; to; filters: Array<[string, string]>; orFilter?: string }`
+  - `buildOrderQuery(params: OrderListParams): { from; to; filters: Array<[string, string]>; orFilter?: string; range?: { gte?: string; lte?: string } }`（关键词清洗复用 Task 7 的 `sanitizeKeyword`）
   - `listOrders(params)` / `getOrder(id)` / `createOrder(input)` / `updateOrderStatus(id, status)` / `listOrderStatusLogs(orderId)`
   - `useOrderList` / `useOrder` / `useCreateOrder` / `useUpdateOrderStatus` / `useOrderStatusLogs`
   - `orderKeys`
@@ -3157,10 +3196,14 @@ git commit -m "feat: 买卖家档案表单页"
 
 - [ ] **Step 1: 写失败的查询构造测试**
 
-`src/features/orders/__tests__/api.test.ts`：
+`src/features/orders/__tests__/api.test.ts`。和 Task 7 一样，顶部先把 supabase 模块 mock 掉，
+不要依赖全局环境变量 stub：
 
 ```ts
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@/lib/supabase', () => ({ supabase: {} }));
+
 import { buildOrderQuery } from '@/features/orders/api';
 
 describe('buildOrderQuery', () => {
@@ -3189,6 +3232,12 @@ describe('buildOrderQuery', () => {
     expect(buildOrderQuery({ page: 1, pageSize: 20, keyword: '   ' }).orFilter).toBeUndefined();
   });
 
+  it('剔除会破坏 PostgREST or 语法的字符', () => {
+    expect(buildOrderQuery({ page: 1, pageSize: 20, keyword: 'ORD(2026),x' }).orFilter).toBe(
+      'order_no.ilike.%ORD2026x%',
+    );
+  });
+
   it('日期区间转成 gte / lte', () => {
     const r = buildOrderQuery({ page: 1, pageSize: 20, dateFrom: '2026-08-01', dateTo: '2026-08-06' });
     expect(r.range).toEqual({ gte: '2026-08-01T00:00:00.000Z', lte: '2026-08-06T23:59:59.999Z' });
@@ -3215,6 +3264,7 @@ Expected: FAIL，模块不存在。
 ```ts
 import { supabase } from '@/lib/supabase';
 import { toFriendlyError } from '@/lib/errors';
+import { sanitizeKeyword } from '@/features/counterparties/api';
 import type {
   Order,
   OrderInput,
@@ -3251,7 +3301,7 @@ export function buildOrderQuery(params: OrderListParams): {
   if (params.orderType) filters.push(['order_type', params.orderType]);
   if (params.status) filters.push(['status', params.status]);
 
-  const keyword = (params.keyword ?? '').replace(/,/g, '').trim();
+  const keyword = sanitizeKeyword(params.keyword);
   const orFilter = keyword ? `order_no.ilike.%${keyword}%` : undefined;
 
   let range: { gte?: string; lte?: string } | undefined;
