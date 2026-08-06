@@ -125,6 +125,19 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 
+// 把测试时区钉死，且必须是非 UTC 值。
+//
+// 两个理由：
+// 1. 涉及本地时区的断言在 TZ=UTC 下会退化 —— 「本地日历日 → UTC 时刻」的转换
+//    在 UTC 机器上是恒等变换，于是把日期直接拼成 'T00:00:00.000Z' 这个 bug
+//    在 UTC 下与正确实现产出完全相同的结果，测试察觉不到。CI runner 默认多是 UTC，
+//    正是最需要它报警的环境。
+// 2. formatDate/formatDateTime 的断言也依赖本地时区：同一个 UTC 时刻在 UTC-8
+//    会落到前一天，断言就会失败。钉死时区让整个套件在任何机器上结果一致。
+//
+// 必须在 defineConfig 之前赋值：Node 在首次创建 Date 时才读取 TZ。
+process.env.TZ = 'Asia/Shanghai';
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -3241,8 +3254,12 @@ describe('buildOrderQuery', () => {
     );
   });
 
-  // 断言写成"与本地时区无关"的形式：直接比对同样按本地时区解析出的 ISO 串，
-  // 而不是硬编码某个 UTC 字面量 —— 否则这个测试只在 UTC 机器上通过。
+  // 这两个用例依赖 vitest.config.ts 里钉死的 TZ='Asia/Shanghai'。
+  //
+  // 注意别把它们改成硬编码 UTC 字面量（那样只在 UTC 机器上通过），
+  // 也别以为"不硬编码就与时区无关"—— 恰恰相反：在 TZ=UTC 下本地解析与 UTC 解析
+  // 是同一个结果，旧的 `${day}T00:00:00.000Z` 写法会让这两个断言照样通过。
+  // 只有在非 UTC 时区下，它们才真的能把那个 bug 抓出来。
   it('日期区间按本地时区的当天起止转成 gte / lte', () => {
     const r = buildOrderQuery({ page: 1, pageSize: 20, dateFrom: '2026-08-01', dateTo: '2026-08-06' });
     expect(r.range).toEqual({
