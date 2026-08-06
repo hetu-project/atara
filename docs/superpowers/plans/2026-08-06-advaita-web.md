@@ -58,7 +58,7 @@
 ## Task 1: 项目脚手架与设计 token
 
 **Files:**
-- Create: `package.json`, `vite.config.ts`, `tsconfig.json`, `tsconfig.node.json`, `vitest.config.ts`, `index.html`, `.gitignore`, `src/main.tsx`, `src/App.tsx`, `src/index.css`, `src/vite-env.d.ts`
+- Create: `package.json`, `vite.config.ts`, `tsconfig.json`, `vitest.config.ts`, `index.html`, `.gitignore`, `src/main.tsx`, `src/App.tsx`, `src/index.css`, `src/vite-env.d.ts`
 - Test: `src/lib/__tests__/smoke.test.ts`
 
 **Interfaces:**
@@ -157,37 +157,23 @@ import '@testing-library/jest-dom/vitest';
     "skipLibCheck": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
-    "types": ["vite/client", "vitest/globals"],
+    "types": ["vite/client", "vitest/globals", "node"],
     "baseUrl": ".",
     "paths": { "@/*": ["src/*"] }
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src", "vite.config.ts", "vitest.config.ts"]
 }
 ```
 
-`tsconfig.node.json` —— 单独管构建脚本本身（`vite.config.ts` / `vitest.config.ts`）。这两个文件跑在 Node 里、不在 `include: ["src"]` 范围内；没有这个 project reference，它们完全不会被类型检查。`composite: true` 是被 `references` 引用的前提。
+**不要创建 `tsconfig.node.json`，不要用 project references。**
 
-```json
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2023"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "noEmit": true,
-    "composite": true,
-    "skipLibCheck": true,
-    "types": ["node"]
-  },
-  "include": ["vite.config.ts", "vitest.config.ts"]
-}
-```
+`vite.config.ts` / `vitest.config.ts` 跑在 Node 里，用了 `import.meta.dirname`，必须被类型检查 —— 但把它们放进单一 tsconfig 的 `include` 就够了，代价是 `types` 多一个 `"node"`（需要 `@types/node`，Step 1 已装）。
 
-`types: ["node"]` 需要 `@types/node`，已在 Step 1 的 devDependencies 里（若漏装则补 `npm i -D @types/node`）。
+不走 project references 是有原因的，别"顺手改回标准写法"：TypeScript 5.6 会对被 `references` 引用、同时又 `noEmit: true` 的项目报 **TS6310 "Referenced project may not disable emit"**。要用 references 就必须让子项目真的 emit 到某个 outDir，凭空产出一堆没人用的 JS。单一 tsconfig 没有这个问题：`tsc -b` 退出码 0，且确实在检查这两个配置文件。
 
-`.gitignore` —— `tsconfig.tsbuildinfo` 是 `composite` 项目 `tsc -b` 的增量缓存产物，必须忽略：
+验证引用生效的方法：往 `vite.config.ts` 末尾临时加一行 `const _bad: number = 'x';`，`npx tsc -b` 必须报错；确认后还原。
+
+`.gitignore` —— `tsc -b` 会产生 `tsconfig.tsbuildinfo` 增量缓存，必须忽略：
 
 ```
 node_modules
