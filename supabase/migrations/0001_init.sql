@@ -48,9 +48,17 @@ create table public.counterparties (
   note                   text,
   tags                   text[] not null default '{}',
 
-  created_by             uuid default auth.uid(),
+  -- 档案归属。自助注册模式下「谁录入的」与「档案属于谁」是同一件事，
+  -- 保留两列会产生两个可能不一致的真相来源，因此取代原来的 created_by。
+  -- default auth.uid() 让前端不必传；not null 让 service-role 或异常上下文
+  -- 下的漏传直接失败，而不是静默写入 NULL 绕过 RLS。
+  user_id                uuid not null default auth.uid()
+                           references auth.users (id) on delete cascade,
   created_at             timestamptz not null default now(),
   updated_at             timestamptz not null default now()
+  ,
+  -- 一个账号每种角色最多一个档案（可同时是买家和卖家）
+  constraint counterparties_user_id_role_key unique (user_id, role)
 );
 
 -- security definer 是必须的，且与下面 set_order_no / log_order_status 对称：
@@ -78,7 +86,8 @@ create trigger trg_counterparty_touch
   before update on public.counterparties
   for each row execute function public.touch_updated_at();
 
-create index idx_counterparties_role       on public.counterparties (role);
+-- orders 的 RLS policy 会通过 user_id 反查 counterparties，每次订单查询都命中
+create index idx_counterparties_user_id    on public.counterparties (user_id);
 create index idx_counterparties_full_name  on public.counterparties (full_name);
 create index idx_counterparties_created_at on public.counterparties (created_at desc);
 
