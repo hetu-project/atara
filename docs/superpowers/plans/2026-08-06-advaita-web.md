@@ -3686,7 +3686,7 @@ git commit -m "feat: 订单数据层与列表页"
 ## Task 10: 订单表单
 
 **Files:**
-- Create: `src/features/orders/formLogic.ts`, `src/features/orders/OrderForm.tsx`, `src/features/orders/OrderCreatePage.tsx`
+- Create: `src/features/orders/formLogic.ts`, `src/features/orders/fieldProps.ts`, `src/features/orders/CryptoFields.tsx`, `src/features/orders/FiatFields.tsx`, `src/features/orders/OrderForm.tsx`, `src/features/orders/OrderCreatePage.tsx`
 - Modify: `src/routes.tsx`
 - Test: `src/features/orders/__tests__/formLogic.test.ts`
 
@@ -3864,6 +3864,113 @@ export function payeeDefaults(
 Run: `npm test -- formLogic`
 Expected: PASS，9 个用例（defaultPayee 2 + clearTypeFields 4 + payeeDefaults 3）。
 
+- [ ] **Step 5: 实现两组收款字段的子组件**
+
+Crypto 与法币两组字段只有一组会渲染，把它们各自拆成一个文件。这样 `OrderForm.tsx`
+只保留表单接线（useForm、一个 effect、一个 handler），不被两大段 JSX 淹没，
+也给后续改动留出行数余量 —— 这两段合起来占了近 60 行。
+
+两个组件都接同样的两个 prop：`register`（react-hook-form 的注册函数，因为表单用的是
+`useForm<any>`，这里也只能是 `UseFormRegister<any>`）和 `err`（按字段名取错误消息）。
+
+`src/features/orders/fieldProps.ts`：
+
+```ts
+import type { UseFormRegister } from 'react-hook-form';
+
+/** 两组收款字段子组件共用的 prop 形状 */
+export interface FieldGroupProps {
+  register: UseFormRegister<any>;
+  err: (name: string) => string | undefined;
+}
+```
+
+`src/features/orders/CryptoFields.tsx`：
+
+```tsx
+import { Field, FormSection, Input, Select } from '@/components/ui';
+import { ASSETS, CHAINS } from '@/lib/schema';
+import type { FieldGroupProps } from './fieldProps';
+
+const ASSET_OPTIONS = ASSETS.map((v) => ({ value: v, label: v }));
+const CHAIN_OPTIONS = CHAINS.map((v) => ({ value: v, label: v }));
+
+export default function CryptoFields({ register, err }: FieldGroupProps) {
+  return (
+    <FormSection title="Crypto 收款信息">
+      <Field label="币种" required error={err('asset')}>
+        <Select {...register('asset')} options={ASSET_OPTIONS} placeholder="请选择币种" invalid={!!err('asset')} />
+      </Field>
+      <Field label="链" required error={err('chain')}>
+        <Select {...register('chain')} options={CHAIN_OPTIONS} placeholder="请选择链" invalid={!!err('chain')} />
+      </Field>
+      <div className="col-span-2">
+        <Field
+          label="收款地址"
+          required
+          error={err('receiving_address')}
+          hint="已按所选收款方的默认地址带出，可修改"
+        >
+          <Input
+            {...register('receiving_address')}
+            placeholder="请输入收款地址"
+            invalid={!!err('receiving_address')}
+          />
+        </Field>
+      </div>
+    </FormSection>
+  );
+}
+```
+
+`src/features/orders/FiatFields.tsx`：
+
+```tsx
+import { Field, FormSection, Input, Select } from '@/components/ui';
+import { FIAT_CURRENCIES } from '@/lib/schema';
+import type { FieldGroupProps } from './fieldProps';
+
+const FIAT_OPTIONS = FIAT_CURRENCIES.map((v) => ({ value: v, label: v }));
+
+export default function FiatFields({ register, err }: FieldGroupProps) {
+  return (
+    <FormSection title="法币收款信息">
+      <Field label="法币币种" required error={err('fiat_currency')}>
+        <Select
+          {...register('fiat_currency')}
+          options={FIAT_OPTIONS}
+          placeholder="请选择币种"
+          invalid={!!err('fiat_currency')}
+        />
+      </Field>
+      <Field label="银行名称" error={err('bank_name')}>
+        <Input {...register('bank_name')} placeholder="请输入银行名称" />
+      </Field>
+      <Field label="银行户名" error={err('bank_account_name')}>
+        <Input {...register('bank_account_name')} placeholder="请输入户名" />
+      </Field>
+      <Field label="SWIFT / IFSC" error={err('bank_swift')}>
+        <Input {...register('bank_swift')} placeholder="选填" />
+      </Field>
+      <div className="col-span-2">
+        <Field
+          label="收款账号"
+          required
+          error={err('bank_account_number')}
+          hint="已按所选收款方的默认账号带出，可修改"
+        >
+          <Input
+            {...register('bank_account_number')}
+            placeholder="请输入收款账号"
+            invalid={!!err('bank_account_number')}
+          />
+        </Field>
+      </div>
+    </FormSection>
+  );
+}
+```
+
 - [ ] **Step 5: 实现 `OrderForm.tsx`**
 
 表单用 `useForm` 的 `watch` + `setValue` 驱动动态字段。收款信息带出逻辑：监听 `payee`、`order_type`、`buyer_id`、`seller_id` 四个值，任一变化就调 `payeeDefaults` 回填（用户手动改过之后再触发会被覆盖，这是刻意的 —— 换收款方就该换收款信息）。
@@ -3875,9 +3982,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Field, FormSection, Input, Select, Textarea, type Option } from '@/components/ui';
 import { ORDER_TYPE_LABEL, PAYEE_LABEL } from '@/lib/format';
 import {
-  ASSETS,
-  CHAINS,
-  FIAT_CURRENCIES,
   ORDER_TYPES,
   PAYEES,
   orderSchema,
@@ -3888,12 +3992,11 @@ import {
 import type { CounterpartyOption } from '@/features/counterparties/api';
 import { useCounterpartyOptions } from '@/features/counterparties/hooks';
 import { clearTypeFields, defaultPayee, payeeDefaults } from './formLogic';
+import CryptoFields from './CryptoFields';
+import FiatFields from './FiatFields';
 
 const TYPE_OPTIONS = ORDER_TYPES.map((v) => ({ value: v, label: ORDER_TYPE_LABEL[v] }));
 const PAYEE_OPTIONS = PAYEES.map((v) => ({ value: v, label: PAYEE_LABEL[v] }));
-const ASSET_OPTIONS = ASSETS.map((v) => ({ value: v, label: v }));
-const CHAIN_OPTIONS = CHAINS.map((v) => ({ value: v, label: v }));
-const FIAT_OPTIONS = FIAT_CURRENCIES.map((v) => ({ value: v, label: v }));
 
 function toOptions(rows: CounterpartyOption[] | undefined): Option[] {
   return (rows ?? []).map((r) => ({ value: r.id, label: `${r.full_name}（${r.display_id}）` }));
@@ -4002,62 +4105,9 @@ export default function OrderForm({
       </FormSection>
 
       {orderType === 'crypto' ? (
-        <FormSection title="Crypto 收款信息">
-          <Field label="币种" required error={err('asset')}>
-            <Select {...register('asset')} options={ASSET_OPTIONS} placeholder="请选择币种" invalid={!!err('asset')} />
-          </Field>
-          <Field label="链" required error={err('chain')}>
-            <Select {...register('chain')} options={CHAIN_OPTIONS} placeholder="请选择链" invalid={!!err('chain')} />
-          </Field>
-          <div className="col-span-2">
-            <Field
-              label="收款地址"
-              required
-              error={err('receiving_address')}
-              hint="已按所选收款方的默认地址带出，可修改"
-            >
-              <Input
-                {...register('receiving_address')}
-                placeholder="请输入收款地址"
-                invalid={!!err('receiving_address')}
-              />
-            </Field>
-          </div>
-        </FormSection>
+        <CryptoFields register={register} err={err} />
       ) : (
-        <FormSection title="法币收款信息">
-          <Field label="法币币种" required error={err('fiat_currency')}>
-            <Select
-              {...register('fiat_currency')}
-              options={FIAT_OPTIONS}
-              placeholder="请选择币种"
-              invalid={!!err('fiat_currency')}
-            />
-          </Field>
-          <Field label="银行名称" error={err('bank_name')}>
-            <Input {...register('bank_name')} placeholder="请输入银行名称" />
-          </Field>
-          <Field label="银行户名" error={err('bank_account_name')}>
-            <Input {...register('bank_account_name')} placeholder="请输入户名" />
-          </Field>
-          <Field label="SWIFT / IFSC" error={err('bank_swift')}>
-            <Input {...register('bank_swift')} placeholder="选填" />
-          </Field>
-          <div className="col-span-2">
-            <Field
-              label="收款账号"
-              required
-              error={err('bank_account_number')}
-              hint="已按所选收款方的默认账号带出，可修改"
-            >
-              <Input
-                {...register('bank_account_number')}
-                placeholder="请输入收款账号"
-                invalid={!!err('bank_account_number')}
-              />
-            </Field>
-          </div>
-        </FormSection>
+        <FiatFields register={register} err={err} />
       )}
 
       <FormSection title="备注">
