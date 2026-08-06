@@ -795,6 +795,12 @@ describe('orderSchema - crypto', () => {
     expect(r.amount).toBe(250.5);
   });
 
+  it('非数字金额给出中文报错而非 zod 默认英文', () => {
+    const r = orderSchema.safeParse({ ...base, amount: 'abc' });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0].message).toBe('请输入有效金额');
+  });
+
   it('买卖家为同一人时报错', () => {
     const r = orderSchema.safeParse({ ...base, seller_id: buyerId });
     expect(r.success).toBe(false);
@@ -906,7 +912,9 @@ export type CounterpartyInput = z.infer<typeof counterpartySchema>;
 const orderBase = {
   buyer_id: z.string().uuid('请选择买家'),
   seller_id: z.string().uuid('请选择卖家'),
-  amount: z.coerce.number().positive('金额必须大于 0'),
+  // invalid_type_error 是必须的：金额输入框是纯文本框，用户打错一个字母就会
+  // coerce 成 NaN，走 zod 默认的英文报错 "Expected number, received nan"。
+  amount: z.coerce.number({ invalid_type_error: '请输入有效金额' }).positive('金额必须大于 0'),
   payee: z.enum(PAYEES),
   note: optLongText,
 };
@@ -1011,7 +1019,7 @@ export interface OrderStatusLog {
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `npm test -- schema`
-Expected: PASS，14 个用例全绿（counterpartySchema 6 + crypto 5 + fiat 3）。
+Expected: PASS，15 个用例全绿（counterpartySchema 6 + crypto 6 + fiat 3）。
 
 - [ ] **Step 5: 写失败的 format 测试**
 
@@ -3934,7 +3942,15 @@ export default function OrderForm({
   const buyerId = watch('buyer_id') as string;
   const sellerId = watch('seller_id') as string;
 
-  // 收款方或订单类型变化时，从对应档案带出默认收款信息
+  // 收款方或订单类型变化时，从对应档案带出默认收款信息。
+  //
+  // 依赖里必须带上 buyers.data / sellers.data（要从中查出选中那条档案），
+  // 这意味着列表数据一旦刷新，本 effect 就会重跑、覆盖用户手改过的收款字段。
+  // 目前不会发生，但**理由不是 staleTime** —— counterparty 的增改会调
+  // invalidateQueries({ queryKey: ['counterparties'] })，那是精确失效，绕过 staleTime。
+  // 真正的原因是路由一次只挂载一个页面：能触发那个 mutation 的 /buyers、/sellers
+  // 与本表单互斥。若将来在订单表单里加"快速新建买家/卖家"的浮层，这个前提就没了，
+  // 届时需要把带出逻辑改成只在用户主动切换收款方时触发。
   useEffect(() => {
     const partyId = payee === 'buyer' ? buyerId : sellerId;
     if (!partyId) return;
