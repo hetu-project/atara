@@ -3,6 +3,11 @@
 -- 在 Supabase SQL Editor 中整段执行
 -- ============================================================
 
+-- 显式事务：README 里"失败会整体回滚"的承诺目前只是 SQL Editor 的行为，
+-- 脚本本身并不保证。包一层 begin/commit 之后，psql、CI、supabase db push
+-- 跑这份脚本时也一样：中途报错整体回滚，不会留下建了一半的 schema。
+begin;
+
 -- ---------- 通用：updated_at 自动维护 ----------
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
@@ -48,8 +53,15 @@ create table public.counterparties (
   updated_at             timestamptz not null default now()
 );
 
+-- security definer 是必须的，且与下面 set_order_no / log_order_status 对称：
+-- 这个函数要 nextval() 一个序列，需要该序列的 USAGE 权限。在标准 Supabase 项目上，
+-- ambient 的 ALTER DEFAULT PRIVILEGES 大概率已经把这个权限授给了 authenticated，
+-- 所以少了 security definer 也可能"看起来正常"——但这是在依赖环境的隐性授权，
+-- 而不是脚本自己建立所需权限，一旦某个项目的默认权限不是标准配置，
+-- 这里就会报错，而且报错的后果是没有任何 counterparty 能被创建，整个应用无法使用。
+-- 显式加 security definer，让这个函数始终以属主身份运行、不依赖 ambient 授权。
 create or replace function public.set_counterparty_display_id()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   if new.display_id is null or new.display_id = '' then
     new.display_id := 'U' || lpad(nextval('public.counterparty_display_seq')::text, 6, '0');
@@ -234,3 +246,5 @@ create policy "authenticated read" on public.order_status_logs
 -- order_no_counters 刻意不给任何 policy：
 -- 它只被 set_order_no（security definer，以属主身份运行）读写，
 -- 任何前端角色都不该碰它。开 RLS 且无 policy = 对 anon/authenticated 完全关闭。
+
+commit;
