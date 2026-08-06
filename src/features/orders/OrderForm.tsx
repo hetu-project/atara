@@ -4,9 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Field, FormSection, Input, Select, Textarea, type Option } from '@/components/ui';
 import { ORDER_TYPE_LABEL, PAYEE_LABEL } from '@/lib/format';
 import {
-  ASSETS,
-  CHAINS,
-  FIAT_CURRENCIES,
   ORDER_TYPES,
   PAYEES,
   orderSchema,
@@ -17,12 +14,11 @@ import {
 import type { CounterpartyOption } from '@/features/counterparties/api';
 import { useCounterpartyOptions } from '@/features/counterparties/hooks';
 import { clearTypeFields, defaultPayee, payeeDefaults } from './formLogic';
+import CryptoFields from './CryptoFields';
+import FiatFields from './FiatFields';
 
 const TYPE_OPTIONS = ORDER_TYPES.map((v) => ({ value: v, label: ORDER_TYPE_LABEL[v] }));
 const PAYEE_OPTIONS = PAYEES.map((v) => ({ value: v, label: PAYEE_LABEL[v] }));
-const ASSET_OPTIONS = ASSETS.map((v) => ({ value: v, label: v }));
-const CHAIN_OPTIONS = CHAINS.map((v) => ({ value: v, label: v }));
-const FIAT_OPTIONS = FIAT_CURRENCIES.map((v) => ({ value: v, label: v }));
 
 function toOptions(rows: CounterpartyOption[] | undefined): Option[] {
   return (rows ?? []).map((r) => ({ value: r.id, label: `${r.full_name}（${r.display_id}）` }));
@@ -131,62 +127,9 @@ export default function OrderForm({
       </FormSection>
 
       {orderType === 'crypto' ? (
-        <FormSection title="Crypto 收款信息">
-          <Field label="币种" required error={err('asset')}>
-            <Select {...register('asset')} options={ASSET_OPTIONS} placeholder="请选择币种" invalid={!!err('asset')} />
-          </Field>
-          <Field label="链" required error={err('chain')}>
-            <Select {...register('chain')} options={CHAIN_OPTIONS} placeholder="请选择链" invalid={!!err('chain')} />
-          </Field>
-          <div className="col-span-2">
-            <Field
-              label="收款地址"
-              required
-              error={err('receiving_address')}
-              hint="已按所选收款方的默认地址带出，可修改"
-            >
-              <Input
-                {...register('receiving_address')}
-                placeholder="请输入收款地址"
-                invalid={!!err('receiving_address')}
-              />
-            </Field>
-          </div>
-        </FormSection>
+        <CryptoFields register={register} err={err} />
       ) : (
-        <FormSection title="法币收款信息">
-          <Field label="法币币种" required error={err('fiat_currency')}>
-            <Select
-              {...register('fiat_currency')}
-              options={FIAT_OPTIONS}
-              placeholder="请选择币种"
-              invalid={!!err('fiat_currency')}
-            />
-          </Field>
-          <Field label="银行名称" error={err('bank_name')}>
-            <Input {...register('bank_name')} placeholder="请输入银行名称" />
-          </Field>
-          <Field label="银行户名" error={err('bank_account_name')}>
-            <Input {...register('bank_account_name')} placeholder="请输入户名" />
-          </Field>
-          <Field label="SWIFT / IFSC" error={err('bank_swift')}>
-            <Input {...register('bank_swift')} placeholder="选填" />
-          </Field>
-          <div className="col-span-2">
-            <Field
-              label="收款账号"
-              required
-              error={err('bank_account_number')}
-              hint="已按所选收款方的默认账号带出，可修改"
-            >
-              <Input
-                {...register('bank_account_number')}
-                placeholder="请输入收款账号"
-                invalid={!!err('bank_account_number')}
-              />
-            </Field>
-          </div>
-        </FormSection>
+        <FiatFields register={register} err={err} />
       )}
 
       <FormSection title="备注">
