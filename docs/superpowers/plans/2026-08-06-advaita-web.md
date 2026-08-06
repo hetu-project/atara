@@ -1157,7 +1157,7 @@ git commit -m "feat: zod schema 与格式化工具"
 
 **Files:**
 - Create: `src/lib/supabase.ts`, `src/lib/queryClient.ts`, `src/lib/errors.ts`, `src/features/auth/useSession.ts`, `src/features/auth/LoginPage.tsx`, `src/features/auth/RequireAuth.tsx`, `src/routes.tsx`
-- Modify: `src/App.tsx`, `src/main.tsx`
+- Modify: `src/App.tsx`（`src/main.tsx` 在 Task 1 已写好，本任务不需要改动）
 - Test: `src/lib/__tests__/errors.test.ts`
 
 **Interfaces:**
