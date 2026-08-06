@@ -71,7 +71,15 @@ export default function OrderForm({
   const buyerId = watch('buyer_id') as string;
   const sellerId = watch('seller_id') as string;
 
-  // 收款方或订单类型变化时，从对应档案带出默认收款信息
+  // 收款方或订单类型变化时，从对应档案带出默认收款信息。
+  //
+  // 依赖里必须带上 buyers.data / sellers.data（要从中查出选中那条档案），
+  // 这意味着列表数据一旦刷新，本 effect 就会重跑、覆盖用户手改过的收款字段。
+  // 目前不会发生，但**理由不是 staleTime** —— counterparty 的增改会调
+  // invalidateQueries({ queryKey: ['counterparties'] })，那是精确失效，绕过 staleTime。
+  // 真正的原因是路由一次只挂载一个页面：能触发那个 mutation 的 /buyers、/sellers
+  // 与本表单互斥。若将来在订单表单里加"快速新建买家/卖家"的浮层，这个前提就没了，
+  // 届时需要把带出逻辑改成只在用户主动切换收款方时触发。
   useEffect(() => {
     const partyId = payee === 'buyer' ? buyerId : sellerId;
     if (!partyId) return;

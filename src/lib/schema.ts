@@ -65,7 +65,9 @@ export type CounterpartyInput = z.infer<typeof counterpartySchema>;
 const orderBase = {
   buyer_id: z.string().uuid('请选择买家'),
   seller_id: z.string().uuid('请选择卖家'),
-  amount: z.coerce.number().positive('金额必须大于 0'),
+  // invalid_type_error 是必须的：金额输入框是纯文本框，用户打错一个字母就会
+  // coerce 成 NaN，走 zod 默认的英文报错 "Expected number, received nan"。
+  amount: z.coerce.number({ invalid_type_error: '请输入有效金额' }).positive('金额必须大于 0'),
   payee: z.enum(PAYEES),
   note: optLongText,
 };

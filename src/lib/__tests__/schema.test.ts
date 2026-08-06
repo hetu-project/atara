@@ -72,6 +72,12 @@ describe('orderSchema - crypto', () => {
     expect(r.amount).toBe(250.5);
   });
 
+  it('非数字金额给出中文报错而非 zod 默认英文', () => {
+    const r = orderSchema.safeParse({ ...base, amount: 'abc' });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0].message).toBe('请输入有效金额');
+  });
+
   it('买卖家为同一人时报错', () => {
     const r = orderSchema.safeParse({ ...base, seller_id: buyerId });
     expect(r.success).toBe(false);
