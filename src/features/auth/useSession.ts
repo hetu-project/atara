@@ -38,6 +38,24 @@ export async function signIn(email: string, password: string) {
   if (error) throw error;
 }
 
+/**
+ * 注册。
+ *
+ * 返回 needsEmailConfirm 让调用方区分两种 Supabase 配置：
+ * - 开启邮箱验证（默认）：data.session 为 null，用户需先点邮件链接
+ * - 关闭邮箱验证：data.session 已就绪，可直接进应用
+ *
+ * 两种配置都能正常工作，切换配置不需要改代码。
+ */
+export async function signUp(
+  email: string,
+  password: string,
+): Promise<{ needsEmailConfirm: boolean }> {
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) throw error;
+  return { needsEmailConfirm: !data.session };
+}
+
 export async function signOut() {
   await supabase.auth.signOut();
 }

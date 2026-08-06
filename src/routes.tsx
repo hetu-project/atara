@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import LoginPage from '@/features/auth/LoginPage';
+import RegisterPage from '@/features/auth/RegisterPage';
 import RequireAuth from '@/features/auth/RequireAuth';
 import CounterpartyFormPage from '@/features/counterparties/CounterpartyFormPage';
 import OrderCreatePage from '@/features/orders/OrderCreatePage';
@@ -9,6 +10,7 @@ import AppLayout from '@/layouts/AppLayout';
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  { path: '/register', element: <RegisterPage /> },
   {
     element: <RequireAuth />,
     children: [

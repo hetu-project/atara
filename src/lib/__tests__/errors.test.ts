@@ -26,3 +26,36 @@ describe('toFriendlyError', () => {
     expect(toFriendlyError(null).message).toBe('操作失败，请稍后重试');
   });
 });
+
+describe('toFriendlyError —— 自助注册相关', () => {
+  it('角色档案重复给出具体原因，而非通用的数据重复', () => {
+    const err = {
+      code: '23505',
+      message: 'duplicate key value violates unique constraint "counterparties_user_id_role_key"',
+    };
+    expect(toFriendlyError(err).message).toBe('你已创建过该角色的档案');
+  });
+
+  it('其他 23505 冲突仍走通用文案', () => {
+    const err = { code: '23505', message: 'duplicate key value violates unique constraint "orders_order_no_key"' };
+    expect(toFriendlyError(err).message).toBe('数据重复，请重试');
+  });
+
+  it('RLS 拒绝给出无权访问', () => {
+    expect(toFriendlyError({ code: '42501', message: 'permission denied' }).message).toBe('无权访问该数据');
+  });
+
+  it('邮箱已注册', () => {
+    expect(toFriendlyError({ message: 'User already registered' }).message).toBe('该邮箱已注册，请直接登录');
+  });
+
+  it('未验证邮箱的提示指向邮件，不再指向管理员', () => {
+    expect(toFriendlyError({ message: 'Email not confirmed' }).message).toBe('邮箱尚未验证，请查收验证邮件');
+  });
+
+  it('状态机 trigger 的中文消息原样透出', () => {
+    expect(toFriendlyError({ code: 'P0001', message: '只有收款方可以确认完成' }).message).toBe(
+      '只有收款方可以确认完成',
+    );
+  });
+});

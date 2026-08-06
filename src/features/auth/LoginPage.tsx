@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router';
+import { Link, Navigate, useNavigate } from 'react-router';
 import { signIn, useSession } from './useSession';
 import { toFriendlyError } from '@/lib/errors';
 
@@ -62,6 +62,13 @@ export default function LoginPage() {
         >
           {submitting ? '登录中...' : '登录'}
         </button>
+
+        <p className="text-ink-3 mt-5 text-center text-xs">
+          还没有账号？
+          <Link to="/register" className="ml-1 font-semibold text-black underline">
+            去注册
+          </Link>
+        </p>
       </form>
     </div>
   );
