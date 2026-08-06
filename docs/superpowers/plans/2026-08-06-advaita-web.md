@@ -28,7 +28,11 @@
 - zod 固定为 `^3.25.0`（不要升到 v4，本计划使用的是 v3 API）
 - **不创建 `tailwind.config.ts`**。Tailwind v4 是 CSS-first 配置，token 全部写在 `src/index.css` 的 `@theme` 块里。这是对 spec §6 文件清单的有意偏离。
 - `@theme` 只定义 Tailwind v4 认识的命名空间（`--color-*`、`--radius-*`）。尺寸类（侧边栏宽、顶栏高、控件高）一律用任意值写法 `h-[44px]`、`w-[249px]`，**不要**自造 `--height-*`、`--spacing-sidebar` 这类变量 —— Tailwind v4 不会为它们生成工具类。
-- 所有数据库枚举值用英文小写下划线（`pending_payment`），中文只出现在前端 label 映射里
+- 状态机类枚举（订单状态、角色、订单类型、收款方、证件类型）用英文小写下划线（`pending_payment`），
+  中文只出现在前端 label 映射里。
+  **外部标准标识符保持其通行大写形式**：链名（`TRON`/`ETH`/…）、币种代号（`USDT`/`BTC`/…）、
+  ISO 4217 法币码（`USD`/`CNY`/…）。这三类里只有链名在 SQL 中有 CHECK 约束；
+  `asset` 和 `fiat_currency` 在数据库里是无约束的 text 列，取值范围只由前端 schema 定义。
 - 每个 task 结束必须 commit，commit message 用 conventional commits 前缀（`feat:` `chore:` `test:` `docs:`）
 - 单文件不超过 200 行；超了就拆
 
