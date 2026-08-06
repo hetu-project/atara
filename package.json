@@ -1,11 +1,7 @@
 {
   "name": "advaita-web",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,9 +10,6 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@supabase/supabase-js": "^2.112.1",

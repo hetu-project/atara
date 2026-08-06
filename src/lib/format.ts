@@ -20,13 +20,6 @@ export function formatDateTime(iso: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function formatDate(iso: string | null | undefined): string {
-  if (!iso) return DASH;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return DASH;
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
 export function shortenAddress(addr: string | null | undefined, head = 6, tail = 4): string {
   if (!addr) return DASH;
   if (addr.length <= head + tail + 3) return addr;

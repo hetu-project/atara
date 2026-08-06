@@ -14,12 +14,6 @@ describe('toFriendlyError', () => {
     );
   });
 
-  it('外键约束冲突提示被引用', () => {
-    expect(toFriendlyError({ code: '23503', message: 'fk' }).message).toBe(
-      '该记录已被订单引用，无法删除',
-    );
-  });
-
   it('登录凭证错误', () => {
     expect(toFriendlyError({ message: 'Invalid login credentials' }).message).toBe('邮箱或密码不正确');
   });

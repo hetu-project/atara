@@ -11,7 +11,9 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  if (loading) return null;
+  if (loading) {
+    return <div className="text-ink-4 flex h-full items-center justify-center text-sm">加载中...</div>;
+  }
   if (session) return <Navigate to="/orders" replace />;
 
   async function handleSubmit(e: React.FormEvent) {

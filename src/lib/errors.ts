@@ -1,7 +1,6 @@
 const PG_CODE_MESSAGES: Record<string, string> = {
   '23505': '数据重复，请重试',
   '23514': '填写的内容不符合规则，请检查后重试',
-  '23503': '该记录已被订单引用，无法删除',
 };
 
 const MESSAGE_MAP: Array<[RegExp, string]> = [

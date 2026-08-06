@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router';
 import PageHeader from '@/components/PageHeader';
 import { Button, useToast } from '@/components/ui';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, ROLE_LABEL } from '@/lib/format';
 import type { Counterparty, CounterpartyInput, Role } from '@/lib/schema';
 import CounterpartyForm from './CounterpartyForm';
 import { useCounterparty, useCreateCounterparty, useUpdateCounterparty } from './hooks';
@@ -24,7 +24,7 @@ export default function CounterpartyFormPage({ role, mode }: { role: Role; mode:
   const navigate = useNavigate();
   const toast = useToast();
 
-  const label = role === 'buyer' ? '买家' : '卖家';
+  const label = ROLE_LABEL[role];
   const basePath = role === 'buyer' ? '/buyers' : '/sellers';
 
   const detail = useCounterparty(mode === 'edit' ? id : undefined);

@@ -3,7 +3,6 @@ import {
   ORDER_STATUS_LABEL,
   ORDER_TYPE_LABEL,
   formatAmount,
-  formatDate,
   formatDateTime,
   shortenAddress,
 } from '@/lib/format';
@@ -21,12 +20,9 @@ describe('formatAmount', () => {
   });
 });
 
-describe('formatDateTime / formatDate', () => {
+describe('formatDateTime', () => {
   it('格式化 ISO 时间', () => {
     expect(formatDateTime('2026-08-06T03:04:05Z')).toMatch(/^2026-08-06 \d{2}:\d{2}$/);
-  });
-  it('只取日期部分', () => {
-    expect(formatDate('2026-08-06T03:04:05Z')).toBe('2026-08-06');
   });
   it('空值返回短横线', () => {
     expect(formatDateTime(null)).toBe('-');
