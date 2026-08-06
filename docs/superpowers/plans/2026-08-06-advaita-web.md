@@ -428,9 +428,13 @@ create index idx_counterparties_created_at on public.counterparties (created_at 
 -- ============================================================
 -- orders
 -- ============================================================
+-- 订单号的每日计数器。只由 set_order_no trigger 读写，前端永远不碰它。
+-- RLS 在文件末尾的 RLS 段统一开启（且不给任何 policy）——必须开，
+-- 否则 Supabase 默认授权会让 anon key（打包在前端 JS 里）能改 seq，
+-- 把它改回已用过的值就会让下一笔订单号撞上 unique 约束，订单创建直接崩。
 create table public.order_no_counters (
   day date primary key,
-  seq int not null default 0
+  seq int not null
 );
 
 create table public.orders (
@@ -464,12 +468,19 @@ create table public.orders (
   updated_at          timestamptz not null default now(),
 
   constraint orders_parties_differ check (buyer_id <> seller_id),
+  -- 两个分支互斥且各自把对方的字段强制为 null。
+  -- 注意 fiat 分支只强制 fiat_currency 和 bank_account_number 非空：
+  -- bank_name / bank_account_name / bank_swift 是选填（境内转账常常没有 SWIFT）。
   constraint orders_type_fields check (
     (order_type = 'crypto'
       and asset is not null
       and chain is not null
       and receiving_address is not null
-      and fiat_currency is null)
+      and fiat_currency is null
+      and bank_name is null
+      and bank_account_name is null
+      and bank_account_number is null
+      and bank_swift is null)
     or
     (order_type = 'fiat'
       and fiat_currency is not null
@@ -480,9 +491,16 @@ create table public.orders (
   )
 );
 
+-- security definer 是必须的：order_no_counters 开了 RLS 且没有任何 policy，
+-- 只有以属主身份运行的这个函数能写它。
+-- search_path 必须显式含 pg_temp，这是 security definer 函数的标准防护写法。
 create or replace function public.set_order_no()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
 declare
+  -- 刻意用 UTC：订单号的日期在全球统一，不随运营所在时区漂移。
+  -- 代价是界面上按本地时区显示的 created_at 可能与订单号里的日期差一天
+  -- （例：北京时间 08-07 03:00 创建 → 显示 08-07，订单号 ORD20260806-xxxx）。
+  -- 这是有意为之，不是 bug，不要改成本地时区。
   d date := (now() at time zone 'utc')::date;
   n int;
 begin
@@ -530,7 +548,7 @@ create index idx_order_status_logs_order on public.order_status_logs (order_id, 
 -- 这个 trigger 要往表里写，必须以函数属主身份执行才能通过 RLS。
 -- set search_path = public 是 security definer 函数的标准防护，防止调用方篡改 search_path。
 create or replace function public.log_order_status()
-returns trigger language plpgsql security definer set search_path = public as $$
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   if tg_op = 'INSERT' then
     insert into public.order_status_logs (order_id, from_status, to_status, changed_by)
@@ -557,6 +575,7 @@ create trigger trg_order_status_log_update
 alter table public.counterparties    enable row level security;
 alter table public.orders            enable row level security;
 alter table public.order_status_logs enable row level security;
+alter table public.order_no_counters enable row level security;
 
 create policy "authenticated full access" on public.counterparties
   for all to authenticated using (true) with check (true);
@@ -566,6 +585,10 @@ create policy "authenticated full access" on public.orders
 
 create policy "authenticated read" on public.order_status_logs
   for select to authenticated using (true);
+
+-- order_no_counters 刻意不给任何 policy：
+-- 它只被 set_order_no（security definer，以属主身份运行）读写，
+-- 任何前端角色都不该碰它。开 RLS 且无 policy = 对 anon/authenticated 完全关闭。
 ```
 
 上面就是完整脚本，逐字照抄即可，没有需要额外替换的部分。
@@ -597,7 +620,11 @@ npm run dev
 
 1. 到 [supabase.com](https://supabase.com) 新建一个项目，记下数据库密码。
 2. 打开项目的 **SQL Editor**，把 `supabase/migrations/0001_init.sql` 全文粘贴进去执行。
-   执行成功后在 **Table Editor** 应能看到 `counterparties`、`orders`、`order_status_logs` 三张表。
+   执行成功后在 **Table Editor** 应能看到 `counterparties`、`orders`、`order_status_logs`、
+   `order_no_counters` 四张表。
+   脚本不是可重复执行的（用的是 `create table` 而非 `create table if not exists`），
+   但 SQL Editor 会把整段包在一个事务里：中途报错会整体回滚，数据库保持原样，
+   修好后重新粘贴即可，不会留下建了一半的 schema。
 3. 打开 **Authentication → Providers → Email**，把 **Enable Sign Ups** 关掉（本项目不开放注册）；
    再到 **Authentication → Users → Add user**，手工创建登录账号（勾选 Auto Confirm User）。
 4. 打开 **Project Settings → API**，复制 `Project URL` 和 `anon public` key，
@@ -607,6 +634,9 @@ npm run dev
    VITE_SUPABASE_URL=<Project URL>
    VITE_SUPABASE_ANON_KEY=<anon public key>
    ```
+
+   若 `npm run dev` 已经在跑，改完 `.env` 后必须重启它 —— Vite 只在启动时读取
+   `import.meta.env`，不重启会看到 client 初始化失败。
 
 ## 脚本
 
