@@ -6,7 +6,28 @@ design-direction.md
 # Working method: names a live customer, a colleague, and internal
 # positioning disagreements. Must not be published.
 METHOD.md
+# Product plan: pricing intent, competitive weaknesses, buyer scoring,
+# and the interview guide. Internal only.
+PRODUCT.md
+# Alignment checklist: quotes named colleagues from internal meeting
+# minutes, including positioning that is deliberately not public.
+ALIGNMENT.md
+# Competitive messaging research for the landing page. Internal only.
+LANDING-RESEARCH.md
+# Competitor classification and mechanism comparison. Internal only.
+COMPETITORS.md
+# Deep dives on the closest competitor. Internal only.
+DEEPDIVE-ARS-T54.md
+DEEPDIVE-TRUSTLINE.md
+# Landing copy draft with strategy annotations. Internal only.
+LANDING-COPY.md
 
 # Local tooling
 .claude/
 .DS_Store
+# Landing page content spec. Internal only.
+LANDING-SPEC.md
+
+# Local editing backups of the landing page.
+*.bak
+*.bak[0-9]

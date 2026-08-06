@@ -3,105 +3,60 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atara · The payment gate for global money</title>
-<meta name="description" content="Atara is a conditional payment protocol for people and agents. Every transfer moves with the conditions it must meet, a fee priced to its actual risk, and a way back if it goes wrong.">
-<meta property="og:title" content="Atara · The payment gate for global money">
-<meta property="og:description" content="A conditional payment protocol for people and agents.">
+<title>Atara · The cost of trust, priced per counterparty</title>
+<meta name="description" content="Every payment system covers trust the same way: lock the full amount. Atara prices each counterparty instead, sizing collateral and fees to the probability of default.">
+<meta property="og:title" content="Atara · The cost of trust, priced per counterparty">
+<meta property="og:description" content="Every payment system covers trust the same way: lock the full amount. Atara prices each counterparty instead.">
 <meta property="og:type" content="website">
-<meta name="theme-color" content="#0b1310">
+<meta name="theme-color" content="#f7f8f7">
 <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f%5B%5D=switzer@200,300,400,500&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f%5B%5D=switzer@300,400,500&display=swap">
+<script>document.documentElement.className += ' js';</script>
 <style>
 /* ══════════════════════════════════════════════════════════════
-   ATARA — dark, graphics-led, hands-on.
-   Structure comes from surface and light, not from drawn lines.
+   ATARA
+   Four rules that keep this from reading as templated:
+     · No eyebrows, no kickers. Sections open on the headline.
+     · Three type sizes. Nothing in between.
+     · Status is stated once, in words, not scattered as chips.
+     · Whitespace separates. Borders are a last resort.
    ══════════════════════════════════════════════════════════════ */
-/* ── Theme ──────────────────────────────────────────────────────
-   Light is the page. The same variable names are redefined inside
-   .dark, so every component below is written once and works in both
-   contexts — no per-theme component rules, no duplicated CSS.
-   ─────────────────────────────────────────────────────────────── */
 :root{
-  --bg:        oklch(97.6% .004 168);
-  --bg-2:      oklch(94.6% .006 168);
-  --bg-3:      oklch(91.4% .008 168);
-  --bg-4:      oklch(87%   .010 168);
-  --line:      oklch(87.5% .009 168);
-  --ink:       oklch(19%   .013 168);
-  --ink-2:     oklch(31%   .013 168);
-  --muted:     oklch(45%   .013 168);
-  --faint:     oklch(46%   .013 168);
+  --bg:      oklch(97.8% .003 168);
+  --bg-2:    oklch(95.2% .005 168);
+  --ink:     oklch(17%   .012 168);
+  --ink-2:   oklch(38%   .011 168);
+  --muted:   oklch(50%   .010 168);
+  --line:    oklch(89%   .007 168);
+  --accent:  oklch(47%   .135 158);
 
-  /* Dark enough to be legible *as text* on a light page and to carry
-     white button labels — a mid green fails both. */
-  --accent:    oklch(47%   .135 158);
-  --accent-2:  oklch(41%   .115 158);
-  --accent-3:  oklch(36%   .095 158);
-  --warn:      oklch(48%   .165 34);
-
-  /* canvas figures read these — they follow whichever context they sit in */
-  --viz-dot:   oklch(58%   .020 168);
-  --viz-grid:  oklch(52%   .020 168);
-  --viz-arc:   oklch(58%   .130 158);
-  --viz-pulse: oklch(50%   .150 158);
-  --viz-label: oklch(42%   .015 168);
-  --viz-halo:  rgba(20,120,80,.05);
-  --viz-node:  oklch(91.4% .008 168);
-  --viz-gain:  1.95;  /* dark marks on a light page need more opacity */
-  --portal-ink: 20 30 25;
-  --portal-acc: 0 104 56;
-  --portal-lit: 255 255 255;
-  /* a real UI surface floating in the card well — white, not a wireframe */
-  --ui-bg:      oklch(99.6% .001 168);
-  --ui-line:    oklch(92.5% .005 168);
-  --ui-ink:     oklch(20%   .012 168);
-  --ui-dim:     oklch(51%   .012 168);
-  --ui-shadow:  20 30 25;
+  --dark:      oklch(17.5% .010 168);
+  --dark-line: oklch(29%   .010 168);
+  --dark-ink:  oklch(96%   .004 168);
+  --dark-mut:  oklch(69%   .010 168);
+  --dark-acc:  oklch(80%   .170 160);
 
   --sans:'Switzer','Helvetica Neue',Helvetica,Arial,sans-serif;
-  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-
-  --maxw:1300px;
-  --pad:clamp(1.25rem,4.5vw,4.5rem);
+  /* only inside the trust-model figure, where letterforms of a fixed
+     width are doing work: these are readings, not prose */
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --maxw:1240px;
+  --maxw-hero:1560px;
+  --pad:clamp(1.5rem,5vw,5rem);
+  /* The hero deliberately breaks out past the 1240 text column, but not to the
+     edge: at 1440 this leaves ~94px, against the text column's ~172px. Flush
+     margins read as an accident rather than as a decision. */
+  --pad-hero:clamp(1.5rem,6.5vw,6rem);
   --ease:cubic-bezier(.16,1,.3,1);
 
-  /* svh term keeps the headline from eating a short laptop viewport and
-     pushing the logo strip below the fold */
-  --fig:clamp(2.2rem,min(5.1vw,8.2svh),4.35rem);
-  --h2:clamp(2rem,4.1vw,3.4rem);
-  --h3:clamp(1.2rem,1.7vw,1.55rem);
-  --body:clamp(1rem,.32vw+.93rem,1.14rem);
-}
+  /* three sizes. that is the whole scale. */
+  /* ceiling is set by the longest authored line, "priced per counterparty.",
+     which has to survive on one line inside the hero text column */
+  --t-display:clamp(2.05rem,3.5vw,2.8rem);
+  --t-head:clamp(1.7rem,3.2vw,2.85rem);
+  --t-body:clamp(1rem,.4vw+.92rem,1.15rem);
 
-/* Dark band — same names, different values. Everything below inherits. */
-.dark{
-  --bg:        oklch(16%   .014 168);
-  --bg-2:      oklch(20%   .015 168);
-  --bg-3:      oklch(24.5% .016 168);
-  --bg-4:      oklch(29%   .017 168);
-  --line:      oklch(31%   .015 168);
-  --ink:       oklch(96%   .006 168);
-  --ink-2:     oklch(82%   .010 168);
-  --muted:     oklch(70%   .012 168);
-  --faint:     oklch(65%   .014 168);
-  --accent:    oklch(80%   .185 160);
-  --accent-2:  oklch(68%   .165 160);
-  --accent-3:  oklch(40%   .100 160);
-  --warn:      oklch(76%   .150 55);
-  --viz-dot:   oklch(74%   .020 168);
-  --viz-grid:  oklch(70%   .020 168);
-  --viz-arc:   oklch(64%   .160 160);
-  --viz-pulse: oklch(80%   .185 160);
-  --viz-label: oklch(72%   .014 168);
-  --viz-halo:  rgba(60,220,150,.06);
-  --viz-node:  oklch(24.5% .016 168);
-  --viz-gain:  1;
-  --portal-ink: 210 226 218;
-  --portal-acc: 90 220 160;
-  --portal-lit: 255 255 255;
-  background:var(--bg);color:var(--ink);
+  --gap-section:clamp(7rem,14vw,14rem);
 }
 
 *,*::before,*::after{box-sizing:border-box}
@@ -109,1921 +64,1120 @@ html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 body{
   margin:0;background:var(--bg);color:var(--ink);
-  font-family:var(--sans);font-size:var(--body);font-weight:400;line-height:1.62;
+  font-family:var(--sans);font-size:var(--t-body);font-weight:400;line-height:1.6;
   -webkit-font-smoothing:antialiased;overflow-x:hidden;
 }
-h1,h2,h3,h4,p,ul,ol,figure,dl,dd,fieldset{margin:0}
-fieldset{border:0;padding:0;min-width:0}
+h1,h2,h3,p,ul,figure,dl,dd{margin:0}
 ul{padding:0;list-style:none}
 a{color:inherit;text-decoration:none}
-button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-svg,canvas{display:block}
-img{max-width:100%}
-::selection{background:var(--accent);color:oklch(16% .02 160)}
+::selection{background:var(--accent);color:oklch(97% .01 160)}
 
-.wrap{position:relative;max-width:var(--maxw);margin-inline:auto;padding-inline:var(--pad)}
-.sec{position:relative;padding-block:clamp(5rem,10vw,10.5rem)}
+.wrap{max-width:var(--maxw);margin-inline:auto;padding-inline:var(--pad)}
+.sec{padding-block:var(--gap-section)}
+.js .r{opacity:0}
 
-/* Grid/flex children default to min-width:auto, so a wide child (the code
-   <pre>, a long mono string) refuses to shrink and blows the column past
-   the viewport. Every track holder opts out. */
-.two > *,.prim-split > *,.hero-grid > *,.duo > *,
-.gap-grid > *,.comp > *,.mesh-read > *,.foot > *,.stack-lay > *,
-.legend-row > *,.ramp-line > *{min-width:0}
-.code,.code pre{max-width:100%}
+.display{font-size:var(--t-display);font-weight:400;line-height:1.0;letter-spacing:-.04em;text-wrap:balance}
+.head{font-size:var(--t-head);font-weight:400;line-height:1.08;letter-spacing:-.032em;text-wrap:balance}
+.lede{font-size:clamp(1.08rem,.5vw+.98rem,1.32rem);line-height:1.5;color:var(--ink-2);letter-spacing:-.014em}
+.sub{color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
 
-/* ── type ──────────────────────────────────────────────────── */
-.eyebrow{
-  font-family:var(--mono);font-size:.6875rem;font-weight:500;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--muted);line-height:1;
-  display:inline-flex;align-items:center;gap:.65rem;
-}
-.eyebrow::before{content:"";width:18px;height:1px;background:var(--accent-2);flex:none}
-.display{font-size:var(--fig);font-weight:300;line-height:1.0;letter-spacing:-.035em;text-wrap:balance}
-.h2{font-size:var(--h2);font-weight:300;line-height:1.05;letter-spacing:-.03em;text-wrap:balance}
-.h3{font-size:var(--h3);font-weight:400;line-height:1.22;letter-spacing:-.018em;text-wrap:balance}
-.lede{font-size:clamp(1.06rem,.5vw+.95rem,1.32rem);line-height:1.55;color:var(--ink-2);font-weight:300;letter-spacing:-.012em}
-p.body{color:var(--muted)}
-.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
-.figcap{font-family:var(--mono);font-size:.625rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:1.1rem;display:flex;justify-content:space-between;gap:1rem;align-items:baseline}
-.figcap .hint{color:var(--accent-2);text-transform:none;letter-spacing:.06em}
+/* the only small-text treatment on the page */
+.tag{display:inline-flex;align-items:center;gap:.5rem;font-size:.8125rem;color:var(--muted)}
+.tag::before{content:"";width:6px;height:6px;flex:none;border-radius:50%;background:var(--muted)}
+.tag.on{color:var(--accent)}
+.tag.on::before{background:var(--accent)}
+.dark .tag{color:var(--dark-mut)}
+.dark .tag::before{background:var(--dark-mut)}
+.dark .tag.on{color:var(--dark-acc)}
+.dark .tag.on::before{background:var(--dark-acc)}
 
-/* ── buttons ───────────────────────────────────────────────── */
-.btn{
-  display:inline-flex;align-items:center;gap:.7em;padding:.9em 1.6em;border-radius:0;
-  font-size:.9375rem;font-weight:500;letter-spacing:-.005em;
-  transition:background .3s var(--ease),color .3s var(--ease),border-color .3s var(--ease),transform .3s var(--ease);
-}
-/* --bg is light on the page and near-black inside .dark, so one rule
-   gives a legible label against the accent in both contexts. */
-.btn-solid{background:var(--accent);color:var(--bg)}
-.btn-solid:hover{background:var(--ink);transform:translateY(-1px)}
-.btn-ghost{border:1px solid var(--line);color:var(--ink)}
-.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
-.btn .arw,.tlink .arw{transition:transform .35s var(--ease)}
+/* ── buttons ─────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:.6em;padding:.95em 1.7em;
+  font-size:.9375rem;font-weight:500;letter-spacing:-.008em;
+  transition:background .35s var(--ease),color .35s var(--ease),
+             border-color .35s var(--ease),transform .35s var(--ease)}
+.btn-solid{background:var(--ink);color:var(--bg)}
+.btn-solid:hover{background:var(--accent);transform:translateY(-1px)}
+.arw{transition:transform .35s var(--ease)}
 .btn:hover .arw,.tlink:hover .arw{transform:translateX(4px)}
-.tlink{display:inline-flex;align-items:center;gap:.6em;font-size:.9375rem;font-weight:500;padding-block:.25em;color:var(--ink);position:relative}
-.tlink::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--line);transition:background .3s var(--ease)}
-.tlink:hover::after{background:var(--accent)}
-.tlink:hover{color:var(--accent)}
+.tlink{display:inline-flex;align-items:center;gap:.5em;font-weight:500;color:var(--ink);
+  border-bottom:1px solid var(--line);padding-bottom:.2em;transition:border-color .3s var(--ease)}
+.tlink:hover{border-color:var(--ink)}
+.dark .tlink{color:var(--dark-ink);border-color:var(--dark-line)}
+.dark .tlink:hover{border-color:var(--dark-ink)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:4px}
-.skip{position:absolute;left:-9999px;top:0;z-index:99;background:var(--ink);color:var(--bg);padding:.75rem 1.15rem}
-.skip:focus{left:.5rem;top:.5rem}
-@media (pointer:coarse){
-  .btn{padding-block:1.05em}.tlink{padding-block:.75em}
-  .foot a{padding-block:.62rem}.nav-links a{padding-block:.7rem}
-  .faq summary{padding-block:1.75rem}
-}
+.skip{position:absolute;left:-9999px;background:var(--ink);color:var(--bg);padding:.8rem 1.2rem}
+.skip:focus{left:.5rem;top:.5rem;z-index:99}
+@media (pointer:coarse){.btn{padding-block:1.1em}}
 
-/* ══ NAV ═══════════════════════════════════════════════════════ */
-/* Flat and opaque — no divider, no backdrop blur, at any scroll position. */
+/* ══ NAV ══════════════════════════════════════════════════════ */
 .nav{position:sticky;top:0;z-index:60;background:var(--bg)}
-.nav-in{display:flex;align-items:center;gap:2.5rem;height:70px}
-.brand{display:flex;align-items:center;gap:.65rem;margin-right:auto}
-.mark{position:relative;width:15px;height:15px;border:1px solid var(--ink);flex:none}
-.mark::after{content:"";position:absolute;left:4px;top:4px;width:10px;height:10px;background:var(--accent);transition:transform .4s var(--ease)}
-.brand:hover .mark::after{transform:translate(-3px,-3px)}
-.wordmark{font-size:.9375rem;font-weight:500;letter-spacing:.26em;text-transform:uppercase}
-.nav-links{display:flex;gap:2.1rem}
-.nav-links a{font-size:.875rem;color:var(--muted);transition:color .25s}
-.nav-links a:hover{color:var(--ink)}
-.nav .btn{padding:.62em 1.2em;font-size:.875rem}
-@media (max-width:900px){.nav-links{display:none}}
+.nav-in{display:flex;align-items:center;gap:2.5rem;height:80px}
+.brand{display:flex;align-items:center;gap:.6rem;margin-right:auto;
+  font-weight:500;letter-spacing:-.01em;font-size:1.0625rem}
+.mark{width:14px;height:14px;background:var(--accent);flex:none}
+.nav a.lnk{font-size:.9375rem;color:var(--muted);transition:color .25s}
+.nav a.lnk:hover{color:var(--ink)}
+.nav .btn{padding:.6em 1.25em;font-size:.875rem}
+@media (max-width:880px){.nav a.lnk{display:none}}
 
-/* ══ HERO ══════════════════════════════════════════════════════ */
-/* Hero fills the viewport minus the sticky nav, as a column, so the logo
-   strip lands on the fold instead of below it. */
-.hero{position:relative;min-height:calc(100svh - 70px);display:flex;flex-direction:column;justify-content:center;padding-block:clamp(1.5rem,2.6vw,2.4rem) 0;overflow:hidden}
-.hero-inner{flex:1 1 auto;display:flex;align-items:center;width:100%;min-height:0}
-.hero-glow{position:absolute;top:-10%;right:-14%;width:min(1100px,105vw);aspect-ratio:1;background:radial-gradient(circle at 50% 50%,color-mix(in oklch,var(--accent) 5%,transparent) 0%,transparent 60%);pointer-events:none;filter:blur(10px)}
-.hero-grid{position:relative;display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,1.04fr);gap:clamp(1.25rem,2.4vw,2.5rem);align-items:center;width:100%}
-.hero-copy{position:relative;z-index:2}
-.hero h1{margin-block:0 1.4rem;max-width:19ch}
-.hero .lede{max-width:44ch}
-.hero-cta{display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center;margin-top:1.8rem}
-/* ── hero portal ───────────────────────────────────────────────
-   Rings are stacked along Z; depth is real 3D transform, not paint.
-   Colours come from --portal-* so the figure follows the theme. */
-.coin-wrap{position:relative;justify-self:center;width:100%;max-width:640px;display:flex;align-items:center;justify-content:center}
-.portal-scene{perspective:1600px;width:100%;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d}
-.portal-wrapper{
-  position:relative;width:min(480px,94%);aspect-ratio:480/640;max-height:min(640px,60svh);
-  transform-style:preserve-3d;
-  animation:portalFloat 24s cubic-bezier(.4,0,.2,1) infinite alternate;
-}
-@keyframes portalFloat{
-  0%  {transform:rotateY(-18deg) rotateX(6deg)  translateY(0)}
-  50% {transform:rotateY(12deg)  rotateX(-2deg) translateY(-20px)}
-  100%{transform:rotateY(-14deg) rotateX(4deg)  translateY(5px)}
-}
-.portal-ring{
-  position:absolute;inset:0;
-  border-radius:240px 240px 0 0;
-  border:1px solid rgb(var(--portal-ink) / .12);
-  border-bottom:none;
-  transform-origin:bottom center;
-  transform:translateZ(calc(var(--i) * -65px)) scale(calc(1 - (var(--i) * .015)));
-  animation:ringBreathe 6s ease-in-out infinite alternate;
-  animation-delay:calc(var(--i) * -.35s);
-  box-shadow:inset 0 40px 60px -20px rgb(var(--portal-acc) / calc(.0022 * var(--i)));
-}
-/* No background-color on the rings. Each ring is only rounded on top, so
-   its fill is a hard-cornered rectangle below the arch springline — 35 of
-   them stacked accumulate into a visible block with hard right/bottom
-   edges. Depth comes from the strokes and the inset shadow instead. */
-@keyframes ringBreathe{
-  0%  {border-color:rgb(var(--portal-ink) / calc(.15 - (var(--i) * .005)))}
-  100%{border-color:rgb(var(--portal-acc) / calc(.30 - (var(--i) * .01)))}
-}
-.portal-mist{
-  position:absolute;bottom:-2px;left:-8%;right:-8%;height:104px;
-  background:linear-gradient(to top,var(--bg) 20%,transparent 100%);
-  pointer-events:none;z-index:20;
-}
-@media (max-width:1000px){ .portal-wrapper{max-height:min(560px,58svh)} }
-.globe-wrap{position:relative;width:100%;aspect-ratio:1/.82;touch-action:pan-y}
-#globe{width:100%;height:100%;cursor:grab}
-#globe.dragging{cursor:grabbing}
-.globe-tip{
-  position:absolute;pointer-events:none;opacity:0;transform:translate(-50%,-140%);
-  background:var(--bg-3);padding:.55rem .7rem;font-family:var(--mono);font-size:.625rem;
-  letter-spacing:.1em;text-transform:uppercase;color:var(--ink);white-space:nowrap;
-  box-shadow:0 6px 24px rgba(0,0,0,.45);transition:opacity .2s;z-index:3;
-}
-.globe-tip b{color:var(--accent);font-weight:400}
-.globe-hint{
-  position:absolute;left:50%;bottom:2%;translate:-50% 0;font-family:var(--mono);
-  font-size:.625rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);
-  display:flex;align-items:center;gap:.5rem;transition:opacity .4s;
-}
-.globe-hint .g{width:16px;height:10px;border:1px solid var(--faint);position:relative}
-.globe-hint .g::after{content:"";position:absolute;top:2px;left:3px;width:3px;height:5px;background:var(--faint);animation:nudge 2.6s var(--ease) infinite}
-@keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
-@media (max-width:1000px){
-  .hero{min-height:0;padding-block:clamp(2rem,5vw,3rem) 0}
-  .hero-grid{grid-template-columns:1fr;gap:2.5rem}
-  .globe-wrap{max-width:520px;max-height:none;order:2}
-}
+/* ══ HERO ═════════════════════════════════════════════════════ */
+/* Hero fills the viewport minus the nav and lays out as a column, so the
+   ecosystem strip lands on the fold instead of below it. */
+.hero{position:relative;isolation:isolate;overflow:hidden;
+  min-height:calc(100svh - 80px);
+  display:flex;flex-direction:column;justify-content:center;
+  padding-block:clamp(2.5rem,5vw,4.5rem) clamp(1.75rem,3vw,2.75rem)}
+/* as a flex item the auto inline margins from .wrap collapse this to
+   its content width instead of stretching, so it needs width:100% */
+.hero-grid{flex:1 1 auto;width:100%;align-content:center}
+.hero > .wrap{max-width:var(--maxw-hero);padding-inline:var(--pad-hero)}
 
-/* ── logo strip ────────────────────────────────────────────────
-   Source artwork is mixed-tone (some near-black, some mid-grey), so
-   it is flattened to one ink weight and only lights up on hover. */
-/* width:100%/min-width:0 — as a column flex item the strip would otherwise
-   size to the ticker's max-content width and blow past the viewport. */
-.strip{flex:0 0 auto;width:100%;min-width:0;margin-top:clamp(1rem,2vw,1.6rem);padding-top:clamp(.8rem,1.3vw,1.1rem)}
-.strip-k{font-family:var(--mono);font-size:.625rem;letter-spacing:.17em;text-transform:uppercase;color:var(--faint);margin-bottom:.7rem}
-.ticker{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
-.ticker-in{display:flex;align-items:center;gap:clamp(2.2rem,4vw,3.6rem);padding-block:.4rem .7rem;width:max-content;animation:slide 46s linear infinite}
+/* ── silk: three very large blurred planes drifting against each other,
+   plus a fine noise wash. No gradient stops, no pattern. The blur is what
+   makes it read as material rather than as a graphic. ─────────────── */
+.silk{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.silk span{position:absolute;display:block;filter:blur(80px);opacity:.8;
+  animation:drift 25s infinite alternate ease-in-out;will-change:transform}
+.silk .s1{width:120%;height:42%;background:#fff;top:-12%;left:-10%;
+  --rot:-15deg;animation-delay:0s}
+.silk .s2{width:82%;height:62%;background:oklch(94.6% .006 168);bottom:-22%;right:-10%;
+  --rot:20deg;animation-duration:35s;animation-delay:-5s}
+.silk .s3{width:100%;height:52%;background:oklch(92.8% .008 168);top:28%;left:-20%;
+  --rot:-5deg;animation-duration:30s;animation-delay:-15s}
+@keyframes drift{
+  0%   {transform:translate(0,0) scale(1) rotate(var(--rot))}
+  50%  {transform:translate(3%,5%) scale(1.05) rotate(calc(var(--rot) + 2deg))}
+  100% {transform:translate(-2%,-3%) scale(.95) rotate(calc(var(--rot) - 2deg))}
+}
+/* the svg needs explicit sizing or it falls back to the 300x150 default
+   and the noise only covers the top-left corner */
+.grain{position:absolute;inset:0;width:100%;height:100%;
+  z-index:-1;pointer-events:none;opacity:.4;mix-blend-mode:multiply}
+@media (prefers-reduced-motion:reduce){.silk span{animation:none}}
+
+
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.14fr) minmax(0,.86fr);
+  gap:clamp(2.5rem,5vw,5rem);align-items:center}
+.hero-grid > *{min-width:0}
+/* the break is authored, not left to the wrap algorithm: it lands on the
+   comma so the two clauses read as a pair. Released below 600px. */
+.hero h1{max-width:none}
+@media (max-width:600px){.brk{display:none}}
+
+/* ── ecosystem strip, inside the hero ────────────────────────── */
+.strip{flex:0 0 auto;width:100%;min-width:0;
+  padding-top:clamp(2.5rem,4.5vw,4rem)}
+.strip-lbl{font-size:.8125rem;color:var(--muted);margin-bottom:1.1rem}
+.ticker{overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+.ticker-in{display:flex;align-items:center;gap:clamp(2.75rem,5vw,4.5rem);
+  width:max-content;animation:slide 52s linear infinite}
 @keyframes slide{to{transform:translateX(-50%)}}
 .ticker:hover .ticker-in{animation-play-state:paused}
-.ticker img{
-  height:clamp(14px,1.45vw,18px);width:auto;flex:none;display:block;
-  filter:brightness(0);opacity:.44;
-  transition:opacity .3s var(--ease),filter .3s var(--ease);
-}
-.dark .ticker img{filter:brightness(0) invert(1);opacity:.55}
+.ticker img{height:clamp(17px,1.6vw,21px);width:auto;flex:none;
+  filter:grayscale(1) brightness(0);opacity:.32;
+  transition:opacity .3s var(--ease),filter .3s var(--ease)}
 .ticker img:hover{opacity:1;filter:none}
-@media (prefers-reduced-motion:reduce){
-  .ticker-in{animation:none;flex-wrap:wrap;width:auto}
+@media (prefers-reduced-motion:reduce){.ticker-in{animation:none;flex-wrap:wrap}}
+.hero .lede{max-width:46ch;margin-top:clamp(1.5rem,2.4vw,2.1rem)}
+.hero-act{display:flex;flex-wrap:wrap;gap:1.6rem;align-items:center;margin-top:clamp(2rem,3.4vw,2.9rem)}
+.hero-state{margin-top:clamp(2.4rem,4vw,3.4rem);display:flex;gap:2rem;flex-wrap:wrap}
+
+/* ── the engine: a trade moving through pricing ────────────────
+   Reads top to bottom: the trade arrives, four checks stamp in order,
+   a verdict prints, the trade is archived. No card, no chart to decode. */
+/* A frosted panel, not an outlined box. The silk shows faintly through
+   it, which ties the card to the background instead of pasting it on
+   top; the lift comes from two shadows rather than a border ring. The
+   translucency is doing real work here, so it is not decoration. */
+.engine{position:relative;display:flex;flex-direction:column;
+  gap:clamp(.72rem,1.1vw,.95rem);
+  padding:clamp(1.1rem,1.5vw,1.35rem);
+  border-radius:20px;
+  background:rgba(255,255,255,.66);
+  box-shadow:0 1px 2px rgb(20 30 25 / .04),
+             0 18px 40px -24px rgb(20 30 25 / .16),
+             0 48px 90px -60px rgb(20 30 25 / .22);
 }
-
-.panel{background:var(--bg-2);padding:clamp(1.35rem,2vw,1.9rem)}
-
-/* ══ §01 STACK ═════════════════════════════════════════════════ */
-.two{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:clamp(2.5rem,5vw,5.5rem);align-items:center}
-@media (max-width:1000px){.two{grid-template-columns:1fr;gap:2.75rem}}
-.pull{margin-top:2.4rem;padding:1.3rem 1.5rem;background:var(--bg-2);border-left:2px solid var(--accent);font-size:clamp(1.02rem,.4vw+.94rem,1.22rem);font-weight:300;letter-spacing:-.015em;line-height:1.5;color:var(--ink)}
-.stack-lay{display:flex;flex-direction:column;gap:clamp(1.4rem,2.2vw,2rem)}
-.stack-fig{width:100%;max-width:min(370px,82%);margin-inline:auto;overflow:visible}
-.stack-fig .g-slab{cursor:pointer}
-.stack-fig .g-slab .slab-top,.stack-fig .g-slab polygon,.stack-fig .g-slab path{transition:opacity .3s var(--ease)}
-.stack-fig.has-sel .g-slab{opacity:.34}
-.stack-fig.has-sel .g-slab.sel{opacity:1}
-.legend{display:flex;flex-direction:column;gap:1px;background:var(--line)}
-.legend-row{background:var(--bg);padding:1rem 1.1rem;display:grid;grid-template-columns:12px 1fr;gap:.9rem;align-items:start;width:100%;text-align:left;cursor:pointer;transition:background .25s}
-.legend-row .sw{width:12px;height:12px;background:var(--bg-4);margin-top:.32rem;transition:background .25s}
-.legend-row.us{background:var(--bg-2)}
-.legend-row.us .sw{background:var(--accent)}
-.legend-row:hover,.legend-row.sel{background:var(--bg-3)}
-.legend-row.us:hover,.legend-row.us.sel{background:color-mix(in oklch,var(--accent) 13%,var(--bg-2))}
-.legend-k{font-family:var(--mono);font-size:.625rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:.3rem}
-.legend-row.us .legend-k{color:var(--accent)}
-.legend-v{font-size:.9062rem;color:var(--muted);line-height:1.45;letter-spacing:-.008em}
-.legend-row.us .legend-v{color:var(--ink);font-weight:500}
-
-/* ══ §02 GAP ═══════════════════════════════════════════════════ */
-.gap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);margin-top:clamp(2.5rem,4.5vw,4rem)}
-.gap-grid > div{background:var(--bg);padding:2.2rem 2rem 2.4rem;transition:background .35s var(--ease)}
-.gap-grid > div:hover{background:var(--bg-2)}
-@media (max-width:900px){.gap-grid{grid-template-columns:1fr}}
-.gap-n{font-family:var(--mono);font-size:.6875rem;letter-spacing:.16em;color:var(--accent-2);display:block;margin-bottom:1.4rem}
-.gap-glyph{height:118px;width:100%;margin-bottom:1.7rem}
-.gap-grid p{margin-top:.9rem;color:var(--muted);font-size:.9688rem}
-.gap-tail{margin-top:2.8rem;font-size:1.06rem;color:var(--ink-2);font-weight:300}
-
-/* ══ CAPABILITIES (Crossmint-style grid) ═══════════════════════ */
-.caps{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);margin-top:clamp(2.5rem,4.5vw,4rem)}
-@media (max-width:980px){.caps{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:640px){.caps{grid-template-columns:1fr}}
-.cap{background:var(--bg);padding:1.9rem 1.8rem 1.8rem;display:flex;flex-direction:column;min-width:0;transition:background .35s var(--ease)}
-.cap:hover{background:var(--bg-2)}
-.cap h3{margin-bottom:.7rem}
-.cap > p{color:var(--muted);font-size:.9375rem}
-/* Reference check (Clay / Linear / Crossmint): the thing inside a
-   feature card is a *rendered product surface* — white, shadowed,
-   real controls, real colour — not hairline wireframe. Consistent
-   well, distinct contents. */
-.cap-fig{margin-top:1.5rem;padding:1.15rem;background:var(--bg-2);flex:1 0 auto;
-  display:flex;align-items:center;justify-content:center;min-height:176px;
-  transition:background .35s var(--ease)}
-.cap:hover .cap-fig{background:var(--bg-3)}
-.chip-prev{display:inline-flex;align-items:center;font-family:var(--mono);font-size:.5625rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);background:color-mix(in oklch,var(--accent) 7%,transparent);padding:.24rem .5rem;margin-left:.55rem;vertical-align:middle}
-
-.ui{width:100%;background:var(--ui-bg);color:var(--ui-ink);
-  box-shadow:0 1px 2px rgb(var(--ui-shadow)/.06), 0 10px 28px rgb(var(--ui-shadow)/.09);
-  font-size:.75rem;line-height:1.35}
-.ui-row{padding:.72rem .85rem}
-.ui-row + .ui-row{box-shadow:0 -1px 0 var(--ui-line)}
-.ui-k{font-size:.625rem;letter-spacing:.02em;color:var(--ui-dim);margin-bottom:.4rem}
-.ui-line{display:flex;align-items:center;justify-content:space-between;gap:.7rem}
-.ui-amt{font-size:1.06rem;font-weight:400;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.ui-amt.big{font-size:1.3rem;font-weight:300;letter-spacing:-.03em}
-.cc{display:inline-flex;align-items:center;gap:.42rem;font-weight:500;font-size:.75rem;white-space:nowrap}
-.cc i{width:15px;height:15px;border-radius:50%;flex:none;display:block}
-.cc.usd i{background:#3B7A57}  .cc.eur i{background:#003399}
-.cc.sgd i{background:#EF3340}  .cc.hkd i{background:#A4133C}
-.cc.cny i{background:#DE2910}  .cc.gbp i{background:#012169}
-.cc.jpy i{background:#BC002D}  .cc.aed i{background:#00732F}
-.cc.usdc i{background:#2775CA} .cc.usdt i{background:#26A17B}
-.ui-btn{display:block;width:100%;text-align:center;background:var(--accent);color:#fff;
-  padding:.6rem;font-size:.75rem;font-weight:500}
-.ui-btn.off{background:var(--ui-line);color:var(--ui-dim)}
-.ui-pill{font-size:.5625rem;letter-spacing:.09em;text-transform:uppercase;padding:.2rem .42rem;
-  background:color-mix(in oklch,var(--accent) 13%,transparent);color:var(--accent-3);white-space:nowrap}
-.ui-pill.wait{background:var(--ui-line);color:var(--ui-dim)}
-.ui-foot{padding:.55rem .85rem;box-shadow:0 -1px 0 var(--ui-line);display:flex;justify-content:space-between;
-  font-size:.625rem;color:var(--ui-dim);font-variant-numeric:tabular-nums}
-
-/* rate board rows */
-.rate{display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.36rem 0;font-variant-numeric:tabular-nums}
-.rate b{font-weight:500;font-size:.75rem}
-
-/* condition rows inside the surface */
-.crow{display:flex;align-items:center;gap:.55rem;padding:.42rem 0;color:var(--ui-dim);font-size:.6875rem;transition:color .45s var(--ease)}
-.crow em,.cv{font-style:normal;margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ui-dim);font-size:.625rem}
-.crow.on em{color:var(--accent-3)}
-.crow .bx{width:13px;height:13px;flex:none;box-shadow:inset 0 0 0 1px var(--ui-line);position:relative;transition:background .35s var(--ease),box-shadow .35s var(--ease)}
-.crow.on{color:var(--ui-ink)}
-.crow.on .bx{background:var(--accent);box-shadow:none}
-.crow.on .bx::after{content:"";position:absolute;left:4px;top:1.5px;width:3.5px;height:7px;
-  border-right:1.6px solid #fff;border-bottom:1.6px solid #fff;transform:rotate(42deg)}
-
-/* A physical card: real proportions, rounded corners, a chip, a sheen.
-   Gradients are banned as decoration on this page — here they are
-   simulating a material, which is the point. */
-.ccard-wrap{width:100%;display:flex;flex-direction:column;align-items:center;gap:.9rem}
-.ccard-stage{width:100%;display:flex;justify-content:center;perspective:900px}
-.ccard{
-  width:100%;max-width:272px;aspect-ratio:1.586;border-radius:13px;position:relative;
-  background:linear-gradient(147deg, oklch(26% .022 168) 0%, oklch(17% .016 168) 52%, oklch(21% .02 168) 100%);
-  color:oklch(93% .008 168);
-  box-shadow:0 14px 34px rgb(var(--ui-shadow)/.30), inset 0 1px 0 rgb(255 255 255/.07);
-  padding:.85rem .95rem;display:flex;flex-direction:column;justify-content:space-between;
-  /* preserve-3d is why the clip layer is a child and not overflow:hidden
-     on the card itself — that would flatten the whole stack */
-  transform-style:preserve-3d;will-change:transform;
-  animation:cardFloat 14s cubic-bezier(.4,0,.2,1) infinite alternate;
-  transition:box-shadow .35s var(--ease);
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .engine{-webkit-backdrop-filter:blur(22px) saturate(1.12);
+          backdrop-filter:blur(22px) saturate(1.12)}
 }
-@keyframes cardFloat{
-  0%  {transform:rotateY(-14deg) rotateX(7deg)  translateY(0)}
-  50% {transform:rotateY(10deg)  rotateX(-3deg) translateY(-7px)}
-  100%{transform:rotateY(-7deg)  rotateX(5deg)  translateY(2px)}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .engine{background:rgba(255,255,255,.94)}
 }
-/* pointer takes over while hovering, then hands back to the float */
-.ccard.tilt{animation:none;
-  transform:rotateY(var(--ry,0deg)) rotateX(var(--rx,0deg)) translateY(-6px) scale(1.015);
-  transition:transform .12s linear, box-shadow .35s var(--ease);
-  box-shadow:0 22px 46px rgb(var(--ui-shadow)/.34), inset 0 1px 0 rgb(255 255 255/.09);
-}
-.ccard-clip{position:absolute;inset:0;border-radius:13px;overflow:hidden;pointer-events:none}
-.ccard .sheen{position:absolute;top:-60%;left:-30%;width:70%;height:220%;
-  background:linear-gradient(90deg,transparent,rgb(255 255 255/.06),transparent);
-  transform:rotate(18deg);animation:cardSheen 14s cubic-bezier(.4,0,.2,1) infinite alternate}
-/* lifting the printed elements off the surface is what sells the depth */
-.ccard-top{transform:translateZ(14px)}
-.ccard-no{transform:translateZ(20px)}
-.ccard-foot{transform:translateZ(12px)}
-.ccard-top{display:flex;align-items:center;gap:.6rem}
-.ccard .chip{width:33px;height:25px;border-radius:4px;flex:none;position:relative;
-  background:linear-gradient(135deg,#E3D3A2,#B9975B 48%,#EADCB3)}
-.ccard .chip::after{content:"";position:absolute;inset:4px 6px;
-  box-shadow:inset 0 0 0 .8px rgb(90 70 30/.55), 0 -8px 0 -7.2px rgb(90 70 30/.55), 0 8px 0 -7.2px rgb(90 70 30/.55)}
-.ccard .wave{width:17px;height:17px;color:oklch(93% .008 168 / .55)}
-.ccard-no{font-family:var(--mono);font-size:.9375rem;letter-spacing:.055em;
-  display:flex;align-items:center;text-shadow:0 1px 0 rgb(0 0 0/.35)}
-.ccard-no i{width:.55em;display:inline-block}
-.ccard-foot{display:flex;align-items:flex-end;gap:1.1rem;font-family:var(--mono);font-size:.625rem;letter-spacing:.03em}
-.ccard-foot .lb{display:block;font-size:.5rem;letter-spacing:.14em;text-transform:uppercase;
-  color:oklch(93% .008 168 / .45);margin-bottom:.18rem}
-.ccard-foot .brand{margin-left:auto;font-family:var(--sans);font-size:.6875rem;font-weight:500;letter-spacing:.22em}
-.ccard-lim{width:100%;max-width:272px;font-family:var(--mono);font-size:.625rem;color:var(--ui-dim)}
-.ccard-lim .row{display:flex;justify-content:space-between;margin-top:.45rem;font-variant-numeric:tabular-nums}
-.ccard-lim .row b{color:var(--ui-ink);font-weight:400}
-.mk-bar{height:3px;background:var(--ui-line);position:relative}
-.mk-bar i{position:absolute;inset:0 auto 0 0;background:var(--accent)}
+/* the hairline that makes glass read as glass: bright on top, gone at the
+   bottom. a uniform 1px ring is what made the previous card look pasted. */
+.engine::before{content:"";position:absolute;inset:0;border-radius:inherit;
+  padding:1px;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,0) 42%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude}
 
-/* payouts list */
-.pay{display:flex;align-items:center;gap:.55rem;padding:.4rem 0;font-size:.6875rem}
-.pay .av{width:20px;height:20px;flex:none;background:var(--ui-line);color:var(--ui-dim);
-  display:grid;place-items:center;font-size:.5rem;font-weight:600;letter-spacing:.02em}
-.pay .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pay .amt{font-variant-numeric:tabular-nums;color:var(--ui-ink)}
-.live{display:inline-block;width:6px;height:6px;background:var(--accent);margin-right:.45rem;flex:none;
-  animation:livePulse 2s var(--ease) infinite}
-@keyframes livePulse{0%,100%{opacity:1}50%{opacity:.25}}
+.eng-head{display:flex;align-items:center;gap:.75rem;font-size:.8125rem;color:var(--muted)}
+.eng-state{display:inline-flex;align-items:center;gap:.55rem;color:var(--accent)}
+.eng-state::before{content:"";width:6px;height:6px;border-radius:50%;flex:none;
+  background:var(--accent);animation:beat 2s ease-in-out infinite}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.3}}
+.eng-illus{margin-left:auto}
 
-/* Section figures use the same rendered-surface system as the cards:
-   a tinted well, a white product surface floating in it. */
-.ui-head{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;
-  padding:.8rem .9rem;box-shadow:0 1px 0 var(--ui-line)}
+/* the trade slides in from the left, then settles */
+.lane{overflow:hidden;border-radius:12px}
+/* flat inside the panel: nesting a card in a card is the fastest way to
+   make an interface look generic */
+.trade{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;
+  padding:.75rem 1rem;border-radius:12px;
+  background:rgba(255,255,255,.75);
+  box-shadow:inset 0 0 0 1px rgba(30,42,36,.05);
+  will-change:transform,opacity}
+.t-ref{font-size:.8125rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.t-amt{font-size:1.22rem;letter-spacing:-.028em}
 
-/* — condition set (primitives) — */
-#condFig .cond-row{display:flex;align-items:center;gap:.6rem;width:100%;text-align:left;
-  padding:.62rem .9rem;font-size:.6875rem;color:var(--ui-dim);cursor:pointer;
-  font-family:var(--sans);transition:color .35s var(--ease),background .2s}
-#condFig .cond-row .box{width:13px;height:13px;flex:none;box-shadow:inset 0 0 0 1px var(--ui-line);
-  background:transparent;border:0;position:relative;transform:none;
-  transition:background .35s var(--ease),box-shadow .35s var(--ease)}
-#condFig .cond-row.met .box::after{content:"";position:absolute;left:4px;top:1.5px;width:3.5px;height:7px;
-  border-right:1.6px solid #fff;border-bottom:1.6px solid #fff;transform:rotate(42deg)}
-.cond-gate{padding:.7rem .9rem;box-shadow:0 -1px 0 var(--ui-line)}
-.gate-bar{height:4px;background:var(--ui-line);position:relative;overflow:hidden}
-.gate-fill{position:absolute;inset:0 auto 0 0;width:0;background:var(--accent);transition:width .5s var(--ease)}
-.gate-line{display:flex;justify-content:space-between;align-items:baseline;
-  font-size:.625rem;color:var(--ui-dim);font-variant-numeric:tabular-nums}
-.gate-state{font-size:.5625rem;letter-spacing:.09em;text-transform:uppercase;transition:color .35s}
-.gate-state.go{color:var(--accent-3)}
+/* the four checks. each fills its rail left to right as it clears. */
+.checks{display:flex;flex-direction:column}
+.chk{position:relative;display:flex;align-items:baseline;gap:.85rem;
+  padding:.42rem 0 .42rem .95rem;font-size:.9375rem;
+  opacity:.25;transition:opacity .4s var(--ease)}
+.chk.on{opacity:1}
+.chk i{position:absolute;left:0;top:.42rem;bottom:.42rem;width:2px;
+  background:var(--line);overflow:hidden}
+.chk i::after{content:"";position:absolute;inset:0 0 100% 0;background:var(--accent);
+  transition:inset .55s var(--ease)}
+.chk.on i::after{inset:0}
+.chk span{color:var(--muted)}
+.chk b{margin-left:auto;font-weight:400;font-variant-numeric:tabular-nums;
+  color:var(--ink);white-space:nowrap}
 
-/* — dispute window — */
-.tl-bar{position:relative;height:5px;background:var(--ui-line);margin:1.5rem 0 .7rem;cursor:ew-resize;touch-action:none}
-.tl-bar::before{content:"";position:absolute;left:0;right:0;top:-16px;bottom:-16px}
-.tl-fill{position:absolute;left:0;top:0;height:5px;width:0;background:var(--accent);transition:background .35s}
-.tl-fill.final{background:var(--warn)}
-.tl-node{display:none}
-.tl-head{position:absolute;top:-5px;left:0;width:15px;height:15px;margin-left:-7.5px;background:#fff;
-  box-shadow:0 0 0 3px var(--accent),0 2px 6px rgb(var(--ui-shadow)/.28);border-radius:50%;transition:box-shadow .35s}
-.tl-head.final{box-shadow:0 0 0 3px var(--warn),0 2px 6px rgb(var(--ui-shadow)/.28)}
-.tl-lab{display:flex;justify-content:space-between;font-size:.5625rem;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--ui-dim)}
-.tl-read{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-top:.9rem}
-.tl-elapsed em{font-style:normal;font-size:.875rem;color:var(--ui-dim)}
-.tl-elapsed{font-size:1.5rem;font-weight:300;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--ui-ink)}
-.tl-state{font-size:.5625rem;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-3)}
-.tl-state.final{color:var(--warn)}
+/* the verdict block */
+.verdict{padding-top:.9rem;border-top:1px solid var(--line);
+  opacity:0;transform:translateY(5px);
+  transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.verdict.on{opacity:1;transform:none}
+.v-k{display:block;font-size:.8125rem;color:var(--muted);margin-bottom:.25rem}
+.v-pd{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;
+  padding-bottom:.8rem}
+.v-pd-n{font-size:clamp(1.85rem,2.5vw,2.3rem);line-height:1;letter-spacing:-.045em;
+  color:var(--accent);font-variant-numeric:tabular-nums}
+.v-out{display:flex;gap:clamp(1.35rem,2.6vw,2.6rem);padding-top:.7rem;
+  border-top:1px solid var(--line)}
+.v-out > div{display:flex;flex-direction:column}
+.v-out b{font-weight:400;font-size:1.05rem;letter-spacing:-.022em}
 
-/* — chat / CLI — */
-@media (max-width:760px){.duo{grid-template-columns:1fr}}
-.duo-k{font-family:var(--mono);font-size:.625rem;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--faint);margin-bottom:.7rem;display:flex;justify-content:space-between}
-.duo-k em{font-style:normal;color:var(--accent-2);letter-spacing:.06em;text-transform:none}
+/* The whole bar is the trade. Only the posted fraction is coloured, so
+   the empty part carries the argument: that is the capital you keep. */
+.posted{opacity:0;transform:translateY(5px);
+  transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.posted.on{opacity:1;transform:none}
+.p-top{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;
+  margin-bottom:.5rem}
+.p-k{font-size:.8125rem;color:var(--muted)}
+.p-n b{font-weight:400;font-variant-numeric:tabular-nums}
+.p-n em{font-style:normal;font-size:.8125rem;color:var(--accent);margin-left:.35rem}
+.p-track{position:relative;height:26px;border-radius:8px;overflow:hidden;
+  background:rgba(30,42,36,.055);box-shadow:inset 0 0 0 1px rgba(30,42,36,.05)}
+.p-track i{position:absolute;inset:0 auto 0 0;display:block;width:0;
+  border-radius:8px 0 0 8px;background:var(--accent);
+  transition:width 1.1s var(--ease);will-change:width}
+.p-foot{margin-top:.5rem;font-size:.8125rem;color:var(--muted)}
+.p-foot .num{color:var(--ink-2)}
 
-/* the page accent is tuned for a light page; on the terminal it needs to lift */
-.duo-out{margin-top:.7rem;font-family:var(--mono);font-size:.625rem;color:var(--faint);min-height:1.2em}
-.duo-out b{color:var(--accent-3);font-weight:400}
-.car{display:inline-block;width:1px;height:1.05em;background:var(--accent);vertical-align:-2px;animation:blink 1.1s steps(1,end) infinite}
-@keyframes blink{0%,55%{opacity:1}56%,100%{opacity:0}}
-.replay{font-family:var(--mono);font-size:.625rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);transition:color .25s}
-.replay:hover{color:var(--accent)}
+/* ══ DARK BAND ════════════════════════════════════════════════ */
+/* clip, not hidden: the trust-model panel is wider than the text column,
+   and clip does not make this a scroll container */
+.dark{background:var(--dark);color:var(--dark-ink);padding-block:var(--gap-section);
+  overflow-x:clip}
+.dark .head{color:var(--dark-ink)}
+.dark .lede,.dark .sub{color:var(--dark-mut)}
 
-/* Measured against Ramp at 1440: feature visuals run 29–52% of the
-   section width and 500–750px tall. The earlier versions failed at
-   opposite ends — a big empty box, then a dense but tiny strip. This
-   is big AND full: a real screen with enough content to earn its size. */
-/* 50/50, not 41/59: measured feature visuals sit at 29–52% of the section
-   width, and past that the copy column starves. */
-.wb{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.04fr);
-  gap:clamp(2rem,4vw,4.5rem);
-  /* start, not center — a 200px block centred against a 700px figure has
-     no shared axis, it just floats in a void */
-  align-items:start;
-  padding-block:clamp(2.6rem,5vw,4.5rem);box-shadow:0 1px 0 var(--line)}
-.wb:first-of-type{margin-top:clamp(2rem,3.5vw,3rem);box-shadow:0 1px 0 var(--line),0 -1px 0 var(--line)}
-/* the widths have to swap with the order, or the figure lands in the narrow
-   column and the copy cannot fill the wide one */
-.wb.flip{grid-template-columns:minmax(0,1.04fr) minmax(0,1fr)}
-.wb.flip .wb-txt{order:2}
-/* optical: line the copy up with the screen's first content row, not its chrome */
-.wb-txt{padding-top:.4rem}
+/* ── the trust model figure ───────────────────────────────────────
+   The drawing is the argument: four kinds of evidence converge on one
+   model, one probability leaves it, three terms hang off that number.
+   The wires are measured from where the cards actually landed, so the
+   picture stays correct at any width instead of at one width. */
+/* The figure breaks out of the text column. Not decoration: the wires need
+   horizontal room or the curves come out as short steep diagonals, and the
+   convergence stops reading as convergence. Carries the reveal class so
+   GSAP's transform does not fight the centering transform below. */
+/* the same edge line as the hero, so the two widest things on the page share
+   a margin instead of each inventing one */
+.tm-bleed{margin-top:clamp(2.5rem,5vw,4.25rem);
+  width:min(calc(100vw - 2 * var(--pad-hero)),var(--maxw-hero));
+  margin-left:50%;transform:translateX(-50%)}
+
+.tm{--tm-cols:clamp(10.5rem,15vw,15rem) minmax(0,1fr) clamp(10.5rem,15vw,15rem);
+    --tm-gap:clamp(1rem,3.6vw,4rem);
+  position:relative;
+  padding:clamp(1.35rem,2.6vw,2.4rem);border-radius:26px;
+  background:oklch(12.6% .010 168);
+  box-shadow:inset 0 0 0 1px oklch(27.5% .010 168),
+             0 50px 90px -60px oklch(4% .010 168);
+  overflow:hidden}
+/* one light source, behind the model. without it the middle column is
+   just three more rectangles instead of the place everything points at. */
+.tm::after{content:"";position:absolute;left:50%;top:52%;
+  width:min(54%,640px);aspect-ratio:1;transform:translate(-50%,-50%);
+  pointer-events:none;
+  background:radial-gradient(circle,oklch(80% .17 160/.085),transparent 62%)}
+
+.tm-head,.tm-grid{display:grid;grid-template-columns:var(--tm-cols);gap:var(--tm-gap)}
+.tm-head{margin-bottom:clamp(1.1rem,2vw,1.75rem)}
+.tm-head span{font:400 .6875rem/1 var(--mono);letter-spacing:.13em;
+  text-transform:uppercase;color:oklch(59% .010 168)}
+.tm-head span:nth-child(2){text-align:center}
+.tm-head span:nth-child(3){text-align:right}
+.tm-grid{align-items:center;position:relative;z-index:2}
+.tm-grid > *{min-width:0}
+
+.tm-col{display:grid;gap:.6rem;align-content:center}
+.node{position:relative;z-index:2;border-radius:12px;padding:.78rem .95rem;
+  background:oklch(19.5% .008 168);
+  box-shadow:inset 0 0 0 1px oklch(25.5% .010 168);
+  transition:background .55s var(--ease),box-shadow .55s var(--ease)}
+.node b{display:block;font-weight:400;font-size:.9375rem;letter-spacing:-.012em;
+  line-height:1.3;color:oklch(72% .006 168);transition:color .55s var(--ease)}
+/* the reserved height must equal one filled line exactly. short by even 3px
+   and lighting a card resizes the panel, which rebuilds the wires and kills
+   whatever packets are in flight. hence 1.25em, matching the line-height. */
+.node i{display:block;margin-top:.34rem;min-height:1.25em;
+  font:400 .6875rem/1.25 var(--mono);font-style:normal;letter-spacing:.05em;
+  text-transform:uppercase;color:oklch(46% .010 168);
+  opacity:0;transition:opacity .55s var(--ease)}
+/* lit = this signal has been read on this counterparty */
+.node.on{background:oklch(23% .012 168);
+  box-shadow:inset 0 0 0 1px oklch(35% .028 164),0 0 0 4px oklch(80% .17 160/.04)}
+.node.on b{color:var(--dark-ink)}
+.node.on i{opacity:1;color:oklch(62% .028 164)}
+
+/* The orb alone occupies the middle column. Anything stacked with it (the
+   caption used to be) makes the column taller than the orb, which drops the
+   orb's centre below the row's centre axis and skews the whole fan. */
+.tm-core{display:grid;place-items:center}
+.orb{position:relative;flex:none;display:grid;place-items:center;
+  width:clamp(186px,19vw,258px);aspect-ratio:1}
+.orb .ring,.orb .wave{position:absolute;inset:0;margin:auto;border-radius:50%}
+.orb .ring{border:1px solid oklch(22.5% .010 168)}
+.orb .r1{width:38%;height:38%}
+.orb .r2{width:60%;height:60%}
+.orb .r3{width:80%;height:80%}
+/* the one thing that never stops: a slow dashed sweep, so the figure is
+   alive between decisions instead of only during them */
+.orb .r4{width:100%;height:100%;border-style:dashed;
+  border-color:oklch(20.5% .012 168);animation:orbSpin 52s linear infinite}
+.orb .wave{width:100%;height:100%;border:1px solid var(--dark-acc);
+  opacity:0;will-change:transform,opacity}
+@keyframes orbSpin{to{transform:rotate(360deg)}}
+
+/* graph while it thinks, number once it has one. they share the cell. */
+.orb-graph,.orb-pd{grid-area:1/1;position:relative;z-index:2}
+.orb-graph{width:36%;height:auto;overflow:visible;
+  transition:opacity .5s var(--ease)}
+.orb-graph line{stroke:oklch(42% .020 164);stroke-width:1}
+.orb-graph circle{fill:oklch(86% .030 164);animation:nodeBreathe 2.8s ease-in-out infinite}
+@keyframes nodeBreathe{0%,100%{opacity:.35}50%{opacity:1}}
+.orb-pd{z-index:3;font-size:clamp(1.5rem,2.5vw,1.95rem);letter-spacing:-.035em;
+  color:var(--dark-acc);opacity:0;transition:opacity .45s var(--ease)}
+.tm.computing .orb-graph{opacity:.16}
+.tm.computing .orb-pd{opacity:1}
+
+.tm-cap{margin:clamp(1rem,1.8vw,1.5rem) auto 0;text-align:center;
+  font-size:.8125rem;line-height:1.45;color:oklch(60% .010 168);max-width:34ch}
+.tm-cap b{display:block;font-weight:400;color:oklch(74% .008 168);
+  margin-bottom:.2rem}
+.tm-cap span{font-family:var(--mono);font-size:.75rem;letter-spacing:.04em}
+
+.tm-wires{position:absolute;inset:0;width:100%;height:100%;z-index:1;
+  pointer-events:none;overflow:visible}
+.tm-wires path{fill:none}
+.tm-wires .base{stroke:oklch(25% .010 168);stroke-width:1}
+/* sparse dashes creeping along every wire. the period is fixed, so one
+   loop distance works for all seven paths regardless of their length. */
+.tm-wires .shim{stroke:oklch(37% .012 168);stroke-width:1;stroke-linecap:round;
+  stroke-dasharray:3 26;opacity:0}
+.tm.live .tm-wires .shim{opacity:1;animation:wireShim 9s linear infinite}
+@keyframes wireShim{to{stroke-dashoffset:-290px}}
+.tm-wires .pulse{stroke:var(--dark-acc);stroke-width:1.6;stroke-linecap:round;
+  opacity:0;filter:drop-shadow(0 0 4px oklch(80% .17 160/.45))}
+.tm-wires .port{fill:oklch(62% .010 168)}
+
 @media (max-width:900px){
-  .wb,.wb.flip{grid-template-columns:1fr;gap:1.8rem}
-  .wb.flip .wb-txt{order:0}
-  .wb-txt{padding-top:0}
+  .tm-bleed{width:100%;margin-left:0;transform:none}
+  .tm{--tm-cols:minmax(0,1fr);--tm-gap:1.75rem;border-radius:20px}
+  .tm-head,.tm-wires{display:none}
+  .tm-in{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
-.wb-n{display:block;font-family:var(--mono);font-size:.6875rem;letter-spacing:.16em;
-  color:var(--accent-2);margin-bottom:1rem}
-.wb-txt h3{margin-bottom:.75rem}
-.wb-txt p{color:var(--muted);font-size:.9688rem;max-width:46ch}
-.wb-txt .replay{margin-top:1.4rem;display:inline-block}
-.wb-fig{min-width:0}
-.wb-fig-split{display:grid;grid-template-columns:1fr 1fr;gap:clamp(.8rem,1.4vw,1.1rem)}
-@media (max-width:620px){.wb-fig-split{grid-template-columns:1fr}}
-
-/* the screen — one shared chrome, different contents */
-.scr{background:var(--ui-bg);color:var(--ui-ink);
-  box-shadow:0 1px 2px rgb(var(--ui-shadow)/.06),0 16px 40px rgb(var(--ui-shadow)/.10);
-  display:flex;flex-direction:column}
-.scr-bar{display:flex;align-items:center;justify-content:space-between;gap:1rem;
-  padding:.75rem .95rem;box-shadow:0 1px 0 var(--ui-line)}
-.scr-t{font-size:.75rem;font-weight:500}
-.scr-s{font-size:.5875rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ui-dim)}
-.scr-sec{padding:1rem .95rem}
-.scr-sec + .scr-sec{box-shadow:0 -1px 0 var(--ui-line)}
-.scr-k{font-size:.625rem;letter-spacing:.02em;color:var(--ui-dim);margin-bottom:.6rem}
-.scr-row{display:flex;align-items:baseline;justify-content:space-between;gap:1rem}
-.scr-big{font-size:1.9rem;font-weight:300;letter-spacing:-.032em;font-variant-numeric:tabular-nums;line-height:1}
-.scr-big em{font-style:normal;font-size:.5em;color:var(--ui-dim)}
-.scr-side{text-align:right;font-size:.75rem;font-variant-numeric:tabular-nums}
-.scr-side em{font-style:normal;font-size:.625rem;color:var(--ui-dim)}
-.scr-meta{display:flex;gap:1.1rem;margin-top:.7rem;font-size:.625rem;color:var(--ui-dim)}
-.scr-foot{margin-top:auto;padding:.65rem .95rem;box-shadow:0 -1px 0 var(--ui-line);
-  display:flex;justify-content:space-between;font-size:.5875rem;color:var(--ui-dim)}
-.scr-btn{width:100%;margin-top:.9rem;background:var(--accent);color:#fff;padding:.62rem;
-  font-size:.75rem;font-weight:500;transition:background .25s}
-.scr-btn.off{background:var(--ui-line);color:var(--ui-dim)}
-.pill{font-size:.5875rem;letter-spacing:.09em;text-transform:uppercase;padding:.2rem .45rem;
-  background:color-mix(in oklch,var(--accent) 13%,transparent);color:var(--accent-3)}
-.dot-live{display:inline-flex;align-items:center;gap:.4rem;font-size:.5875rem;letter-spacing:.09em;
-  text-transform:uppercase;color:var(--accent-3)}
-.dot-live::before{content:"";width:6px;height:6px;background:var(--accent);
-  animation:livePulse 2s var(--ease) infinite}
-
-/* score */
-.score{display:grid;grid-template-columns:auto 1fr;gap:.2rem 1rem;align-items:baseline}
-.score-v{font-size:2.6rem;font-weight:300;letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
-.score-d{font-size:.6875rem;color:var(--accent-3)}
-.score-d em{font-style:normal;color:var(--ui-dim);margin-left:.3rem}
-.score-track{grid-column:1/-1;height:4px;background:var(--ui-line);margin-top:.7rem;position:relative}
-.score-track i{position:absolute;inset:0 auto 0 0;background:var(--accent)}
-
-/* the fee fall, now inside the screen */
-.fall{display:flex;align-items:center;gap:.8rem;margin-top:.9rem}
-.fall-v{font-size:.9375rem;font-weight:400;font-variant-numeric:tabular-nums;white-space:nowrap}
-.fall-v em{font-style:normal;font-size:.72em;color:var(--ui-dim)}
-.fall-v.is-acc{color:var(--accent)}
-.fall svg{flex:1;min-width:50px;height:34px}
-.fall-lab{display:flex;justify-content:space-between;margin-top:.35rem;font-size:.5875rem;color:var(--ui-dim)}
-
-/* settlement ticks */
-.ticks{display:flex;gap:3px}
-.ticks i{flex:1;height:20px;background:var(--accent);opacity:.85}
-.ticks i.off{background:var(--ui-line);opacity:1}
-
-/* reversal window */
-.tl-bar{position:relative;height:5px;background:var(--ui-line);cursor:ew-resize;touch-action:none;margin-top:.2rem}
-.tl-bar::before{content:"";position:absolute;left:0;right:0;top:-14px;bottom:-14px}
-.tl-fill{position:absolute;left:0;top:0;height:5px;width:0;background:var(--accent);transition:background .35s}
-.tl-fill.final{background:var(--warn)}
-.tl-head{position:absolute;top:-5px;left:0;width:15px;height:15px;margin-left:-7.5px;border-radius:50%;
-  background:var(--ui-bg);box-shadow:0 0 0 3px var(--accent),0 2px 6px rgb(var(--ui-shadow)/.25);transition:box-shadow .35s}
-.tl-head.final{box-shadow:0 0 0 3px var(--warn),0 2px 6px rgb(var(--ui-shadow)/.25)}
-.tl-read{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-top:.9rem}
-.tl-elapsed{font-size:1.5rem;font-weight:300;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.tl-elapsed em{font-style:normal;font-size:.55em;color:var(--ui-dim)}
-.tl-state{font-size:.5875rem;letter-spacing:.11em;text-transform:uppercase;color:var(--accent-3)}
-.tl-state.final{color:var(--warn)}
-.tline{list-style:none;margin:0;padding:0}
-.tline li{display:flex;align-items:center;gap:.6rem;padding:.4rem 0;font-size:.6875rem;color:var(--ui-dim)}
-.tline li.on{color:var(--ui-ink)}
-.tline .tl-d{width:7px;height:7px;flex:none;background:var(--ui-line);border-radius:50%}
-.tline li.on .tl-d{background:var(--accent)}
-.tline em{font-style:normal;margin-left:auto;font-variant-numeric:tabular-nums;font-size:.625rem;color:var(--ui-dim)}
-
-/* chat + terminal */
-.chat{padding:.95rem;display:flex;flex-direction:column;gap:.6rem;flex:1;min-height:300px}
-.bub.stat{background:var(--bg-2);color:var(--ui-dim);font-size:.6875rem;align-self:flex-start}
-.mini{margin-top:.2rem;box-shadow:inset 0 0 0 1px var(--ui-line);padding:.6rem .7rem}
-.mini-r{display:flex;justify-content:space-between;gap:.8rem;font-size:.75rem;align-items:center;
-  font-variant-numeric:tabular-nums}
-.mini-r.sub{font-size:.625rem;color:var(--ui-dim);margin-top:.35rem}
-.bub{font-size:.8125rem;line-height:1.45;padding:.6rem .75rem;max-width:92%}
-.bub.me{background:var(--bg-2);align-self:flex-start}
-.bub.them{background:color-mix(in oklch,var(--accent) 10%,transparent);color:var(--accent-3);
-  align-self:flex-start;font-size:.75rem;min-height:1.2em}
-.bub.them:empty{display:none}
-.chat-input{display:flex;align-items:center;justify-content:space-between;padding:.55rem .6rem .55rem .8rem;
-  box-shadow:0 -1px 0 var(--ui-line);font-size:.6875rem;color:var(--ui-dim)}
-.chat-input i{font-style:normal;width:22px;height:22px;background:var(--accent);color:#fff;
-  display:grid;place-items:center;font-size:.7rem}
-.scr.term{background:oklch(16.5% .014 168);color:oklch(89% .01 168);box-shadow:0 16px 40px rgb(var(--ui-shadow)/.20)}
-.scr.term .scr-bar{box-shadow:0 1px 0 oklch(28% .015 168)}
-.scr.term .scr-s{color:oklch(62% .012 168)}
-.term-body{padding:.85rem .95rem;font-family:var(--mono);font-size:.7188rem;line-height:1.85;flex:1;min-height:300px;word-break:break-all}
-.term-body .dim{color:oklch(64% .012 168);margin-bottom:.4rem}
-.term-body .p{color:oklch(80% .17 160)}
-.term-body b{color:oklch(80% .17 160);font-weight:400}
-.car{display:inline-block;width:1px;height:1.05em;background:var(--accent);vertical-align:-2px;animation:blink 1.1s steps(1,end) infinite}
-@keyframes blink{0%,55%{opacity:1}56%,100%{opacity:0}}
-.replay{font-family:var(--mono);font-size:.625rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);transition:color .25s}
-.replay:hover{color:var(--accent)}
-
-/* ══ COMPACT PRIMITIVES ════════════════════════════════════════ */
-.prim-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
-@media (max-width:600px){.prim-grid{grid-template-columns:1fr}}
-.prim-cell{background:var(--bg);padding:1.5rem 1.4rem 1.7rem;min-width:0}
-.prim-cell .k{font-family:var(--mono);font-size:.625rem;letter-spacing:.16em;color:var(--accent);display:block;margin-bottom:.85rem}
-.prim-cell h4{font-size:1.02rem;font-weight:400;letter-spacing:-.016em;margin-bottom:.5rem}
-.prim-cell p{font-size:.9062rem;color:var(--muted);line-height:1.5}
-
-/* ══ §03 PRIMITIVES ════════════════════════════════════════════ */
-.prim{padding-block:clamp(3rem,5.5vw,5.5rem);border-top:1px solid var(--line)}
-.prim-head{display:flex;align-items:baseline;gap:1.3rem;margin-bottom:1.4rem}
-.prim-num{font-family:var(--mono);font-size:.6875rem;letter-spacing:.16em;color:var(--accent-2);flex:none}
-.prim p{color:var(--muted);max-width:52ch;margin-top:1.1rem}
-.prim-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(2rem,4vw,4.5rem);align-items:center}
-@media (max-width:900px){.prim-split{grid-template-columns:1fr;gap:2.4rem}}
-
-/* interactive condition set */
-.cond-row{
-  display:flex;align-items:center;gap:.9rem;padding:1rem .7rem;width:100%;text-align:left;
-  font-family:var(--mono);font-size:.78rem;color:var(--faint);cursor:pointer;
-  transition:color .35s var(--ease),background .25s;
-}
-.cond-row:hover{background:var(--bg-3)}
-.cond-row + .cond-row{box-shadow:0 -1px 0 var(--line)}
-.cond-row .box{width:12px;height:12px;border:1px solid var(--line);flex:none;position:relative;transition:background .35s var(--ease),border-color .35s var(--ease),transform .35s var(--ease)}
-.cond-row.met{color:var(--ink-2)}
-.cond-row.met .box{background:var(--accent);border-color:var(--accent);transform:rotate(45deg)}
-.cond-row .st{margin-left:auto;font-size:.625rem;letter-spacing:.14em;text-transform:uppercase}
-.cond-row.met .st{color:var(--accent)}
-.cond-gate{margin-top:.5rem;padding:1.1rem .7rem 0;box-shadow:0 -1px 0 var(--line)}
-.gate-bar{height:4px;background:var(--bg-3);position:relative;overflow:hidden}
-.gate-fill{position:absolute;inset:0 auto 0 0;width:0;background:var(--accent);transition:width .5s var(--ease)}
-.gate-line{display:flex;justify-content:space-between;align-items:baseline;margin-top:.9rem;font-family:var(--mono);font-size:.75rem;font-variant-numeric:tabular-nums;color:var(--muted)}
-.gate-state{font-size:.6875rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);transition:color .35s}
-.gate-state.go{color:var(--accent)}
-
-/* draggable dispute window */
-.tl-bar{position:relative;height:4px;background:var(--bg-3);margin:3rem 0 1rem;cursor:ew-resize;touch-action:none}
-.tl-bar::before{content:"";position:absolute;left:0;right:0;top:-18px;bottom:-18px}
-.tl-fill{position:absolute;left:0;top:0;height:4px;width:0;background:var(--accent);transition:background .35s}
-.tl-fill.final{background:var(--warn)}
-.tl-node{position:absolute;top:-5px;width:14px;height:14px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
-.tl-node.a{left:0}.tl-node.c{right:0}
-.tl-head{position:absolute;top:-8px;left:0;width:20px;height:20px;margin-left:-10px;background:var(--accent);box-shadow:0 0 24px color-mix(in oklch,var(--accent) 55%,transparent);transition:background .35s}
-.tl-head.final{background:var(--warn);box-shadow:0 0 24px color-mix(in oklch,var(--warn) 50%,transparent)}
-.tl-lab{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.625rem;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
-.tl-read{margin-top:2rem;display:flex;justify-content:space-between;align-items:baseline;gap:1rem;flex-wrap:wrap}
-.tl-elapsed{font-size:clamp(1.6rem,2.6vw,2.2rem);font-weight:300;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.tl-state{font-family:var(--mono);font-size:.6875rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
-.tl-state.final{color:var(--warn)}
-
-/* risk */
-.drop-end{flex:none}
-.drop-end.right{text-align:right}
-.drop-lab{font-size:.625rem;color:var(--ui-dim);margin-top:.25rem}
-
-/* dual entry */
-@media (max-width:760px){.duo{grid-template-columns:1fr}}
-.duo-k{font-family:var(--mono);font-size:.625rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:1.3rem;display:flex;justify-content:space-between}
-.duo-k em{font-style:normal;color:var(--accent-2);letter-spacing:.06em;text-transform:none}
-.chatline{background:var(--bg-3);padding:.95rem 1.05rem;font-size:.9375rem;color:var(--ink-2);min-height:3.4em}
-/* the page accent is tuned for a light page; on the terminal it needs to lift */
-.car{display:inline-block;width:1px;height:1.05em;background:var(--accent);vertical-align:-2px;animation:blink 1.1s steps(1,end) infinite}
-@keyframes blink{0%,55%{opacity:1}56%,100%{opacity:0}}
-.duo-out{margin-top:1.1rem;font-family:var(--mono);font-size:.6875rem;color:var(--faint);min-height:1.3em}
-.duo-out b{color:var(--accent);font-weight:400}
-.replay{font-family:var(--mono);font-size:.625rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);transition:color .25s}
-.replay:hover{color:var(--accent)}
-
-/* ══ FOR PEOPLE ════════════════════════════════════════════════ */
-.people{background:var(--bg-2)}
-.tag-live{display:inline-flex;align-items:center;gap:.6rem;font-family:var(--mono);font-size:.6875rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
-.tag-live .d{width:7px;height:7px;background:var(--accent);animation:pulse 2.2s var(--ease) infinite}
-@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in oklch,var(--accent) 55%,transparent)}70%,100%{box-shadow:0 0 0 9px transparent}}
-.ramp{background:oklch(99.5% .002 168);box-shadow:0 1px 2px oklch(20% .02 168/.07),0 14px 44px oklch(20% .02 168/.10);position:relative}
-.ramp-row{padding:1.5rem 1.6rem}
-.ramp-row + .ramp-row{box-shadow:0 -1px 0 var(--bg-3)}
-.ramp-k{font-family:var(--mono);font-size:.625rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem}
-.ramp-line{display:flex;align-items:center;justify-content:space-between;gap:1rem}
-.ramp-cur{display:flex;align-items:center;gap:.65rem;font-size:.9375rem;font-weight:500;letter-spacing:.01em;flex:none}
-.ramp-cur .glyph{width:22px;height:22px;flex:none;background:var(--bg-3)}
-.ramp-cur .glyph.usdc{background:var(--accent)}
-.ramp-amt{
-  font-size:clamp(1.4rem,2.5vw,2rem);font-weight:300;letter-spacing:-.03em;
-  font-variant-numeric:tabular-nums;text-align:right;min-width:0;flex:1;
-  background:transparent;border:0;color:var(--ink);font-family:var(--sans);padding:0;
-  border-bottom:1px dashed var(--bg-4);
-}
-.ramp-amt:focus{outline:none;border-bottom-color:var(--accent)}
-.ramp-amt[readonly]{border-bottom-color:transparent;color:var(--accent)}
-.ramp-swap{
-  position:absolute;right:1.6rem;top:50%;translate:0 -50%;z-index:2;
-  width:38px;height:38px;background:var(--ink);color:var(--bg);
-  display:grid;place-items:center;font-size:.9rem;transition:background .25s,transform .35s var(--ease);
-}
-.ramp-swap:hover{background:var(--accent);transform:translateY(-50%) rotate(180deg)}
-.ramp-foot{padding:1rem 1.6rem;box-shadow:0 -1px 0 var(--bg-3);font-family:var(--mono);font-size:.6875rem;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;font-variant-numeric:tabular-nums}
-.chips{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:1.8rem}
-.chip{background:var(--bg-3);padding:.45rem .8rem;font-family:var(--mono);font-size:.6875rem;letter-spacing:.09em;color:var(--ink-2);transition:background .2s,color .2s}
-.chip:hover{background:var(--ink);color:var(--bg)}
-.chip.more{background:transparent;box-shadow:inset 0 0 0 1px var(--bg-4);color:var(--muted)}
-
-/* ══ AGENTS ════════════════════════════════════════════════════ */
-.badge-prev{display:inline-flex;align-items:center;gap:.6rem;background:color-mix(in oklch,var(--accent) 14%,transparent);color:var(--accent);padding:.4rem .8rem;font-family:var(--mono);font-size:.625rem;letter-spacing:.18em;text-transform:uppercase}
-.badge-prev .d{width:6px;height:6px;background:var(--accent)}
-.agent-list{margin-top:2.4rem}
-.agent-list li{display:grid;grid-template-columns:2.4rem 1fr;gap:1.1rem;padding:1.3rem 0;color:var(--muted);font-size:.9688rem}
-.agent-list li + li{box-shadow:0 -1px 0 var(--line)}
-.agent-list .k{font-family:var(--mono);font-size:.625rem;letter-spacing:.16em;color:var(--accent-2);padding-top:.4em}
-.wait{margin-top:2.6rem;display:flex;flex-wrap:wrap;max-width:31rem}
-.wait input{flex:1 1 14rem;min-width:0;background:var(--bg-2);color:var(--ink);border:0;border-radius:0;padding:.95em 1.1em;font:inherit;font-size:.9375rem}
-.wait input::placeholder{color:var(--faint)}
-.wait input:focus{outline:none;box-shadow:inset 0 0 0 1px var(--accent)}
-.wait-msg{margin-top:1rem;font-family:var(--mono);font-size:.6875rem;letter-spacing:.07em;color:var(--accent);min-height:1.2em}
-.wait-msg.err{color:var(--warn)}
-
-.mesh-fig{background:var(--bg-2);padding:1.3rem 1.3rem 1rem}
-.mesh-wrap{position:relative;width:100%;aspect-ratio:1/.78}
-#mesh{width:100%;height:100%;cursor:crosshair}
-.mesh-read{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);margin-top:1.2rem}
-.mesh-read > div{background:var(--bg-2);padding:.9rem .95rem}
-.mesh-read dt{font-family:var(--mono);font-size:.5875rem;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);margin-bottom:.45rem}
-.mesh-read dd{font-family:var(--mono);font-size:.8125rem;color:var(--ink);font-variant-numeric:tabular-nums}
-.mesh-read dd.acc{color:var(--accent)}
-
-/* ══ CODE ══════════════════════════════════════════════════════ */
-.code{background:var(--bg-2);margin-top:2.4rem;overflow:hidden}
-.code-bar{display:flex;align-items:center;box-shadow:0 1px 0 var(--line)}
-.code-tab{padding:.85rem 1.1rem;font-family:var(--mono);font-size:.625rem;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);position:relative;transition:color .25s,background .25s}
-.code-tab:hover{color:var(--ink-2)}
-.code-tab[aria-selected="true"]{color:var(--accent);background:var(--bg-3)}
-.code-tab[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:var(--accent)}
-.code-file{margin-left:auto;padding-right:1.1rem;font-family:var(--mono);font-size:.625rem;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
-@media (max-width:560px){.code-file{display:none}}
-.term-l{flex-wrap:wrap}
-.term-l .v{min-width:0}
-.code pre{margin:0;padding:1.5rem 1.3rem;overflow-x:auto;font-family:var(--mono);font-size:.8125rem;line-height:1.9;color:var(--ink-2)}
-.code .kw{color:oklch(76% .10 300)}
-.code .fn{color:var(--accent)}
-.code .str{color:oklch(82% .11 92)}
-.code .num2{color:oklch(82% .09 225)}
-.code .cm{color:var(--faint)}
-.dev-links{display:flex;flex-wrap:wrap;gap:2.2rem;margin-top:2.2rem}
-
-/* terminal */
-.term{background:oklch(11% .012 168);margin-top:1px;padding:1.2rem 1.3rem 1.4rem;font-family:var(--mono);font-size:.75rem;line-height:2;min-height:180px}
-.term-l{display:flex;gap:.8rem;color:var(--faint)}
-.term-l .ok{color:var(--accent)}
-.term-l .wt{color:var(--warn)}
-.term-l .v{margin-left:auto;color:var(--ink-2);font-variant-numeric:tabular-nums;text-align:right}
-.term-run{margin-top:1rem}
-
-/* ══ CONTROLS ══════════════════════════════════════════════════ */
-.comp{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);margin-top:clamp(2.2rem,4vw,3.5rem)}
-.comp > div{background:var(--bg);padding:2rem 1.9rem 2.2rem;transition:background .35s var(--ease)}
-.comp > div:hover{background:var(--bg-2)}
-.comp-glyph{height:64px;margin-bottom:1.6rem}
-.comp dt{font-family:var(--mono);font-size:.625rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-2);margin-bottom:.9rem}
-.comp dd{font-size:.9688rem;color:var(--muted);line-height:1.6}
-@media (max-width:900px){.comp{grid-template-columns:1fr}}
-
-/* ══ FAQ ═══════════════════════════════════════════════════════ */
-.faq{margin-top:clamp(2.2rem,4vw,3rem)}
-.faq details{box-shadow:0 1px 0 var(--line)}
-.faq details:first-child{box-shadow:0 1px 0 var(--line),0 -1px 0 var(--line)}
-.faq summary{list-style:none;cursor:pointer;padding:1.65rem 3.2rem 1.65rem 0;position:relative;font-size:clamp(1.02rem,.35vw+.95rem,1.2rem);font-weight:400;letter-spacing:-.016em;transition:color .25s}
-.faq summary:hover{color:var(--accent)}
-.faq summary::-webkit-details-marker{display:none}
-.faq summary::before,.faq summary::after{content:"";position:absolute;right:.4rem;top:50%;background:var(--muted);transition:transform .35s var(--ease),background .25s}
-.faq summary::before{width:14px;height:1px;margin-top:-.5px}
-.faq summary::after{width:1px;height:14px;right:calc(.4rem + 6.5px);margin-top:-7px}
-.faq details[open] summary::after{transform:scaleY(0)}
-.faq details[open] summary{color:var(--accent)}
-.faq summary:hover::before,.faq summary:hover::after{background:var(--accent)}
-.faq .ans p{padding:.1rem 0 1.8rem;max-width:64ch;color:var(--muted);font-size:.9688rem}
-
-/* ══ CTA / FOOTER ══════════════════════════════════════════════ */
-.cta{position:relative;padding-block:clamp(5.5rem,10vw,10rem);overflow:hidden}
-.cta-glow{position:absolute;left:50%;bottom:-60%;translate:-50% 0;width:min(1000px,120vw);aspect-ratio:1;background:radial-gradient(circle,color-mix(in oklch,var(--accent) 8%,transparent) 0%,transparent 62%);pointer-events:none}
-.cta h2{max-width:17ch;position:relative}
-.cta-row{display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center;margin-top:2.8rem;position:relative}
-footer{box-shadow:0 -1px 0 var(--line);padding-block:3.4rem 3.6rem}
-.foot{display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:2.5rem}
-@media (max-width:820px){.foot{grid-template-columns:1fr 1fr;gap:2.2rem}}
-.foot h4{margin:0 0 1.1rem;font-family:var(--mono);font-size:.625rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:500}
-.foot a{display:block;font-size:.875rem;color:var(--muted);padding-block:.34rem;transition:color .25s}
-.foot a:hover{color:var(--accent)}
-.foot-note{margin-top:3.2rem;padding-top:1.6rem;box-shadow:0 -1px 0 var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem;font-family:var(--mono);font-size:.6875rem;color:var(--faint);letter-spacing:.05em}
-
 @media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  .orb .r4,.orb-graph circle,.tm.live .tm-wires .shim{animation:none}
+}
+
+.claims{margin-top:clamp(3.5rem,6vw,5.5rem);display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(1.75rem,3.4vw,3.4rem)}
+.claims > *{min-width:0}
+.claim h3{font-size:1.0625rem;font-weight:500;letter-spacing:-.015em;margin-bottom:.7rem}
+.claim p{font-size:.9375rem;color:var(--dark-mut);line-height:1.55}
+@media (max-width:820px){.claims{grid-template-columns:minmax(0,1fr);gap:2rem}}
+
+.why{margin-top:clamp(4rem,7vw,6.5rem);display:grid;
+  grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:clamp(2rem,4vw,4.5rem);align-items:start}
+.why > *{min-width:0}
+.why p + p{margin-top:1.1rem}
+.why .lede{max-width:44ch}
+.step{display:grid;grid-template-columns:2.2rem minmax(0,1fr) auto;gap:1rem;align-items:baseline;
+  padding:1rem 0;border-bottom:1px solid var(--dark-line);font-size:.9375rem}
+.step:first-child{border-top:1px solid var(--dark-line)}
+.step .n{color:var(--dark-mut);font-variant-numeric:tabular-nums}
+.step .who{color:var(--dark-mut);font-size:.8125rem;text-align:right}
+.step.hold .who{color:var(--dark-acc)}
+@media (max-width:820px){.why{grid-template-columns:minmax(0,1fr)}}
+
+/* ══ PAIN BLOCKS ══════════════════════════════════════════════ */
+.pains{margin-top:clamp(3.5rem,6.5vw,6rem);display:flex;flex-direction:column;
+  gap:clamp(3.5rem,6.5vw,6rem)}
+.pain{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);
+  gap:clamp(1.75rem,4vw,4.5rem);align-items:start}
+.pain > *{min-width:0}
+.pain .q{font-size:clamp(1.45rem,2.5vw,2.05rem);line-height:1.14;letter-spacing:-.028em;text-wrap:balance}
+.pain .cost{margin-top:1.1rem;color:var(--muted);max-width:38ch}
+.pain .a{padding-left:clamp(1.25rem,2vw,2rem);border-left:1px solid var(--line)}
+.pain .a p + p{margin-top:1rem}
+.pain .a .tag{margin-top:1.5rem}
+.pain .a b{font-weight:500}
+@media (max-width:820px){
+  .pain{grid-template-columns:minmax(0,1fr);gap:1.5rem}
+  .pain .a{padding-left:1.25rem}
+}
+
+/* ══ FAQ ══════════════════════════════════════════════════════ */
+.faq{max-width:920px;margin-top:clamp(2.5rem,4.5vw,4rem)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq details:first-child{border-top:1px solid var(--line)}
+.faq summary{list-style:none;cursor:pointer;padding:1.6rem 0;display:flex;
+  align-items:baseline;justify-content:space-between;gap:2rem;
+  font-size:1.0625rem;letter-spacing:-.015em;transition:color .25s}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary:hover{color:var(--accent)}
+.faq summary .pm{position:relative;width:12px;height:12px;flex:none;margin-top:.4em}
+.faq summary .pm::before,.faq summary .pm::after{content:"";position:absolute;
+  background:var(--muted);transition:transform .3s var(--ease)}
+.faq summary .pm::before{left:0;top:5.5px;width:12px;height:1px}
+.faq summary .pm::after{left:5.5px;top:0;width:1px;height:12px}
+.faq details[open] summary .pm::after{transform:scaleY(0)}
+.faq .ans{padding:0 0 1.7rem;max-width:68ch;color:var(--muted)}
+
+/* ══ CTA / FOOTER ═════════════════════════════════════════════ */
+.cta{padding-block:var(--gap-section);background:var(--bg-2)}
+.cta .head{max-width:18ch}
+.cta p{margin-top:1.3rem;color:var(--muted);max-width:46ch}
+footer{padding-block:4rem 2.5rem;border-top:1px solid var(--line)}
+.foot{display:flex;justify-content:space-between;gap:2rem;flex-wrap:wrap;align-items:flex-start}
+.foot nav{display:flex;gap:2rem;flex-wrap:wrap}
+.foot a{font-size:.9375rem;color:var(--muted);transition:color .25s}
+.foot a:hover{color:var(--ink)}
+.foot-note{margin-top:3rem;font-size:.875rem;color:var(--muted);
+  display:flex;justify-content:space-between;gap:1.5rem;flex-wrap:wrap}
+
+@media (max-width:900px){
+  .hero-grid{grid-template-columns:minmax(0,1fr)}
+  .hero h1{max-width:none}
 }
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 
-<!-- ══════════ NAV ══════════ -->
-<header class="nav" id="nav">
+<header class="nav">
   <div class="wrap nav-in">
-    <a class="brand" href="#top" aria-label="Atara, home"><span class="mark" aria-hidden="true"></span><span class="wordmark">Atara</span></a>
-    <nav class="nav-links" aria-label="Primary">
-      <a href="#capabilities">Capabilities</a>
-      <a href="#why">Why Atara</a><a href="#developers">Developers</a><a href="#faq">FAQ</a>
-    </nav>
-    <a class="btn btn-solid" href="#" data-app>Launch App <span class="arw" aria-hidden="true">→</span></a>
+    <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>Atara</a>
+    <a class="lnk" href="#engine">How it works</a>
+    <a class="lnk" href="#pains">What it solves</a>
+    <a class="lnk" href="desk.html">Settlement desk</a>
+    <a class="btn btn-solid" href="#contact">Talk to us <span class="arw" aria-hidden="true">&rarr;</span></a>
   </div>
 </header>
 
 <main id="main">
 
-<!-- ══════════ HERO ══════════ -->
+<!-- ══ HERO ═══════════════════════════════════════════════════ -->
 <section class="hero" id="top">
-  <div class="hero-glow" aria-hidden="true"></div>
-  <div class="wrap hero-inner">
-    <div class="hero-grid">
-      <div class="hero-copy">
-        <h1 class="display" data-hero>The payment gate for global money</h1>
-        <p class="lede" data-hero>
-          Fiat and stablecoins across live corridors, for people and agents. Every transfer is
-          priced to credit and can be reversed.
-        </p>
-        <div class="hero-cta" data-hero>
-          <a class="btn btn-solid" href="#" data-app>Launch App <span class="arw" aria-hidden="true">→</span></a>
-          <a class="tlink" href="#capabilities">See what it does <span class="arw" aria-hidden="true">→</span></a>
-        </div>
-      </div>
-      <div class="coin-wrap" data-hero>
-        <div class="portal-scene" role="img" aria-label="A receding corridor of arched portals.">
-          <div class="portal-wrapper">
-          <div class="portal-ring" style="--i:0"></div>
-          <div class="portal-ring" style="--i:1"></div>
-          <div class="portal-ring" style="--i:2"></div>
-          <div class="portal-ring" style="--i:3"></div>
-          <div class="portal-ring" style="--i:4"></div>
-          <div class="portal-ring" style="--i:5"></div>
-          <div class="portal-ring" style="--i:6"></div>
-          <div class="portal-ring" style="--i:7"></div>
-          <div class="portal-ring" style="--i:8"></div>
-          <div class="portal-ring" style="--i:9"></div>
-          <div class="portal-ring" style="--i:10"></div>
-          <div class="portal-ring" style="--i:11"></div>
-          <div class="portal-ring" style="--i:12"></div>
-          <div class="portal-ring" style="--i:13"></div>
-          <div class="portal-ring" style="--i:14"></div>
-          <div class="portal-ring" style="--i:15"></div>
-          <div class="portal-ring" style="--i:16"></div>
-          <div class="portal-ring" style="--i:17"></div>
-          <div class="portal-ring" style="--i:18"></div>
-          <div class="portal-ring" style="--i:19"></div>
-          <div class="portal-ring" style="--i:20"></div>
-          <div class="portal-ring" style="--i:21"></div>
-          <div class="portal-ring" style="--i:22"></div>
-          <div class="portal-ring" style="--i:23"></div>
-          <div class="portal-ring" style="--i:24"></div>
-          <div class="portal-ring" style="--i:25"></div>
-          <div class="portal-ring" style="--i:26"></div>
-          <div class="portal-ring" style="--i:27"></div>
-          <div class="portal-ring" style="--i:28"></div>
-          <div class="portal-ring" style="--i:29"></div>
-          <div class="portal-ring" style="--i:30"></div>
-          <div class="portal-ring" style="--i:31"></div>
-          <div class="portal-ring" style="--i:32"></div>
-          <div class="portal-ring" style="--i:33"></div>
-          <div class="portal-ring" style="--i:34"></div>
-            <div class="portal-mist" aria-hidden="true"></div>
-          </div>
-        </div>
-      </div>
-        
-      </div>
+  <div class="silk" aria-hidden="true">
+    <span class="s1"></span><span class="s2"></span><span class="s3"></span>
+  </div>
+  <svg class="grain" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <filter id="grainFilter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 0.05 0"/>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#grainFilter)"/>
+  </svg>
+
+  <div class="wrap hero-grid">
+    <div>
+      <h1 class="display r" data-hero>The cost of trust,<br class="brk">priced per counterparty.</h1>
+      <p class="lede r" data-hero>Instead of locking the full amount, an AI model reads what this counterparty has actually done and prices the trade: collateral, fee, and recourse, all sized to its probability of default.</p>
+      <div class="hero-act r" data-hero>
+        <a class="btn btn-solid" href="#contact">Talk to us <span class="arw" aria-hidden="true">&rarr;</span></a>
+        <a class="tlink" href="#engine">How it works <span class="arw" aria-hidden="true">&rarr;</span></a>
       </div>
     </div>
+
+    <figure class="r" data-hero>
+      <div class="engine" id="engine-fig">
+        <div class="eng-head">
+          <span class="eng-state" id="state">Incoming</span>
+          <span class="eng-illus">Illustrative</span>
+        </div>
+
+        <!-- the trade in hand -->
+        <div class="lane">
+          <div class="trade" id="trade">
+            <span class="t-ref" id="ref">A&#8209;2291</span>
+            <span class="t-amt num" id="amt">2,000,000.00</span>
+          </div>
+        </div>
+
+        <!-- four checks, stamped in order as the trade passes -->
+        <div class="checks" id="checks">
+          <div class="chk"><i></i><span>Settlement history</span><b data-v></b></div>
+          <div class="chk"><i></i><span>Delivered on time</span><b data-v></b></div>
+          <div class="chk"><i></i><span>Disputes</span><b data-v></b></div>
+          <div class="chk"><i></i><span>Wallet provenance</span><b data-v></b></div>
+        </div>
+
+        <!-- the verdict -->
+        <div class="verdict" id="verdict">
+          <div class="v-pd">
+            <span class="v-k">Probability of default</span>
+            <span class="v-pd-n num" id="pd">&mdash;</span>
+          </div>
+          <div class="v-out">
+            <div><span class="v-k">Collateral</span><b class="num" id="oColl">&mdash;</b></div>
+            <div><span class="v-k">Fee</span><b class="num" id="oFee">&mdash;</b></div>
+            <div><span class="v-k">Recourse</span><b id="oRec">&mdash;</b></div>
+          </div>
+        </div>
+
+        <!-- the whole trade as a bar; only the posted share is coloured -->
+        <div class="posted" id="posted">
+          <div class="p-top">
+            <span class="p-k">Capital tied up</span>
+            <span class="p-n"><b class="num" id="pAmt">&mdash;</b> <em class="num" id="pPct">&mdash;</em></span>
+          </div>
+          <div class="p-track"><i id="pFill"></i></div>
+          <div class="p-foot"><span class="num" id="pFree">&mdash;</span> stays available</div>
+        </div>
+      </div>
+      </div>
+      </div>
+      </div>
+    </figure>
   </div>
 
-  <div class="wrap strip" data-hero>
-    <!-- TODO: wording is yours to set — these are the Advaita Labs network's
-         logos, not a claim that each one is an Atara customer. -->
-    <p class="strip-k">Ecosystem</p>
-    <div class="ticker"><div class="ticker-in" id="ticker"></div></div>
-  </div>
-</section>
-
-<!-- ══════════ §02 CAPABILITIES ══════════ -->
-<section class="sec" id="capabilities">
-  <div class="wrap">
-    <h2 class="h2 r" style="max-width:19ch">A full suite of payment products</h2>
-
-    <div class="caps">
-      <article class="cap r">
-        <h3 class="h3">On-ramp</h3>
-        <p>Take in the local currency your users actually hold and settle it as stablecoin.</p>
-        <div class="cap-fig">
-          <div class="ui">
-            <div class="ui-row">
-              <div class="ui-k">You send</div>
-              <div class="ui-line"><span class="cc sgd"><i></i>SGD</span>
-                <span class="ui-amt big" data-num="5000" data-dp="2">5,000.00</span></div>
-            </div>
-            <div class="ui-row">
-              <div class="ui-k">You receive</div>
-              <div class="ui-line"><span class="cc usdc"><i></i>USDC</span>
-                <span class="ui-amt big" data-num="3725.06" data-dp="2">3,725.06</span></div>
-            </div>
-            <div class="ui-row" style="padding-top:.55rem"><span class="ui-btn">Buy USDC</span></div>
-            <div class="ui-foot"><span>Rate 1.3423 SGD / USDC</span><span>~<b data-num="40" data-dp="0">40</b>s</span></div>
-          </div>
-        </div>
-      </article>
-
-      <article class="cap r">
-        <h3 class="h3">Off-ramp</h3>
-        <p>Send stablecoin out to a local bank account or wallet, in the currency the payee banks in.</p>
-        <div class="cap-fig">
-          <div class="ui">
-            <div class="ui-row">
-              <div class="ui-k">Withdraw</div>
-              <div class="ui-line"><span class="cc usdc"><i></i>USDC</span>
-                <span class="ui-amt" data-num="200" data-dp="2">200.00</span></div>
-            </div>
-            <div class="ui-row">
-              <div class="ui-k">Payout</div>
-              <div class="ui-line"><span class="cc hkd"><i></i>HKD</span>
-                <span class="ui-amt big" data-num="1562.00" data-dp="2">1,562.00</span></div>
-            </div>
-            <div class="ui-row">
-              <div class="ui-line"><span style="color:var(--ui-dim)">HSBC Hong Kong</span>
-                <span style="font-variant-numeric:tabular-nums" data-scramble="•••• 4839">•••• 4839</span></div>
-            </div>
-            <div class="ui-foot"><span>Arrives same day</span><span class="ui-pill">Ready</span></div>
-          </div>
-        </div>
-      </article>
-
-      <article class="cap r">
-        <h3 class="h3">FX settlement</h3>
-        <p>Quote a rate, hold it for the life of the payment, settle across currencies on the chain.</p>
-        <div class="cap-fig">
-          <div class="ui">
-            <div class="ui-row">
-              <div class="rate"><span class="cc usd"><i></i>USD</span><b data-tick="1.0000" data-dp="4">1.0000</b></div>
-              <div class="rate"><span class="cc eur"><i></i>EUR</span><b data-tick="0.9180" data-dp="4">0.9180</b></div>
-              <div class="rate"><span class="cc sgd"><i></i>SGD</span><b data-tick="1.3423" data-dp="4">1.3423</b></div>
-              <div class="rate"><span class="cc hkd"><i></i>HKD</span><b data-tick="7.8100" data-dp="4">7.8100</b></div>
-            </div>
-            <div class="ui-foot"><span><i class="live" aria-hidden="true"></i>Live · per USDC</span>
-              <span class="ui-pill">Held <b data-down="30" data-suf=" min">30 min</b></span></div>
-          </div>
-        </div>
-      </article>
-
-      <article class="cap r">
-        <h3 class="h3">Agent cards <span class="chip-prev">Preview</span></h3>
-        <p>An agent issues a scoped virtual card to another agent, with a limit set by the risk model.</p>
-        <div class="cap-fig">
-          <div class="ccard-wrap">
-            <div class="ccard-stage">
-            <div class="ccard" id="agentCard">
-              <span class="ccard-clip" aria-hidden="true"><span class="sheen"></span></span>
-              <div class="ccard-top">
-                <span class="chip" aria-hidden="true"></span>
-                <svg class="wave" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                  <path d="M7 4a9 9 0 010 12M11 6a6 6 0 010 8M15 8a3 3 0 010 4"
-                        stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-                </svg>
-              </div>
-              <div class="ccard-no">5412<i></i>0071<i></i>3388<i></i>4839</div>
-              <div class="ccard-foot">
-                <div><span class="lb">Issued to</span>AGT.04</div>
-                <div><span class="lb">Valid thru</span>08 / 28</div>
-                <div class="brand">ATARA</div>
-              </div>
-            </div>
-            </div>
-            <div class="ccard-lim">
-              <div class="mk-bar"><i data-bar="38" style="width:38%"></i></div>
-              <div class="row"><span><b data-num="1240" data-dp="0">1,240</b> used</span><span>3,250 limit</span></div>
-            </div>
-          </div>
-        </div>
-      </article>
-
-      <article class="cap r">
-        <h3 class="h3">Conditional payments</h3>
-        <p>Attach the terms to the money. Funds release when the conditions clear, not before.</p>
-        <div class="cap-fig">
-          <div class="ui">
-            <div class="ui-row">
-              <div class="ui-line" style="margin-bottom:.55rem">
-                <span class="ui-k" style="margin:0">Payment 8f21</span>
-                <span class="ui-pill wait"><b data-seqcount="3">2 / 3</b></span></div>
-              <div class="crow on" data-seq="0"><span class="bx"></span>Buyer credit &ge; 720<em>748</em></div>
-              <div class="crow on" data-seq="1"><span class="bx"></span>Within limit · 5,000 / txn<em>2,500</em></div>
-              <div class="crow"><span class="bx"></span>Delivery confirmed · SH-88213<em>in transit</em></div>
-            </div>
-            <div class="ui-row" style="padding-top:.55rem"><span class="ui-btn off">Held until all clear</span></div>
-          </div>
-        </div>
-      </article>
-
-      <article class="cap r">
-        <h3 class="h3">Global payouts</h3>
-        <p>Many recipients, many corridors, one call. Each is priced to its own counterparty risk.</p>
-        <div class="cap-fig">
-          <div class="ui">
-            <div class="ui-row">
-              <div class="pay"><span class="av">SG</span><span class="nm">Singapore · SGD</span><span class="amt">0.08%</span></div>
-              <div class="pay"><span class="av">HK</span><span class="nm">Hong Kong · HKD</span><span class="amt">0.11%</span></div>
-              <div class="pay"><span class="av">LN</span><span class="nm">London · GBP</span><span class="amt">0.14%</span></div>
-              <div class="pay"><span class="av">+</span><span class="nm" style="color:var(--ui-dim)">181 more recipients</span></div>
-            </div>
-            <div class="ui-foot"><span><b data-num="184" data-dp="0">184</b> payouts</span><span class="ui-pill">One request</span></div>
-          </div>
-        </div>
-      </article>
-    </div>
+  <div class="wrap strip r">
+    <div class="strip-lbl">Advaita ecosystem</div>
+    <div class="ticker"><div class="ticker-in" id="ticker" aria-hidden="true"></div></div>
   </div>
 </section>
 
-<!-- ══════════ §03 WHY ATARA ══════════ -->
-<section class="sec" id="why">
+<!-- ══ THE ENGINE ═════════════════════════════════════════════ -->
+<section class="dark" id="engine">
   <div class="wrap">
-    <h2 class="h2 r" style="max-width:17ch">Purpose-built for agent payments</h2>
+    <h2 class="head r">The trust model</h2>
+    <p class="lede r" style="max-width:52ch;margin-top:1.6rem">Trust here is computed, not assumed. The model reads what a counterparty has actually done, and turns it into the three numbers that decide a trade.</p>
 
-    <!-- ① credit — a counterparty screen, dense enough to fill its half -->
-    <div class="wb r">
-      <div class="wb-txt">
-        <span class="wb-n">01</span>
-        <h3 class="h3">Credit on every transaction</h3>
-        <p>We price each transfer to its counterparty's default probability. Not a yes/no gate, but a rate that falls as they prove themselves, and rises the moment they don't.</p>
+    <div class="tm-bleed r">
+    <div class="tm" id="tm">
+      <div class="tm-head" aria-hidden="true">
+        <span>Evidence in</span>
+        <span>One model &middot; per counterparty</span>
+        <span>Terms out</span>
       </div>
-      <div class="wb-fig">
-        <div class="scr">
-          <div class="scr-bar"><span class="scr-t">agent:0x7f3a…c412</span><span class="dot-live">Active</span></div>
 
-          <div class="scr-sec">
-            <div class="scr-k">Credit score</div>
-            <div class="score">
-              <span class="score-v">748</span>
-              <span class="score-d">▲ 12 <em>last 30d</em></span>
-              <span class="score-track"><i style="width:78%"></i></span>
-            </div>
-          </div>
-
-          <div class="scr-sec">
-            <div class="scr-k">Fee on this transfer</div>
-            <div class="scr-row"><span class="scr-big">0.32<em>%</em></span>
-              <span class="scr-side">USDC 8.00<br><em>on 2,500.00</em></span></div>
-            <div class="fall">
-              <span class="fall-v">1.16<em>%</em></span>
-              <svg viewBox="0 0 120 34" preserveAspectRatio="none" aria-hidden="true">
-                <path d="M0 5 C46 5 58 29 120 29" stroke="var(--accent)" stroke-width="1.6" fill="none"/>
-              </svg>
-              <span class="fall-v is-acc">0.08<em>%</em></span>
-            </div>
-            <div class="fall-lab"><span>new</span><span>200 settled</span></div>
-          </div>
-
-          <div class="scr-sec">
-            <div class="scr-k">Settlement history</div>
-            <div class="ticks" aria-hidden="true">
-              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-              <i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i>
-            </div>
-            <div class="scr-meta"><span>10 settled</span><span>0 disputed</span><span>0 reversed</span></div>
-          </div>
-
-          <div class="scr-foot"><span>Repriced on every transfer</span><span>Illustrative</span></div>
+      <div class="tm-grid">
+        <div class="tm-col tm-in">
+          <div class="node"><b>Settlement history</b><i></i></div>
+          <div class="node"><b>Dispute outcomes</b><i></i></div>
+          <div class="node"><b>Verification checks</b><i></i></div>
+          <div class="node"><b>Wallet provenance</b><i></i></div>
         </div>
+
+        <div class="tm-core">
+          <div class="orb" id="tmOrb">
+            <span class="ring r1" aria-hidden="true"></span>
+            <span class="ring r2" aria-hidden="true"></span>
+            <span class="ring r3" aria-hidden="true"></span>
+            <span class="ring r4" aria-hidden="true"></span>
+            <span class="wave" aria-hidden="true"></span>
+            <span class="wave" aria-hidden="true"></span>
+            <span class="wave" aria-hidden="true"></span>
+            <svg class="orb-graph" viewBox="0 0 64 64" aria-hidden="true">
+              <line x1="32" y1="32" x2="14" y2="17"/><line x1="32" y1="32" x2="50" y2="14"/>
+              <line x1="32" y1="32" x2="16" y2="47"/><line x1="32" y1="32" x2="52" y2="44"/>
+              <line x1="16" y1="47" x2="34" y2="52"/><line x1="52" y1="44" x2="34" y2="52"/>
+              <circle cx="32" cy="32" r="3.4" style="animation-delay:0s"/>
+              <circle cx="14" cy="17" r="2.2" style="animation-delay:-.4s"/>
+              <circle cx="50" cy="14" r="2.2" style="animation-delay:-.9s"/>
+              <circle cx="16" cy="47" r="2.2" style="animation-delay:-1.4s"/>
+              <circle cx="52" cy="44" r="2.2" style="animation-delay:-1.9s"/>
+              <circle cx="34" cy="52" r="2.2" style="animation-delay:-2.3s"/>
+            </svg>
+            <div class="orb-pd num" id="tmPd">&mdash;</div>
+          </div>
+        </div>
+
+        <div class="tm-col tm-out">
+          <div class="node"><b>Collateral posted</b><i></i></div>
+          <div class="node"><b>Fee on the trade</b><i></i></div>
+          <div class="node"><b>Recourse if it fails</b><i></i></div>
+        </div>
+      </div>
+
+      <div class="tm-cap">
+        <b id="tmState">Reading the record</b>
+        Probability of default, example counterparty <span id="tmRef">A&#8209;2291</span>
+      </div>
+
+      <svg class="tm-wires" id="tmWires" aria-hidden="true"></svg>
+    </div>
+    </div>
+
+    <div class="claims r">
+      <div class="claim">
+        <h3>Per payment, not per account</h3>
+        <p>A limit set once at onboarding says nothing about the party on the other side of this particular trade. The same counterparty can price differently today than last month, because the record moved.</p>
+      </div>
+      <div class="claim">
+        <h3>A price, not a verdict</h3>
+        <p>Fraud detection answers whether to allow or block. That is table stakes and it frees no capital. A price answers how much to post and what it costs, which is the number a treasury can act on.</p>
+      </div>
+      <div class="claim">
+        <h3>Reversible by design</h3>
+        <p>Every priced trade carries its unwind terms from the start: what returns, to whom, and on what evidence. Written before the trade, not argued after it.</p>
       </div>
     </div>
 
-    <!-- ② reversibility — a payment screen with a live window -->
-    <div class="wb r flip" id="tlFig">
-      <div class="wb-txt">
-        <span class="wb-n">02</span>
-        <h3 class="h3">Reversible while the window is open</h3>
-        <p>Roll a payment back natively, with no chargeback bureaucracy layered on top. The rollback
-           is recorded against the counterparty, so their score moves with it.</p>
-      </div>
-      <div class="wb-fig">
-        <div class="scr">
-          <div class="scr-bar"><span class="scr-t">payment_8f21</span><span class="pill">Cleared</span></div>
-
-          <div class="scr-sec">
-            <div class="scr-row"><span class="scr-big">2,500<em>.00</em></span><span class="cc usdc"><i></i>USDC</span></div>
-            <div class="scr-meta"><span>to agent:0x7f3a…c412</span></div>
-          </div>
-
-          <div class="scr-sec">
-            <div class="scr-k" style="display:flex;justify-content:space-between">
-              <span>Reversal window</span><span>drag</span></div>
-            <div class="tl-bar" id="tlBar" role="slider" tabindex="0"
-                 aria-label="Hours elapsed since clearing" aria-valuemin="0" aria-valuemax="96" aria-valuenow="27" aria-valuetext="27 hours, reversible">
-              <div class="tl-fill" id="tlFill"></div>
-              <span class="tl-head" id="tlHead"></span>
-            </div>
-            <div class="tl-read">
-              <span class="tl-elapsed num"><span id="tlHours">27h</span><em> / 72h</em></span>
-              <span class="tl-state" id="tlState">↩ Reversible</span>
-            </div>
-            <button class="scr-btn" id="tlBtn" type="button">Reverse payment</button>
-          </div>
-
-          <div class="scr-sec">
-            <div class="scr-k">Timeline</div>
-            <ol class="tline">
-              <li class="on"><span class="tl-d"></span>Created<em>00:00</em></li>
-              <li class="on"><span class="tl-d"></span>Conditions met<em>04:12</em></li>
-              <li class="on"><span class="tl-d"></span>Cleared<em>04:14</em></li>
-              <li><span class="tl-d"></span>Final, no rollback<em>72:00</em></li>
-            </ol>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ③ two entry points, one protocol -->
-    <div class="wb r" id="duoFig">
-      <div class="wb-txt">
-        <span class="wb-n">03</span>
-        <h3 class="h3">Agents pay agents natively<span class="chip-prev">Preview</span></h3>
-        <p>Same conditions, same credit assessment, same rollback, whether a person types a sentence or a program makes a call.</p>
-        <button class="replay" id="replayDuo" type="button">↻ Replay</button>
-      </div>
-      <div class="wb-fig wb-fig-split">
-        <div class="scr">
-          <div class="scr-bar"><span class="scr-t">Chat</span><span class="scr-s">human</span></div>
-          <div class="chat">
-            <div class="bub them stat">Balance USDC 41,280.00 · 3 agents active</div>
-            <div class="bub me"><span id="typeChat"></span><span class="car" aria-hidden="true"></span></div>
-            <div class="bub them" id="outChat"></div>
-            <div class="mini" id="chatCard" hidden>
-              <div class="mini-r"><span>USDC 2,500.00</span><span class="pill">Held</span></div>
-              <div class="mini-r sub"><span>to agent:0x7f3a…c412</span><span>fee 0.32%</span></div>
-              <div class="mini-r sub"><span>releases on delivery · SH-88213</span><span>72h window</span></div>
-            </div>
-          </div>
-          <div class="chat-input"><span>Message Atara…</span><i>↑</i></div>
-        </div>
-        <div class="scr term">
-          <div class="scr-bar"><span class="scr-t">Terminal</span><span class="scr-s">agent</span></div>
-          <div class="term-body">
-            <div class="dim">connected</div>
-            <div class="tl1"><span class="p">$</span> <span id="typeCli"></span><span class="car" aria-hidden="true"></span></div>
-            <div id="outCli"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ══════════ §04 PROTOCOL PRIMITIVES ══════════ -->
-<section class="sec" id="primitives">
-  <div class="wrap">
-    <h2 class="h2 r" style="max-width:16ch">Built into every payment</h2>
-    <div class="two" style="margin-top:clamp(2.2rem,4vw,3.2rem)">
-      <div class="prim-grid r">
-        <div class="prim-cell">
-          <span class="k">01</span><h4>Conditions</h4>
-          <p>Delivery, deadlines, signatures, an external feed. Carried by the payment itself.</p>
-        </div>
-        <div class="prim-cell">
-          <span class="k">02</span><h4>Reversibility</h4>
-          <p>A dispute window with a native rollback path and no chargeback bureaucracy.</p>
-        </div>
-        <div class="prim-cell">
-          <span class="k">03</span><h4>Risk-priced fee</h4>
-          <p>Default probability simulated per transfer; the fee follows it down as trust accrues.</p>
-        </div>
-        <div class="prim-cell">
-          <span class="k">04</span><h4>Dual entry</h4>
-          <p>A chat box for people, an API for agents. One protocol underneath both.</p>
-        </div>
-      </div>
-
-      <div class="r fig-well" id="condFig">
-        <div class="ui">
-          <div id="condRows"></div>
-          <div class="cond-gate">
-            <div class="gate-line">
-              <span><span id="condCount">0</span> / 3 cleared</span>
-              <span class="gate-state" id="gateState">Funds held</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ══════════ FOR PEOPLE ══════════ -->
-<section class="sec people" id="people">
-  <div class="wrap">
-    <div class="two">
+    <div class="why r">
       <div>
-        <h2 class="h2 r" style="max-width:15ch">Move money across borders.</h2>
-        <p class="lede r" style="margin-top:1.7rem;max-width:44ch">
-          Buy and sell against the fiat you actually use, settle in stablecoins, pay anywhere.
-          No wire cutoffs, no correspondent banks, no three-day float.
-        </p>
-        <div class="chips r" id="chips"></div>
-        <div style="margin-top:2.6rem" class="r"><a class="tlink" href="#" data-app>Open the app <span class="arw" aria-hidden="true">→</span></a></div>
+        <p class="lede">A model that prices default needs real defaults to learn from. Simulated rounds and wallet activity signals do not produce them.</p>
+        <p class="sub">Our settlement desk does. Every trade runs the same five steps, with six verification checks, two separate screens on the digital leg, and six failure cases whose handling is written down before anyone commits.</p>
+        <p class="sub">Each completed trade leaves one labelled record: who delivered, who was late, who defaulted, with a real amount attached. That record is the input, and it is the part a competitor cannot copy.</p>
+        <p style="margin-top:1.9rem"><a class="tlink" href="desk.html">See the full flow and the unwind table <span class="arw" aria-hidden="true">&rarr;</span></a></p>
       </div>
-
       <div>
-      <figure class="r" style="margin-bottom:clamp(1.6rem,3vw,2.4rem)">
-        <div class="figcap"><span>Fig. 05 · Live corridors</span><span class="hint">Drag to rotate · hover a city</span></div>
-        <div class="globe-wrap">
-          <canvas id="globe" role="img" aria-label="An interactive globe showing payment corridors between cities. Drag to rotate."></canvas>
-          <div class="globe-tip" id="globeTip" aria-hidden="true"></div>
-        </div>
-      </figure>
-
-      <figure class="r" id="rampFig">
-        <div class="figcap"><span>Fig. 06 · Fiat corridor</span><span class="hint">Edit the amount</span></div>
-        <div class="ramp">
-          <div class="ramp-row">
-            <div class="ramp-k">You send</div>
-            <div class="ramp-line">
-              <span class="ramp-cur"><span class="glyph" id="glyphA" aria-hidden="true"></span><span id="curA">SGD</span></span>
-              <label class="skip" for="rampSend">Amount to send</label>
-              <input class="ramp-amt num" id="rampSend" inputmode="decimal" value="5,000.00">
-            </div>
-          </div>
-          <button class="ramp-swap" id="rampSwap" type="button" aria-label="Swap direction">⇅</button>
-          <div class="ramp-row">
-            <div class="ramp-k">You receive</div>
-            <div class="ramp-line">
-              <span class="ramp-cur"><span class="glyph usdc" id="glyphB" aria-hidden="true"></span><span id="curB">USDC</span></span>
-              <label class="skip" for="rampRecv">Amount received</label>
-              <input class="ramp-amt num" id="rampRecv" value="718.39" readonly tabindex="-1">
-            </div>
-          </div>
-          <div class="ramp-foot"><span id="rampRate">RATE 1.3423 SGD / USDC</span><span>INDICATIVE</span></div>
-        </div>
-      </figure>
+        <div class="step"><span class="n">01</span><span>Both sides verified, trade matched</span><span class="who">Nothing has moved</span></div>
+        <div class="step hold"><span class="n">02</span><span>Digital leg into custody, screened again</span><span class="who">Held by Atara</span></div>
+        <div class="step"><span class="n">03</span><span>Fiat sent bank to bank</span><span class="who">Never touches us</span></div>
+        <div class="step hold"><span class="n">04</span><span>Bank confirmation received</span><span class="who">Release unlocked</span></div>
+        <div class="step"><span class="n">05</span><span>Digital leg released, documents issued</span><span class="who">Settled</span></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ══════════ DARK BAND — DEVELOPERS ══════════ -->
-<div class="dark">
-
-<!-- ══════════ DEVELOPERS ══════════ -->
-<section class="sec" id="developers">
+<!-- ══ PAINS ══════════════════════════════════════════════════ -->
+<section class="sec" id="pains">
   <div class="wrap">
-    <div class="two">
-      <div>
-        <h2 class="h2 r" style="max-width:17ch">Create a payment in four lines</h2>
-        <div class="dev-links r">
-          <a class="tlink" href="#">Docs <span class="arw" aria-hidden="true">→</span></a>
-          <a class="tlink" href="#">API reference <span class="arw" aria-hidden="true">→</span></a>
-          <a class="tlink" href="#">Status <span class="arw" aria-hidden="true">→</span></a>
+    <h2 class="head r" style="max-width:20ch">Three things that make a large trade hard, and what we do about each.</h2>
+
+    <div class="pains">
+
+      <div class="pain r">
+        <div>
+          <p class="q">Someone has to send first.</p>
+          <p class="cost">Whoever moves first carries the whole trade until the other side performs. Which is why large trades end up inside a small circle of people you already know, at whatever price that circle offers.</p>
+        </div>
+        <div class="a">
+          <p><b>Neither side sends to the other.</b> The digital leg comes into our custody and the fiat goes bank to bank. The seller does move first, but to us, not to the buyer.</p>
+          <p class="sub">Release runs on the bank receipt rather than on the buyer&rsquo;s confirmation, so a counterparty who has been paid and refuses to confirm cannot stall the trade. Neither party learns who the other is, which also means there is nothing to route around next time.</p>
+          <span class="tag on">Live</span>
         </div>
       </div>
-      <div class="r">
-        <div class="code">
-          <div class="code-bar" role="tablist" aria-label="Language">
-            <button class="code-tab" role="tab" aria-selected="true"  data-lang="ts">TypeScript</button>
-            <button class="code-tab" role="tab" aria-selected="false" data-lang="py">Python</button>
-            <button class="code-tab" role="tab" aria-selected="false" data-lang="sh">cURL</button>
-            <span class="code-file" id="codeFile">payment.ts</span>
-          </div>
-          <pre><code id="codeBody"></code></pre>
-          <div class="term" id="term" aria-live="polite"></div>
+
+      <div class="pain r">
+        <div>
+          <p class="q">One tainted transfer freezes the account.</p>
+          <p class="cost">Funds arrive carrying a history you cannot see, the receiving account is frozen, and the loss can be the entire amount. Checking it yourself is not realistic.</p>
+        </div>
+        <div class="a">
+          <p><b>We screen twice, not once.</b> The wallet is traced through multiple hops before that counterparty ever reaches the book, and the specific transaction that lands in custody is screened again on arrival.</p>
+          <p class="sub">Anything failing the second screen goes back the way it came. It never reaches you, and the trade unwinds under terms agreed in advance.</p>
+          <span class="tag on">Live</span>
         </div>
       </div>
+
+      <div class="pain r">
+        <div>
+          <p class="q">Your capital is safe because it is stuck.</p>
+          <p class="cost">Full escrow works, and it costs the same on every trade whether the counterparty was ever going to be a problem. Two million held for thirty days is roughly eight thousand in carry, earning nothing.</p>
+        </div>
+        <div class="a">
+          <p><b>Post what the risk is worth.</b> The engine estimates how likely this counterparty is to fail on this payment and sizes the collateral to match. A counterparty with a record posts a fraction, and the rest of the money keeps working.</p>
+          <p class="sub">The first two problems are solved by custody and verification, which run today. This one can only be solved by pricing, which is why the engine exists.</p>
+          <span class="tag">In build</span>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
-</div><!-- /.dark -->
 
-<!-- ══════════ FAQ ══════════ -->
-<section class="sec" id="faq">
+<!-- ══ FAQ ════════════════════════════════════════════════════ -->
+<section class="sec" id="faq" style="padding-top:0">
   <div class="wrap">
-    <h2 class="h2 r" style="max-width:14ch">Frequently asked questions</h2>
+    <h2 class="head r">Questions people ask first.</h2>
     <div class="faq r">
-      <details><summary>Do you compete with payment networks?</summary><div class="ans"><p>No. We don't hold your customer relationship and we don't originate business on your rails. We make the payments that run over them programmable.</p></div></details>
-      <details><summary>How is this different from escrow?</summary><div class="ans"><p>Escrow is a third party holding funds and a human deciding when to release them. Ours is the release logic written into the payment.</p></div></details>
-      <details><summary>Is agent payment available now?</summary><div class="ans"><p>Not yet. It's in preview. Fiat corridors and conditional transfers are live today. Join early access and we'll bring you in when the agent surface opens.</p></div></details>
-      <details><summary>How do I integrate?</summary><div class="ans"><p>Through the SDK or the REST API. Start with the docs, or talk to us if you need a corridor we don't list yet.</p></div></details>
-    </div>
-  </div>
-</section>
-
-<!-- ══════════ CTA ══════════ -->
-<section class="cta">
-  <div class="cta-glow" aria-hidden="true"></div>
-  <div class="wrap">
-    <h2 class="h2 r">Start moving money with Atara</h2>
-    <div class="cta-row r">
-      <a class="btn btn-solid" href="#" data-app>Launch App <span class="arw" aria-hidden="true">→</span></a>
-      <a class="tlink" href="#">Read the docs <span class="arw" aria-hidden="true">→</span></a>
-      <a class="tlink" href="#">Talk to us <span class="arw" aria-hidden="true">→</span></a>
+      <details>
+        <summary>Is the credit engine live?<span class="pm" aria-hidden="true"></span></summary>
+        <div class="ans">No. It is in build and it is not extending credit to anyone. What runs today is the settlement desk, and the records its completed trades produce are what the engine will learn from. Everything on this site is labelled with its actual status, including this.</div>
+      </details>
+      <details>
+        <summary>Are you a payment rail?<span class="pm" aria-hidden="true"></span></summary>
+        <div class="ans">No. Settlement runs on existing rails, chains and banks. We build the credit and conditions layer above them, which is why we can sit on top of a rail rather than asking anyone to migrate to a new one.</div>
+      </details>
+      <details>
+        <summary>How is this different from fraud detection?<span class="pm" aria-hidden="true"></span></summary>
+        <div class="ans">Fraud detection is binary: allow or block. It stops bad payments and frees no capital. A credit engine outputs a price instead, which is a different kind of answer: how much collateral, what fee, what recourse. Blocking the bad ones is table stakes. Pricing the good ones is the product.</div>
+      </details>
+      <details>
+        <summary>How is this different from identity or reputation systems?<span class="pm" aria-hidden="true"></span></summary>
+        <div class="ans">Identity proves who a counterparty is. Reputation ranks how they have behaved. A reputation tier can shorten a lock or raise a ceiling, but it does not reduce the amount you have to post. The amount is the number a treasury actually needs, and that is what we compute.</div>
+      </details>
+      <details>
+        <summary>What data trains the model?<span class="pm" aria-hidden="true"></span></summary>
+        <div class="ans">Settlement performance from trades our own desk completes: delivery, timing, disputes, outcomes, each with a real amount attached. First-party records of real obligations, rather than simulated rounds or behaviour inferred from wallet activity.</div>
+      </details>
+      <details>
+        <summary>What can I use today?<span class="pm" aria-hidden="true"></span></summary>
+        <div class="ans">The settlement desk. Send a size and a side and you will get a specific answer: whether we have the other side, what documents are needed, and what it costs. If we cannot do your trade, that comes back in the first reply.</div>
+      </details>
     </div>
   </div>
 </section>
 
 </main>
 
+<section class="cta" id="contact">
+  <div class="wrap">
+    <h2 class="head r">Send us a hard trade.</h2>
+    <p class="r">A size, a side, and a counterparty you do not trust yet. If the desk can settle it we will tell you exactly how. If it cannot, you will know in the first reply.</p>
+    <div class="hero-act r">
+      <a class="btn btn-solid" id="ctaBtn" href="#contact">Talk to us <span class="arw" aria-hidden="true">&rarr;</span></a>
+      <a class="tlink" href="desk.html">See the desk <span class="arw" aria-hidden="true">&rarr;</span></a>
+    </div>
+  </div>
+</section>
+
 <footer>
   <div class="wrap">
     <div class="foot">
-      <div>
-        <a class="brand" href="#top" aria-label="Atara, home"><span class="mark" aria-hidden="true"></span><span class="wordmark">Atara</span></a>
-        <p style="font-size:.875rem;margin-top:1.1rem;max-width:26ch;color:var(--faint)">A conditional payment protocol for people and agents.</p>
-      </div>
-      <div><h4>Protocol</h4><a href="#capabilities">Capabilities</a><a href="#primitives">Primitives</a><a href="#">Whitepaper</a></div>
-      <div><h4>Build</h4><a href="#">Docs</a><a href="#">API reference</a><a href="#">Status</a></div>
-      <div><h4>Company</h4><a href="#">About</a><a href="#">Contact</a><a href="#">Legal</a></div>
+      <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>Atara</a>
+      <nav>
+        <a href="#engine">How it works</a>
+        <a href="#pains">What it solves</a>
+        <a href="desk.html">Settlement desk</a>
+        <a href="#faq">FAQ</a>
+        <a href="#contact">Contact</a>
+      </nav>
     </div>
-    <div class="foot-note"><span>© 2026 ATARA</span><span>ATARA IS NOT A BANK. AGENT PAYMENTS ARE IN PREVIEW.</span></div>
+    <div class="foot-note">
+      <span>© 2026 Atara</span>
+      <span>Atara is not a bank. The credit engine is in development and is not extending credit.</span>
+    </div>
   </div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
 <script>
-/* ══════════════════════════════════════════════════════════════
-   Nothing here hides content. Reveals start from the visible DOM
-   and GSAP sets the "from" state at runtime — if the CDN fails,
-   the page just renders static. Every figure degrades to a
-   readable resting state without animation.
-   ══════════════════════════════════════════════════════════════ */
 window.addEventListener('DOMContentLoaded', () => {
 'use strict';
 
-const APP_URL = "";            // ← product surface
-const WAITLIST_ENDPOINT = "";  // ← POST {email}; empty so nothing is dropped silently
-
+const CONTACT_EMAIL = "";   // ← wire before launch
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const NS = 'http://www.w3.org/2000/svg';
-const el = (id) => document.getElementById(id);
-const svgEl = (t, attrs={}) => { const n=document.createElementNS(NS,t);
-  for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
-const fmt = (n,d=2) => n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const el = id => document.getElementById(id);
+const fmt = n => n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 
-/* ══ 1. Corridor globe — drag to rotate, hover a city ══════════ */
-const CORRIDORS = [
-  { a:['SINGAPORE',   1.35, 103.82], b:['LONDON',    51.51,  -0.13] },
-  { a:['HONG KONG',  22.32, 114.17], b:['NEW YORK',  40.71, -74.01] },
-  { a:['DUBAI',      25.20,  55.27], b:['FRANKFURT', 50.11,   8.68] },
-  { a:['TOKYO',      35.68, 139.69], b:['SINGAPORE',  1.35, 103.82] },
-  { a:['ZURICH',     47.38,   8.54], b:['NEW YORK',  40.71, -74.01] },
-  { a:['SYDNEY',    -33.87, 151.21], b:['HONG KONG', 22.32, 114.17] },
-  { a:['SHANGHAI',   31.23, 121.47], b:['SINGAPORE',  1.35, 103.82] },
-  { a:['MUMBAI',     19.08,  72.88], b:['DUBAI',     25.20,  55.27] },
-];
+if (CONTACT_EMAIL) {
+  const b = el('ctaBtn');
+  if (b) b.href = 'mailto:' + CONTACT_EMAIL + '?subject=Atara%20enquiry';
+}
 
-(function globe(){
-  const cv = el('globe'), tip = el('globeTip'), hint = el('globeHint');
-  if (!cv) return;
-  const ctx = cv.getContext('2d');
-  let W=0,H=0,R=0,cx=0,cy=0;
-
-  const toXYZ=(lat,lng)=>{ const p=(90-lat)*Math.PI/180,t=(lng+180)*Math.PI/180;
-    return [-Math.sin(p)*Math.cos(t), Math.cos(p), Math.sin(p)*Math.sin(t)]; };
-
-  // point cloud
-  const N=1250, DOTS=[];
-  for(let i=0;i<N;i++){ const y=1-(i/(N-1))*2, r=Math.sqrt(Math.max(0,1-y*y));
-    const th=i*Math.PI*(3-Math.sqrt(5)); DOTS.push([Math.cos(th)*r,y,Math.sin(th)*r]); }
-
-  // graticule — gives the sphere structure the dots alone can't
-  const GRAT=[];
-  for(let lat=-60;lat<=60;lat+=30){ const ring=[];
-    for(let lng=-180;lng<=180;lng+=5) ring.push(toXYZ(lat,lng)); GRAT.push(ring); }
-  for(let lng=-180;lng<180;lng+=30){ const m=[];
-    for(let lat=-84;lat<=84;lat+=4) m.push(toXYZ(lat,lng)); GRAT.push(m); }
-
-  const arcPts=(A,B,lift=0.27,n=68)=>{
-    const d=Math.acos(Math.max(-1,Math.min(1,A[0]*B[0]+A[1]*B[1]+A[2]*B[2])));
-    const out=[]; const s=Math.sin(d)||1e-6;
-    for(let i=0;i<=n;i++){ const t=i/n, w1=Math.sin((1-t)*d)/s, w2=Math.sin(t*d)/s;
-      let v=[A[0]*w1+B[0]*w2, A[1]*w1+B[1]*w2, A[2]*w1+B[2]*w2];
-      const L=Math.hypot(v[0],v[1],v[2])||1, k=(1+lift*Math.sin(Math.PI*t))/L;
-      out.push([v[0]*k,v[1]*k,v[2]*k]); }
-    return out;
-  };
-  const ARCS = CORRIDORS.map((c,i)=>({
-    a:c.a[0], b:c.b[0],
-    pts: arcPts(toXYZ(c.a[1],c.a[2]), toXYZ(c.b[1],c.b[2])),
-    endA: toXYZ(c.a[1],c.a[2]), endB: toXYZ(c.b[1],c.b[2]),
-    phase: -i/CORRIDORS.length, ping:-1,
-  }));
-
-  const TILT=-0.42;
-  let rot=0.6, vel=0, dragging=false, lastX=0, hoverArc=-1, userTouched=false;
-
-  const rotate=([x,y,z])=>{
-    const ca=Math.cos(rot), sa=Math.sin(rot);
-    const X=x*ca+z*sa, Z=-x*sa+z*ca;
-    const cb=Math.cos(TILT), sb=Math.sin(TILT);
-    return [X, y*cb-Z*sb, y*sb+Z*cb];
-  };
-  const proj=(p)=>{ const q=rotate(p); return [cx+q[0]*R, cy-q[1]*R, q[2]]; };
-
-  function size(){
-    const dpr=Math.min(2,devicePixelRatio||1), r=cv.getBoundingClientRect();
-    W=Math.max(1,r.width); H=Math.max(1,r.height);
-    cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
-    R=Math.min(W,H)*0.37; cx=W/2; cy=H/2;
-  }
-  size(); addEventListener('resize', ()=>{ size(); theme(); });
-
-  // pointer: drag + hover
-  const pos = (e)=>{ const r=cv.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; };
-  cv.addEventListener('pointerdown', e=>{
-    dragging=true; userTouched=true; lastX=e.clientX; cv.setPointerCapture(e.pointerId);
-    cv.classList.add('dragging'); if(hint) hint.style.opacity='0';
-  });
-  cv.addEventListener('pointerup', e=>{ dragging=false; cv.classList.remove('dragging'); });
-  cv.addEventListener('pointercancel', ()=>{ dragging=false; cv.classList.remove('dragging'); });
-  cv.addEventListener('pointermove', e=>{
-    if (dragging){ const dx=e.clientX-lastX; lastX=e.clientX; rot += dx*0.0062; vel = dx*0.0062; return; }
-    const [mx,my]=pos(e);
-    let best=-1, bd=18;
-    ARCS.forEach((arc,i)=>{
-      [[arc.endA,arc.a],[arc.endB,arc.b]].forEach(([pt])=>{
-        const p=proj(pt); if (p[2]<0.05) return;
-        const d=Math.hypot(p[0]-mx,p[1]-my); if (d<bd){ bd=d; best=i; }
-      });
-    });
-    hoverArc=best;
-    if (best>=0 && tip){
-      const arc=ARCS[best];
-      const pA=proj(arc.endA), pB=proj(arc.endB);
-      const p = pA[2]>pB[2]?pA:pB;
-      tip.innerHTML = `${arc.a} <b>→</b> ${arc.b}`;
-      tip.style.left=p[0]+'px'; tip.style.top=p[1]+'px'; tip.style.opacity='1';
-    } else if (tip) tip.style.opacity='0';
-  });
-  cv.addEventListener('pointerleave', ()=>{ hoverArc=-1; if(tip) tip.style.opacity='0'; });
-
-  // Read the theme off the canvas itself so the figure follows whichever
-  // band it lives in — no colours are duplicated between CSS and JS.
-  let C={};
-  function theme(){
-    const s=getComputedStyle(cv), v=(n)=>s.getPropertyValue(n).trim();
-    C={ dot:v('--viz-dot'), grid:v('--viz-grid'), acc:v('--viz-pulse'),
-        accD:v('--viz-arc'), txt:v('--viz-label'), halo:v('--viz-halo'),
-        gain: parseFloat(v('--viz-gain'))||1 };
-  }
-  theme();
-  const A=(x)=>{ ctx.globalAlpha=Math.min(1,x*C.gain); };
-
-  function draw(){
-    ctx.clearRect(0,0,W,H);
-    const g=ctx.createRadialGradient(cx,cy,R*.5,cx,cy,R*1.55);
-    g.addColorStop(0,C.halo); g.addColorStop(1,'transparent');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R*1.55,0,7); ctx.fill();
-
-    // graticule
-    ctx.lineWidth=1;
-    for (const ring of GRAT){
-      for (let i=0;i<ring.length-1;i++){
-        const p=proj(ring[i]), q=proj(ring[i+1]);
-        const z=(p[2]+q[2])/2; if (z<0) continue;
-        A(0.05+0.07*z); ctx.strokeStyle=C.grid;
-        ctx.beginPath(); ctx.moveTo(p[0],p[1]); ctx.lineTo(q[0],q[1]); ctx.stroke();
-      }
-    }
-
-    // dots
-    for (const d of DOTS){
-      const p=proj(d); if (p[2]<-0.05) continue;
-      A(0.05+0.38*Math.max(0,p[2]));
-      ctx.fillStyle=C.dot;
-      const s=0.7+0.85*Math.max(0,p[2]);
-      ctx.fillRect(p[0]-s/2,p[1]-s/2,s,s);
-    }
-    ctx.globalAlpha=1;
-
-    // corridors
-    ARCS.forEach((arc,ai)=>{
-      const hot = ai===hoverArc;
-      const P = arc.pts.map(proj);
-      ctx.lineWidth = hot?1.4:1;
-      for (let i=0;i<P.length-1;i++){
-        const z=(P[i][2]+P[i+1][2])/2; if (z<-0.1) continue;
-        A((hot?0.30:0.10)+(hot?0.45:0.20)*Math.max(0,z));
-        ctx.strokeStyle=hot?C.acc:C.accD;
-        ctx.beginPath(); ctx.moveTo(P[i][0],P[i][1]); ctx.lineTo(P[i+1][0],P[i+1][1]); ctx.stroke();
-      }
-      if (arc.phase>=0){
-        const head=arc.phase*(P.length-1), tail=Math.max(0,head-P.length*0.17);
-        for (let i=Math.floor(tail); i<Math.min(P.length-1,Math.ceil(head)); i++){
-          const z=(P[i][2]+P[i+1][2])/2; if (z<-0.1) continue;
-          const t=(i-tail)/Math.max(1,(head-tail));
-          ctx.globalAlpha=Math.pow(t,1.6)*(0.25+0.75*Math.max(0,z));
-          ctx.strokeStyle=C.acc; ctx.lineWidth=1.7;
-          ctx.beginPath(); ctx.moveTo(P[i][0],P[i][1]); ctx.lineTo(P[i+1][0],P[i+1][1]); ctx.stroke();
-        }
-        const hp=P[Math.min(P.length-1,Math.round(head))];
-        if (hp && hp[2]>-0.1){
-          ctx.globalAlpha=0.4+0.6*Math.max(0,hp[2]); ctx.fillStyle=C.acc;
-          ctx.beginPath(); ctx.arc(hp[0],hp[1],2.2,0,7); ctx.fill();
-        }
-      }
-      [[arc.endA,arc.a],[arc.endB,arc.b]].forEach(([e,lab])=>{
-        const p=proj(e); if (p[2]<0.1) return;
-        const vis=Math.min(1,(p[2]-0.1)*3.4);
-        ctx.globalAlpha=vis; ctx.fillStyle=C.acc;
-        const s=hot?4.4:3.2; ctx.fillRect(p[0]-s/2,p[1]-s/2,s,s);
-        if (hot){ ctx.globalAlpha=vis*.5; ctx.strokeStyle=C.acc; ctx.lineWidth=1;
-          ctx.beginPath(); ctx.arc(p[0],p[1],9,0,7); ctx.stroke(); }
-        ctx.globalAlpha=vis*(hot?.95:.62);
-        ctx.strokeStyle=C.accD; ctx.lineWidth=1;
-        ctx.beginPath(); ctx.moveTo(p[0]+5,p[1]); ctx.lineTo(p[0]+13,p[1]); ctx.stroke();
-        ctx.fillStyle=hot?C.acc:C.txt;
-        ctx.font='500 8.5px "JetBrains Mono", monospace'; ctx.textBaseline='middle';
-        ctx.fillText(lab, p[0]+17, p[1]+.5);
-      });
-      if (arc.ping>=0){
-        const p=proj(arc.endB);
-        if (p[2]>0){ ctx.globalAlpha=(1-arc.ping)*.6; ctx.strokeStyle=C.acc; ctx.lineWidth=1;
-          ctx.beginPath(); ctx.arc(p[0],p[1],3+arc.ping*18,0,7); ctx.stroke(); }
-      }
-    });
-    ctx.globalAlpha=1;
-  }
-
-  function tick(){
-    if (!dragging){ rot += 0.0015 + vel; vel *= 0.94; if (Math.abs(vel)<1e-5) vel=0; }
-    for (const arc of ARCS){
-      arc.phase += 0.0035;
-      if (arc.phase>=1){ arc.phase=-0.3-Math.random()*0.6; arc.ping=0; }
-      if (arc.ping>=0){ arc.ping+=0.02; if (arc.ping>1) arc.ping=-1; }
-    }
-    draw();
-    requestAnimationFrame(tick);
-  }
-  if (reduced){ ARCS.forEach((a,i)=>a.phase=0.35+i*0.07); draw(); }
-  else tick();
-  setTimeout(()=>{ if (!userTouched && hint) hint.style.opacity='.55'; }, 100);
+/* Ecosystem strip. Duplicated once so the -50% keyframe loops seamlessly. */
+(function ticker(){
+  const host = el('ticker'); if (!host) return;
+  const LOGOS = ['ethereum-foundation','g42','cyberport','hkstp','a-star','ai-singapore',
+    'vana','pr-spera','intelligent-internet','desci-world','bio','hetu','researchhub','open-targets'];
+  host.innerHTML = LOGOS.concat(LOGOS)
+    .map(n => `<img src="assets/logos/${n}.png" alt="" loading="lazy" decoding="async">`).join('');
 })();
 
-/* ══ 2. Logo strip ═════════════════════════════════════════════ */
-const LOGOS=[
-  ['Ethereum Foundation','ethereum-foundation.png'], ['G42','g42.png'],
-  ['A*STAR','a-star.png'],                           ['AI Singapore','ai-singapore.png'],
-  ['Cyberport','cyberport.png'],                     ['HKSTP','hkstp.png'],
-  ['VANA','vana.png'],                               ['Próspera','pr-spera.png'],
-  ['Intelligent Internet','intelligent-internet.png'],['DeSci.World','desci-world.png'],
-  ['BIO','bio.png'],                                 ['ResearchHub','researchhub.png'],
-  ['Open Targets','open-targets.png'],               ['HETU','hetu.png'],
-];
-(function strip(){
-  const t=el('ticker'); if(!t) return;
-  const row = LOGOS.map(([name,file],i)=>
-    `<img src="assets/logos/${file}" alt="${name}" loading="${i<6?'eager':'lazy'}" decoding="async">`
-  ).join('');
-  // duplicated so the -50% keyframe loops seamlessly; the copy is decorative
-  t.innerHTML = row + row.replace(/alt="[^"]*"/g,'alt="" aria-hidden="true"');
-})();
+/* ── the credit engine ────────────────────────────────────────────
+   A trade arrives, four checks stamp in sequence, a verdict prints,
+   the capital bar shows how little had to be posted. Then the next trade.
+   The pauses matter: this is one decision at a time, not a number
+   wandering. Four counterparties with real spread between them, so
+   the verdict visibly depends on the data rather than on a timer. */
+(function creditEngine(){
+  const state = el('state'), trade = el('trade'), ref = el('ref'), amt = el('amt'),
+        checks = el('checks'), verdict = el('verdict'), posted = el('posted'),
+        pFill = el('pFill'), pAmt = el('pAmt'), pPct = el('pPct'), pFree = el('pFree'),
+        pd = el('pd'), oColl = el('oColl'), oFee = el('oFee'), oRec = el('oRec');
+  if (!state || !trade || !checks || !verdict) return;
 
-/* ══ 5. Conditions — toggle them ═══════════════════════════════ */
-(function conditions(){
-  const host=el('condRows'); if(!host) return;
-  const C=[
-    { k:'Buyer credit ≥ 720',          v:'748',        met:false },
-    { k:'Within limit · 5,000 / txn',  v:'2,500',      met:false },
-    { k:'Delivery confirmed · SH-88213', v:'in transit', met:false },
+  const rows = [...checks.querySelectorAll('.chk')];
+
+  const BOOK = [
+    { ref:'A-2291', amt:2000000, pd:1.54, rec:'Full',
+      vals:['142 trades','99.3%','None','Clean, 6 hops'] },
+    { ref:'B-0417', amt:5400000, pd:0.62, rec:'Full',
+      vals:['1,208 trades','99.9%','None','Clean, 9 hops'] },
+    { ref:'C-8830', amt:750000,  pd:4.10, rec:'Partial',
+      vals:['23 trades','94.1%','2, resolved','Clean, 4 hops'] },
+    { ref:'D-1165', amt:3100000, pd:2.35, rec:'Full',
+      vals:['87 trades','97.6%','1, resolved','Clean, 7 hops'] },
   ];
-  const fill=el('gateFill'), count=el('condCount'), state=el('gateState');
-  const rows=C.map((c,i)=>{
-    const b=document.createElement('button');
-    b.type='button'; b.className='cond-row'; b.setAttribute('aria-pressed','false');
-    b.innerHTML=`<span class="box" aria-hidden="true"></span>${c.k}<em class="cv">${c.v}</em><span class="st">Open</span>`;
-    b.addEventListener('click',()=>{ C[i].met=!C[i].met; render(); });
-    host.appendChild(b); return b;
-  });
-  function render(){
-    const n=C.filter(c=>c.met).length;
-    rows.forEach((r,i)=>{
-      r.classList.toggle('met',C[i].met);
-      r.setAttribute('aria-pressed',String(C[i].met));
-      r.querySelector('.st').textContent = C[i].met?'Met':'Open';
-    });
-    count.textContent=n;
-    if (fill) fill.style.width=(n/C.length*100)+'%';   // the bar was removed in the simplification pass
-    const go = n===C.length;
-    state.textContent = go ? '✓ Released' : 'Funds held';
-    state.classList.toggle('go',go);
-  }
-  render();
-  // nudge the first two open on scroll so it reads as live, not empty
-  if (!reduced) window.__condAuto = () => {
-    [0,1].forEach((i,k)=>setTimeout(()=>{ C[i].met=true; render(); }, 500+k*750));
+
+  let idx = -1, alive = false;
+  const timers = [];
+  const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+  const clearAll = () => timers.splice(0).forEach(clearTimeout);
+
+  const setVerdict = c => {
+    const coll = Math.min(.45, Math.max(.05, c.pd / 12));
+    pd.textContent    = c.pd.toFixed(2) + '%';
+    oColl.textContent = (coll * 100).toFixed(1) + '%';
+    oFee.textContent  = (c.pd * .122).toFixed(2) + '%';
+    oRec.textContent  = c.rec;
+    return coll;
   };
+
+  /* the bar is the trade; the filled part is what has to be posted */
+  const showPosted = (c, coll) => {
+    pAmt.textContent = fmt(c.amt * coll);
+    pPct.textContent = (coll * 100).toFixed(1) + '%';
+    pFree.textContent = fmt(c.amt * (1 - coll));
+    posted.classList.add('on');
+    requestAnimationFrame(() => { pFill.style.width = (coll * 100).toFixed(1) + '%'; });
+  };
+
+  const cycle = () => {
+    clearAll();
+    idx = (idx + 1) % BOOK.length;
+    const c = BOOK[idx];
+
+    /* reset */
+    rows.forEach(r => { r.classList.remove('on'); r.querySelector('[data-v]').textContent = ''; });
+    verdict.classList.remove('on');
+    posted.classList.remove('on');
+    pFill.style.width = '0';
+    state.textContent = 'Incoming';
+    ref.textContent = c.ref;
+    amt.textContent = c.amt.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+    /* the trade slides in */
+    trade.animate(
+      [ { transform:'translateX(-14%)', opacity:0 },
+        { transform:'translateX(0)',    opacity:1 } ],
+      { duration:620, easing:'cubic-bezier(.16,1,.3,1)', fill:'both' });
+
+    /* four checks stamp in order */
+    at(760, () => { state.textContent = 'Checking counterparty'; });
+    rows.forEach((r, k) => at(820 + k * 480, () => {
+      r.classList.add('on');
+      r.querySelector('[data-v]').textContent = c.vals[k];
+    }));
+
+    const done = 820 + rows.length * 480;
+
+    at(done + 180, () => { state.textContent = 'Pricing'; });
+    at(done + 520,  () => { verdict.classList.add('on'); state.textContent = 'Priced'; setVerdict(c); });
+    at(done + 1150, () => showPosted(c, Math.min(.45, Math.max(.05, c.pd / 12))));
+    at(done + 4600, cycle);
+  };
+
+  /* a composed still, used for reduced motion and as the fallback */
+  const rest = () => {
+    const c = BOOK[0];
+    ref.textContent = c.ref;
+    amt.textContent = c.amt.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    rows.forEach((r, k) => { r.classList.add('on'); r.querySelector('[data-v]').textContent = c.vals[k]; });
+    const coll = setVerdict(c);
+    verdict.classList.add('on'); state.textContent = 'Priced';
+    showPosted(c, coll);
+  };
+
+  if (reduced) { rest(); return; }
+
+  const start = () => { if (alive) return; alive = true; cycle(); };
+  const stop  = () => { alive = false; clearAll(); };
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? start() : stop()),
+      { threshold:.15 }).observe(trade);
+  } else start();
+
+  /* only fires if the observer never did; must not clobber a running cycle */
+  setTimeout(() => { if (!alive) rest(); }, 4000);
 })();
 
-/* ══ 6. Dispute window — draggable ═════════════════════════════ */
-(function dispute(){
-  const bar=el('tlBar'); if(!bar) return;
-  const fill=el('tlFill'), head=el('tlHead'), hours=el('tlHours'), state=el('tlState');
-  const MAX=96, FINAL=72;
-  let h=27;
-  function render(){
-    const pct=h/MAX*100;
-    fill.style.width=pct+'%'; head.style.left=pct+'%';
-    hours.textContent=Math.round(h)+'h';
-    const final = h>FINAL;
-    fill.classList.toggle('final',final); head.classList.toggle('final',final);
-    state.classList.toggle('final',final);
-    state.textContent = final ? '✕ Final, no rollback' : '↩ Reversible';
-    const btn=el('tlBtn');
-    if (btn){ btn.classList.toggle('off', final);
-      btn.textContent = final ? 'Window closed' : 'Reverse payment'; }
-    bar.setAttribute('aria-valuenow',Math.round(h));
-    bar.setAttribute('aria-valuetext',`${Math.round(h)} hours, ${final?'final':'reversible'}`);
-  }
-  const set=(clientX)=>{
-    const r=bar.getBoundingClientRect();
-    h=Math.max(0,Math.min(MAX,(clientX-r.left)/r.width*MAX));
-    render();
+/* ── the trust model ──────────────────────────────────────────────
+   Four kinds of evidence travel to one model, a probability resolves
+   inside it, three terms leave it. Same book and the same two formulas
+   as the hero figure, so the two can never print numbers that disagree.
+
+   The wires are generated from the rendered card geometry rather than
+   authored as fixed path data: the columns are fluid, so any hand-drawn
+   curve would be right at exactly one viewport width. Rebuilt on resize.
+   Everything degrades: no ResizeObserver, no WAAPI, reduced motion, or a
+   throttled rAF each land on the same composed still. */
+(function trustModel(){
+  const tm = el('tm'); if (!tm) return;
+  const wires = el('tmWires'), orb = el('tmOrb'),
+        pdEl = el('tmPd'), stateEl = el('tmState'), refEl = el('tmRef');
+  const ins  = [...tm.querySelectorAll('.tm-in .node')];
+  const outs = [...tm.querySelectorAll('.tm-out .node')];
+  const waves = [...tm.querySelectorAll('.orb .wave')];
+  if (!wires || !orb || !pdEl || ins.length !== 4 || outs.length !== 3) return;
+
+  const NS = 'http://www.w3.org/2000/svg';
+
+  /* values stay short enough to hold one line at the narrowest card width:
+     a wrap changes the card's height, and the height is load bearing here */
+  const BOOK = [
+    { ref:'A-2291', pd:1.54, rec:'Full',
+      ev:['142 trades, 99.3%','None','Six of six','Clean, 6 hops'] },
+    { ref:'B-0417', pd:0.62, rec:'Full',
+      ev:['1,208 trades, 99.9%','None','Six of six','Clean, 9 hops'] },
+    { ref:'C-8830', pd:4.10, rec:'Partial',
+      ev:['23 trades, 94.1%','2, resolved','Six of six','Clean, 4 hops'] },
+    { ref:'D-1165', pd:2.35, rec:'Full',
+      ev:['87 trades, 97.6%','1, resolved','Six of six','Clean, 7 hops'] },
+  ];
+  const collOf = pd => Math.min(.45, Math.max(.05, pd / 12));   // as in the hero
+  const termsOf = c => [ (collOf(c.pd) * 100).toFixed(1) + '%',
+                         (c.pd * .122).toFixed(2) + '%', c.rec ];
+
+  let pulses = [], idx = -1, alive = false, raf = 0;
+  const timers = [];
+  const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+  /* Packets are queued with their own delay, so clearing timers is not enough:
+     leaving a section mid cycle would let them land on the next one. Cancel the
+     element animations too. Shimmer is CSS driven and stays untouched. */
+  const clearAll = () => {
+    timers.splice(0).forEach(clearTimeout);
+    if (raf) cancelAnimationFrame(raf); raf = 0;
+    [...pulses, ...waves].forEach(n =>
+      n.getAnimations && n.getAnimations().forEach(a => a.cancel()));
   };
-  let drag=false;
-  bar.addEventListener('pointerdown',e=>{ drag=true; bar.setPointerCapture(e.pointerId); set(e.clientX); });
-  bar.addEventListener('pointermove',e=>{ if(drag) set(e.clientX); });
-  bar.addEventListener('pointerup',()=>drag=false);
-  bar.addEventListener('pointercancel',()=>drag=false);
-  bar.addEventListener('keydown',e=>{
-    const d = e.key==='ArrowRight'?3 : e.key==='ArrowLeft'?-3 : e.key==='Home'?-999 : e.key==='End'?999 : 0;
-    if(!d) return; e.preventDefault();
-    h=Math.max(0,Math.min(MAX,h+d)); render();
-  });
-  render();
-})();
 
-/* ══ 7. Risk — slider + presets, chart derived from the model ══ */
-
-/* ══ 8. Dual entry — typing, replayable ════════════════════════ */
-const duo=(()=>{
-  const chat=el('typeChat'), cli=el('typeCli'), oc=el('outChat'), ol=el('outCli');
-  if(!chat) return {run(){}};
-  const A='Pay the Singapore supplier once the shipment clears';
-  const B='atara pay agent:0x7f3a…c412 --amount 2500 --on delivery:SH-88213';
-  let timers=[];
-  const type=(node,text,speed,done)=>{
-    let i=0;
-    const step=()=>{ node.textContent=text.slice(0,++i);
-      if(i<text.length) timers.push(setTimeout(step,speed)); else done&&done(); };
-    step();
-  };
-  function run(){
-    timers.forEach(clearTimeout); timers=[];
-    chat.textContent=''; cli.textContent=''; oc.textContent=''; ol.textContent='';
-    const mc0=el('chatCard'); if(mc0) mc0.hidden=true;
-    if (reduced){ chat.textContent=A; cli.textContent=B;
-      oc.textContent='Created a conditional payment. Releases on delivery.';
-      const mcR=el('chatCard'); if(mcR) mcR.hidden=false;
-      ol.innerHTML='✓ <b>payment_8f21</b> · fee 0.32% · 72h window'; return; }
-    type(chat,A,36,()=>{ timers.push(setTimeout(()=>{
-      oc.textContent='Created a conditional payment. Releases on delivery.';
-      const mc=el('chatCard'); if(mc) mc.hidden=false; },320)); });
-    timers.push(setTimeout(()=>type(cli,B,22,()=>{
-      timers.push(setTimeout(()=>{ ol.innerHTML=
-        '→ resolving agent:0x7f3a…c412<br>→ credit 748 · limit ok<br>→ fee <b>0.32%</b> · USDC 8.00<br>✓ <b>payment_8f21</b> · 72h window'; },320));
-    }),900));
-  }
-  el('replayDuo')?.addEventListener('click',run);
-  return { run };
-})();
-
-/* ══ 9. Fiat corridor — editable, swappable ════════════════════ */
-(function ramp(){
-  const send=el('rampSend'), recv=el('rampRecv'), swap=el('rampSwap'),
-        curA=el('curA'), curB=el('curB'), gA=el('glyphA'), gB=el('glyphB'), rate=el('rampRate');
-  if(!send) return;
-  const RATE=1.3423;
-  let fiatFirst=true;
-  const num=(s)=>parseFloat(String(s).replace(/[^0-9.]/g,''))||0;
-  // Keep the unrounded result so swapping back and forth is lossless —
-  // reading the rounded field would decay 10,000 → 9,999.99 → 9,999.98…
-  let outRaw = 0;
-  function calc(){
-    const v=num(send.value);
-    outRaw = fiatFirst ? v/RATE : v*RATE;
-    recv.value = fmt(outRaw);
-  }
-  send.addEventListener('input',calc);
-  send.addEventListener('blur',()=>{ send.value=fmt(num(send.value)); calc(); });
-  swap.addEventListener('click',()=>{
-    const carry = outRaw;
-    fiatFirst=!fiatFirst;
-    curA.textContent = fiatFirst?'SGD':'USDC';
-    curB.textContent = fiatFirst?'USDC':'SGD';
-    gA.className = 'glyph'+(fiatFirst?'':' usdc');
-    gB.className = 'glyph'+(fiatFirst?' usdc':'');
-    rate.textContent = fiatFirst ? 'RATE 1.3423 SGD / USDC' : 'RATE 0.7450 USDC / SGD';
-    send.value = fmt(carry);
-    outRaw = fiatFirst ? carry/RATE : carry*RATE;
-    recv.value = fmt(outRaw);
-  });
-  calc();
-  window.__rampCount = () => {
-    if (reduced || !window.gsap) { send.value=fmt(5000); calc(); return; }
-    const o={v:0};
-    gsap.to(o,{v:5000,duration:1.4,ease:'power2.out',
-      onUpdate(){ send.value=fmt(o.v); calc(); }});
-  };
-})();
-
-/* ══ 11. Code tabs + terminal ══════════════════════════════════ */
-const SNIPPETS={
-  ts:{ file:'payment.ts', html:
-`<span class="kw">import</span> { atara } <span class="kw">from</span> <span class="str">"@atara/sdk"</span>
-
-<span class="kw">const</span> payment = <span class="kw">await</span> atara.payments.<span class="fn">create</span>({
-  to: <span class="str">"agent:0x7f3a…c412"</span>,
-  amount: <span class="fn">usdc</span>(<span class="num2">2_500</span>),
-  conditions: [
-    <span class="fn">onDelivery</span>({ oracle: <span class="str">"shipments.v1"</span>, ref: <span class="str">"SH-88213"</span> }),
-    <span class="fn">beforeDeadline</span>(<span class="str">"2026-09-01T00:00:00Z"</span>),
-  ],
-  reversible: { window: <span class="str">"72h"</span> },
-})
-
-payment.fee        <span class="cm">// 0.32%, priced from counterparty default probability</span>
-payment.riskScore  <span class="cm">// 0.0126</span>` },
-  py:{ file:'payment.py', html:
-`<span class="kw">from</span> atara <span class="kw">import</span> Atara, usdc, on_delivery, before_deadline
-
-atara = <span class="fn">Atara</span>(api_key=os.environ[<span class="str">"ATARA_KEY"</span>])
-
-payment = atara.payments.<span class="fn">create</span>(
-    to=<span class="str">"agent:0x7f3a…c412"</span>,
-    amount=<span class="fn">usdc</span>(<span class="num2">2_500</span>),
-    conditions=[
-        <span class="fn">on_delivery</span>(oracle=<span class="str">"shipments.v1"</span>, ref=<span class="str">"SH-88213"</span>),
-        <span class="fn">before_deadline</span>(<span class="str">"2026-09-01T00:00:00Z"</span>),
-    ],
-    reversible={<span class="str">"window"</span>: <span class="str">"72h"</span>},
-)
-
-payment.fee         <span class="cm"># 0.0032</span>
-payment.risk_score  <span class="cm"># 0.0126</span>` },
-  sh:{ file:'create.sh', html:
-`curl https://api.atara.xyz/v1/payments \\
-  -H <span class="str">"Authorization: Bearer $ATARA_KEY"</span> \\
-  -H <span class="str">"Content-Type: application/json"</span> \\
-  -d <span class="str">'{
-    "to": "agent:0x7f3a…c412",
-    "amount": { "currency": "USDC", "value": "2500.00" },
-    "conditions": [
-      { "type": "on_delivery", "oracle": "shipments.v1", "ref": "SH-88213" },
-      { "type": "before_deadline", "at": "2026-09-01T00:00:00Z" }
-    ],
-    "reversible": { "window": "72h" }
-  }'</span>
-
-<span class="cm"># → 201 { "id": "payment_8f21", "fee_rate": 0.0032, "risk_score": 0.0126 }</span>` },
-};
-(function code(){
-  const body=el('codeBody'), file=el('codeFile');
-  const tabs=[...document.querySelectorAll('.code-tab')];
-  if(!body) return;
-  const show=(lang)=>{
-    body.innerHTML=SNIPPETS[lang].html;
-    file.textContent=SNIPPETS[lang].file;
-    tabs.forEach(t=>t.setAttribute('aria-selected',String(t.dataset.lang===lang)));
-  };
-  tabs.forEach(t=>t.addEventListener('click',()=>show(t.dataset.lang)));
-  tabs.forEach((t,i)=>t.addEventListener('keydown',e=>{
-    const d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0; if(!d) return; e.preventDefault();
-    const k=(i+d+tabs.length)%tabs.length; tabs[k].focus(); tabs[k].click();
-  }));
-  show('ts');
-})();
-
-const TERM=[
-  ['ok','payment_8f21 created','usdc 2,500.00'],
-  ['ok','risk model','p(d) 1.27% → fee 0.32%'],
-  ['··','awaiting 2 conditions','held'],
-  ['ok','shipments.v1','SH-88213 delivered'],
-  ['ok','released','72h window open'],
-];
-function runTerm(){
-  const t=el('term'); if(!t) return;
-  t.innerHTML='';
-  const add=(i)=>{
-    if (i>=TERM.length){
-      const b=document.createElement('button');
-      b.type='button'; b.className='replay term-run'; b.textContent='↻ Run again';
-      b.addEventListener('click',runTerm); t.appendChild(b); return;
+  /* ---- geometry ---- */
+  let lastW = 0, lastH = 0;
+  const build = () => {
+    if (getComputedStyle(wires).display === 'none') {          // stacked layout
+      pulses = []; wires.innerHTML = ''; lastW = lastH = 0; return;
     }
-    const [k,label,val]=TERM[i];
-    const row=document.createElement('div');
-    row.className='term-l';
-    row.innerHTML=`<span class="${k==='ok'?'ok':'wt'}">${k==='ok'?'✓':'·'}</span><span>${label}</span><span class="v">${val}</span>`;
-    t.appendChild(row);
-    if (!reduced) setTimeout(()=>add(i+1), 480); else add(i+1);
-  };
-  add(0);
-}
+    const box = tm.getBoundingClientRect(), o = orb.getBoundingClientRect();
+    if (!box.width || !o.width) return;
+    /* Rebuilding discards every packet in flight, so only rebuild when the
+       box genuinely moved. Without this, sub pixel reflow during a cycle
+       silently emptied the wires. */
+    if (Math.abs(box.width - lastW) < 1 && Math.abs(box.height - lastH) < 1) return;
+    lastW = box.width; lastH = box.height;
 
-/* ══ 12. Currency chips ════════════════════════════════════════ */
-(function chips(){
-  const host=el('chips'); if(!host) return;
-  ['USD','EUR','SGD','HKD','CNY','JPY','GBP','AED','CHF','AUD'].forEach(c=>{
-    const s=document.createElement('span'); s.className='chip'; s.textContent=c; host.appendChild(s);
-  });
-  const m=document.createElement('span'); m.className='chip more'; m.textContent='+ more corridors';
-  host.appendChild(m);
+    pulses = [];
+    wires.innerHTML = '';
+    /* every input converges on one point, every output leaves from one:
+       that single meeting point is what says "one model", not four */
+    const midY = o.top - box.top + o.height / 2;
+    const hubL = { x: o.left  - box.left - 12, y: midY };
+    const hubR = { x: o.right - box.left + 12, y: midY };
+    wires.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+
+    const arc = (a, b) => {
+      const dx = Math.max(36, (b.x - a.x) * .5);
+      return `M${a.x} ${a.y} C${a.x + dx} ${a.y} ${b.x - dx} ${b.y} ${b.x} ${b.y}`;
+    };
+    const add = (a, b) => {
+      const d = arc(a, b);
+      ['base','shim','pulse'].forEach(cls => {
+        const p = document.createElementNS(NS, 'path');
+        p.setAttribute('d', d);
+        p.setAttribute('class', cls);
+        if (cls === 'shim') p.style.animationDelay = (-Math.random() * 9).toFixed(2) + 's';
+        wires.appendChild(p);
+        if (cls === 'pulse') pulses.push(p);
+      });
+      [a, b].forEach(pt => {
+        const c = document.createElementNS(NS, 'circle');
+        c.setAttribute('cx', pt.x); c.setAttribute('cy', pt.y);
+        c.setAttribute('r', '2.5'); c.setAttribute('class', 'port');
+        wires.appendChild(c);
+      });
+    };
+    const port = (n, side) => {
+      const r = n.getBoundingClientRect();
+      return { x: (side === 'right' ? r.right : r.left) - box.left,
+               y: r.top - box.top + r.height / 2 };
+    };
+    ins.forEach(n  => add(port(n, 'right'), hubL));   // pulses 0..3
+    outs.forEach(n => add(hubR, port(n, 'left')));    // pulses 4..6
+  };
+
+  /* one packet of light down one wire. a short dash chased along the
+     path by its own offset, which is cheaper than moving an element. */
+  const fire = (p, dur, delay) => {
+    if (!p || !p.animate) return;
+    const L = p.getTotalLength();
+    if (!L) return;
+    const dash = Math.min(84, L * .3);
+    p.style.strokeDasharray = `${dash} ${L + dash}`;
+    p.animate([
+      { strokeDashoffset: dash,        opacity: 0 },
+      { strokeDashoffset: dash * .4,   opacity: 1, offset: .14 },
+      { strokeDashoffset: -L * .86,    opacity: 1, offset: .88 },
+      { strokeDashoffset: -L,          opacity: 0 },
+    ], { duration: dur, delay, easing: 'cubic-bezier(.42,0,.5,1)', fill: 'none' });
+  };
+
+  /* three expanding rings, once, at the moment the estimate is made */
+  const burst = () => waves.forEach((w, k) => w.animate && w.animate(
+    [ { transform:'scale(.34)', opacity:.5 }, { transform:'scale(1.08)', opacity:0 } ],
+    { duration:1700, delay:k * 400, easing:'cubic-bezier(.22,.9,.3,1)', fill:'none' }));
+
+  /* jitter that decays as it converges: a number being resolved, not typed */
+  const resolve = c => {
+    const t0 = performance.now(), DUR = 1150;
+    const tick = now => {
+      const p = Math.min(1, (now - t0) / DUR), e = 1 - Math.pow(1 - p, 3);
+      pdEl.textContent =
+        Math.max(.02, c.pd * e + (1 - e) * 4.2 * Math.sin(p * 31)).toFixed(2) + '%';
+      if (p < 1 && alive) raf = requestAnimationFrame(tick);
+      else { pdEl.textContent = c.pd.toFixed(2) + '%'; raf = 0; }
+    };
+    raf = requestAnimationFrame(tick);
+  };
+
+  const clear = () => {
+    [...ins, ...outs].forEach(n => {
+      n.classList.remove('on'); n.querySelector('i').textContent = '';
+    });
+    tm.classList.remove('computing');
+  };
+
+  const cycle = () => {
+    clearAll();
+    idx = (idx + 1) % BOOK.length;
+    const c = BOOK[idx], t = termsOf(c);
+
+    clear();
+    refEl.textContent = c.ref;
+    stateEl.textContent = 'Reading the record';
+
+    /* a signal lights when its packet arrives, not when it is sent */
+    ins.forEach((n, k) => {
+      fire(pulses[k], 1000, 200 + k * 400);
+      at(1000 + k * 400, () => {
+        n.classList.add('on'); n.querySelector('i').textContent = c.ev[k];
+      });
+    });
+    const read = 1000 + ins.length * 400;
+
+    at(read + 140, () => {
+      stateEl.textContent = 'Estimating probability of default';
+      tm.classList.add('computing'); burst(); resolve(c);
+    });
+
+    at(read + 1480, () => { stateEl.textContent = 'Terms priced to that number'; });
+    outs.forEach((n, k) => {
+      fire(pulses[4 + k], 900, read + 1480 + k * 280);
+      at(read + 2200 + k * 280, () => {
+        n.classList.add('on'); n.querySelector('i').textContent = t[k];
+      });
+    });
+
+    at(read + 6300, cycle);
+  };
+
+  /* the resting state is the finished state: if nothing above ever runs,
+     the figure still reads as a complete argument */
+  const rest = () => {
+    clearAll();
+    const c = BOOK[0], t = termsOf(c);
+    refEl.textContent = c.ref;
+    stateEl.textContent = 'Terms priced to that number';
+    ins.forEach((n, k)  => { n.classList.add('on'); n.querySelector('i').textContent = c.ev[k]; });
+    outs.forEach((n, k) => { n.classList.add('on'); n.querySelector('i').textContent = t[k]; });
+    tm.classList.add('computing');
+    pdEl.textContent = c.pd.toFixed(2) + '%';
+  };
+
+  build();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(build);
+  addEventListener('load', build);
+
+  if (reduced) { rest(); return; }
+
+  /* rebuild after the layout settles, never mid-frame */
+  let rafR = 0;
+  const relayout = () => {
+    if (rafR) return;
+    rafR = requestAnimationFrame(() => { rafR = 0; build(); });
+  };
+  if ('ResizeObserver' in window) new ResizeObserver(relayout).observe(tm);
+  else addEventListener('resize', relayout);
+
+  const start = () => { if (alive) return; alive = true; tm.classList.add('live'); cycle(); };
+  const stop  = () => { alive = false; tm.classList.remove('live'); clearAll(); };
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? start() : stop()),
+      { threshold:.2 }).observe(tm);
+  } else start();
+
+  setTimeout(() => { if (!alive) rest(); }, 4500);
 })();
 
-/* ══ 12b. Capability cards — each one performs its own thing ═══
-   Not a generic fade: the ramp counts money in, the FX board ticks
-   like a live quote, the card's credit bar fills, the conditions
-   clear one by one. Replays on hover so it isn't a one-shot. */
-(function capAnim(){
-  const cards=[...document.querySelectorAll('.cap')];
-  if(!cards.length) return;
-  const f=(n,dp)=>n.toLocaleString('en-US',{minimumFractionDigits:dp,maximumFractionDigits:dp});
-  const timers=new WeakMap();
 
-  function run(card){
-    (timers.get(card)||[]).forEach(clearTimeout);
-    const own=[]; timers.set(card,own);
-
-    card.querySelectorAll('[data-num]').forEach((n,i)=>{
-      const to=parseFloat(n.dataset.num), dp=+(n.dataset.dp||0);
-      const pre=n.dataset.pre||'', suf=n.dataset.suf||'';
-      if(reduced||!window.gsap){ n.textContent=pre+f(to,dp)+suf; return; }
-      const o={v:0};
-      gsap.killTweensOf(o);
-      gsap.to(o,{v:to,duration:.9+i*.12,ease:'power2.out',
-        onUpdate(){ n.textContent=pre+f(o.v,dp)+suf; }});
+/* fromTo only. gsap.from() records the CSS-hidden opacity 0 as the tween's
+   END value, so sections would animate 0 to 0 and never appear. */
+if (window.gsap && !reduced) {
+  const g = window.gsap;
+  if (window.ScrollTrigger) g.registerPlugin(window.ScrollTrigger);
+  g.timeline().fromTo('[data-hero]',
+    { y:18, opacity:0 },
+    { y:0, opacity:1, duration:.9, stagger:.1, ease:'power3.out' });
+  if (window.ScrollTrigger) {
+    document.querySelectorAll('.r:not([data-hero])').forEach(n => {
+      g.fromTo(n, { y:26, opacity:0 },
+        { y:0, opacity:1, duration:.85, ease:'power3.out',
+          scrollTrigger:{ trigger:n, start:'top 88%', once:true } });
     });
-
-    card.querySelectorAll('[data-bar]').forEach(b=>{
-      const w=+b.dataset.bar;
-      if(reduced||!window.gsap){ b.style.width=w+'%'; return; }
-      gsap.fromTo(b,{width:'0%'},{width:w+'%',duration:1.1,ease:'power2.out',delay:.15});
-    });
-
-    const seq=[...card.querySelectorAll('[data-seq]')].sort((a,b)=>+a.dataset.seq-+b.dataset.seq);
-    const counter=card.querySelector('[data-seqcount]');
-    if(seq.length){
-      seq.forEach(s=>s.classList.remove('on'));
-      if(counter) counter.textContent='0 / '+counter.dataset.seqcount;
-      seq.forEach((s,i)=>{
-        const go=()=>{ s.classList.add('on');
-          if(counter) counter.textContent=(i+1)+' / '+counter.dataset.seqcount; };
-        if(reduced) go(); else own.push(setTimeout(go, 420+i*560));
-      });
-    }
-
-    card.querySelectorAll('[data-scramble]').forEach(s=>{
-      const fin=s.dataset.scramble;
-      if(reduced){ s.textContent=fin; return; }
-      let k=0;
-      const step=()=>{
-        k++;
-        s.textContent = k>9 ? fin : fin.replace(/\d/g,()=>String(Math.floor(Math.random()*10)));
-        if(k<=9) own.push(setTimeout(step,55));
-      };
-      own.push(setTimeout(step,180));
-    });
-  }
-
-  /* FX board: a small random walk around the real quote, so it reads live.
-     Only runs while the section is actually on screen. */
-  const ticks=[...document.querySelectorAll('[data-tick]')];
-  const down=[...document.querySelectorAll('[data-down]')];
-  let onScreen=false, held=30;
-  if(ticks.length && !reduced){
-    setInterval(()=>{
-      if(!onScreen) return;
-      ticks.forEach(n=>{
-        const base=parseFloat(n.dataset.tick), dp=+(n.dataset.dp||2);
-        n.textContent=f(base*(1+(Math.random()-0.5)*0.0007), dp);
-      });
-    },1500);
-    setInterval(()=>{
-      if(!onScreen) return;
-      held = held<=26 ? 30 : held-1;
-      down.forEach(n=>n.textContent=held+(n.dataset.suf||''));
-    },3200);
-  }
-
-  const sec=document.getElementById('capabilities');
-  if('IntersectionObserver' in window && sec){
-    new IntersectionObserver(es=>es.forEach(e=>{ onScreen=e.isIntersecting; }),
-      {threshold:0.05}).observe(sec);
-    const io=new IntersectionObserver(es=>es.forEach(e=>{
-      if(e.isIntersecting){ run(e.target); io.unobserve(e.target); }
-    }),{threshold:0.35});
-    cards.forEach(c=>io.observe(c));
   } else {
-    onScreen=true; cards.forEach(run);
+    g.set('.r:not([data-hero])', { opacity:1, y:0 });
   }
-  cards.forEach(c=>c.addEventListener('pointerenter',()=>run(c)));
-})();
-
-/* ══ 12c. Agent card — pointer tilt over the idle float ═══════ */
-(function cardTilt(){
-  const card=el('agentCard'); if(!card||reduced) return;
-  const MAX=13;                       // degrees; more than this reads as a gimmick
-  card.addEventListener('pointermove',e=>{
-    const r=card.getBoundingClientRect();
-    const nx=(e.clientX-r.left)/r.width  - .5;
-    const ny=(e.clientY-r.top )/r.height - .5;
-    card.style.setProperty('--ry', ( nx*MAX*2).toFixed(2)+'deg');
-    card.style.setProperty('--rx', (-ny*MAX  ).toFixed(2)+'deg');
-    card.classList.add('tilt');
-  });
-  card.addEventListener('pointerleave',()=>{
-    card.classList.remove('tilt');
-    card.style.removeProperty('--ry'); card.style.removeProperty('--rx');
-  });
-})();
-
-/* ══ 13. Waitlist ══════════════════════════════════════════════ */
-const form=el('waitForm'), msg=el('waitMsg');
-form?.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const email=el('waitEmail').value.trim();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
-    msg.className='wait-msg err'; msg.textContent='Enter a valid work email.'; return; }
-  if (!WAITLIST_ENDPOINT){
-    msg.className='wait-msg err';
-    msg.textContent='Waitlist is not wired up yet. Set WAITLIST_ENDPOINT in this page.'; return; }
-  msg.className='wait-msg'; msg.textContent='Sending…';
-  try{
-    const r=await fetch(WAITLIST_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
-    if(!r.ok) throw new Error(String(r.status));
-    msg.textContent='Thanks, we\'ll be in touch.'; form.reset();
-  }catch{ msg.className='wait-msg err'; msg.textContent='Couldn\'t send. Try again in a moment.'; }
-});
-
-/* ══ 14. App links ═════════════════════════════════════════════ */
-if (APP_URL) document.querySelectorAll('[data-app]').forEach(a=>{
-  a.setAttribute('href',APP_URL); a.setAttribute('rel','noopener'); });
-
-/* ══ 15. Motion ════════════════════════════════════════════════ */
-function motion(){
-  if (!window.gsap || !window.ScrollTrigger || reduced){
-    runTerm(); duo.run(); window.__condAuto?.(); window.__rampCount?.(); return;
-  }
-  gsap.registerPlugin(ScrollTrigger);
-  const E='power3.out';
-
-  gsap.from('[data-hero]',{opacity:0,y:26,duration:1.05,ease:E,stagger:.09,delay:.1});
-  gsap.from('.globe-wrap',{opacity:0,scale:.94,duration:1.6,ease:'power2.out',delay:.2});
-
-  // Safety net: gsap.from() hides first. If the ticker never advances
-  // (background tab, stalled frame) the hero would sit invisible.
-  setTimeout(()=>{
-    document.querySelectorAll('[data-hero], .globe-wrap').forEach(n=>{
-      if (getComputedStyle(n).opacity!=='1') gsap.set(n,{clearProps:'all'});
-    });
-  },3000);
-
-  gsap.to('.globe-wrap',{yPercent:12,ease:'none',
-    scrollTrigger:{trigger:'.hero',start:'top top',end:'bottom top',scrub:.6}});
-
-  ScrollTrigger.batch('.r',{ start:'top 88%', once:true,
-    onEnter:b=>gsap.from(b,{opacity:0,y:22,duration:.95,ease:E,stagger:.09,overwrite:true}) });
-
-  const slabs=gsap.utils.toArray('#stackFig .g-slab');
-  if (slabs.length) gsap.from(slabs,{ y:(i)=>(1-i)*74, opacity:0, duration:1, ease:E, stagger:.1,
-    scrollTrigger:{trigger:'#stackFig',start:'top 78%'} });
-
-  const curve=document.querySelector('.fall svg path');
-  if (curve){
-    const len=curve.getTotalLength();
-    gsap.fromTo(curve,{strokeDasharray:len,strokeDashoffset:len},
-      {strokeDashoffset:0,duration:1.3,ease:'power2.inOut',
-       scrollTrigger:{trigger:'.fall',start:'top 88%'}});
-    gsap.from('.fall-v.is-acc',{opacity:0,x:-10,duration:.6,delay:.6,ease:'power2.out',
-       scrollTrigger:{trigger:'.fall',start:'top 88%'}});
-  }
-
-  // .comp-glyph went with the Controls section; guard against an empty set
-  gsap.utils.toArray('.gap-glyph .dash').forEach(p=>{
-    const len=p.getTotalLength();
-    gsap.fromTo(p,{strokeDasharray:len,strokeDashoffset:len},
-      {strokeDashoffset:0,duration:1.1,ease:'power2.out',
-       scrollTrigger:{trigger:p.closest('svg'),start:'top 88%'}});
-  });
-
-  ScrollTrigger.create({trigger:'#condFig',start:'top 78%',once:true,
-    onEnter:()=>window.__condAuto?.()});
-  ScrollTrigger.create({trigger:'#duoFig',start:'top 80%',once:true,onEnter:()=>duo.run()});
-  ScrollTrigger.create({trigger:'#rampFig',start:'top 80%',once:true,
-    onEnter:()=>window.__rampCount?.()});
-  ScrollTrigger.create({trigger:'#term',start:'top 88%',once:true,onEnter:runTerm});
-
+} else {
+  document.querySelectorAll('.r').forEach(n => { n.style.opacity = '1'; });
 }
 
-if (window.gsap) motion(); else addEventListener('load', motion);
-document.fonts?.ready.then(()=>window.ScrollTrigger?.refresh());
+/* Failsafe. Some embedded browsers throttle requestAnimationFrame to
+   near zero, which parks a tween mid-flight: the hero headline was
+   sticking at opacity .28 while the later-staggered subhead finished,
+   inverting the type hierarchy. Kill every tween and land the end state.
+   Covers [data-hero] too, which is on its own timeline. */
+setTimeout(() => {
+  const stuck = [...document.querySelectorAll('.r, [data-hero]')]
+    .filter(n => getComputedStyle(n).opacity !== '1');
+  if (!stuck.length) return;
+  if (window.gsap) {
+    stuck.forEach(n => window.gsap.killTweensOf(n));
+    window.gsap.set(stuck, { opacity:1, y:0, clearProps:'transform' });
+  } else {
+    stuck.forEach(n => { n.style.opacity = '1'; n.style.transform = 'none'; });
+  }
+}, 2500);
+
 });
 </script>
 </body>
