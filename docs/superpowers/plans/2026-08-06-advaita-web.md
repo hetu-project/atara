@@ -2969,13 +2969,16 @@ export default function CounterpartyForm({ role, defaultValues, submitting, onSu
     formState: { errors },
   } = useForm<CounterpartyInput>({
     resolver: zodResolver(counterpartySchema),
+    // role 靠这里的 defaultValues 进入提交值，不需要也不要加隐藏 input。
+    // react-hook-form 默认会把 defaultValues 里未注册的字段一并提交，
+    // 加一个 <input type="hidden" {...register('role')} /> 是死代码 ——
+    // 更糟的是它会让人以为 role 由它承载，从而放心删掉这行 defaultValues，
+    // 那样 role 会变成 undefined、在 z.enum(ROLES) 处报一个很难懂的错。
     defaultValues: { role, tags: [], ...defaultValues },
   });
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-[900px]">
-      <input type="hidden" {...register('role')} value={role} />
-
       <FormSection title="基础身份">
         <Field label="姓名" required error={errors.full_name?.message}>
           <Input {...register('full_name')} invalid={!!errors.full_name} placeholder="请输入姓名" />
