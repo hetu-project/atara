@@ -19,13 +19,22 @@ function toFormValues(row: Counterparty | undefined): Partial<CounterpartyInput>
   return out as Partial<CounterpartyInput>;
 }
 
-export default function CounterpartyFormPage({ role, mode }: { role: Role; mode: 'create' | 'edit' }) {
-  const { id } = useParams<{ id: string }>();
+export default function CounterpartyFormPage({
+  role,
+  mode,
+  profileId,
+}: {
+  role: Role;
+  mode: 'create' | 'edit';
+  /** edit 模式下要编辑的档案 id。省略时回退到路由参数 :id */
+  profileId?: string;
+}) {
+  const { id: routeId } = useParams<{ id: string }>();
+  const id = profileId ?? routeId;
   const navigate = useNavigate();
   const toast = useToast();
 
   const label = ROLE_LABEL[role];
-  const basePath = role === 'buyer' ? '/buyers' : '/sellers';
 
   const detail = useCounterparty(mode === 'edit' ? id : undefined);
   const create = useCreateCounterparty();
@@ -43,7 +52,7 @@ export default function CounterpartyFormPage({ role, mode }: { role: Role; mode:
       create.mutate(values, {
         onSuccess: (row) => {
           toast.success(`创建成功，用户 ID ${row.display_id}`);
-          navigate(`${basePath}/${row.id}`, { replace: true });
+          navigate('/profile', { replace: true });
         },
         onError: (e) => toast.error((e as Error).message),
       });
@@ -60,8 +69,8 @@ export default function CounterpartyFormPage({ role, mode }: { role: Role; mode:
       <PageHeader
         title={mode === 'create' ? `新建${label}` : `${label}详情`}
         actions={
-          <Button variant="second" onClick={() => navigate(basePath)}>
-            返回列表
+          <Button variant="second" onClick={() => navigate('/profile')}>
+            返回我的档案
           </Button>
         }
       />
