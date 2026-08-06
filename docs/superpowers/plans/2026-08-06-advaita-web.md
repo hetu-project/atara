@@ -3241,14 +3241,27 @@ describe('buildOrderQuery', () => {
     );
   });
 
-  it('日期区间转成 gte / lte', () => {
+  // 断言写成"与本地时区无关"的形式：直接比对同样按本地时区解析出的 ISO 串，
+  // 而不是硬编码某个 UTC 字面量 —— 否则这个测试只在 UTC 机器上通过。
+  it('日期区间按本地时区的当天起止转成 gte / lte', () => {
     const r = buildOrderQuery({ page: 1, pageSize: 20, dateFrom: '2026-08-01', dateTo: '2026-08-06' });
-    expect(r.range).toEqual({ gte: '2026-08-01T00:00:00.000Z', lte: '2026-08-06T23:59:59.999Z' });
+    expect(r.range).toEqual({
+      gte: new Date('2026-08-01T00:00:00').toISOString(),
+      lte: new Date('2026-08-06T23:59:59.999').toISOString(),
+    });
+  });
+
+  it('起点确实落在本地时区的当天零点', () => {
+    const r = buildOrderQuery({ page: 1, pageSize: 20, dateFrom: '2026-08-01' });
+    const start = new Date(r.range!.gte!);
+    expect(start.getHours()).toBe(0);
+    expect(start.getMinutes()).toBe(0);
+    expect(start.getDate()).toBe(1);
   });
 
   it('只填开始日期时只有 gte', () => {
     const r = buildOrderQuery({ page: 1, pageSize: 20, dateFrom: '2026-08-01' });
-    expect(r.range).toEqual({ gte: '2026-08-01T00:00:00.000Z' });
+    expect(Object.keys(r.range!)).toEqual(['gte']);
   });
 
   it('无日期时 range 为 undefined', () => {
@@ -3290,6 +3303,25 @@ export interface OrderListParams {
   dateTo?: string;
 }
 
+/**
+ * 日期筛选框给的是**本地日历日**（<input type="date"> 的值，如 '2026-08-07'），
+ * 而列表里的 created_at 也是用 formatDateTime 按本地时区渲染的。
+ * 所以边界必须按本地时区的当天起止来算，不能直接拼 'T00:00:00.000Z'。
+ *
+ * 拼 Z 后缀会造成筛选结果和肉眼所见自相矛盾：东八区用户看到一张
+ * 「08-07 03:00 创建」的订单，筛 08-07 却查不到它（它的 UTC 时刻是 08-06T19:00Z）。
+ *
+ * 不带时区后缀的 'YYYY-MM-DDTHH:mm:ss' 会被 JS 按本地时区解析，
+ * toISOString() 再转成对应的 UTC 时刻 —— 这正是我们要的。
+ */
+function localDayStart(day: string): string {
+  return new Date(`${day}T00:00:00`).toISOString();
+}
+
+function localDayEnd(day: string): string {
+  return new Date(`${day}T23:59:59.999`).toISOString();
+}
+
 export function buildOrderQuery(params: OrderListParams): {
   from: number;
   to: number;
@@ -3310,8 +3342,8 @@ export function buildOrderQuery(params: OrderListParams): {
   let range: { gte?: string; lte?: string } | undefined;
   if (params.dateFrom || params.dateTo) {
     range = {};
-    if (params.dateFrom) range.gte = `${params.dateFrom}T00:00:00.000Z`;
-    if (params.dateTo) range.lte = `${params.dateTo}T23:59:59.999Z`;
+    if (params.dateFrom) range.gte = localDayStart(params.dateFrom);
+    if (params.dateTo) range.lte = localDayEnd(params.dateTo);
   }
 
   return { from, to, filters, orFilter, range };
@@ -3344,7 +3376,12 @@ export async function getOrder(id: string): Promise<OrderWithParties> {
 }
 
 export async function createOrder(input: OrderInput): Promise<Order> {
-  const { data, error } = await supabase.from('orders').insert(input).select('*').single();
+  // OrderInput 是 crypto | fiat 的判别联合，而 postgrest-js 的 insert<T>() 只能从
+  // 联合里推断出一个分支，另一分支的字段就被判成"多余属性"而报错。
+  // 收窄成普通对象类型即可 —— 这是诚实的描述（PostgREST 收的就是一个 JSON 对象），
+  // 也比 `as never` 好：后者会把整个 payload 的类型检查都关掉。
+  const payload: Record<string, unknown> = input;
+  const { data, error } = await supabase.from('orders').insert(payload).select('*').single();
   if (error) throw toFriendlyError(error);
   return data as Order;
 }
@@ -3374,7 +3411,7 @@ export async function listOrderStatusLogs(orderId: string): Promise<OrderStatusL
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `npm test -- orders`
-Expected: PASS，8 个用例。
+Expected: PASS，10 个用例。
 
 - [ ] **Step 5: 实现 `hooks.ts`**
 
