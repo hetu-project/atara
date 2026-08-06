@@ -78,6 +78,22 @@ describe('orderSchema - crypto', () => {
     expect(r.error?.issues[0].message).toBe('请输入有效金额');
   });
 
+  it('恰好 8 位小数可以通过', () => {
+    expect(orderSchema.safeParse({ ...base, amount: 0.12345678 }).success).toBe(true);
+  });
+
+  it('超过 8 位小数、四舍五入后仍非零时报错要求最多 8 位小数', () => {
+    const r = orderSchema.safeParse({ ...base, amount: 0.123456789 });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0].message).toBe('最多 8 位小数');
+  });
+
+  it('超过 8 位小数、四舍五入后变成 0 时报错金额过小', () => {
+    const r = orderSchema.safeParse({ ...base, amount: 0.000000001 });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0].message).toBe('金额过小');
+  });
+
   it('买卖家为同一人时报错', () => {
     const r = orderSchema.safeParse({ ...base, seller_id: buyerId });
     expect(r.success).toBe(false);

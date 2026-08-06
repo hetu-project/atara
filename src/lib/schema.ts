@@ -62,12 +62,34 @@ export const counterpartySchema = z.object({
 export type CounterpartyInput = z.infer<typeof counterpartySchema>;
 
 // ---------------- order ----------------
+const AMOUNT_MAX_DP = 8;
+
+/** 数值的十进制小数位数。用字符串形式判断，避免浮点二进制表示带来的误差。 */
+function decimalPlaces(n: number): number {
+  const s = n.toString();
+  const exp = /e-(\d+)$/.exec(s);
+  if (exp) return Number(exp[1]);
+  const dot = s.indexOf('.');
+  return dot === -1 ? 0 : s.length - dot - 1;
+}
+
+/** 四舍五入到 8 位小数后是否变成了 0（数据库 numeric(38,8) 的精度就是这里的依据）。 */
+function roundsToZeroAt8dp(n: number): boolean {
+  return Math.round(n * 10 ** AMOUNT_MAX_DP) === 0;
+}
+
 const orderBase = {
   buyer_id: z.string().uuid('请选择买家'),
   seller_id: z.string().uuid('请选择卖家'),
-  // invalid_type_error 是必须的：金额输入框是纯文本框，用户打错一个字母就会
-  // coerce 成 NaN，走 zod 默认的英文报错 "Expected number, received nan"。
-  amount: z.coerce.number({ invalid_type_error: '请输入有效金额' }).positive('金额必须大于 0'),
+  // invalid_type_error 是必须的：金额输入框是纯文本框，打错一个字母就会 coerce 成 NaN，
+  // 走 zod 默认的英文报错。数据库列是 numeric(38,8)，超过 8 位小数会被静默四舍五入，
+  // 按后果拆成两条提示：截断后仍非零 → 提示位数超限；截断后变成 0 → 提示金额过小
+  // （否则用户会看到跟内容无关的「填写的内容不符合规则」，那是 DB 的 amount > 0 检查报的）。
+  amount: z.coerce
+    .number({ invalid_type_error: '请输入有效金额' })
+    .positive('金额必须大于 0')
+    .refine((n) => !(decimalPlaces(n) > AMOUNT_MAX_DP && !roundsToZeroAt8dp(n)), '最多 8 位小数')
+    .refine((n) => !(decimalPlaces(n) > AMOUNT_MAX_DP && roundsToZeroAt8dp(n)), '金额过小'),
   payee: z.enum(PAYEES),
   note: optLongText,
 };
@@ -135,7 +157,12 @@ export interface Order {
   seller_id: string;
   order_type: OrderType;
   status: OrderStatus;
-  amount: string;
+  // PostgREST 把 numeric 列序列化成 JSON number，所以运行时这里大概率是 number，
+  // 不是 string —— 但我们没有可连的 Supabase 项目验证这一点，只能诚实地写成
+  // 两者都可能。formatAmount 两种都接受，今天不会炸；但 `order.amount.startsWith(...)`
+  // 这类假设它是 string 的写法会在第一次接到真实数据时崩掉。
+  // 上线后务必用一次真实请求确认实际类型，并在确认后收窄这个类型。
+  amount: string | number;
   payee: Payee;
   asset: Asset | null;
   chain: Chain | null;
