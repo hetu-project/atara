@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { createMemoryRouter, RouterProvider } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import RequireProfile from '../RequireProfile';
 
 const mockUseMyProfiles = vi.fn();
@@ -9,19 +9,16 @@ vi.mock('@/features/counterparties/hooks', () => ({
 }));
 
 function renderAt(path: string) {
-  const router = createMemoryRouter(
-    [
-      {
-        element: <RequireProfile />,
-        children: [
-          { path: '/orders', element: <div>订单页</div> },
-          { path: '/onboarding', element: <div>引导页</div> },
-        ],
-      },
-    ],
-    { initialEntries: [path] },
+  render(
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route element={<RequireProfile />}>
+          <Route path="/orders" element={<div>订单页</div>} />
+          <Route path="/onboarding" element={<div>引导页</div>} />
+        </Route>
+      </Routes>
+    </MemoryRouter>,
   );
-  render(<RouterProvider router={router} />);
 }
 
 describe('RequireProfile', () => {
