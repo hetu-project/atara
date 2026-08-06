@@ -14,6 +14,7 @@ import {
 import type { CounterpartyOption } from '@/features/counterparties/api';
 import { useCounterpartyOptions } from '@/features/counterparties/hooks';
 import { clearTypeFields, defaultPayee, payeeDefaults } from './formLogic';
+import CounterpartyOptionNotice from './CounterpartyOptionNotice';
 import CryptoFields from './CryptoFields';
 import FiatFields from './FiatFields';
 
@@ -124,6 +125,10 @@ export default function OrderForm({
         <Field label="金额" required error={err('amount')}>
           <Input {...register('amount')} inputMode="decimal" placeholder="请输入金额" invalid={!!err('amount')} />
         </Field>
+        <div className="col-span-2 flex flex-col gap-1">
+          <CounterpartyOptionNotice list={buyers} label="买家" createPath="/buyers/new" />
+          <CounterpartyOptionNotice list={sellers} label="卖家" createPath="/sellers/new" />
+        </div>
       </FormSection>
 
       {orderType === 'crypto' ? (
