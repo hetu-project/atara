@@ -12,16 +12,21 @@ function renderAt(path: string) {
 }
 
 describe('Sidebar', () => {
-  it('渲染三个导航入口', () => {
+  it('渲染两个导航入口', () => {
     renderAt('/orders');
-    expect(screen.getByRole('link', { name: '买家管理' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '卖家管理' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '订单管理' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '我的档案' })).toBeInTheDocument();
+  });
+
+  it('买卖家列表入口已移除', () => {
+    renderAt('/orders');
+    expect(screen.queryByRole('link', { name: '买家管理' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '卖家管理' })).not.toBeInTheDocument();
   });
 
   it('当前路由的入口标记为选中', () => {
-    renderAt('/buyers');
-    expect(screen.getByRole('link', { name: '买家管理' })).toHaveAttribute('aria-current', 'page');
+    renderAt('/profile');
+    expect(screen.getByRole('link', { name: '我的档案' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: '订单管理' })).not.toHaveAttribute('aria-current');
   });
 

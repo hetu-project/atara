@@ -2,7 +2,11 @@ import { createBrowserRouter, Navigate } from 'react-router';
 import LoginPage from '@/features/auth/LoginPage';
 import RegisterPage from '@/features/auth/RegisterPage';
 import RequireAuth from '@/features/auth/RequireAuth';
+import RequireProfile from '@/features/auth/RequireProfile';
 import CounterpartyFormPage from '@/features/counterparties/CounterpartyFormPage';
+import MyProfileEditPage from '@/features/counterparties/MyProfileEditPage';
+import MyProfilePage from '@/features/counterparties/MyProfilePage';
+import OnboardingPage from '@/features/counterparties/OnboardingPage';
 import OrderCreatePage from '@/features/orders/OrderCreatePage';
 import OrderDetailPage from '@/features/orders/OrderDetailPage';
 import OrderListPage from '@/features/orders/OrderListPage';
@@ -15,21 +19,29 @@ const router = createBrowserRouter([
     element: <RequireAuth />,
     children: [
       {
-        element: <AppLayout />,
+        // RequireProfile 在 AppLayout 之外：引导页不显示侧边栏。
+        // 侧边栏的每个入口都要求已有档案，在还没有档案时展示它只会让人点进去撞守卫。
+        element: <RequireProfile />,
         children: [
-          { path: '/', element: <Navigate to="/orders" replace /> },
+          { path: '/onboarding', element: <OnboardingPage /> },
+          {
+            element: <AppLayout />,
+            children: [
+              { path: '/', element: <Navigate to="/orders" replace /> },
 
-          { path: '/buyers/new', element: <CounterpartyFormPage role="buyer" mode="create" /> },
-          { path: '/buyers/:id', element: <CounterpartyFormPage role="buyer" mode="edit" /> },
+              { path: '/profile', element: <MyProfilePage /> },
+              { path: '/profile/buyer/new', element: <CounterpartyFormPage role="buyer" mode="create" /> },
+              { path: '/profile/seller/new', element: <CounterpartyFormPage role="seller" mode="create" /> },
+              { path: '/profile/buyer', element: <MyProfileEditPage role="buyer" /> },
+              { path: '/profile/seller', element: <MyProfileEditPage role="seller" /> },
 
-          { path: '/sellers/new', element: <CounterpartyFormPage role="seller" mode="create" /> },
-          { path: '/sellers/:id', element: <CounterpartyFormPage role="seller" mode="edit" /> },
+              { path: '/orders', element: <OrderListPage /> },
+              { path: '/orders/new', element: <OrderCreatePage /> },
+              { path: '/orders/:id', element: <OrderDetailPage /> },
 
-          { path: '/orders', element: <OrderListPage /> },
-          { path: '/orders/new', element: <OrderCreatePage /> },
-          { path: '/orders/:id', element: <OrderDetailPage /> },
-
-          { path: '*', element: <Navigate to="/orders" replace /> },
+              { path: '*', element: <Navigate to="/orders" replace /> },
+            ],
+          },
         ],
       },
     ],

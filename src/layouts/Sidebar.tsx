@@ -2,9 +2,8 @@ import { NavLink } from 'react-router';
 import { cn } from '@/components/ui/cn';
 
 const NAV = [
-  { to: '/buyers', label: '买家管理' },
-  { to: '/sellers', label: '卖家管理' },
   { to: '/orders', label: '订单管理' },
+  { to: '/profile', label: '我的档案' },
 ];
 
 export default function Sidebar() {
