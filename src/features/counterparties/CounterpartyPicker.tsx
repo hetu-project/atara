@@ -7,7 +7,7 @@ import { lookupCounterparty, type CounterpartyRef } from './lookup';
 export default function CounterpartyPicker({
   role,
   label,
-  value: _value,
+  value,
   onChange,
   error,
   myProfile,
@@ -73,7 +73,7 @@ export default function CounterpartyPicker({
         </button>
       ) : null}
 
-      {found ? (
+      {found && found.id === value ? (
         <p className="text-success mt-2 text-xs">
           已选择 {found.full_name}（{found.display_id}）
         </p>
