@@ -3428,7 +3428,7 @@ export async function listOrderStatusLogs(orderId: string): Promise<OrderStatusL
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `npm test -- orders`
-Expected: PASS，9 个用例（defaultPayee 2 + clearTypeFields 4 + payeeDefaults 3）。
+Expected: PASS，10 个用例（分页 1 + 筛选 2 + 关键词 3 + 日期 4）。
 
 - [ ] **Step 5: 实现 `hooks.ts`**
 
