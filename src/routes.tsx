@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import LoginPage from '@/features/auth/LoginPage';
 import RequireAuth from '@/features/auth/RequireAuth';
+import CounterpartyListPage from '@/features/counterparties/CounterpartyListPage';
 import AppLayout from '@/layouts/AppLayout';
 
 const placeholder = (name: string) => <div className="text-ink-4">{name}（待实现）</div>;
@@ -15,11 +16,11 @@ const router = createBrowserRouter([
         children: [
           { path: '/', element: <Navigate to="/orders" replace /> },
 
-          { path: '/buyers', element: placeholder('买家列表') },
+          { path: '/buyers', element: <CounterpartyListPage role="buyer" /> },
           { path: '/buyers/new', element: placeholder('新建买家') },
           { path: '/buyers/:id', element: placeholder('买家详情') },
 
-          { path: '/sellers', element: placeholder('卖家列表') },
+          { path: '/sellers', element: <CounterpartyListPage role="seller" /> },
           { path: '/sellers/new', element: placeholder('新建卖家') },
           { path: '/sellers/:id', element: placeholder('卖家详情') },
 
