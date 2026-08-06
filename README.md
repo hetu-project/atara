@@ -20,8 +20,15 @@ npm run dev
    但脚本本身用 `begin` / `commit` 包住了整段内容：中途报错会整体回滚，数据库保持原样，
    修好后重新粘贴即可，不会留下建了一半的 schema。这个保证来自脚本本身，
    不依赖 SQL Editor、psql 或 `supabase db push` 里的任何一种执行方式。
-3. 打开 **Authentication → Providers → Email**，把 **Enable Sign Ups** 关掉（本项目不开放注册）；
-   再到 **Authentication → Users → Add user**，手工创建登录账号（勾选 Auto Confirm User）。
+3. 打开 **Authentication → URL Configuration**，把 **Site URL** 设为应用地址
+   （本地开发填 `http://localhost:5173`），否则验证邮件里的链接会指向错误地址。
+
+   用户在应用内自助注册（`/register`），无需在后台手工建号；
+   **Enable Sign Ups 必须保持开启**。
+
+   **邮箱验证默认开启**，注册后需点邮件里的链接才能登录。
+   如需关闭：**Authentication → Providers → Email** → 取消 **Confirm email**。
+   前端两种配置都能正常工作，不需要改代码。
 4. 打开 **Project Settings → API**，复制 `Project URL` 和 `anon public` key，
    填进项目根目录的 `.env`：
 
@@ -40,6 +47,18 @@ npm run dev
 | `npm run dev` | 开发服务器 |
 | `npm run build` | 类型检查 + 生产构建 |
 | `npm test` | 跑 Vitest |
+
+## 权限模型
+
+每个账号只能访问自己的数据：
+
+- **档案**：只能增删改查自己的（`counterparties.user_id = auth.uid()`）
+- **订单**：只能看自己是买方或卖方的
+- **状态流转**：付款方可标「已付款」，收款方可标「已完成」，待付款下双方可取消。
+  由数据库 trigger 强制，前端只是灰掉按钮。
+
+对手方通过 `display_id`（形如 `U000123`）精确查询，只返回 ID、角色、姓名 —— 
+身份证号和银行账号在数据库层面就拿不到。把自己的 `display_id` 线下告诉交易对手。
 
 ## 已知的 npm audit 告警（不要“修”）
 

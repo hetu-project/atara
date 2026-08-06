@@ -236,21 +236,178 @@ create trigger trg_order_status_log_update
   for each row execute function public.log_order_status();
 
 -- ============================================================
--- RLS：登录用户可全量读写（账号由管理员手工创建，不开放注册）
+-- 归属判定
+-- ============================================================
+-- security definer 是必须的：本函数会在 orders 的 policy 内被调用，
+-- 而 policy 内的子查询同样受 counterparties 的 RLS 约束。普通函数在这里
+-- 会因可见性递归而给出错误结果（policy 判定依赖一张正被 policy 保护的表）。
+-- stable 允许 planner 在单条语句内缓存结果，避免每行重复查询。
+create or replace function public.is_my_counterparty(cp_id uuid)
+returns boolean language sql stable security definer
+set search_path = public, pg_temp as $$
+  select exists (
+    select 1 from public.counterparties
+    where id = cp_id and user_id = auth.uid()
+  );
+$$;
+
+-- 收款方 / 付款方的档案 id。
+-- payee 取值 'buyer' | 'seller'，指明这笔钱付给谁。
+-- 绝不能用 order_type 推断收款方 —— crypto 默认买家收币、fiat 默认卖家收款
+-- 只是表单默认值，用户可以覆盖。必须读 payee 列。
+create or replace function public.order_payee_id(o public.orders)
+returns uuid language sql immutable as $$
+  select case when o.payee = 'buyer' then o.buyer_id else o.seller_id end;
+$$;
+
+create or replace function public.order_payer_id(o public.orders)
+returns uuid language sql immutable as $$
+  select case when o.payee = 'buyer' then o.seller_id else o.buyer_id end;
+$$;
+
+-- ============================================================
+-- 状态流转状态机
+-- ============================================================
+-- 放在 trigger 而非 policy 里，是为了能给出具体的中文原因。
+-- policy 违规返回空结果集或通用权限错误，用户只会看到"更新了 0 行"。
+--
+-- 下面 raise exception 的消息是唯一会原样展示给最终用户的 DB 文本
+-- （前端 toFriendlyError 直接透出），因此必须是中文且不含表名列名。
+--
+-- 同一账号可能同时持有买家和卖家档案，此时自己跟自己下单会让两个判定
+-- 同时为真、任何转移都被允许。数据都是他自己的，不构成安全问题，不额外拦截。
+create or replace function public.check_status_transition()
+returns trigger language plpgsql security definer
+set search_path = public, pg_temp as $$
+declare
+  is_payee boolean := public.is_my_counterparty(public.order_payee_id(new));
+  is_payer boolean := public.is_my_counterparty(public.order_payer_id(new));
+begin
+  if new.status = old.status then
+    return new;
+  end if;
+
+  if new.status = 'paid' then
+    if old.status <> 'pending_payment' then
+      raise exception '不允许的状态变更';
+    end if;
+    if not is_payer then
+      raise exception '只有付款方可以标记为已付款';
+    end if;
+
+  elsif new.status = 'completed' then
+    if old.status <> 'paid' then
+      raise exception '不允许的状态变更';
+    end if;
+    if not is_payee then
+      raise exception '只有收款方可以确认完成';
+    end if;
+
+  elsif new.status = 'cancelled' then
+    if old.status <> 'pending_payment' then
+      raise exception '只有待付款的订单可以取消';
+    end if;
+    if not (is_payer or is_payee) then
+      raise exception '不允许的状态变更';
+    end if;
+
+  else
+    raise exception '不允许的状态变更';
+  end if;
+
+  return new;
+end;
+$$;
+
+-- 必须在 trg_order_status_log_update 之前执行：本 trigger 拒绝时应当
+-- 阻止日志写入。同为 before/after 时 PostgreSQL 按名称字母序执行，
+-- 而 log_order_status 是 after update、check 是 before update，
+-- before 总在 after 之前，因此顺序天然正确。
+create trigger trg_order_check_status
+  before update of status on public.orders
+  for each row execute function public.check_status_transition();
+
+-- ============================================================
+-- 对手方查询
+-- ============================================================
+-- 创建订单需要指定对手方，但 RLS 只让用户看到自己的档案。
+-- 这个 RPC 是唯一的例外通道，三重约束：
+--   1. 只返回 4 个字段 —— 身份证号、出生日期、银行账号、钱包地址都不在内。
+--      这是硬约束：即使前端有 bug 也无法泄漏。**永远不要往返回列表里加字段。**
+--   2. 精确匹配，无 like —— 不能用来枚举用户。
+--   3. 只授权 authenticated —— 未登录不可调用。
+--
+-- display_id 形如 U000123，理论上可暴力枚举。这是已接受的风险：
+-- 枚举结果只有姓名，而姓名在交易场景下本就要相互告知。真实防护在于
+-- 返回字段的选择，不在于 ID 不可猜。
+create or replace function public.lookup_counterparty(p_display_id text)
+returns table (id uuid, display_id text, role text, full_name text)
+language sql stable security definer
+set search_path = public, pg_temp as $$
+  select c.id, c.display_id, c.role, c.full_name
+  from public.counterparties c
+  where c.display_id = upper(trim(p_display_id))
+  limit 1;
+$$;
+
+revoke all on function public.lookup_counterparty(text) from public;
+grant execute on function public.lookup_counterparty(text) to authenticated;
+
+-- ============================================================
+-- RLS：每个账号只能访问自己的数据
 -- ============================================================
 alter table public.counterparties    enable row level security;
 alter table public.orders            enable row level security;
 alter table public.order_status_logs enable row level security;
 alter table public.order_no_counters enable row level security;
 
-create policy "authenticated full access" on public.counterparties
-  for all to authenticated using (true) with check (true);
+-- using 管住读/改/删的可见行，with check 防止插入或改写为他人的 user_id
+create policy "own profiles" on public.counterparties
+  for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
 
-create policy "authenticated full access" on public.orders
-  for all to authenticated using (true) with check (true);
+-- 自己是买方或卖方即可见
+create policy "my orders read" on public.orders
+  for select to authenticated
+  using (
+    public.is_my_counterparty(buyer_id) or public.is_my_counterparty(seller_id)
+  );
 
-create policy "authenticated read" on public.order_status_logs
-  for select to authenticated using (true);
+create policy "my orders insert" on public.orders
+  for insert to authenticated
+  with check (
+    public.is_my_counterparty(buyer_id) or public.is_my_counterparty(seller_id)
+  );
+
+-- policy 只管"能不能改这一行"，状态转移的合法性由
+-- trg_order_check_status trigger 强制（那里能给出具体中文原因）
+create policy "my orders update" on public.orders
+  for update to authenticated
+  using (
+    public.is_my_counterparty(buyer_id) or public.is_my_counterparty(seller_id)
+  )
+  with check (
+    public.is_my_counterparty(buyer_id) or public.is_my_counterparty(seller_id)
+  );
+
+-- 刻意不给 DELETE policy：订单不允许删除，只能取消。
+
+-- 外层列必须写成表限定的 public.order_status_logs.order_id。
+-- 裸写 order_id 依赖"子查询里的 orders 没有同名列"这一巧合来正确解析；
+-- 日后给 orders 加一个 order_id 列，谓词会静默变成 o.order_id = o.order_id
+-- （恒真），把全部日志暴露给所有登录用户。
+--
+-- 无需重复表达可见性条件：orders 的 SELECT policy 会自动作用于这个子查询，
+-- 能看到订单即能看到其日志。
+create policy "my order logs" on public.order_status_logs
+  for select to authenticated
+  using (
+    exists (
+      select 1 from public.orders o
+      where o.id = public.order_status_logs.order_id
+    )
+  );
 
 -- order_no_counters 刻意不给任何 policy：
 -- 它只被 set_order_no（security definer，以属主身份运行）读写，
