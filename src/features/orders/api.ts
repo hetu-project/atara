@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { toFriendlyError } from '@/lib/errors';
-import { sanitizeKeyword } from '@/features/counterparties/api';
+import { sanitizeKeyword } from '@/lib/sanitizeKeyword';
 import type {
   Order,
   OrderInput,

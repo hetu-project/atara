@@ -1,29 +1,14 @@
-import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Field, FormSection, Input, Select, Textarea, type Option } from '@/components/ui';
+import { Button, Field, FormSection, Input, Select, Textarea } from '@/components/ui';
 import { ORDER_TYPE_LABEL, PAYEE_LABEL } from '@/lib/format';
-import {
-  ORDER_TYPES,
-  PAYEES,
-  orderSchema,
-  type OrderInput,
-  type OrderType,
-  type Payee,
-} from '@/lib/schema';
-import type { CounterpartyOption } from '@/features/counterparties/api';
-import { useCounterpartyOptions } from '@/features/counterparties/hooks';
-import { clearTypeFields, defaultPayee, payeeDefaults } from './formLogic';
-import CounterpartyOptionNotice from './CounterpartyOptionNotice';
+import { ORDER_TYPES, PAYEES, orderSchema, type OrderInput, type OrderType } from '@/lib/schema';
+import { clearTypeFields, defaultPayee } from './formLogic';
 import CryptoFields from './CryptoFields';
 import FiatFields from './FiatFields';
 
 const TYPE_OPTIONS = ORDER_TYPES.map((v) => ({ value: v, label: ORDER_TYPE_LABEL[v] }));
 const PAYEE_OPTIONS = PAYEES.map((v) => ({ value: v, label: PAYEE_LABEL[v] }));
-
-function toOptions(rows: CounterpartyOption[] | undefined): Option[] {
-  return (rows ?? []).map((r) => ({ value: r.id, label: `${r.full_name}（${r.display_id}）` }));
-}
 
 export default function OrderForm({
   submitting,
@@ -32,16 +17,12 @@ export default function OrderForm({
   submitting: boolean;
   onSubmit: (values: OrderInput) => void;
 }) {
-  const buyers = useCounterpartyOptions('buyer');
-  const sellers = useCounterpartyOptions('seller');
-
   const {
     register,
     handleSubmit,
     watch,
     getValues,
     reset,
-    setValue,
     formState: { errors },
   } = useForm<any>({
     resolver: zodResolver(orderSchema),
@@ -64,28 +45,6 @@ export default function OrderForm({
   });
 
   const orderType = watch('order_type') as OrderType;
-  const payee = watch('payee') as Payee;
-  const buyerId = watch('buyer_id') as string;
-  const sellerId = watch('seller_id') as string;
-
-  // 收款方或订单类型变化时，从对应档案带出默认收款信息。
-  //
-  // 依赖里必须带上 buyers.data / sellers.data（要从中查出选中那条档案），
-  // 这意味着列表数据一旦刷新，本 effect 就会重跑、覆盖用户手改过的收款字段。
-  // 目前不会发生，但**理由不是 staleTime** —— counterparty 的增改会调
-  // invalidateQueries({ queryKey: ['counterparties'] })，那是精确失效，绕过 staleTime。
-  // 真正的原因是路由一次只挂载一个页面：能触发那个 mutation 的 /buyers、/sellers
-  // 与本表单互斥。若将来在订单表单里加"快速新建买家/卖家"的浮层，这个前提就没了，
-  // 届时需要把带出逻辑改成只在用户主动切换收款方时触发。
-  useEffect(() => {
-    const partyId = payee === 'buyer' ? buyerId : sellerId;
-    if (!partyId) return;
-    const rows = payee === 'buyer' ? buyers.data : sellers.data;
-    const full = (rows ?? []).find((r) => r.id === partyId);
-    for (const [k, v] of Object.entries(payeeDefaults(orderType, full))) {
-      setValue(k, v, { shouldValidate: false });
-    }
-  }, [orderType, payee, buyerId, sellerId, buyers.data, sellers.data, setValue]);
 
   function handleTypeChange(next: OrderType) {
     reset(clearTypeFields(getValues(), next));
@@ -107,28 +66,14 @@ export default function OrderForm({
           <Select {...register('payee')} options={PAYEE_OPTIONS} invalid={!!err('payee')} />
         </Field>
         <Field label="买家" required error={err('buyer_id')}>
-          <Select
-            {...register('buyer_id')}
-            options={toOptions(buyers.data)}
-            placeholder="请选择买家"
-            invalid={!!err('buyer_id')}
-          />
+          <Input {...register('buyer_id')} placeholder="买家档案 ID" invalid={!!err('buyer_id')} />
         </Field>
         <Field label="卖家" required error={err('seller_id')}>
-          <Select
-            {...register('seller_id')}
-            options={toOptions(sellers.data)}
-            placeholder="请选择卖家"
-            invalid={!!err('seller_id')}
-          />
+          <Input {...register('seller_id')} placeholder="卖家档案 ID" invalid={!!err('seller_id')} />
         </Field>
         <Field label="金额" required error={err('amount')}>
           <Input {...register('amount')} inputMode="decimal" placeholder="请输入金额" invalid={!!err('amount')} />
         </Field>
-        <div className="col-span-2 flex flex-col gap-1">
-          <CounterpartyOptionNotice list={buyers} label="买家" createPath="/buyers/new" />
-          <CounterpartyOptionNotice list={sellers} label="卖家" createPath="/sellers/new" />
-        </div>
       </FormSection>
 
       {orderType === 'crypto' ? (

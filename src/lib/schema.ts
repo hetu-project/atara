@@ -145,7 +145,8 @@ export interface Counterparty {
   default_wallet_chain: Chain | null;
   note: string | null;
   tags: string[];
-  created_by: string | null;
+  /** 档案归属。Task 1 起由 DB 的 default auth.uid() 填充，前端不传。 */
+  user_id: string;
   created_at: string;
   updated_at: string;
 }

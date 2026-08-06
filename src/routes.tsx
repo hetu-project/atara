@@ -2,7 +2,6 @@ import { createBrowserRouter, Navigate } from 'react-router';
 import LoginPage from '@/features/auth/LoginPage';
 import RequireAuth from '@/features/auth/RequireAuth';
 import CounterpartyFormPage from '@/features/counterparties/CounterpartyFormPage';
-import CounterpartyListPage from '@/features/counterparties/CounterpartyListPage';
 import OrderCreatePage from '@/features/orders/OrderCreatePage';
 import OrderDetailPage from '@/features/orders/OrderDetailPage';
 import OrderListPage from '@/features/orders/OrderListPage';
@@ -18,11 +17,9 @@ const router = createBrowserRouter([
         children: [
           { path: '/', element: <Navigate to="/orders" replace /> },
 
-          { path: '/buyers', element: <CounterpartyListPage role="buyer" /> },
           { path: '/buyers/new', element: <CounterpartyFormPage role="buyer" mode="create" /> },
           { path: '/buyers/:id', element: <CounterpartyFormPage role="buyer" mode="edit" /> },
 
-          { path: '/sellers', element: <CounterpartyListPage role="seller" /> },
           { path: '/sellers/new', element: <CounterpartyFormPage role="seller" mode="create" /> },
           { path: '/sellers/:id', element: <CounterpartyFormPage role="seller" mode="edit" /> },
 
