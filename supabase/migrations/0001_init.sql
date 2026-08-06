@@ -328,6 +328,44 @@ create trigger trg_order_check_status
   for each row execute function public.check_status_transition();
 
 -- ============================================================
+-- 订单成交条款不可篡改
+-- ============================================================
+-- 上面那个 trigger 是 `before update OF STATUS` —— 只改 payee 的语句
+-- 根本不触发它。缺了本 trigger 就有一条绕过路径：
+--   买家 A、卖家 B、payee='seller'、状态 paid
+--   A 先 `update orders set payee='buyer'`（不碰 status，trigger 不响）
+--   A 再标 completed —— 状态机读 new.payee，认定 A 自己就是收款方，放行
+--   B 从未确认收款，订单已被 A 单方面完成
+-- 同一条语句里 `set status='completed', payee='buyer'` 一样成立。
+--
+-- 另外 RLS 的 with check 只能看到新行、拿不到 OLD，列冻结无法在 policy 里做，
+-- 只能靠 trigger。这也是为什么不把它并进上面那个：本 trigger 必须对
+-- **任何** update 生效，不能限定 `of status`。
+--
+-- 冻结的是"成交条款"：谁跟谁、谁收钱、收多少。收款账号/地址不冻结 ——
+-- 待付款阶段对方要求换收款方式是正常业务。
+create or replace function public.freeze_order_terms()
+returns trigger language plpgsql as $$
+begin
+  if new.buyer_id is distinct from old.buyer_id
+     or new.seller_id is distinct from old.seller_id
+     or new.payee is distinct from old.payee
+     or new.amount is distinct from old.amount
+     or new.order_type is distinct from old.order_type
+     or new.order_no is distinct from old.order_no
+     or new.created_by is distinct from old.created_by
+     or new.created_at is distinct from old.created_at then
+    raise exception '订单的交易双方、收款方与金额创建后不可修改';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_order_freeze_terms
+  before update on public.orders
+  for each row execute function public.freeze_order_terms();
+
+-- ============================================================
 -- 对手方查询
 -- ============================================================
 -- 创建订单需要指定对手方，但 RLS 只让用户看到自己的档案。
@@ -374,10 +412,15 @@ create policy "my orders read" on public.orders
     public.is_my_counterparty(buyer_id) or public.is_my_counterparty(seller_id)
   );
 
+-- status 必须锁死在 pending_payment：状态机 trigger 只管 UPDATE，
+-- 列上的 check 又允许全部四个值。不锁的话，用户可以直接 INSERT 一条
+-- status='completed' 的既成订单、并把任意陌生人栽为对手方
+-- （只要自己占买卖中的一方，本 policy 的归属判定就通过）。
 create policy "my orders insert" on public.orders
   for insert to authenticated
   with check (
-    public.is_my_counterparty(buyer_id) or public.is_my_counterparty(seller_id)
+    (public.is_my_counterparty(buyer_id) or public.is_my_counterparty(seller_id))
+    and status = 'pending_payment'
   );
 
 -- policy 只管"能不能改这一行"，状态转移的合法性由
