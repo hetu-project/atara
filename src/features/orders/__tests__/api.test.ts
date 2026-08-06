@@ -36,14 +36,27 @@ describe('buildOrderQuery', () => {
     );
   });
 
-  it('日期区间转成 gte / lte', () => {
+  // 断言写成"与本地时区无关"的形式：直接比对同样按本地时区解析出的 ISO 串，
+  // 而不是硬编码某个 UTC 字面量 —— 否则这个测试只在 UTC 机器上通过。
+  it('日期区间按本地时区的当天起止转成 gte / lte', () => {
     const r = buildOrderQuery({ page: 1, pageSize: 20, dateFrom: '2026-08-01', dateTo: '2026-08-06' });
-    expect(r.range).toEqual({ gte: '2026-08-01T00:00:00.000Z', lte: '2026-08-06T23:59:59.999Z' });
+    expect(r.range).toEqual({
+      gte: new Date('2026-08-01T00:00:00').toISOString(),
+      lte: new Date('2026-08-06T23:59:59.999').toISOString(),
+    });
+  });
+
+  it('起点确实落在本地时区的当天零点', () => {
+    const r = buildOrderQuery({ page: 1, pageSize: 20, dateFrom: '2026-08-01' });
+    const start = new Date(r.range!.gte!);
+    expect(start.getHours()).toBe(0);
+    expect(start.getMinutes()).toBe(0);
+    expect(start.getDate()).toBe(1);
   });
 
   it('只填开始日期时只有 gte', () => {
     const r = buildOrderQuery({ page: 1, pageSize: 20, dateFrom: '2026-08-01' });
-    expect(r.range).toEqual({ gte: '2026-08-01T00:00:00.000Z' });
+    expect(Object.keys(r.range!)).toEqual(['gte']);
   });
 
   it('无日期时 range 为 undefined', () => {
