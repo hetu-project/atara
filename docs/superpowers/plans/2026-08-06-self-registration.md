@@ -1058,12 +1058,19 @@ export function useMyProfiles() {
 
 - [ ] **Step 7: 为守卫写失败测试**
 
-创建 `src/features/auth/__tests__/RequireProfile.test.tsx`：
+创建 `src/features/auth/__tests__/RequireProfile.test.tsx`。
+
+**必须用声明式 `MemoryRouter` + `Routes`，不要用 `createMemoryRouter` + `RouterProvider`。**
+数据路由的导航会走 `startNavigation` → `createClientSideRequest` → `new Request(url, { signal })`，
+而 jsdom 造的 `AbortSignal` 不是 Node 全局 `AbortSignal` 的实例，undici 会抛
+`TypeError: RequestInit: Expected signal to be an instance of AbortSignal`，
+于是任何触发重定向的用例都必然失败。声明式路由直接走 history，不碰 `Request`。
+（同仓库的 `Sidebar.test.tsx` 用的就是声明式写法，一直是绿的。）
 
 ```tsx
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { createMemoryRouter, RouterProvider } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import RequireProfile from '../RequireProfile';
 
 const mockUseMyProfiles = vi.fn();
@@ -1072,19 +1079,16 @@ vi.mock('@/features/counterparties/hooks', () => ({
 }));
 
 function renderAt(path: string) {
-  const router = createMemoryRouter(
-    [
-      {
-        element: <RequireProfile />,
-        children: [
-          { path: '/orders', element: <div>订单页</div> },
-          { path: '/onboarding', element: <div>引导页</div> },
-        ],
-      },
-    ],
-    { initialEntries: [path] },
+  render(
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route element={<RequireProfile />}>
+          <Route path="/orders" element={<div>订单页</div>} />
+          <Route path="/onboarding" element={<div>引导页</div>} />
+        </Route>
+      </Routes>
+    </MemoryRouter>,
   );
-  render(<RouterProvider router={router} />);
 }
 
 describe('RequireProfile', () => {
