@@ -11,6 +11,17 @@ export interface ListParams {
 
 const SEARCH_FIELDS = ['full_name', 'display_id', 'email', 'phone'];
 
+/**
+ * PostgREST 的 or 过滤是拼字符串的，语法字符必须从用户输入里剔除，否则会生成畸形查询。
+ * supabase-js 会把整个 or 串再包一层 `(...)`，所以输入里的 `)` 会提前闭合这个组；
+ * `,` 是 or 的分隔符；`"` 和 `\` 是 PostgREST 的引用/转义字符。
+ * 这类畸形查询报错在 toFriendlyError 里没有对应规则，会把后端原始报错直接抛给用户 ——
+ * 正是本层要防的事，所以在源头剔除。
+ */
+export function sanitizeKeyword(raw: string | undefined): string {
+  return (raw ?? '').replace(/[(),"\\]/g, '').trim();
+}
+
 /** 纯函数：把筛选参数转成 supabase 查询片段 */
 export function buildCounterpartyQuery(params: ListParams): {
   from: number;
@@ -20,7 +31,7 @@ export function buildCounterpartyQuery(params: ListParams): {
   const from = (params.page - 1) * params.pageSize;
   const to = from + params.pageSize - 1;
 
-  const keyword = (params.keyword ?? '').replace(/,/g, '').trim();
+  const keyword = sanitizeKeyword(params.keyword);
   if (!keyword) return { from, to };
 
   return {

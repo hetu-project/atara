@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@/lib/supabase', () => ({ supabase: {} }));
+
 import { buildCounterpartyQuery } from '@/features/counterparties/api';
 
 describe('buildCounterpartyQuery', () => {
@@ -30,9 +33,18 @@ describe('buildCounterpartyQuery', () => {
     );
   });
 
-  it('关键词里的逗号被剔除，避免破坏 or 语法', () => {
+  it('剔除会破坏 PostgREST or 语法的字符', () => {
+    // 逗号是 or 的分隔符
     expect(buildCounterpartyQuery({ role: 'buyer', keyword: 'a,b', page: 1, pageSize: 20 }).orFilter).toContain(
       '%ab%',
     );
+    // 右括号会提前闭合 supabase-js 包在外层的那对括号
+    expect(
+      buildCounterpartyQuery({ role: 'buyer', keyword: 'ABC (HK) Ltd', page: 1, pageSize: 20 }).orFilter,
+    ).toContain('%ABC HK Ltd%');
+    // 双引号与反斜杠是 PostgREST 的引用/转义字符
+    expect(
+      buildCounterpartyQuery({ role: 'buyer', keyword: 'a"b\\c', page: 1, pageSize: 20 }).orFilter,
+    ).toContain('%abc%');
   });
 });
