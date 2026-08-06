@@ -246,6 +246,12 @@ Tailwind v4 用 CSS-first 配置，没有 `tailwind.config.ts`。`@theme` 块里
   --radius-card: 28px;
   --radius-input: 12px;
   --radius-pill: 999px;
+
+  /* 组件状态色。单独列出来是为了不让这些值以 bg-[#d3fcd9] 的形式散落在组件里 */
+  --color-primary-disabled: #d3fcd9;
+  --color-second-hover: #e5e5e5;
+
+  --shadow-float: 0px 4px 10px rgba(208, 208, 208, 0.4);
 }
 
 @layer base {
@@ -1399,7 +1405,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={!email || !password || submitting}
-          className="rounded-pill bg-primary hover:bg-primary-hover transition-base h-[56px] w-full text-base font-semibold text-black disabled:cursor-not-allowed disabled:bg-[#d3fcd9] disabled:text-black/30"
+          className="rounded-pill bg-primary hover:bg-primary-hover transition-base h-[56px] w-full text-base font-semibold text-black disabled:cursor-not-allowed disabled:bg-primary-disabled disabled:text-black/30"
         >
           {submitting ? '登录中...' : '登录'}
         </button>
@@ -1580,9 +1586,9 @@ interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'
 }
 
 const VARIANT: Record<Variant, string> = {
-  primary: 'bg-primary text-black hover:bg-primary-hover disabled:bg-[#d3fcd9] disabled:text-black/30',
+  primary: 'bg-primary text-black hover:bg-primary-hover disabled:bg-primary-disabled disabled:text-black/30',
   second:
-    'bg-white text-black border border-line-strong hover:bg-[#e5e5e5] disabled:text-black/30 disabled:hover:bg-white',
+    'bg-white text-black border border-line-strong hover:bg-second-hover disabled:text-black/30 disabled:hover:bg-white',
   third: 'bg-black text-white hover:bg-black/60 disabled:bg-black/30',
   text: 'text-success hover:opacity-60 disabled:text-black/30',
 };
@@ -1759,18 +1765,28 @@ interface Props {
 
 export default function Field({ label, required, error, hint, children }: Props) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-xs text-black/50">
-        {label}
-        {required ? <span className="text-danger ml-1">*</span> : null}
-      </span>
-      {children}
+    <div>
+      <label className="block">
+        <span className="mb-2 block text-xs text-black/50">
+          {label}
+          {required ? <span className="text-danger ml-1">*</span> : null}
+        </span>
+        {children}
+      </label>
       {error ? <p className="text-danger mt-1.5 px-2 text-xs">{error}</p> : null}
       {!error && hint ? <p className="text-ink-4 mt-1.5 px-2 text-xs">{hint}</p> : null}
-    </label>
+    </div>
   );
 }
 ```
+
+`error` / `hint` 必须放在 `<label>` **外面**。隐式 label 关联会把 label 内所有后代文本拼成控件的
+可访问名，如果错误和提示文字在里面，`邮箱` 这个字段的可访问名就会变成
+「邮箱 邮箱格式不正确」——读屏器会念出来，`getByLabelText` 的精确匹配也会失效。
+`<label>` 里只留标题文本和控件本身，可访问名就是干净的「姓名 *」。
+
+（没有再用 `aria-describedby` 把错误文案关联到控件：那需要 `cloneElement` 注入 id，
+对这个内部工具而言复杂度不划算。可访问名污染是主要缺陷，已解决。）
 
 - [ ] **Step 6: 实现展示类组件**
 
@@ -1982,7 +1998,16 @@ export default function Pagination({ page, total, pageSize, onChange }: Props) {
 `src/components/ui/Toast.tsx`：
 
 ```tsx
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { cn } from './cn';
 
 interface ToastItem {
@@ -2002,11 +2027,27 @@ let nextId = 1;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
+  // 记下所有待触发的自动消失定时器，卸载时一并清掉。
+  // 不清的话，测试里挂载 ToastProvider 又快速卸载会触发
+  // "update on unmounted component" 警告，把测试输出弄脏。
+  const timers = useRef<number[]>([]);
+
+  useEffect(
+    () => () => {
+      timers.current.forEach(clearTimeout);
+      timers.current = [];
+    },
+    [],
+  );
 
   const push = useCallback((tone: ToastItem['tone'], message: string) => {
     const id = nextId++;
     setItems((prev) => [...prev, { id, tone, message }]);
-    setTimeout(() => setItems((prev) => prev.filter((i) => i.id !== id)), 3000);
+    const timer = window.setTimeout(() => {
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      timers.current = timers.current.filter((t) => t !== timer);
+    }, 3000);
+    timers.current.push(timer);
   }, []);
 
   const api = useMemo<ToastApi>(
@@ -2022,7 +2063,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={i.id}
             className={cn(
-              'rounded-pill px-5 py-2.5 text-sm font-semibold shadow-[0px_4px_10px_rgba(208,208,208,0.4)]',
+              'rounded-pill shadow-float px-5 py-2.5 text-sm font-semibold',
               i.tone === 'success' ? 'bg-primary text-black' : 'bg-danger text-white',
             )}
           >
