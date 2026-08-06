@@ -1,4 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { cn } from './cn';
 
 interface ToastItem {
@@ -18,11 +27,27 @@ let nextId = 1;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
+  // 记下所有待触发的自动消失定时器，卸载时一并清掉。
+  // 不清的话，测试里挂载 ToastProvider 又快速卸载会触发
+  // "update on unmounted component" 警告，把测试输出弄脏。
+  const timers = useRef<number[]>([]);
+
+  useEffect(
+    () => () => {
+      timers.current.forEach(clearTimeout);
+      timers.current = [];
+    },
+    [],
+  );
 
   const push = useCallback((tone: ToastItem['tone'], message: string) => {
     const id = nextId++;
     setItems((prev) => [...prev, { id, tone, message }]);
-    setTimeout(() => setItems((prev) => prev.filter((i) => i.id !== id)), 3000);
+    const timer = window.setTimeout(() => {
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      timers.current = timers.current.filter((t) => t !== timer);
+    }, 3000);
+    timers.current.push(timer);
   }, []);
 
   const api = useMemo<ToastApi>(
@@ -38,7 +63,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={i.id}
             className={cn(
-              'rounded-pill px-5 py-2.5 text-sm font-semibold shadow-[0px_4px_10px_rgba(208,208,208,0.4)]',
+              'rounded-pill shadow-float px-5 py-2.5 text-sm font-semibold',
               i.tone === 'success' ? 'bg-primary text-black' : 'bg-danger text-white',
             )}
           >

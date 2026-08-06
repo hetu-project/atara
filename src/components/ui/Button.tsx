@@ -13,9 +13,9 @@ interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'
 }
 
 const VARIANT: Record<Variant, string> = {
-  primary: 'bg-primary text-black hover:bg-primary-hover disabled:bg-[#d3fcd9] disabled:text-black/30',
+  primary: 'bg-primary text-black hover:bg-primary-hover disabled:bg-primary-disabled disabled:text-black/30',
   second:
-    'bg-white text-black border border-line-strong hover:bg-[#e5e5e5] disabled:text-black/30 disabled:hover:bg-white',
+    'bg-white text-black border border-line-strong hover:bg-second-hover disabled:text-black/30 disabled:hover:bg-white',
   third: 'bg-black text-white hover:bg-black/60 disabled:bg-black/30',
   text: 'text-success hover:opacity-60 disabled:text-black/30',
 };

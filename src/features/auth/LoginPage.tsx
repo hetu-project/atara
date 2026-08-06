@@ -56,7 +56,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={!email || !password || submitting}
-          className="rounded-pill bg-primary hover:bg-primary-hover transition-base h-[56px] w-full text-base font-semibold text-black disabled:cursor-not-allowed disabled:bg-[#d3fcd9] disabled:text-black/30"
+          className="rounded-pill bg-primary hover:bg-primary-hover transition-base h-[56px] w-full text-base font-semibold text-black disabled:cursor-not-allowed disabled:bg-primary-disabled disabled:text-black/30"
         >
           {submitting ? '登录中...' : '登录'}
         </button>
