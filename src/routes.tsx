@@ -4,10 +4,9 @@ import RequireAuth from '@/features/auth/RequireAuth';
 import CounterpartyFormPage from '@/features/counterparties/CounterpartyFormPage';
 import CounterpartyListPage from '@/features/counterparties/CounterpartyListPage';
 import OrderCreatePage from '@/features/orders/OrderCreatePage';
+import OrderDetailPage from '@/features/orders/OrderDetailPage';
 import OrderListPage from '@/features/orders/OrderListPage';
 import AppLayout from '@/layouts/AppLayout';
-
-const placeholder = (name: string) => <div className="text-ink-4">{name}（待实现）</div>;
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -29,7 +28,7 @@ const router = createBrowserRouter([
 
           { path: '/orders', element: <OrderListPage /> },
           { path: '/orders/new', element: <OrderCreatePage /> },
-          { path: '/orders/:id', element: placeholder('订单详情') },
+          { path: '/orders/:id', element: <OrderDetailPage /> },
 
           { path: '*', element: <Navigate to="/orders" replace /> },
         ],
