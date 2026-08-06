@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import LoginPage from '@/features/auth/LoginPage';
 import RequireAuth from '@/features/auth/RequireAuth';
+import CounterpartyFormPage from '@/features/counterparties/CounterpartyFormPage';
 import CounterpartyListPage from '@/features/counterparties/CounterpartyListPage';
 import AppLayout from '@/layouts/AppLayout';
 
@@ -17,12 +18,12 @@ const router = createBrowserRouter([
           { path: '/', element: <Navigate to="/orders" replace /> },
 
           { path: '/buyers', element: <CounterpartyListPage role="buyer" /> },
-          { path: '/buyers/new', element: placeholder('新建买家') },
-          { path: '/buyers/:id', element: placeholder('买家详情') },
+          { path: '/buyers/new', element: <CounterpartyFormPage role="buyer" mode="create" /> },
+          { path: '/buyers/:id', element: <CounterpartyFormPage role="buyer" mode="edit" /> },
 
           { path: '/sellers', element: <CounterpartyListPage role="seller" /> },
-          { path: '/sellers/new', element: placeholder('新建卖家') },
-          { path: '/sellers/:id', element: placeholder('卖家详情') },
+          { path: '/sellers/new', element: <CounterpartyFormPage role="seller" mode="create" /> },
+          { path: '/sellers/:id', element: <CounterpartyFormPage role="seller" mode="edit" /> },
 
           { path: '/orders', element: placeholder('订单列表') },
           { path: '/orders/new', element: placeholder('新建订单') },
