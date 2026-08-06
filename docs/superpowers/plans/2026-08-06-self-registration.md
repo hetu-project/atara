@@ -311,19 +311,25 @@ create policy "my order logs" on public.order_status_logs
 
 - [ ] **Step 9: 更新 README**
 
-把 README 里描述接入步骤的那一段中「在 Auth 后台手工创建账号」相关内容替换为：
+`README.md` 的 `## Supabase 接入（四步）` 是一个 `1. / 2. / 3. / 4.` 的有序列表。
+把**第 3 项整项**（现内容为「关掉 Enable Sign Ups ... Add user 手工创建账号」）
+替换为下面这一项。**保持列表项格式 `3. `，不要用 `###` 标题**，缩进续行对齐 3 个空格，
+与相邻的第 2、4 项一致。第 4 项（Project Settings → API 那项）原样保留、不要动，
+标题里的「四步」也不变（仍是四步）。
+
+注意第 3 项原文要求关掉 Enable Sign Ups —— 本次变更开放自助注册，这一句必须消失，
+否则 README 会与 `/register` 功能直接矛盾。
 
 ```markdown
-### 4. 注册第一个账号
+3. 打开 **Authentication → URL Configuration**，把 **Site URL** 设为应用地址
+   （本地开发填 `http://localhost:5173`），否则验证邮件里的链接会指向错误地址。
 
-用户在应用内自助注册（`/register`），无需在 Supabase 后台手工建号。
+   用户在应用内自助注册（`/register`），无需在后台手工建号；
+   **Enable Sign Ups 必须保持开启**。
 
-**邮箱验证默认开启。** 需在 Supabase Dashboard → Authentication → URL Configuration
-里把 Site URL 设为你的应用地址（本地开发填 `http://localhost:5173`），
-否则验证邮件里的链接会指向错误地址。
-
-如需关闭邮箱验证：Authentication → Providers → Email → 取消 "Confirm email"。
-前端两种配置都能正常工作，不需要改代码。
+   **邮箱验证默认开启**，注册后需点邮件里的链接才能登录。
+   如需关闭：**Authentication → Providers → Email** → 取消 **Confirm email**。
+   前端两种配置都能正常工作，不需要改代码。
 ```
 
 并在 README 中新增一节：
