@@ -988,7 +988,7 @@ export interface OrderStatusLog {
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `npm test -- schema`
-Expected: PASS，17 个用例全绿。
+Expected: PASS，14 个用例全绿（counterpartySchema 6 + crypto 5 + fiat 3）。
 
 - [ ] **Step 5: 写失败的 format 测试**
 
