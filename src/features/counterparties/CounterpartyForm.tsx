@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Field, FormSection, Input, Select, Textarea } from '@/components/ui';
@@ -19,6 +20,7 @@ export default function CounterpartyForm({ role, defaultValues, submitting, onSu
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<CounterpartyInput>({
     resolver: zodResolver(counterpartySchema),
@@ -29,6 +31,22 @@ export default function CounterpartyForm({ role, defaultValues, submitting, onSu
     // 那样 role 会变成 undefined、在 z.enum(ROLES) 处报一个很难懂的错。
     defaultValues: { role, tags: [], ...defaultValues },
   });
+
+  // tags 在 schema 里是 string[]，但输入框只能编辑 string。不能直接
+  // `{...register('tags')}` —— 那样提交时 tags 会是一整个逗号分隔的字符串，
+  // 而不是数组，zod 会在 tags 上报一个跟标签内容毫无关系的类型错误。
+  // 所以这里维护一份独立的文本状态用于展示/编辑，每次变化时用 setValue 把它
+  // 拆分成数组写回真正的表单字段，真正提交的值永远是数组。
+  const [tagsText, setTagsText] = useState((defaultValues?.tags ?? []).join(', '));
+
+  function handleTagsChange(text: string) {
+    setTagsText(text);
+    const tags = text
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    setValue('tags', tags, { shouldValidate: false });
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-[900px]">
@@ -86,7 +104,16 @@ export default function CounterpartyForm({ role, defaultValues, submitting, onSu
         </Field>
       </FormSection>
 
-      <FormSection title="备注">
+      <FormSection title="备注与标签">
+        <div className="col-span-2">
+          <Field label="标签" hint="多个标签用英文逗号分隔，如 vip, 高风险">
+            <Input
+              value={tagsText}
+              onChange={(e) => handleTagsChange(e.target.value)}
+              placeholder="标签，用逗号分隔"
+            />
+          </Field>
+        </div>
         <div className="col-span-2">
           <Field label="备注" error={errors.note?.message as string}>
             <Textarea {...register('note')} placeholder="内部备注，选填" />

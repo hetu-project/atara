@@ -54,4 +54,28 @@ describe('CounterpartyForm', () => {
     render(<CounterpartyForm role="buyer" submitting onSubmit={vi.fn()} />);
     expect(screen.getByRole('button', { name: '处理中...' })).toBeDisabled();
   });
+
+  it('标签按英文逗号拆分成数组，首尾空格与空项被去掉', async () => {
+    const onSubmit = vi.fn();
+    render(<CounterpartyForm role="buyer" submitting={false} onSubmit={onSubmit} />);
+
+    await userEvent.type(screen.getByLabelText(/^姓名/), '钱七');
+    await userEvent.type(screen.getByLabelText(/^标签/), 'vip, 高风险, ,  ');
+    await userEvent.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0][0].tags).toEqual(['vip', '高风险']);
+  });
+
+  it('回填默认值时标签框显示逗号拼接的文本', () => {
+    render(
+      <CounterpartyForm
+        role="buyer"
+        submitting={false}
+        onSubmit={vi.fn()}
+        defaultValues={{ role: 'buyer', full_name: '赵六', tags: ['vip', '老客户'] }}
+      />,
+    );
+    expect(screen.getByLabelText(/^标签/)).toHaveValue('vip, 老客户');
+  });
 });
