@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clearTypeFields, defaultPayee, payeeDefaults } from '@/features/orders/formLogic';
+import { clearTypeFields, defaultPayee } from '@/features/orders/formLogic';
 
 describe('defaultPayee', () => {
   it('crypto 订单默认收款方是买家', () => {
@@ -52,42 +52,5 @@ describe('clearTypeFields', () => {
 
   it('order_type 被设为目标类型', () => {
     expect(clearTypeFields(values, 'fiat').order_type).toBe('fiat');
-  });
-});
-
-describe('payeeDefaults', () => {
-  const party = {
-    bank_name: 'ICBC',
-    bank_account_name: '张三',
-    bank_account_number: '6222000011112222',
-    bank_swift: 'ICBKCNBJ',
-    default_wallet_address: 'TXkabc',
-    default_wallet_chain: 'TRON' as const,
-  };
-
-  it('crypto 订单带出钱包地址和链', () => {
-    expect(payeeDefaults('crypto', party)).toEqual({
-      receiving_address: 'TXkabc',
-      chain: 'TRON',
-    });
-  });
-
-  it('法币订单带出银行信息', () => {
-    expect(payeeDefaults('fiat', party)).toEqual({
-      bank_name: 'ICBC',
-      bank_account_name: '张三',
-      bank_account_number: '6222000011112222',
-      bank_swift: 'ICBKCNBJ',
-    });
-  });
-
-  it('对方没有默认值时返回空字符串', () => {
-    expect(payeeDefaults('crypto', undefined)).toEqual({ receiving_address: '', chain: '' });
-    expect(payeeDefaults('fiat', {})).toEqual({
-      bank_name: '',
-      bank_account_name: '',
-      bank_account_number: '',
-      bank_swift: '',
-    });
   });
 });

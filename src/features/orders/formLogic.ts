@@ -1,16 +1,4 @@
-import type { Counterparty, OrderType, Payee } from '@/lib/schema';
-
-export type CounterpartyDefaults = Partial<
-  Pick<
-    Counterparty,
-    | 'bank_name'
-    | 'bank_account_name'
-    | 'bank_account_number'
-    | 'bank_swift'
-    | 'default_wallet_address'
-    | 'default_wallet_chain'
-  >
->;
+import type { OrderType, Payee } from '@/lib/schema';
 
 const CRYPTO_FIELDS = ['asset', 'chain', 'receiving_address'] as const;
 const FIAT_FIELDS = ['fiat_currency', 'bank_name', 'bank_account_name', 'bank_account_number', 'bank_swift'] as const;
@@ -29,23 +17,4 @@ export function clearTypeFields<T extends Record<string, unknown>>(
   const toClear = nextType === 'crypto' ? FIAT_FIELDS : CRYPTO_FIELDS;
   for (const f of toClear) next[f] = '';
   return next as T & Record<string, unknown>;
-}
-
-/** 从收款方档案带出默认收款信息 */
-export function payeeDefaults(
-  orderType: OrderType,
-  party: CounterpartyDefaults | undefined,
-): Record<string, string> {
-  if (orderType === 'crypto') {
-    return {
-      receiving_address: party?.default_wallet_address ?? '',
-      chain: party?.default_wallet_chain ?? '',
-    };
-  }
-  return {
-    bank_name: party?.bank_name ?? '',
-    bank_account_name: party?.bank_account_name ?? '',
-    bank_account_number: party?.bank_account_number ?? '',
-    bank_swift: party?.bank_swift ?? '',
-  };
 }

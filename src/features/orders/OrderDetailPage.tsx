@@ -1,15 +1,16 @@
 import { useNavigate, useParams } from 'react-router';
 import PageHeader from '@/components/PageHeader';
 import QueryState from '@/components/QueryState';
-import { Button, Select, useToast } from '@/components/ui';
+import { Button, useToast } from '@/components/ui';
+import { useMyProfiles } from '@/features/counterparties/hooks';
 import { ORDER_STATUS_LABEL } from '@/lib/format';
-import { ORDER_STATUSES, type OrderStatus } from '@/lib/schema';
+import type { OrderStatus } from '@/lib/schema';
 import OrderInfoGrid from './OrderInfoGrid';
 import OrderStatusBadge from './OrderStatusBadge';
+import StatusActions from './StatusActions';
+import { isPayeeSide } from './statusMachine';
 import StatusTimeline from './StatusTimeline';
 import { useOrder, useOrderStatusLogs, useUpdateOrderStatus } from './hooks';
-
-const STATUS_OPTIONS = ORDER_STATUSES.map((v) => ({ value: v, label: ORDER_STATUS_LABEL[v] }));
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,10 +20,24 @@ export default function OrderDetailPage() {
   const order = useOrder(id);
   const logs = useOrderStatusLogs(id);
   const updateStatus = useUpdateOrderStatus(id ?? '');
+  const profiles = useMyProfiles();
 
   if (order.isLoading) return <div className="text-ink-4 text-sm">加载中...</div>;
   if (order.isError) return <div className="text-danger text-sm">加载失败：{(order.error as Error).message}</div>;
   if (!order.data) return null;
+
+  // 判定当前用户在这笔订单里的位置。
+  // 收款方由 payee 列决定（'buyer' 表示钱付给买家），绝不能用 order_type 推断 ——
+  // crypto 默认买家收币只是表单默认值，用户可以改。
+  const myIds = new Set((profiles.data ?? []).map((p) => p.id));
+  const iAmBuyer = myIds.has(order.data.buyer_id);
+  const iAmSeller = myIds.has(order.data.seller_id);
+  const payeeIsBuyer = isPayeeSide(order.data.payee, 'buyer');
+  const roleContext = {
+    status: order.data.status,
+    isPayee: payeeIsBuyer ? iAmBuyer : iAmSeller,
+    isPayer: payeeIsBuyer ? iAmSeller : iAmBuyer,
+  };
 
   function handleStatusChange(next: OrderStatus) {
     if (next === order.data!.status) return;
@@ -43,17 +58,18 @@ export default function OrderDetailPage() {
         }
       />
 
-      <div className="rounded-card bg-surface mb-5 flex items-center gap-5 px-6 py-4">
+      <div className="rounded-card bg-surface mb-5 flex flex-wrap items-center gap-5 px-6 py-4">
         <span className="text-sm text-black/50">当前状态</span>
         <OrderStatusBadge status={order.data.status} />
-        <Select
-          className="w-[160px]"
-          options={STATUS_OPTIONS}
-          value={order.data.status}
-          disabled={updateStatus.isPending}
-          onChange={(e) => handleStatusChange(e.target.value as OrderStatus)}
-        />
-        <span className="text-ink-4 text-xs">状态可在四种之间手动切换，每次变更都会记录</span>
+        {profiles.isPending ? (
+          <span className="text-ink-4 text-xs">加载中...</span>
+        ) : (
+          <StatusActions
+            context={roleContext}
+            pending={updateStatus.isPending}
+            onChange={handleStatusChange}
+          />
+        )}
       </div>
 
       <div className="rounded-card bg-surface mb-5 p-6">

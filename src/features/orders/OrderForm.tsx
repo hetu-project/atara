@@ -1,8 +1,11 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Field, FormSection, Input, Select, Textarea } from '@/components/ui';
+import CounterpartyPicker from '@/features/counterparties/CounterpartyPicker';
+import { useMyProfiles } from '@/features/counterparties/hooks';
+import { pickProfile } from '@/features/counterparties/myProfiles';
 import { ORDER_TYPE_LABEL, PAYEE_LABEL } from '@/lib/format';
-import { ORDER_TYPES, PAYEES, orderSchema, type OrderInput, type OrderType } from '@/lib/schema';
+import { ORDER_TYPES, PAYEES, orderSchema, type OrderInput, type OrderType, type Payee } from '@/lib/schema';
 import { clearTypeFields, defaultPayee } from './formLogic';
 import CryptoFields from './CryptoFields';
 import FiatFields from './FiatFields';
@@ -22,6 +25,7 @@ export default function OrderForm({
     handleSubmit,
     watch,
     getValues,
+    setValue,
     reset,
     formState: { errors },
   } = useForm<any>({
@@ -45,12 +49,19 @@ export default function OrderForm({
   });
 
   const orderType = watch('order_type') as OrderType;
+  const payee = watch('payee') as Payee;
+  const buyerId = watch('buyer_id') as string;
+  const sellerId = watch('seller_id') as string;
+  const profiles = useMyProfiles();
 
   function handleTypeChange(next: OrderType) {
     reset(clearTypeFields(getValues(), next));
   }
 
   const err = (name: string) => (errors as Record<string, { message?: string } | undefined>)[name]?.message;
+
+  const myPayeeProfile = pickProfile(profiles.data, payee);
+  const payeeIsMe = Boolean(myPayeeProfile) && myPayeeProfile!.id === (payee === 'buyer' ? buyerId : sellerId);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-[900px]">
@@ -65,16 +76,33 @@ export default function OrderForm({
         <Field label="收款方" required error={err('payee')}>
           <Select {...register('payee')} options={PAYEE_OPTIONS} invalid={!!err('payee')} />
         </Field>
-        <Field label="买家" required error={err('buyer_id')}>
-          <Input {...register('buyer_id')} placeholder="买家档案 ID" invalid={!!err('buyer_id')} />
-        </Field>
-        <Field label="卖家" required error={err('seller_id')}>
-          <Input {...register('seller_id')} placeholder="卖家档案 ID" invalid={!!err('seller_id')} />
-        </Field>
+        <CounterpartyPicker
+          role="buyer"
+          label="买家"
+          value={buyerId}
+          onChange={(id) => setValue('buyer_id', id, { shouldValidate: true })}
+          error={err('buyer_id')}
+          myProfile={pickProfile(profiles.data, 'buyer')}
+        />
+        <CounterpartyPicker
+          role="seller"
+          label="卖家"
+          value={sellerId}
+          onChange={(id) => setValue('seller_id', id, { shouldValidate: true })}
+          error={err('seller_id')}
+          myProfile={pickProfile(profiles.data, 'seller')}
+        />
         <Field label="金额" required error={err('amount')}>
           <Input {...register('amount')} inputMode="decimal" placeholder="请输入金额" invalid={!!err('amount')} />
         </Field>
       </FormSection>
+
+      <p className="text-ink-3 mb-4 max-w-[900px] text-xs">
+        请填写{payee === 'buyer' ? '买家' : '卖家'}的收款信息。
+        {payeeIsMe
+          ? '这一方是你自己，可以从你的档案填入。'
+          : '对方的收款信息需要向对方索取 —— 出于隐私保护，系统不会展示其他用户的银行账号或钱包地址。'}
+      </p>
 
       {orderType === 'crypto' ? (
         <CryptoFields register={register} err={err} />
