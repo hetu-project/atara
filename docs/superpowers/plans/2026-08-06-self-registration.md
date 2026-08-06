@@ -1767,6 +1767,7 @@ git commit -m "feat: 按用户 ID 精确查询对手方"
 **Files:**
 - Modify: `src/routes.tsx`
 - Modify: `src/layouts/Sidebar.tsx`
+- Modify: `src/features/orders/OrderInfoGrid.tsx`
 
 **Interfaces:**
 - Consumes: Task 3 的 `RegisterPage`；Task 4 的 `RequireProfile`；Task 5 的 `OnboardingPage`、`MyProfilePage`、改造后的 `CounterpartyFormPage`
@@ -1932,10 +1933,46 @@ Expected: 构建成功
 代码走查确认下列每条路径都有对应的 route 项，把结论写进报告：
 `/login`、`/register`、`/onboarding`、`/profile`、`/profile/buyer/new`、`/profile/seller/new`、`/profile/buyer`、`/profile/seller`、`/orders`、`/orders/new`、`/orders/:id`
 
-并确认已无任何文件引用 `/buyers` 或 `/sellers`：
+并确认已无任何文件引用 `/buyers` 或 `/sellers`。**注意 grep 必须覆盖模板字面量**，
+只匹配引号包裹的字符串会漏掉 `` to={`/buyers/${id}`} `` 这种写法：
 
-Run: `grep -rn "'/buyers\|'/sellers\|\"/buyers\|\"/sellers" src/`
+Run: `grep -rnE "/(buyers|sellers)(/|\"|'|\`)" src/`
 Expected: 无输出
+
+- [ ] **Step 5b: 去掉订单详情里指向已删路由的买卖家链接**
+
+`src/features/orders/OrderInfoGrid.tsx` 的买家、卖家两处用模板字面量链到
+`/buyers/${order.buyer.id}` 和 `/sellers/${order.seller.id}`。这两条路由本任务已删除，
+链接会落到 `*` 兜底、把用户弹回 `/orders`。
+
+**不要把它们改指到 `/profile`。** 新的隐私模型下用户看不到别人的档案页，
+而 `/profile` 是自己的档案；无论指向哪边都是错的。正确做法是**去掉链接、只留纯文本** ——
+这里展示的 `姓名（display_id）` 恰好就是 `lookup_counterparty` RPC 返回的那部分非敏感信息，
+本来就该只读展示。
+
+把买家那一段：
+
+```tsx
+      <Item label="买家">
+        {order.buyer ? (
+          <Link className="underline" to={`/buyers/${order.buyer.id}`}>
+            {order.buyer.full_name}（{order.buyer.display_id}）
+          </Link>
+        ) : null}
+      </Item>
+```
+
+改成：
+
+```tsx
+      <Item label="买家">
+        {order.buyer ? `${order.buyer.full_name}（${order.buyer.display_id}）` : null}
+      </Item>
+```
+
+卖家那一段同理，把 `order.buyer` 换成 `order.seller`。
+
+改完 `Link` 在本文件若已无其它用处，把它的 import 一并删掉（`tsc -b` 的 `noUnusedLocals` 会报出来）。
 
 - [ ] **Step 6: 提交**
 
