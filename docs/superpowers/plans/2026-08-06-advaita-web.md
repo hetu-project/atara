@@ -75,7 +75,7 @@ npm i react@^18.3.1 react-dom@^18.3.1 react-router@^7.13.1 \
   @supabase/supabase-js@^2.58.0 @tanstack/react-query@^5.90.0 \
   react-hook-form@^7.54.0 @hookform/resolvers@^3.10.0 zod@^3.25.0
 npm i -D vite@^7.1.0 @vitejs/plugin-react@^5.0.0 typescript@~5.6.2 \
-  @types/react@^18.3.12 @types/react-dom@^18.3.1 \
+  @types/react@^18.3.12 @types/react-dom@^18.3.1 @types/node@^22.10.0 \
   tailwindcss@^4.1.0 @tailwindcss/vite@^4.1.0 \
   vitest@^3.0.0 jsdom@^25.0.0 @testing-library/react@^16.1.0 \
   @testing-library/jest-dom@^6.6.0 @testing-library/user-event@^14.5.0
@@ -161,11 +161,33 @@ import '@testing-library/jest-dom/vitest';
     "baseUrl": ".",
     "paths": { "@/*": ["src/*"] }
   },
-  "include": ["src"]
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }
 ```
 
-`.gitignore`：
+`tsconfig.node.json` —— 单独管构建脚本本身（`vite.config.ts` / `vitest.config.ts`）。这两个文件跑在 Node 里、不在 `include: ["src"]` 范围内；没有这个 project reference，它们完全不会被类型检查。`composite: true` 是被 `references` 引用的前提。
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "composite": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["vite.config.ts", "vitest.config.ts"]
+}
+```
+
+`types: ["node"]` 需要 `@types/node`，已在 Step 1 的 devDependencies 里（若漏装则补 `npm i -D @types/node`）。
+
+`.gitignore` —— `tsconfig.tsbuildinfo` 是 `composite` 项目 `tsc -b` 的增量缓存产物，必须忽略：
 
 ```
 node_modules
@@ -173,6 +195,7 @@ dist
 .env
 .env.local
 *.log
+*.tsbuildinfo
 .DS_Store
 ```
 
