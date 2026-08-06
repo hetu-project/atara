@@ -1451,7 +1451,7 @@ git commit -m "feat: Supabase client、邮箱密码登录与路由守卫"
 ## Task 5: UI 基础组件库
 
 **Files:**
-- Create: `src/components/ui/Button.tsx`, `Input.tsx`, `Select.tsx`, `Textarea.tsx`, `Field.tsx`, `Badge.tsx`, `Table.tsx`, `Pagination.tsx`, `Modal.tsx`, `Toast.tsx`, `cn.ts`, `index.ts`
+- Create: `src/components/ui/Button.tsx`, `Input.tsx`, `Select.tsx`, `Textarea.tsx`, `Field.tsx`, `FormSection.tsx`, `Badge.tsx`, `Table.tsx`, `Pagination.tsx`, `Modal.tsx`, `Toast.tsx`, `cn.ts`, `index.ts`
 - Test: `src/components/ui/__tests__/Button.test.tsx`, `src/components/ui/__tests__/Pagination.test.tsx`
 
 **Interfaces:**
@@ -1462,6 +1462,7 @@ git commit -m "feat: Supabase client、邮箱密码登录与路由守卫"
   - `<Select options={{value,label}[]} placeholder?>`（原生 select props + `invalid?`）
   - `<Textarea>`（原生 textarea props + `invalid?`）
   - `<Field label required? error? hint?>{children}</Field>`
+  - `<FormSection title>{children}</FormSection>` —— 表单分组容器（两列网格），Task 8/10 共用
   - `<Badge tone: 'neutral'|'accent'|'success'|'outline'>`
   - `<Table columns={Column<T>[]} rows={T[]} rowKey={(r)=>string} onRowClick?={(r)=>void} empty?: ReactNode>`，`Column<T> = { key: string; title: string; render: (row: T) => ReactNode; width?: string }`
   - `<Pagination page total pageSize onChange />`
@@ -1686,6 +1687,21 @@ const Textarea = forwardRef<HTMLTextAreaElement, Props>(function Textarea(
 });
 
 export default Textarea;
+```
+
+`src/components/ui/FormSection.tsx`（Task 8 的档案表单和 Task 10 的订单表单都用它做分组容器，放在这里避免两处重复）：
+
+```tsx
+import type { ReactNode } from 'react';
+
+export default function FormSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-card bg-surface mb-5 p-6">
+      <h2 className="mb-5 text-sm font-semibold">{title}</h2>
+      <div className="grid grid-cols-2 gap-x-5 gap-y-4">{children}</div>
+    </section>
+  );
+}
 ```
 
 `src/components/ui/Field.tsx`：
@@ -1991,6 +2007,7 @@ export function useToast(): ToastApi {
 export { default as Badge } from './Badge';
 export { default as Button } from './Button';
 export { default as Field } from './Field';
+export { default as FormSection } from './FormSection';
 export { default as Input } from './Input';
 export { default as Modal } from './Modal';
 export { default as Pagination } from './Pagination';
@@ -2733,7 +2750,7 @@ Expected: FAIL，模块不存在。
 ```tsx
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Field, Input, Select, Textarea } from '@/components/ui';
+import { Button, Field, FormSection, Input, Select, Textarea } from '@/components/ui';
 import { COUNTRIES } from '@/lib/countries';
 import { ID_TYPE_LABEL } from '@/lib/format';
 import { CHAINS, ID_TYPES, counterpartySchema, type CounterpartyInput, type Role } from '@/lib/schema';
@@ -2747,15 +2764,6 @@ interface Props {
 
 const ID_TYPE_OPTIONS = ID_TYPES.map((v) => ({ value: v, label: ID_TYPE_LABEL[v] }));
 const CHAIN_OPTIONS = CHAINS.map((v) => ({ value: v, label: v }));
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-card bg-surface mb-5 p-6">
-      <h2 className="mb-5 text-sm font-semibold">{title}</h2>
-      <div className="grid grid-cols-2 gap-x-5 gap-y-4">{children}</div>
-    </section>
-  );
-}
 
 export default function CounterpartyForm({ role, defaultValues, submitting, onSubmit }: Props) {
   const {
@@ -2771,7 +2779,7 @@ export default function CounterpartyForm({ role, defaultValues, submitting, onSu
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-[900px]">
       <input type="hidden" {...register('role')} value={role} />
 
-      <Section title="基础身份">
+      <FormSection title="基础身份">
         <Field label="姓名" required error={errors.full_name?.message}>
           <Input {...register('full_name')} invalid={!!errors.full_name} placeholder="请输入姓名" />
         </Field>
@@ -2787,9 +2795,9 @@ export default function CounterpartyForm({ role, defaultValues, submitting, onSu
         <Field label="出生日期" error={errors.date_of_birth?.message as string}>
           <Input type="date" {...register('date_of_birth')} invalid={!!errors.date_of_birth} />
         </Field>
-      </Section>
+      </FormSection>
 
-      <Section title="联系方式">
+      <FormSection title="联系方式">
         <Field label="邮箱" error={errors.email?.message as string}>
           <Input {...register('email')} invalid={!!errors.email} placeholder="name@example.com" />
         </Field>
@@ -2802,9 +2810,9 @@ export default function CounterpartyForm({ role, defaultValues, submitting, onSu
         <Field label="WhatsApp" error={errors.whatsapp?.message as string}>
           <Input {...register('whatsapp')} placeholder="含国际区号" />
         </Field>
-      </Section>
+      </FormSection>
 
-      <Section title="默认收款信息">
+      <FormSection title="默认收款信息">
         <Field label="银行名称" error={errors.bank_name?.message as string}>
           <Input {...register('bank_name')} placeholder="请输入银行名称" />
         </Field>
@@ -2823,15 +2831,15 @@ export default function CounterpartyForm({ role, defaultValues, submitting, onSu
         <Field label="默认收款链" error={errors.default_wallet_chain?.message as string}>
           <Select {...register('default_wallet_chain')} options={CHAIN_OPTIONS} placeholder="请选择链" />
         </Field>
-      </Section>
+      </FormSection>
 
-      <Section title="备注">
+      <FormSection title="备注">
         <div className="col-span-2">
           <Field label="备注" error={errors.note?.message as string}>
             <Textarea {...register('note')} placeholder="内部备注，选填" />
           </Field>
         </div>
-      </Section>
+      </FormSection>
 
       <Button type="submit" size="lg" loading={submitting}>
         保存
@@ -3591,7 +3599,7 @@ Expected: PASS，10 个用例。
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Field, Input, Select, Textarea, type Option } from '@/components/ui';
+import { Button, Field, FormSection, Input, Select, Textarea, type Option } from '@/components/ui';
 import { ORDER_TYPE_LABEL, PAYEE_LABEL } from '@/lib/format';
 import {
   ASSETS,
@@ -3616,15 +3624,6 @@ const FIAT_OPTIONS = FIAT_CURRENCIES.map((v) => ({ value: v, label: v }));
 
 function toOptions(rows: CounterpartyOption[] | undefined): Option[] {
   return (rows ?? []).map((r) => ({ value: r.id, label: `${r.full_name}（${r.display_id}）` }));
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-card bg-surface mb-5 p-6">
-      <h2 className="mb-5 text-sm font-semibold">{title}</h2>
-      <div className="grid grid-cols-2 gap-x-5 gap-y-4">{children}</div>
-    </section>
-  );
 }
 
 export default function OrderForm({
@@ -3689,7 +3688,7 @@ export default function OrderForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-[900px]">
-      <Section title="订单基础">
+      <FormSection title="订单基础">
         <Field label="订单类型" required error={err('order_type')}>
           <Select
             options={TYPE_OPTIONS}
@@ -3719,10 +3718,10 @@ export default function OrderForm({
         <Field label="金额" required error={err('amount')}>
           <Input {...register('amount')} inputMode="decimal" placeholder="请输入金额" invalid={!!err('amount')} />
         </Field>
-      </Section>
+      </FormSection>
 
       {orderType === 'crypto' ? (
-        <Section title="Crypto 收款信息">
+        <FormSection title="Crypto 收款信息">
           <Field label="币种" required error={err('asset')}>
             <Select {...register('asset')} options={ASSET_OPTIONS} placeholder="请选择币种" invalid={!!err('asset')} />
           </Field>
@@ -3743,9 +3742,9 @@ export default function OrderForm({
               />
             </Field>
           </div>
-        </Section>
+        </FormSection>
       ) : (
-        <Section title="法币收款信息">
+        <FormSection title="法币收款信息">
           <Field label="法币币种" required error={err('fiat_currency')}>
             <Select
               {...register('fiat_currency')}
@@ -3777,16 +3776,16 @@ export default function OrderForm({
               />
             </Field>
           </div>
-        </Section>
+        </FormSection>
       )}
 
-      <Section title="备注">
+      <FormSection title="备注">
         <div className="col-span-2">
           <Field label="备注" error={err('note')}>
             <Textarea {...register('note')} placeholder="内部备注，选填" />
           </Field>
         </div>
-      </Section>
+      </FormSection>
 
       <Button type="submit" size="lg" loading={submitting}>
         创建订单
