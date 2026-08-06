@@ -525,8 +525,12 @@ create table public.order_status_logs (
 
 create index idx_order_status_logs_order on public.order_status_logs (order_id, created_at);
 
+-- security definer 在这里是必须的，不要去掉：
+-- order_status_logs 只对 authenticated 开放 SELECT，没有 INSERT 策略。
+-- 这个 trigger 要往表里写，必须以函数属主身份执行才能通过 RLS。
+-- set search_path = public 是 security definer 函数的标准防护，防止调用方篡改 search_path。
 create or replace function public.log_order_status()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql security definer set search_path = public as $$
 begin
   if tg_op = 'INSERT' then
     insert into public.order_status_logs (order_id, from_status, to_status, changed_by)
@@ -564,14 +568,7 @@ create policy "authenticated read" on public.order_status_logs
   for select to authenticated using (true);
 ```
 
-注意 `order_status_logs` 只给 SELECT 策略 —— 写入由 trigger（`security invoker` 默认，但 trigger 内的 insert 会绕过 RLS 吗？不会）完成。因此需要额外给 trigger 函数加 `security definer`。修正：把 `log_order_status` 的定义改成带 `security definer`：
-
-```sql
-create or replace function public.log_order_status()
-returns trigger language plpgsql security definer set search_path = public as $$
-```
-
-（写 SQL 时直接用这个带 `security definer` 的版本，上面的完整脚本里把那一行替换掉。）
+上面就是完整脚本，逐字照抄即可，没有需要额外替换的部分。
 
 - [ ] **Step 2: 写 `.env.example`**
 
