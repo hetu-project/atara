@@ -40,6 +40,8 @@
   - `counterparties.created_by` **已删除**
   - RPC `public.lookup_counterparty(p_display_id text)` → `table (id uuid, display_id text, role text, full_name text)`
   - 状态机 trigger 抛出的中文异常消息：`只有付款方可以标记为已付款`、`只有收款方可以确认完成`、`只有待付款的订单可以取消`、`不允许的状态变更`
+  - 条款冻结 trigger 抛出的中文异常消息：`订单的交易双方、收款方与金额创建后不可修改`
+  - 订单只能以 `status = 'pending_payment'` 创建（insert policy 强制）
 
 - [ ] **Step 1: 修改 `counterparties` 表定义**
 
@@ -196,6 +198,44 @@ $$;
 create trigger trg_order_check_status
   before update of status on public.orders
   for each row execute function public.check_status_transition();
+
+-- ============================================================
+-- 订单成交条款不可篡改
+-- ============================================================
+-- 上面那个 trigger 是 `before update OF STATUS` —— 只改 payee 的语句
+-- 根本不触发它。缺了本 trigger 就有一条绕过路径：
+--   买家 A、卖家 B、payee='seller'、状态 paid
+--   A 先 `update orders set payee='buyer'`（不碰 status，trigger 不响）
+--   A 再标 completed —— 状态机读 new.payee，认定 A 自己就是收款方，放行
+--   B 从未确认收款，订单已被 A 单方面完成
+-- 同一条语句里 `set status='completed', payee='buyer'` 一样成立。
+--
+-- 另外 RLS 的 with check 只能看到新行、拿不到 OLD，列冻结无法在 policy 里做，
+-- 只能靠 trigger。这也是为什么不把它并进上面那个：本 trigger 必须对
+-- **任何** update 生效，不能限定 `of status`。
+--
+-- 冻结的是"成交条款"：谁跟谁、谁收钱、收多少。收款账号/地址不冻结 ——
+-- 待付款阶段对方要求换收款方式是正常业务。
+create or replace function public.freeze_order_terms()
+returns trigger language plpgsql as $$
+begin
+  if new.buyer_id is distinct from old.buyer_id
+     or new.seller_id is distinct from old.seller_id
+     or new.payee is distinct from old.payee
+     or new.amount is distinct from old.amount
+     or new.order_type is distinct from old.order_type
+     or new.order_no is distinct from old.order_no
+     or new.created_by is distinct from old.created_by
+     or new.created_at is distinct from old.created_at then
+    raise exception '订单的交易双方、收款方与金额创建后不可修改';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_order_freeze_terms
+  before update on public.orders
+  for each row execute function public.freeze_order_terms();
 ```
 
 - [ ] **Step 6: 加入对手方查询 RPC**
@@ -256,10 +296,15 @@ create policy "my orders read" on public.orders
     public.is_my_counterparty(buyer_id) or public.is_my_counterparty(seller_id)
   );
 
+-- status 必须锁死在 pending_payment：状态机 trigger 只管 UPDATE，
+-- 列上的 check 又允许全部四个值。不锁的话，用户可以直接 INSERT 一条
+-- status='completed' 的既成订单、并把任意陌生人栽为对手方
+-- （只要自己占买卖中的一方，本 policy 的归属判定就通过）。
 create policy "my orders insert" on public.orders
   for insert to authenticated
   with check (
-    public.is_my_counterparty(buyer_id) or public.is_my_counterparty(seller_id)
+    (public.is_my_counterparty(buyer_id) or public.is_my_counterparty(seller_id))
+    and status = 'pending_payment'
   );
 
 -- policy 只管"能不能改这一行"，状态转移的合法性由
@@ -306,8 +351,14 @@ create policy "my order logs" on public.order_status_logs
 4. `order_payee_id` / `order_payer_id` 定义在 `check_status_transition` 之前
 5. `check_status_transition` 的四个分支（paid / completed / cancelled / else）都有 `raise exception` 或正常返回
 6. 三个 `security definer` 函数都有 `set search_path = public, pg_temp`
-7. `counterparties` 里已无 `created_by`，`orders` 里的 `created_by` **仍保留**
-8. `grep -c "created_by" supabase/migrations/0001_init.sql` 的结果应为 1（只剩 orders 那一处）
+7. `counterparties` 里已无 `created_by` **列**，`orders` 里的 `created_by` 列 **仍保留**
+   （注意 `grep created_by` 会有 3 处命中：counterparties 段的说明注释、orders 的真实列、
+   以及 `freeze_order_terms` 里的比较。只看列定义，别按命中数判断。）
+8. `freeze_order_terms` 的 trigger 是 `before update`（**不带** `of status`）——
+   带了就等于没修，只改 payee 的语句照样绕过
+9. insert policy 的 `with check` 里有 `status = 'pending_payment'`
+10. 端到端可写性复核：注册 → 建档案 → 建订单（pending_payment）→ 付款方标 paid →
+    收款方标 completed，这条链每一步都不被两个 trigger 或任何 policy 挡住
 
 - [ ] **Step 9: 更新 README**
 
@@ -364,6 +415,7 @@ git commit -m "feat: RLS 按账号隔离、状态机 trigger 与对手方查询 
 **Files:**
 - Create: `src/lib/sanitizeKeyword.ts`
 - Create: `src/lib/__tests__/sanitizeKeyword.test.ts`
+- Modify: `src/lib/schema.ts`
 - Delete: `src/features/counterparties/CounterpartyListPage.tsx`
 - Delete: `src/features/orders/CounterpartyOptionNotice.tsx`
 - Delete: `src/features/orders/__tests__/CounterpartyOptionNotice.test.tsx`
@@ -378,6 +430,28 @@ git commit -m "feat: RLS 按账号隔离、状态机 trigger 与对手方查询 
   - `sanitizeKeyword(raw: string | undefined): string` 从 `@/lib/sanitizeKeyword` 导出
   - `src/features/counterparties/api.ts` 保留导出：`getCounterparty`、`createCounterparty`、`updateCounterparty`、`toNullablePayload`、`ListParams`
   - **已删除**：`listCounterparties`、`buildCounterpartyQuery`、`listCounterpartyOptions`、`CounterpartyOption`、`OPTION_SELECT`、`sanitizeKeyword`（迁出）
+
+- [ ] **Step 0: 修正 `Counterparty` 的类型定义**
+
+Task 1 把 `counterparties.created_by` 换成了 `user_id`，但 `src/lib/schema.ts` 的
+`Counterparty` interface 还声明着 `created_by`、且没有 `user_id`。`select('*')` 是无类型的，
+运行时不会抛错，所以这个谎言只会在读代码时误导人。
+
+在 `src/lib/schema.ts` 的 `Counterparty` interface 里，把这一行：
+
+```typescript
+  created_by: string | null;
+```
+
+替换为：
+
+```typescript
+  /** 档案归属。Task 1 起由 DB 的 default auth.uid() 填充，前端不传。 */
+  user_id: string;
+```
+
+**只改 `Counterparty`。** 同文件里 `Order` interface 的 `created_by`（约 176 行）
+对应 `orders.created_by`，那一列仍然存在，不要动。
 
 - [ ] **Step 1: 把 sanitizeKeyword 的测试移到新位置**
 
