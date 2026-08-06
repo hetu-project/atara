@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import PageHeader from '@/components/PageHeader';
+import QueryState from '@/components/QueryState';
 import { Button, Input, Pagination, Select, Table, type Column } from '@/components/ui';
 import {
   ORDER_STATUS_LABEL,
@@ -28,7 +29,7 @@ export default function OrderListPage() {
   const [keyword, setKeyword] = useState('');
   const [search, setSearch] = useState('');
 
-  const { data, isLoading } = useOrderList({
+  const { data, isLoading, isError, error } = useOrderList({
     page,
     pageSize: PAGE_SIZE,
     orderType: orderType || undefined,
@@ -102,30 +103,39 @@ export default function OrderListPage() {
           value={dateTo}
           onChange={(e) => reset(() => setDateTo(e.target.value))}
         />
-        <Input
-          className="w-[220px]"
-          placeholder="搜索订单号"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && reset(() => setSearch(keyword))}
-        />
+        <div className="flex flex-col gap-1">
+          <Input
+            className="w-[220px]"
+            placeholder="搜索订单号"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && reset(() => setSearch(keyword))}
+          />
+          <span className="text-ink-4 text-xs">订单号日期为 UTC，可能与创建时间相差最多一天</span>
+        </div>
         <Button variant="second" onClick={() => reset(() => setSearch(keyword))}>
           搜索
         </Button>
       </div>
 
       <div className="rounded-card bg-surface p-2">
-        <Table
-          columns={columns}
-          rows={data?.rows ?? []}
-          rowKey={(r) => r.id}
-          loading={isLoading}
-          onRowClick={(r) => navigate(`/orders/${r.id}`)}
-          empty="暂无订单，点右上角新建"
-        />
+        {isError ? (
+          <QueryState isError error={error} />
+        ) : (
+          <Table
+            columns={columns}
+            rows={data?.rows ?? []}
+            rowKey={(r) => r.id}
+            loading={isLoading}
+            onRowClick={(r) => navigate(`/orders/${r.id}`)}
+            empty="暂无订单，点右上角新建"
+          />
+        )}
       </div>
 
-      <Pagination page={page} total={data?.total ?? 0} pageSize={PAGE_SIZE} onChange={setPage} />
+      {isError ? null : (
+        <Pagination page={page} total={data?.total ?? 0} pageSize={PAGE_SIZE} onChange={setPage} />
+      )}
     </>
   );
 }

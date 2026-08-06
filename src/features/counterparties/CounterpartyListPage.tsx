@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import PageHeader from '@/components/PageHeader';
+import QueryState from '@/components/QueryState';
 import { Button, Input, Pagination, Table, type Column } from '@/components/ui';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, ROLE_LABEL } from '@/lib/format';
 import type { Counterparty, Role } from '@/lib/schema';
 import { useCounterpartyList } from './hooks';
 
@@ -10,14 +11,19 @@ const PAGE_SIZE = 20;
 
 export default function CounterpartyListPage({ role }: { role: Role }) {
   const navigate = useNavigate();
-  const label = role === 'buyer' ? '买家' : '卖家';
+  const label = ROLE_LABEL[role];
   const basePath = role === 'buyer' ? '/buyers' : '/sellers';
 
   const [keyword, setKeyword] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useCounterpartyList({ role, keyword: search, page, pageSize: PAGE_SIZE });
+  const { data, isLoading, isError, error } = useCounterpartyList({
+    role,
+    keyword: search,
+    page,
+    pageSize: PAGE_SIZE,
+  });
 
   const columns: Column<Counterparty>[] = [
     { key: 'display_id', title: '用户 ID', width: '120px', render: (r) => <span className="font-semibold">{r.display_id}</span> },
@@ -54,17 +60,23 @@ export default function CounterpartyListPage({ role }: { role: Role }) {
       </div>
 
       <div className="rounded-card bg-surface p-2">
-        <Table
-          columns={columns}
-          rows={data?.rows ?? []}
-          rowKey={(r) => r.id}
-          loading={isLoading}
-          onRowClick={(r) => navigate(`${basePath}/${r.id}`)}
-          empty={`暂无${label}，点右上角新建`}
-        />
+        {isError ? (
+          <QueryState isError error={error} />
+        ) : (
+          <Table
+            columns={columns}
+            rows={data?.rows ?? []}
+            rowKey={(r) => r.id}
+            loading={isLoading}
+            onRowClick={(r) => navigate(`${basePath}/${r.id}`)}
+            empty={`暂无${label}，点右上角新建`}
+          />
+        )}
       </div>
 
-      <Pagination page={page} total={data?.total ?? 0} pageSize={PAGE_SIZE} onChange={setPage} />
+      {isError ? null : (
+        <Pagination page={page} total={data?.total ?? 0} pageSize={PAGE_SIZE} onChange={setPage} />
+      )}
     </>
   );
 }

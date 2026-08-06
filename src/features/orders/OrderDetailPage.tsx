@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router';
 import PageHeader from '@/components/PageHeader';
+import QueryState from '@/components/QueryState';
 import { Button, Select, useToast } from '@/components/ui';
 import { ORDER_STATUS_LABEL } from '@/lib/format';
 import { ORDER_STATUSES, type OrderStatus } from '@/lib/schema';
@@ -62,7 +63,11 @@ export default function OrderDetailPage() {
 
       <div className="rounded-card bg-surface p-6">
         <h2 className="mb-5 text-sm font-semibold">状态变更记录</h2>
-        <StatusTimeline logs={logs.data ?? []} loading={logs.isLoading} />
+        {logs.isError ? (
+          <QueryState isError error={logs.error} />
+        ) : (
+          <StatusTimeline logs={logs.data ?? []} loading={logs.isLoading} />
+        )}
       </div>
     </>
   );
