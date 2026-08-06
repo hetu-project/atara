@@ -1,0 +1,46 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-primary: #88ff9a;
+  --color-primary-hover: #7af28c;
+  --color-surface: rgba(0, 0, 0, 0.02);
+  --color-surface-hover: rgba(0, 0, 0, 0.04);
+  --color-line: rgba(0, 0, 0, 0.06);
+  --color-line-strong: rgba(0, 0, 0, 0.1);
+  --color-success: #00c41f;
+  --color-danger: #f270be;
+  --color-accent: #f25fb7;
+  --color-ink: rgba(0, 0, 0, 1);
+  --color-ink-2: rgba(0, 0, 0, 0.8);
+  --color-ink-3: rgba(0, 0, 0, 0.6);
+  --color-ink-4: rgba(0, 0, 0, 0.4);
+
+  --radius-card: 28px;
+  --radius-input: 12px;
+  --radius-pill: 999px;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background: #ffffff;
+    color: var(--color-ink);
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
+@utility transition-base {
+  transition: all 0.3s ease-in-out;
+}
