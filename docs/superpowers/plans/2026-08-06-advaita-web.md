@@ -2103,12 +2103,89 @@ git commit -m "feat: UI 基础组件库"
 
 **Files:**
 - Create: `src/layouts/AppLayout.tsx`, `src/layouts/Sidebar.tsx`, `src/layouts/Header.tsx`, `src/components/PageHeader.tsx`
-- Modify: `src/routes.tsx`
+- Modify: `src/routes.tsx`, `src/features/auth/useSession.ts`, `src/App.tsx`
 - Test: `src/layouts/__tests__/Sidebar.test.tsx`
 
 **Interfaces:**
 - Consumes: `useSession` / `signOut`（Task 4）、`Button`（Task 5）
-- Produces：`<AppLayout>`（内含 `<Outlet />`）；`<PageHeader title actions?>`；`/buyers` `/sellers` `/orders` 三组路由的占位挂载点
+- Produces：`<AppLayout>`（内含 `<Outlet />`）；`<PageHeader title actions?>`；`/buyers` `/sellers` `/orders` 三组路由的占位挂载点；
+  `<SessionProvider>`（Task 4 的 `useSession` 改为消费它）
+
+### 先做：把 useSession 改成共享 context
+
+Task 4 的 `useSession` 是每个调用点各自 `getSession()` 一次、各自开一条 `onAuthStateChange` 订阅。
+Task 4 只有两个调用点（`LoginPage` 和 `RequireAuth`），且分属互斥路由分支，所以没暴露问题。
+
+本任务的 `Header` 是第三个调用点，而且**和 `RequireAuth` 同时挂载** —— 于是同一个页面会开两条订阅、
+发两次 `getSession()`，`Header` 还会因为自己那份 `loading` 而先渲染一次空邮箱。调用点只会越来越多，
+所以在加 `Header` 之前先把它收敛成单一订阅。
+
+`src/features/auth/useSession.ts` 改成（`signIn` / `signOut` 保持原样不动，只改 hook 部分）：
+
+```ts
+import { createContext, createElement, useContext, useEffect, useState, type ReactNode } from 'react';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+import { queryClient } from '@/lib/queryClient';
+
+interface SessionState {
+  session: Session | null;
+  loading: boolean;
+}
+
+const SessionContext = createContext<SessionState>({ session: null, loading: true });
+
+export function SessionProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<SessionState>({ session: null, loading: true });
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setState({ session: data.session, loading: false });
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
+      setState({ session: next, loading: false });
+      if (event === 'SIGNED_OUT') queryClient.clear();
+    });
+
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  return createElement(SessionContext.Provider, { value: state }, children);
+}
+
+export function useSession(): SessionState {
+  return useContext(SessionContext);
+}
+```
+
+用 `createElement` 而不是 JSX，是为了让这个文件保持 `.ts` 后缀（Task 4 就是 `.ts`），避免改扩展名连带改所有 import。
+
+`src/App.tsx` 把 `SessionProvider` 套在 `RouterProvider` 外层（要在 `QueryClientProvider` 内层，
+因为 `SIGNED_OUT` 时要清 query 缓存）：
+
+```tsx
+import { QueryClientProvider } from '@tanstack/react-query';
+import { RouterProvider } from 'react-router';
+import { ToastProvider } from '@/components/ui';
+import { SessionProvider } from '@/features/auth/useSession';
+import { queryClient } from '@/lib/queryClient';
+import router from '@/routes';
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SessionProvider>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </SessionProvider>
+    </QueryClientProvider>
+  );
+}
+```
+
+`LoginPage` 和 `RequireAuth` 的代码**不需要改** —— 它们调用的还是 `useSession()`，只是现在读的是 context。
 
 - [ ] **Step 1: 写失败的 Sidebar 测试**
 
