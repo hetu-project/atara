@@ -1,0 +1,54 @@
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { createMemoryRouter, RouterProvider } from 'react-router';
+import RequireProfile from '../RequireProfile';
+
+const mockUseMyProfiles = vi.fn();
+vi.mock('@/features/counterparties/hooks', () => ({
+  useMyProfiles: () => mockUseMyProfiles(),
+}));
+
+function renderAt(path: string) {
+  const router = createMemoryRouter(
+    [
+      {
+        element: <RequireProfile />,
+        children: [
+          { path: '/orders', element: <div>订单页</div> },
+          { path: '/onboarding', element: <div>引导页</div> },
+        ],
+      },
+    ],
+    { initialEntries: [path] },
+  );
+  render(<RouterProvider router={router} />);
+}
+
+describe('RequireProfile', () => {
+  beforeEach(() => mockUseMyProfiles.mockReset());
+
+  it('无任何档案时重定向到引导页', () => {
+    mockUseMyProfiles.mockReturnValue({ data: [], isPending: false });
+    renderAt('/orders');
+    expect(screen.getByText('引导页')).toBeInTheDocument();
+  });
+
+  it('有档案时放行', () => {
+    mockUseMyProfiles.mockReturnValue({ data: [{ role: 'buyer' }], isPending: false });
+    renderAt('/orders');
+    expect(screen.getByText('订单页')).toBeInTheDocument();
+  });
+
+  it('已经在引导页时不再重定向（否则无限循环）', () => {
+    mockUseMyProfiles.mockReturnValue({ data: [], isPending: false });
+    renderAt('/onboarding');
+    expect(screen.getByText('引导页')).toBeInTheDocument();
+  });
+
+  it('加载中显示占位，不重定向', () => {
+    mockUseMyProfiles.mockReturnValue({ data: undefined, isPending: true });
+    renderAt('/orders');
+    expect(screen.getByText('加载中...')).toBeInTheDocument();
+    expect(screen.queryByText('引导页')).not.toBeInTheDocument();
+  });
+});

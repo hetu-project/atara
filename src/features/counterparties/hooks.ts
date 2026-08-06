@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CounterpartyInput } from '@/lib/schema';
-import { createCounterparty, getCounterparty, updateCounterparty } from './api';
+import { createCounterparty, getCounterparty, getMyProfiles, updateCounterparty } from './api';
 
 export const counterpartyKeys = {
   all: ['counterparties'] as const,
+  mine: ['counterparties', 'mine'] as const,
   detail: (id: string) => ['counterparties', 'detail', id] as const,
 };
 
@@ -12,6 +13,13 @@ export function useCounterparty(id: string | undefined) {
     queryKey: counterpartyKeys.detail(id ?? ''),
     queryFn: () => getCounterparty(id!),
     enabled: Boolean(id),
+  });
+}
+
+export function useMyProfiles() {
+  return useQuery({
+    queryKey: counterpartyKeys.mine,
+    queryFn: getMyProfiles,
   });
 }
 

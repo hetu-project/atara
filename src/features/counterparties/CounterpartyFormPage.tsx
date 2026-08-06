@@ -11,7 +11,7 @@ function toFormValues(row: Counterparty | undefined): Partial<CounterpartyInput>
   if (!row) return undefined;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(row)) {
-    if (k === 'id' || k === 'display_id' || k === 'created_by' || k === 'created_at' || k === 'updated_at') {
+    if (k === 'id' || k === 'display_id' || k === 'user_id' || k === 'created_at' || k === 'updated_at') {
       continue;
     }
     out[k] = v === null ? undefined : v;
