@@ -3,6 +3,7 @@ import LoginPage from '@/features/auth/LoginPage';
 import RequireAuth from '@/features/auth/RequireAuth';
 import CounterpartyFormPage from '@/features/counterparties/CounterpartyFormPage';
 import CounterpartyListPage from '@/features/counterparties/CounterpartyListPage';
+import OrderCreatePage from '@/features/orders/OrderCreatePage';
 import OrderListPage from '@/features/orders/OrderListPage';
 import AppLayout from '@/layouts/AppLayout';
 
@@ -27,7 +28,7 @@ const router = createBrowserRouter([
           { path: '/sellers/:id', element: <CounterpartyFormPage role="seller" mode="edit" /> },
 
           { path: '/orders', element: <OrderListPage /> },
-          { path: '/orders/new', element: placeholder('新建订单') },
+          { path: '/orders/new', element: <OrderCreatePage /> },
           { path: '/orders/:id', element: placeholder('订单详情') },
 
           { path: '*', element: <Navigate to="/orders" replace /> },
