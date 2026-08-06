@@ -1,4 +1,3 @@
-import { Link } from 'react-router';
 import { ORDER_TYPE_LABEL, PAYEE_LABEL, formatAmount, formatDateTime } from '@/lib/format';
 import type { OrderWithParties } from '@/lib/schema';
 
@@ -19,18 +18,10 @@ export default function OrderInfoGrid({ order }: { order: OrderWithParties }) {
       <Item label="收款方">{PAYEE_LABEL[order.payee]}</Item>
 
       <Item label="买家">
-        {order.buyer ? (
-          <Link className="underline" to={`/buyers/${order.buyer.id}`}>
-            {order.buyer.full_name}（{order.buyer.display_id}）
-          </Link>
-        ) : null}
+        {order.buyer ? `${order.buyer.full_name}（${order.buyer.display_id}）` : null}
       </Item>
       <Item label="卖家">
-        {order.seller ? (
-          <Link className="underline" to={`/sellers/${order.seller.id}`}>
-            {order.seller.full_name}（{order.seller.display_id}）
-          </Link>
-        ) : null}
+        {order.seller ? `${order.seller.full_name}（${order.seller.display_id}）` : null}
       </Item>
       <Item label="金额">
         {order.order_type === 'crypto'
