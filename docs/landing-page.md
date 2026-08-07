@@ -1,15 +1,13 @@
 # Atara — Landing Page
 
+> 这份文档来自落地页独立仓库时期。落地页现已并入本仓库，用 `npm run dev` 预览，
+> 访问根路径即可；构建、部署和与应用的衔接见根目录 `README.md`。
+> 下面关于设计系统和动效的部分仍然有效。
+
 The payment gate for global money. A single static page: no build step, no dependencies.
 
-Open `index.html` in a browser, or deploy the folder to any static host
-(Vercel / Netlify / Cloudflare Pages / S3).
-
-Local preview:
-
-```bash
-python3 -m http.server 4173
-```
+The page itself still has no build-time dependencies — Vite passes both HTML files
+through untouched and only copies the logos.
 
 ---
 
@@ -18,7 +16,8 @@ python3 -m http.server 4173
 | Path | Purpose |
 |---|---|
 | `index.html` | The whole page — HTML, CSS and JS inlined |
-| `assets/logos/` | 14 ecosystem logos (PNG, ~125 KB total) |
+| `desk.html` | Settlement desk — same technique, its own inlined styles |
+| `public/assets/logos/` | 14 ecosystem logos (PNG, ~125 KB total) |
 
 External runtime dependencies, all via CDN with fallbacks:
 
@@ -29,19 +28,27 @@ External runtime dependencies, all via CDN with fallbacks:
 
 ## Configure before launch
 
-Both live at the top of the `<script>` block near the bottom of `index.html`.
+1. **进应用的入口** — 导航栏的 `Sign in` / `Get started` 直接指向 `/app/login`
+   和 `/app/register`。这两个链接受 `src/__tests__/landingEntry.test.ts` 保护，
+   删改前先看那个测试。
+2. **`CONTACT_EMAIL`** — `index.html:1084` 和 `desk.html:780` 各有一份，默认都是空串。
+   设上之后，两页正文里 id 为 `ctaBtn` 的按钮（`Talk to us` / `Start a trade`）
+   会变成 `mailto:` 链接。**空着的时候这两个按钮是死链** —— `href="#contact"`
+   指向它们自己所在的区块，点了没有任何反应。上线前必须填，或者改成别的去处。
+3. **`APP_URL`** — 只有 `desk.html:781` 有，默认空串。设上之后 `desk.html` 正文的
+   `ctaBtn` 会指向它并在新标签打开，优先级高于 `CONTACT_EMAIL`。
+   `index.html` 没有这个常量。
 
-1. **`APP_URL`** — empty by default. Once set, all four `Launch App` / `Open the app`
-   links point at it. While empty they stay `#`.
-2. **`WAITLIST_ENDPOINT`** — empty by default, **deliberately**. When empty, submitting the
-   early-access form shows an explicit "not wired up yet" message instead of silently
-   dropping the address. Point it at anything that accepts `POST {email}`.
+进应用的路径已经由导航栏那两个写死的链接覆盖，`APP_URL` 不是必需的。
 
 Also worth a look before going live:
 
-- The `[ pending ]` auditor name in the Controls copy — fill it in or delete the line.
-- FX rates and the figures marked `Illustrative` are placeholders.
-- `Preview` chips mark features that are not shipped yet. Keep them accurate.
+- FX rates and the figures marked `Illustrative` are placeholders（`index.html` 里 3 处）。
+- `Preview` chip marks a feature that is not shipped yet（`index.html` 里 1 处）。保持它准确。
+
+页面上没有任何表单或邮箱输入框，不收集邮箱地址。早期版本文档里提到的
+`WAITLIST_ENDPOINT` 常量和 early-access 表单都不存在，同样，Controls 文案里
+那个 `[ pending ]` 审计方占位也已经不在页面上了。
 
 ---
 

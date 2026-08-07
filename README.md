@@ -10,6 +10,16 @@ cp .env.example .env   # 填入下方获取的两个值
 npm run dev
 ```
 
+起来之后：
+
+| 地址 | 内容 |
+|---|---|
+| `http://localhost:5173/` | Atara 落地页（静态） |
+| `http://localhost:5173/desk.html` | Settlement desk（静态） |
+| `http://localhost:5173/app/` | 运营后台（React 应用） |
+
+落地页导航栏的 **Sign in** / **Get started** 直接进应用。
+
 ## Supabase 接入（四步）
 
 1. 到 [supabase.com](https://supabase.com) 新建一个项目，记下数据库密码。
@@ -21,7 +31,11 @@ npm run dev
    修好后重新粘贴即可，不会留下建了一半的 schema。这个保证来自脚本本身，
    不依赖 SQL Editor、psql 或 `supabase db push` 里的任何一种执行方式。
 3. 打开 **Authentication → URL Configuration**，把 **Site URL** 设为应用地址
-   （本地开发填 `http://localhost:5173`），否则验证邮件里的链接会指向错误地址。
+   （本地开发填 `http://localhost:5173/app`），否则验证邮件里的链接会指向错误地址。
+
+   **末尾的 `/app` 不能省。** 应用挂在 `/app` 子路径下，根路径是落地页；
+   漏掉的话用户点验证邮件会落到落地页，看起来像验证失败。
+   代码里没有任何 `emailRedirectTo`，注册确认完全依赖这个配置。
 
    用户在应用内自助注册（`/register`），无需在后台手工建号；
    **Enable Sign Ups 必须保持开启**。
@@ -40,12 +54,52 @@ npm run dev
    若 `npm run dev` 已经在跑，改完 `.env` 后必须重启它 —— Vite 只在启动时读取
    `import.meta.env`，不重启会看到 client 初始化失败。
 
+## 落地页
+
+根路径的落地页是纯静态的手写 HTML，没有构建依赖，不属于 React 应用：
+
+| 文件 | 说明 |
+|---|---|
+| `index.html` | 落地页，HTML / CSS / JS 全部内联 |
+| `desk.html` | Settlement desk 页 |
+| `public/assets/logos/` | 14 个生态 logo |
+
+设计系统、动效约定和改动注意事项见 `docs/landing-page.md`。
+
+改落地页时唯一的硬约束：导航栏里指向 `/app/login` 和 `/app/register` 的两个链接
+不能删也不能改路径。`src/__tests__/landingEntry.test.ts` 会盯着这一点。
+
+logo 放在 `public/` 而不是项目根的 `assets/`，是因为它们由 JS 拼路径
+（`src="assets/logos/${n}.png"`），Vite 的 HTML 资源管线扫不到模板字符串，
+只有 `public/` 的原样拷贝能保证运行时路径不变。
+
+## 部署
+
+`npm run build` 产出三个入口：
+
+```
+dist/index.html        →  /
+dist/desk.html         →  /desk.html
+dist/app/index.html    →  /app/*
+dist/assets/           →  构建产物 + 14 个 logo
+```
+
+**宿主必须配一条 rewrite 规则**：`/app/*` 下所有未命中静态文件的请求都返回
+`dist/app/index.html`，否则用户刷新 `/app/orders` 会 404。这是客户端路由的常规要求，
+但因为应用不在根路径，默认的 SPA 模板通常不覆盖这种情况。
+
+本地 `npm run dev` 和 `npm run preview` 由 `vite.config.ts` 里的
+`appHistoryFallback` 插件负责同样的重写，无需额外配置。
+
+仓库刻意不带部署配置文件，规则请按实际宿主自行添加。
+
 ## 脚本
 
 | 命令 | 作用 |
 |---|---|
 | `npm run dev` | 开发服务器 |
 | `npm run build` | 类型检查 + 生产构建 |
+| `npm run preview` | 预览生产构建产物 |
 | `npm test` | 跑 Vitest |
 
 ## 权限模型
