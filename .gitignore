@@ -5,3 +5,28 @@ dist
 *.log
 *.tsbuildinfo
 .DS_Store
+
+# ── 落地页的内部文档 ──────────────────────────────────────────
+# 以下文件描述定位策略与竞品分析，仓库是公开的，一律不发布。
+landing-content.md
+design-direction.md
+.impeccable.md
+LANDING-RESEARCH.md
+LANDING-COPY.md
+LANDING-SPEC.md
+COMPETITORS.md
+DEEPDIVE-ARS-T54.md
+DEEPDIVE-TRUSTLINE.md
+# 工作方法文档：点名了在世客户、同事，以及内部尚未统一的定位分歧。
+METHOD.md
+# 产品计划：定价意图、竞品弱点、买家评分、访谈提纲。仅供内部。
+PRODUCT.md
+# 对齐清单：引用了内部会议纪要里同事的原话。仅供内部。
+ALIGNMENT.md
+
+# 落地页的本地编辑备份
+*.bak
+*.bak[0-9]
+
+# 本地工具
+.claude/
