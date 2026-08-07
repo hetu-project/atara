@@ -388,7 +388,16 @@ set search_path = public, pg_temp as $$
   limit 1;
 $$;
 
-revoke all on function public.lookup_counterparty(text) from public;
+-- REVOKE ... FROM PUBLIC 撤销的是伪角色 PUBLIC 持有的授权，不会撤销
+-- 显式授给 anon 的权限。标准 Supabase 项目带有
+-- `alter default privileges ... grant all on functions to postgres, anon,
+-- authenticated, service_role`，函数一创建 anon 就已经拿到显式 EXECUTE，
+-- 上面那条 revoke 撤不掉它。必须把 anon 一起列在 revoke 里，
+-- 否则未登录也能凭 anon key 遍历 U000001... 拿到每个用户的真实姓名和角色。
+--
+-- 不要在 schema 层面对 anon 做整体 revoke —— 同一套 default privileges
+-- 机制正是让表本身可达（PostgREST 能连上库）的原因。
+revoke all on function public.lookup_counterparty(text) from public, anon;
 grant execute on function public.lookup_counterparty(text) to authenticated;
 
 -- ============================================================
