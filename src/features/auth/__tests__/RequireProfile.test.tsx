@@ -42,6 +42,21 @@ describe('RequireProfile', () => {
     expect(screen.getByText('引导页')).toBeInTheDocument();
   });
 
+  it('已有档案却停留在引导页时重定向到 /profile', () => {
+    mockUseMyProfiles.mockReturnValue({ data: [{ role: 'buyer' }], isPending: false });
+    render(
+      <MemoryRouter initialEntries={['/onboarding']}>
+        <Routes>
+          <Route element={<RequireProfile />}>
+            <Route path="/onboarding" element={<div>引导页</div>} />
+            <Route path="/profile" element={<div>我的档案</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('我的档案')).toBeInTheDocument();
+  });
+
   it('加载中显示占位，不重定向', () => {
     mockUseMyProfiles.mockReturnValue({ data: undefined, isPending: true });
     renderAt('/orders');

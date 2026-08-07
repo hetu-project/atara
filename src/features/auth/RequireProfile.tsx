@@ -17,5 +17,12 @@ export default function RequireProfile() {
     return <Navigate to={ONBOARDING_PATH} replace />;
   }
 
+  // 已有档案的用户不该停留在引导页——它挂在 AppLayout 之外，没有侧边栏也没有
+  // 退出登录按钮。典型触发路径：注册 → 引导 → 建档案 → 跳到 /profile → 浏览器后退。
+  // 不会与上面那条形成环：/profile 只要求"有档案存在"，不会再被弹回引导页。
+  if (!needsOnboarding(data) && location.pathname === ONBOARDING_PATH) {
+    return <Navigate to="/profile" replace />;
+  }
+
   return <Outlet />;
 }
