@@ -9,9 +9,21 @@ import type {
   OrderType,
   OrderWithParties,
 } from '@/lib/schema';
+import { resolveParties, type PartyRef } from './resolveParties';
 
-export const ORDER_SELECT =
-  '*, buyer:buyer_id (id, display_id, full_name), seller:seller_id (id, display_id, full_name)';
+// 只选订单自身的列。买卖双方的姓名不能靠资源嵌入拿——
+// `buyer:buyer_id (...)` 这类嵌入查询会走被嵌表 counterparties 的 RLS，
+// `own profiles` policy 只放行自己的档案，对方那一侧永远是 null。
+// 见 resolveParties.ts：改用一个按 id 批量查的 RPC 单独解析。
+export const ORDER_SELECT = '*';
+
+/** 把一批订单的买卖双方姓名/display_id 通过 resolveParties 填回去。 */
+async function attachParties(rows: Order[]): Promise<OrderWithParties[]> {
+  const ids = rows.flatMap((r) => [r.buyer_id, r.seller_id]);
+  const parties = await resolveParties(ids);
+  const pick = (id: string): PartyRef | null => parties.get(id) ?? null;
+  return rows.map((r) => ({ ...r, buyer: pick(r.buyer_id), seller: pick(r.seller_id) }));
+}
 
 export interface OrderListParams {
   page: number;
@@ -86,13 +98,15 @@ export async function listOrders(params: OrderListParams) {
   const { data, error, count } = await q;
   if (error) throw toFriendlyError(error);
 
-  return { rows: (data ?? []) as unknown as OrderWithParties[], total: count ?? 0 };
+  const rows = await attachParties((data ?? []) as Order[]);
+  return { rows, total: count ?? 0 };
 }
 
 export async function getOrder(id: string): Promise<OrderWithParties> {
   const { data, error } = await supabase.from('orders').select(ORDER_SELECT).eq('id', id).single();
   if (error) throw toFriendlyError(error);
-  return data as unknown as OrderWithParties;
+  const [row] = await attachParties([data as Order]);
+  return row;
 }
 
 export async function createOrder(input: OrderInput): Promise<Order> {

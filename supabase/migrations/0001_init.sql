@@ -400,6 +400,21 @@ $$;
 revoke all on function public.lookup_counterparty(text) from public, anon;
 grant execute on function public.lookup_counterparty(text) to authenticated;
 
+-- 订单列表/详情要显示对手方的姓名，但 counterparties 的 RLS 只让你看到自己的行，
+-- PostgREST 的资源嵌入会走被嵌表的 RLS，于是对方那一侧永远是 null。
+-- 用这个函数按 id 解析，返回字段与 lookup_counterparty 完全一致（四个非敏感列）。
+-- 千万不要改成给 counterparties 加一条 SELECT policy —— 那会连带暴露
+-- id_number 和 bank_account_number，正是 §6.1 明确禁止的。
+create or replace function public.lookup_counterparties_by_id(p_ids uuid[])
+returns table (id uuid, display_id text, role text, full_name text)
+language sql stable security definer set search_path = public, pg_temp as $$
+  select c.id, c.display_id, c.role, c.full_name
+  from public.counterparties c where c.id = any(p_ids);
+$$;
+
+revoke all on function public.lookup_counterparties_by_id(uuid[]) from public, anon;
+grant execute on function public.lookup_counterparties_by_id(uuid[]) to authenticated;
+
 -- ============================================================
 -- RLS：每个账号只能访问自己的数据
 -- ============================================================
