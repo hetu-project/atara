@@ -2119,7 +2119,6 @@ Expected: PASS，8 个用例
 
 ```tsx
 import { Button } from '@/components/ui';
-import { ORDER_STATUS_LABEL } from '@/lib/format';
 import type { OrderStatus } from '@/lib/schema';
 import { allowedTransitions, type OrderRoleContext } from './statusMachine';
 
