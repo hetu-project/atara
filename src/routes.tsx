@@ -46,6 +46,6 @@ const router = createBrowserRouter([
       },
     ],
   },
-]);
+], { basename: '/app' });
 
 export default router;
