@@ -1992,6 +1992,9 @@ git commit -m "feat: 路由表与侧边栏改为自助模式"
 - Modify: `src/features/orders/OrderForm.tsx`
 - Modify: `src/features/orders/formLogic.ts`
 - Modify: `src/features/orders/OrderDetailPage.tsx`
+- Modify: `src/features/orders/CryptoFields.tsx`
+- Modify: `src/features/orders/FiatFields.tsx`
+- Modify: `src/features/orders/__tests__/statusMachine.test.ts`
 - Modify: `src/features/orders/__tests__/formLogic.test.ts`
 
 **Interfaces:**
@@ -2296,6 +2299,123 @@ Task 2 已删除 auto-fill effect。收款方是对手方时不能自动带出�
 保留 `defaultPayee` 与 `clearTypeFields` 及其测试 —— 它们仍在用。
 
 **注意**：删掉的是「从对方档案带出收款信息」这个能力，不是「切换类型时清空字段」。若不确定某个测试属于哪一类，看它断言的函数名。
+
+- [ ] **Step 9b: 清掉自动带出的残留文案**
+
+自动带出能力已经没了，但两个字段的 `hint` 还在说「已按…带出」，就在 Step 8 新增的
+「系统不会展示其他用户的银行账号或钱包地址」那段话下面几行 —— 用户先读到
+「不会展示对方账号」，紧接着读到「这是从对方默认账号带出来的」，自相矛盾，而且没有任何东西被带出。
+
+`src/features/orders/CryptoFields.tsx` 把
+
+```tsx
+          hint="已按所选收款方的默认地址带出，可修改"
+```
+
+改成
+
+```tsx
+          hint="收款方是你自己时可从档案复制；是对方时请向对方索取"
+```
+
+`src/features/orders/FiatFields.tsx` 把
+
+```tsx
+          hint="已按所选收款方的默认账号带出，可修改"
+```
+
+改成同一句。
+
+- [ ] **Step 9c: 把角色判定抽成可测的纯函数**
+
+`OrderDetailPage` 里这四行是整条链上唯一决定「我是收款方还是付款方」的地方，
+而 8 个 statusMachine 测试全在它**下游** —— 把 `isPayee` 和 `isPayer` 对调，
+没有任何测试会红。数据库 trigger 会兜住非法转移，所以后果是按钮组错误加一个
+看不懂的拒绝，不是越权，但这是本任务最该被钉住的一行。
+
+在 `src/features/orders/statusMachine.ts` 末尾加：
+
+```ts
+/**
+ * 把订单和「我持有哪些档案」换算成角色上下文。
+ *
+ * payee 列指明这笔钱付给谁：payee='buyer' 就是买家收款、卖家付款。
+ * 绝不能用 order_type 推断 —— crypto 默认买家收币只是表单默认值，用户可以改。
+ */
+export function roleContextFor(
+  order: { status: OrderStatus; payee: Payee; buyer_id: string; seller_id: string },
+  myProfileIds: Set<string>,
+): OrderRoleContext {
+  const iAmBuyer = myProfileIds.has(order.buyer_id);
+  const iAmSeller = myProfileIds.has(order.seller_id);
+  const payeeIsBuyer = order.payee === 'buyer';
+  return {
+    status: order.status,
+    isPayee: payeeIsBuyer ? iAmBuyer : iAmSeller,
+    isPayer: payeeIsBuyer ? iAmSeller : iAmBuyer,
+  };
+}
+```
+
+同时删掉 `isPayeeSide` —— 它是个只有一个调用点、且实参永远是字面量 `'buyer'` 的
+一行包装，`order.payee === 'buyer'` 说的是同一件事。
+
+`src/features/orders/OrderDetailPage.tsx` 里把那四行替换为：
+
+```tsx
+  const roleContext = roleContextFor(order.data, new Set((profiles.data ?? []).map((p) => p.id)));
+```
+
+并把 import 从 `isPayeeSide` 改成 `roleContextFor`。
+
+在 `src/features/orders/__tests__/statusMachine.test.ts` 追加：
+
+```ts
+describe('roleContextFor', () => {
+  const base = { status: 'pending_payment' as const, buyer_id: 'B', seller_id: 'S' };
+
+  it('payee=buyer 时，持有买家档案的人是收款方', () => {
+    const ctx = roleContextFor({ ...base, payee: 'buyer' }, new Set(['B']));
+    expect(ctx.isPayee).toBe(true);
+    expect(ctx.isPayer).toBe(false);
+  });
+
+  it('payee=buyer 时，持有卖家档案的人是付款方', () => {
+    const ctx = roleContextFor({ ...base, payee: 'buyer' }, new Set(['S']));
+    expect(ctx.isPayee).toBe(false);
+    expect(ctx.isPayer).toBe(true);
+  });
+
+  it('payee=seller 时收付方对调', () => {
+    const ctx = roleContextFor({ ...base, payee: 'seller' }, new Set(['S']));
+    expect(ctx.isPayee).toBe(true);
+    expect(ctx.isPayer).toBe(false);
+  });
+
+  it('与订单无关的人两边都不是', () => {
+    const ctx = roleContextFor({ ...base, payee: 'buyer' }, new Set(['X']));
+    expect(ctx.isPayee).toBe(false);
+    expect(ctx.isPayer).toBe(false);
+  });
+
+  it('同时持有买卖两个档案时两边都是（自己跟自己下单）', () => {
+    const ctx = roleContextFor({ ...base, payee: 'buyer' }, new Set(['B', 'S']));
+    expect(ctx.isPayee).toBe(true);
+    expect(ctx.isPayer).toBe(true);
+  });
+});
+```
+
+记得把 `roleContextFor` 加进该测试文件顶部的 import。
+
+- [ ] **Step 9d: 区分「查询失败」与「你不是当事人」**
+
+`OrderDetailPage` 只判断了 `profiles.isPending`。`useMyProfiles` 若报错，
+`profiles.data` 是 `undefined`、`myIds` 为空、两个标志都 false，
+`StatusActions` 就渲染「当前状态下你没有可执行的操作」—— 把一次网络失败说成了权限结论。
+
+在 `profiles.isPending` 那个分支之后补一个 `profiles.isError` 分支，
+渲染 `<span className="text-danger text-xs">档案加载失败，无法判断你在本订单中的角色</span>`。
 
 - [ ] **Step 10: 全部测试与类型检查**
 
