@@ -72,11 +72,13 @@ logo 必须放 `public/`，不能放项目根的 `assets/`：它们由 JS 拼出
 ```ts
 build: {
   rollupOptions: {
-    input: { landing: 'index.html', app: 'app/index.html' },
+    input: { landing: 'index.html', desk: 'desk.html', app: 'app/index.html' },
   },
 },
 appType: 'mpa',
 ```
+
+`desk.html` 必须显式列为入口。Vite 不会重写 `<a href>`，也不会把没被声明为入口的根级 HTML 拷进 `dist` —— 漏了它，落地页里那几个指向 `desk.html` 的链接在生产环境会 404。
 
 再加一个本地插件 `appHistoryFallback()`：在 `configureServer` 和 `configurePreviewServer` 里插中间件，把 `/app` 开头、无文件扩展名的请求重写到 `/app/index.html`。
 
@@ -153,7 +155,7 @@ Site URL 从 `http://localhost:5173` 改成 `http://localhost:5173/app`，否则
 | `.gitignore` | 两边并集 |
 | `README.md` | 取 `main` 版本；落地页 README 移到 `docs/landing-page.md` |
 
-合并本身一个提交，打通改造另一个提交，两者分开以便回溯。
+合并与文件落位合成一个提交（用 `--no-commit` 让两者同时落地，避免中间出现「根 `index.html` 已是落地页、但应用入口尚不存在」的坏状态）。后续的打通改造按任务另行分多个提交，与合并本身分开，以便回溯。
 
 ---
 
@@ -161,7 +163,7 @@ Site URL 从 `http://localhost:5173` 改成 `http://localhost:5173/app`，否则
 
 - `npm test` 保持全绿。基线：20 个文件 / 128 个测试通过。
 - 新增测试：读 `index.html` 和 `desk.html`，断言存在指向 `/app/login` 和 `/app/register` 的链接。落地页是手写 HTML，没有类型系统兜底，这条断言防止以后改版把入口弄丢。
-- `npm run build` 产出必须包含 `dist/index.html`、`dist/app/index.html`、`dist/assets/logos/`（14 个 PNG）。
+- `npm run build` 产出必须包含 `dist/index.html`、`dist/desk.html`、`dist/app/index.html`、`dist/assets/logos/`（14 个 PNG）。
 - `npm run dev` 手动核对：`/` 出落地页；点 Sign in 到登录页；`/app/orders` 直接刷新不 404；窄屏（<880px）导航里两个按钮仍可见。
 
 ---
