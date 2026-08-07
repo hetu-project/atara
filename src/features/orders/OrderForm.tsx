@@ -100,7 +100,7 @@ export default function OrderForm({
       <p className="text-ink-3 mb-4 max-w-[900px] text-xs">
         请填写{payee === 'buyer' ? '买家' : '卖家'}的收款信息。
         {payeeIsMe
-          ? '这一方是你自己，可以从你的档案填入。'
+          ? '收款方是你自己时可从档案复制。'
           : '对方的收款信息需要向对方索取 —— 出于隐私保护，系统不会展示其他用户的银行账号或钱包地址。'}
       </p>
 
