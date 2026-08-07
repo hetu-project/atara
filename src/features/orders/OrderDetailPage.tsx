@@ -8,7 +8,7 @@ import type { OrderStatus } from '@/lib/schema';
 import OrderInfoGrid from './OrderInfoGrid';
 import OrderStatusBadge from './OrderStatusBadge';
 import StatusActions from './StatusActions';
-import { isPayeeSide } from './statusMachine';
+import { roleContextFor } from './statusMachine';
 import StatusTimeline from './StatusTimeline';
 import { useOrder, useOrderStatusLogs, useUpdateOrderStatus } from './hooks';
 
@@ -26,18 +26,7 @@ export default function OrderDetailPage() {
   if (order.isError) return <div className="text-danger text-sm">加载失败：{(order.error as Error).message}</div>;
   if (!order.data) return null;
 
-  // 判定当前用户在这笔订单里的位置。
-  // 收款方由 payee 列决定（'buyer' 表示钱付给买家），绝不能用 order_type 推断 ——
-  // crypto 默认买家收币只是表单默认值，用户可以改。
-  const myIds = new Set((profiles.data ?? []).map((p) => p.id));
-  const iAmBuyer = myIds.has(order.data.buyer_id);
-  const iAmSeller = myIds.has(order.data.seller_id);
-  const payeeIsBuyer = isPayeeSide(order.data.payee, 'buyer');
-  const roleContext = {
-    status: order.data.status,
-    isPayee: payeeIsBuyer ? iAmBuyer : iAmSeller,
-    isPayer: payeeIsBuyer ? iAmSeller : iAmBuyer,
-  };
+  const roleContext = roleContextFor(order.data, new Set((profiles.data ?? []).map((p) => p.id)));
 
   function handleStatusChange(next: OrderStatus) {
     if (next === order.data!.status) return;
@@ -63,6 +52,8 @@ export default function OrderDetailPage() {
         <OrderStatusBadge status={order.data.status} />
         {profiles.isPending ? (
           <span className="text-ink-4 text-xs">加载中...</span>
+        ) : profiles.isError ? (
+          <span className="text-danger text-xs">档案加载失败，无法判断你在本订单中的角色</span>
         ) : (
           <StatusActions
             context={roleContext}

@@ -19,7 +19,7 @@ export default function CryptoFields({ register, err }: FieldGroupProps) {
           label="收款地址"
           required
           error={err('receiving_address')}
-          hint="已按所选收款方的默认地址带出，可修改"
+          hint="收款方是你自己时可从档案复制；是对方时请向对方索取"
         >
           <Input
             {...register('receiving_address')}

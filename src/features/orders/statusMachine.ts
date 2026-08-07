@@ -36,7 +36,22 @@ export function allowedTransitions({ status, isPayee, isPayer }: OrderRoleContex
   return [];
 }
 
-/** 这笔钱付给谁 —— 必须读 payee 列，不能由 order_type 推断 */
-export function isPayeeSide(payee: Payee, side: 'buyer' | 'seller'): boolean {
-  return payee === side;
+/**
+ * 把订单和「我持有哪些档案」换算成角色上下文。
+ *
+ * payee 列指明这笔钱付给谁：payee='buyer' 就是买家收款、卖家付款。
+ * 绝不能用 order_type 推断 —— crypto 默认买家收币只是表单默认值，用户可以改。
+ */
+export function roleContextFor(
+  order: { status: OrderStatus; payee: Payee; buyer_id: string; seller_id: string },
+  myProfileIds: Set<string>,
+): OrderRoleContext {
+  const iAmBuyer = myProfileIds.has(order.buyer_id);
+  const iAmSeller = myProfileIds.has(order.seller_id);
+  const payeeIsBuyer = order.payee === 'buyer';
+  return {
+    status: order.status,
+    isPayee: payeeIsBuyer ? iAmBuyer : iAmSeller,
+    isPayer: payeeIsBuyer ? iAmSeller : iAmBuyer,
+  };
 }

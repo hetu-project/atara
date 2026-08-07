@@ -29,7 +29,7 @@ export default function FiatFields({ register, err }: FieldGroupProps) {
           label="收款账号"
           required
           error={err('bank_account_number')}
-          hint="已按所选收款方的默认账号带出，可修改"
+          hint="收款方是你自己时可从档案复制；是对方时请向对方索取"
         >
           <Input
             {...register('bank_account_number')}
