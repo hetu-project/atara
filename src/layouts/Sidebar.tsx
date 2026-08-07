@@ -9,7 +9,7 @@ const NAV = [
 export default function Sidebar() {
   return (
     <nav className="bg-surface w-[249px] shrink-0 py-3.5">
-      <div className="px-[22px] py-4 text-base font-semibold">Advaita</div>
+      <div className="px-[22px] py-4 text-base font-semibold">Atara</div>
       <hr className="border-line mx-[22px] my-5" />
       {NAV.map((item) => (
         <NavLink
