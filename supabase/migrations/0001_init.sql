@@ -86,6 +86,41 @@ create trigger trg_counterparty_touch
   before update on public.counterparties
   for each row execute function public.touch_updated_at();
 
+-- ------------------------------------------------------------
+-- 档案身份三列不可篡改
+-- ------------------------------------------------------------
+-- `own profiles` policy 是 `for all` 且不限制列，界面上没有暴露
+-- display_id / role / user_id 的编辑控件不代表 PostgREST 挡得住：
+-- 直接 PATCH 这三列一样会通过 policy（改的还是自己名下的行）。
+--
+--   display_id 是用户线下交换、也是 lookup_counterparty 的唯一输入。
+--   允许改动会让人在腾出旧 ID 后被别人抢注，造成身份混淆。
+--
+--   role 更严重：数据库层面没有任何约束把 orders.buyer_id / seller_id
+--   绑定到对应角色的档案上，lookup.ts 里的角色校验是唯一的强制点，
+--   而那是客户端代码。一旦 role 可写，用户可以把自己的卖家档案
+--   现改成 'buyer'，绕过所有依赖角色判定的业务逻辑。
+--
+--   user_id 可写等于可以把档案过户给别的账号，直接绕过 RLS 的归属模型。
+--
+-- updateCounterparty 提交时这三列要么不出现在 payload 里（display_id、
+-- user_id 从不由表单携带），要么原样带回、值不变（role），不会被这里误伤。
+create or replace function public.freeze_counterparty_identity()
+returns trigger language plpgsql as $$
+begin
+  if new.display_id is distinct from old.display_id
+     or new.role is distinct from old.role
+     or new.user_id is distinct from old.user_id then
+    raise exception '档案的身份信息创建后不可修改';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_counterparty_freeze_identity
+  before update on public.counterparties
+  for each row execute function public.freeze_counterparty_identity();
+
 -- orders 的 RLS policy 会通过 user_id 反查 counterparties，每次订单查询都命中
 create index idx_counterparties_user_id    on public.counterparties (user_id);
 create index idx_counterparties_full_name  on public.counterparties (full_name);
