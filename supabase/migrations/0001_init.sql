@@ -342,8 +342,9 @@ create trigger trg_order_check_status
 -- 只能靠 trigger。这也是为什么不把它并进上面那个：本 trigger 必须对
 -- **任何** update 生效，不能限定 `of status`。
 --
--- 冻结的是"成交条款"：谁跟谁、谁收钱、收多少。收款账号/地址不冻结 ——
--- 待付款阶段对方要求换收款方式是正常业务。
+-- 冻结的是"成交条款"：谁跟谁、谁收钱、收多少，这两列一开始就是永久锁死的。
+-- 收款账号/地址只在 pending_payment 阶段允许改（待付款时对方要求换收款方式
+-- 是正常业务），进入 paid 之后同样锁死——具体判断见函数体内第二段检查。
 create or replace function public.freeze_order_terms()
 returns trigger language plpgsql as $$
 begin
@@ -357,6 +358,22 @@ begin
      or new.created_at is distinct from old.created_at then
     raise exception '订单的交易双方、收款方与金额创建后不可修改';
   end if;
+
+  -- 收款信息只在 pending_payment 阶段可改（对方换收款方式是正常业务）。
+  -- 一旦进入 paid / completed / cancelled，任何一方都不该再改写钱到底打去了哪 ——
+  -- 应用里没有订单编辑界面，这里锁死不损失任何功能，只堵一条 PostgREST 直连的口子。
+  if old.status <> 'pending_payment'
+     and (new.receiving_address is distinct from old.receiving_address
+          or new.bank_account_number is distinct from old.bank_account_number
+          or new.asset is distinct from old.asset
+          or new.chain is distinct from old.chain
+          or new.fiat_currency is distinct from old.fiat_currency
+          or new.bank_name is distinct from old.bank_name
+          or new.bank_account_name is distinct from old.bank_account_name
+          or new.bank_swift is distinct from old.bank_swift) then
+    raise exception '订单已开始付款，收款信息不可再修改';
+  end if;
+
   return new;
 end;
 $$;
