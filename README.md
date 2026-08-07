@@ -74,3 +74,6 @@ SPA：没有 loader、没有 action、没有 server，不会触发这个漏洞�
 
 - 设计文档：`docs/superpowers/specs/2026-08-06-advaita-web-design.md`
 - 实施计划：`docs/superpowers/plans/2026-08-06-advaita-web.md`
+- 自助注册设计文档：`docs/superpowers/specs/2026-08-06-self-registration-design.md`
+- 自助注册实施计划：`docs/superpowers/plans/2026-08-06-self-registration.md`
+- 交付说明（含手工验收清单，务必在上线前跑一遍）：`docs/HANDOFF.md`
