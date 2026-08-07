@@ -9,8 +9,9 @@ Supabase**——本机没有 Postgres、Docker 或 Supabase CLI，所以 `supaba
 过，也没有跑过任何端到端流程。**人工审读，加上下面两份手工验收清单，是它上线前唯一的关卡。**
 
 自动化验证的范围：128 个单元测试、TypeScript 类型检查、生产构建，全部通过。**RLS policy、状态机 trigger、
-本轮新增的两个 RPC（`lookup_counterparties_by_id`）和两个 trigger（收款信息冻结、档案身份三列冻结）
-均只经人工审读，一行都没有在真实数据库里跑过。**
+本轮新增的 RPC `lookup_counterparties_by_id`、新增的 `trg_counterparty_freeze_identity` trigger，
+以及加进既有 `trg_order_freeze_terms` 的收款信息冻结分支，均只经人工审读，
+一行都没有在真实数据库里跑过。**
 
 ## 一、接入 Supabase
 
@@ -30,8 +31,10 @@ Supabase**——本机没有 Postgres、Docker 或 Supabase CLI，所以 `supaba
 2. 登录后应自动跳到 `/onboarding`（此时还没有任何档案）。
 3. 选择「我是买家」，填姓名 + 默认钱包地址（TRON），提交 → toast 显示 `U000001`，跳转到 `/profile`。
 4. 在「我的档案」页点「创建卖家档案」，填姓名 + 银行账号，提交 → toast 显示 `U000002`。
-5. 用浏览器后退键回到 `/onboarding` → 应立即被重定向回 `/profile`，而不是停留在选身份的页面
-   （这是本轮修的 Important 4；修之前这里是个死胡同，只能靠继续后退离开）。
+5. 在地址栏手动输入 `/onboarding` → 应立即被重定向回 `/profile`，而不是停留在选身份的页面
+   （这是本轮修的 Important 4；修之前这里是个死胡同：`/onboarding` 挂在 AppLayout 之外，
+   没有侧边栏也没有退出登录按钮，选中已持有的角色、填完表单只会撞唯一约束）。
+   注意进出 `/onboarding` 的跳转都用了 `replace`，所以后退键通常落不到它上面，要手敲地址。
 6. 新建 Crypto 订单：买家、卖家两栏各自输入对方的用户 ID 点「查询」，或点「用我自己的 xx 档案」；
    注意收款地址**不会**自动带出（§7 的设计变更，不是 bug，见下面第五节）。提交后 toast 显示订单号。
 7. 打开刚创建的订单详情：买家、卖家两栏都应显示姓名和用户 ID，**不应该有一边显示 `-`**
@@ -46,14 +49,48 @@ Supabase**——本机没有 Postgres、Docker 或 Supabase CLI，所以 `supaba
 设计文档 §10 的要求：本次改动的 SQL 是安全边界，不只是数据结构，而它从未连过真实数据库，交付时必须给出
 针对 RLS 的手工验收清单。用**两个真实账号**在 Supabase 项目上按顺序执行：
 
-1. **交叉验证互相看不到对方档案。** 账号 A 登录后在浏览器 devtools 里执行
-   `await supabase.from('counterparties').select('*')`，应只返回 A 自己的 0-2 条档案，绝不能出现账号 B 的
-   任何字段，尤其是 `id_number`、`bank_account_number`、`default_wallet_address`。
-2. **交叉验证互相看不到对方的订单。** 账号 A 若不是某订单的买卖双方之一，执行
-   `await supabase.from('orders').select('*').eq('id', '<B的订单id>')` 应返回空结果，而不是报错或返回数据。
-3. **确认 `lookup_counterparty` 只返回四个字段。** 任一已登录账号执行
-   `await supabase.rpc('lookup_counterparty', { p_display_id: 'U000001' })`，返回行只应有
-   `id / display_id / role / full_name`，不应出现银行账号、身份证号、出生日期、钱包地址等任何一列。
+**先取到账号 A 的 JWT**，下面前三步都要用它。`supabase` 这个 client 是模块作用域的、从没挂到
+`window` 上，生产包里还会被压缩掉，所以**不能在 devtools 控制台里直接调 `supabase.xxx`**——用 curl。
+
+账号 A 登录后，在 devtools 的 Console 里执行：
+
+```js
+JSON.parse(Object.entries(localStorage).find(([k]) => k.startsWith('sb-') && k.endsWith('-auth-token'))[1]).access_token
+```
+
+把打印出来的字符串记作 `<A的JWT>`。下面把 `<anon key>` 和 `<SUPABASE_URL>` 换成 `.env` 里的那两个值。
+
+1. **交叉验证互相看不到对方档案。**
+
+   ```bash
+   curl '<SUPABASE_URL>/rest/v1/counterparties?select=*' \
+     -H 'apikey: <anon key>' -H 'Authorization: Bearer <A的JWT>'
+   ```
+
+   应只返回 A 自己的 0-2 条档案，绝不能出现账号 B 的任何字段，尤其是 `id_number`、
+   `bank_account_number`、`default_wallet_address`。
+
+2. **交叉验证互相看不到对方的订单。** 用一笔 A 既不是买家也不是卖家的订单 id：
+
+   ```bash
+   curl '<SUPABASE_URL>/rest/v1/orders?select=*&id=eq.<B的订单id>' \
+     -H 'apikey: <anon key>' -H 'Authorization: Bearer <A的JWT>'
+   ```
+
+   应返回空数组 `[]`，而不是报错或返回数据。
+
+3. **确认 `lookup_counterparty` 只返回四个字段。**
+
+   ```bash
+   curl -X POST '<SUPABASE_URL>/rest/v1/rpc/lookup_counterparty' \
+     -H 'apikey: <anon key>' -H 'Authorization: Bearer <A的JWT>' \
+     -H 'Content-Type: application/json' \
+     -d '{"p_display_id":"U000001"}'
+   ```
+
+   返回行只应有 `id / display_id / role / full_name`，不应出现银行账号、身份证号、出生日期、
+   钱包地址等任何一列。对 `lookup_counterparties_by_id` 同样查一遍
+   （`-d '{"p_ids":["<某个档案的uuid>"]}'`），它返回的字段必须与上面完全一致。
 4. **确认不带用户登录、只用 anon key 调用 `lookup_counterparty` 会失败**（Critical 1 的验证，这正是打包
    在前端 JS 里、任何人都能抄走的那个 key）：
 
