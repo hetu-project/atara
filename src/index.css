@@ -22,6 +22,62 @@
   --radius-pill: 999px;
 
   --shadow-float: 0px 4px 10px rgba(208, 208, 208, 0.4);
+
+  /* ── Trustline 暗色令牌（Demo）──────────────────────────────
+     追加而非替换：上面那批浅色令牌还被未路由的旧组件用着，删掉会让它们
+     失去样式，而它们的测试还在跑。唯一被覆盖的是 --color-surface，
+     它的旧值 rgba(0,0,0,0.02) 在暗色下没有意义。 */
+  --color-bg: #0b0d12;
+  --color-surface: #171821;
+  --color-surface-raised: #1d1f2a;
+  --color-txt: #fbf9ff;
+  --color-muted: #a8a7b6;
+  --color-hairline: #2b2d39;
+  --color-hairline-strong: #444756;
+  --color-brand: #7cd8c4;
+  --color-brand-dim: #1ea98e;
+  --color-ok: #8ee0ba;
+  --color-ok-muted: #123b2b;
+  --color-warn: #f1b991;
+  --color-bad: #ffb4aa;
+  --color-bad-muted: #4a1f1b;
+  --color-info: #9fc5ff;
+  --color-info-muted: #172d4f;
+  --color-series-1: #8ee6c9;
+  --color-series-2: #a8c1ff;
+  --color-series-3: #f1b991;
+  --color-series-4: #ffaaa5;
+  --color-series-5: #cabdff;
+
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-panel: 16px;
+  --radius-md: 18px;
+  --radius-lg: 26px;
+
+  --shadow-panel: 0 14px 34px #00000057;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @layer base {
@@ -31,8 +87,8 @@
     height: 100%;
   }
   body {
-    background: #ffffff;
-    color: var(--color-ink);
+    background: var(--color-bg);
+    color: var(--color-txt);
     font-family:
       -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
