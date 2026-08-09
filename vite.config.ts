@@ -35,6 +35,9 @@ function appHistoryFallback(): Plugin {
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), appHistoryFallback()],
+  server: {
+    port: 5174,
+  },
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, 'src') },
   },

@@ -17,9 +17,9 @@ npm run dev
 
 | 地址 | 内容 |
 |---|---|
-| `http://localhost:5173/` | Atara 落地页（静态） |
-| `http://localhost:5173/desk.html` | Settlement desk（静态） |
-| `http://localhost:5173/app/` | 撮合演示后台（React 应用） |
+| `http://localhost:5174/` | Atara 落地页（静态） |
+| `http://localhost:5174/desk.html` | Settlement desk（静态） |
+| `http://localhost:5174/app/` | 撮合演示后台（React 应用） |
 
 落地页导航栏的 **Sign in** / **Get started** 直接进应用。
 
@@ -37,7 +37,7 @@ npm run dev
    修好后重新粘贴即可，不会留下建了一半的 schema。这个保证来自脚本本身，
    不依赖 SQL Editor、psql 或 `supabase db push` 里的任何一种执行方式。
 3. 打开 **Authentication → URL Configuration**，把 **Site URL** 设为应用地址
-   （本地开发填 `http://localhost:5173/app`），否则验证邮件里的链接会指向错误地址。
+   （本地开发填 `http://localhost:5174/app`），否则验证邮件里的链接会指向错误地址。
 
    **末尾的 `/app` 不能省。** 应用挂在 `/app` 子路径下，根路径是落地页；
    漏掉的话用户点验证邮件会落到落地页，看起来像验证失败。
