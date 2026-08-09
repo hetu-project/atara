@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="As completed settlements accumulate, the model's estimate tightens and the collateral it asks of a clean counterparty falls from 34 to 8 percent">
+  <style>
+    .paper{fill:#f1ede6}.card{fill:#fbfaf6;stroke:#ddd8cf}
+    .cap{fill:#a49d90;font:400 15px/1 Inter,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase}
+    .lbl{fill:#8a8478;font:400 16px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+    .val{fill:#1b2233;font:500 24px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+    .grid{stroke:#e8e3da;stroke-width:1}
+    .axis{stroke:#cdc7bc;stroke-width:1.5;stroke-linecap:round}
+    .band{fill:url(#bandFade)}
+    .mid{stroke:#2f24e7;stroke-width:2.5;fill:none;stroke-linecap:round}
+    .tickmark{fill:#c6e84e}.tickmark.bad{fill:#e58272}
+    .pin{stroke:#8e88ef;stroke-width:1.5;stroke-dasharray:3 4}
+    .dot{fill:#fbfaf6;stroke:#2f24e7;stroke-width:2.5}
+    /* the estimate tightens as the record grows */
+    .draw{stroke-dasharray:1400;stroke-dashoffset:1400;animation:draw 6s cubic-bezier(.5,0,.3,1) -4.2s infinite}
+    @keyframes draw{0%,4%{stroke-dashoffset:1400}62%,100%{stroke-dashoffset:0}}
+    .grow{transform-box:fill-box;transform-origin:left center;animation:grow 6s cubic-bezier(.5,0,.3,1) -4.2s infinite}
+    @keyframes grow{0%,4%{transform:scaleX(0)}62%,100%{transform:scaleX(1)}}
+    .p1{animation:pop 6s ease-out -4.2s infinite}
+    .p2{animation:pop 6s ease-out -3.3s infinite}
+    .p3{animation:pop 6s ease-out -2.4s infinite}
+    @keyframes pop{0%,8%{opacity:0}22%,100%{opacity:1}}
+    @media(prefers-reduced-motion:reduce){.draw,.grow,.p1,.p2,.p3{animation:none;opacity:1;transform:none;stroke-dashoffset:0}}
+  </style>
+
+  <defs>
+    <!-- denser at the estimate, thinner at its edges: a band of belief
+         rather than a solid block -->
+    <linearGradient id="bandFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#8e88ef" stop-opacity=".08"/>
+      <stop offset=".5"  stop-color="#8e88ef" stop-opacity=".34"/>
+      <stop offset="1"   stop-color="#8e88ef" stop-opacity=".08"/>
+    </linearGradient>
+  </defs>
+
+  <rect class="paper" width="800" height="600"/>
+  <rect class="card" x="18" y="18" width="764" height="564" rx="18"/>
+
+  <text class="cap" x="96" y="98">collateral asked of the same counterparty</text>
+
+  <g class="grid"><path d="M96 190H706M96 260H706M96 330H706M96 400H706"/></g>
+
+  <!-- the estimate, and how sure the model is of it -->
+  <g class="grow"><path class="band" d="M96.0 154.0C98.5 156.7 106.2 164.9 111.2 170.0C116.3 175.2 121.4 180.1 126.5 184.9C131.6 189.6 136.7 194.2 141.8 198.6C146.8 203.0 151.9 207.3 157.0 211.4C162.1 215.4 167.2 219.4 172.2 223.2C177.3 226.9 182.4 230.6 187.5 234.1C192.6 237.6 197.7 241.0 202.8 244.2C207.8 247.5 212.9 250.6 218.0 253.6C223.1 256.6 228.2 259.5 233.2 262.3C238.3 265.1 243.4 267.8 248.5 270.4C253.6 273.0 258.7 275.4 263.8 277.8C268.8 280.2 273.9 282.5 279.0 284.8C284.1 287.0 289.2 289.1 294.2 291.2C299.3 293.2 304.4 295.2 309.5 297.1C314.6 299.0 319.7 300.8 324.8 302.6C329.8 304.4 334.9 306.1 340.0 307.7C345.1 309.3 350.2 310.9 355.2 312.4C360.3 313.9 365.4 315.4 370.5 316.8C375.6 318.2 380.7 319.6 385.8 320.9C390.8 322.2 395.9 323.4 401.0 324.6C406.1 325.8 411.2 327.0 416.2 328.1C421.3 329.2 426.4 330.3 431.5 331.3C436.6 332.4 441.7 333.3 446.8 334.3C451.8 335.3 456.9 336.2 462.0 337.1C467.1 338.0 472.2 338.8 477.2 339.6C482.3 340.5 487.4 341.3 492.5 342.0C497.6 342.8 502.7 343.5 507.8 344.2C512.8 344.9 517.9 345.6 523.0 346.3C528.1 346.9 533.2 347.5 538.2 348.2C543.3 348.8 548.4 349.3 553.5 349.9C558.6 350.5 563.7 351.0 568.8 351.5C573.8 352.0 578.9 352.5 584.0 353.0C589.1 353.5 594.2 354.0 599.2 354.4C604.3 354.9 609.4 355.3 614.5 355.7C619.6 356.1 624.7 356.5 629.8 356.9C634.8 357.3 639.9 357.7 645.0 358.0C650.1 358.4 655.2 358.7 660.2 359.0C665.3 359.4 670.4 359.7 675.5 360.0C680.6 360.3 685.7 360.6 690.8 360.9C695.8 361.2 703.5 361.6 706.0 361.7 L706.0 371.3 C703.5 371.3 695.8 371.3 690.8 371.2C685.7 371.2 680.6 371.2 675.5 371.2C670.4 371.1 665.3 371.1 660.2 371.1C655.2 371.1 650.1 371.0 645.0 371.0C639.9 371.0 634.8 370.9 629.8 370.9C624.7 370.9 619.6 370.8 614.5 370.8C609.4 370.8 604.3 370.7 599.2 370.7C594.2 370.6 589.1 370.6 584.0 370.5C578.9 370.5 573.8 370.4 568.8 370.4C563.7 370.3 558.6 370.3 553.5 370.2C548.4 370.2 543.3 370.1 538.2 370.1C533.2 370.0 528.1 369.9 523.0 369.9C517.9 369.8 512.8 369.7 507.8 369.7C502.7 369.6 497.6 369.5 492.5 369.5C487.4 369.4 482.3 369.3 477.2 369.2C472.2 369.1 467.1 369.0 462.0 368.9C456.9 368.8 451.8 368.7 446.8 368.6C441.7 368.5 436.6 368.4 431.5 368.3C426.4 368.2 421.3 368.1 416.2 368.0C411.2 367.9 406.1 367.7 401.0 367.6C395.9 367.5 390.8 367.3 385.8 367.2C380.7 367.0 375.6 366.9 370.5 366.7C365.4 366.6 360.3 366.4 355.2 366.2C350.2 366.1 345.1 365.9 340.0 365.7C334.9 365.5 329.8 365.3 324.8 365.1C319.7 364.9 314.6 364.7 309.5 364.4C304.4 364.2 299.3 364.0 294.2 363.7C289.2 363.5 284.1 363.2 279.0 363.0C273.9 362.7 268.8 362.4 263.8 362.1C258.7 361.8 253.6 361.5 248.5 361.2C243.4 360.9 238.3 360.6 233.2 360.2C228.2 359.9 223.1 359.5 218.0 359.1C212.9 358.7 207.8 358.4 202.8 357.9C197.7 357.5 192.6 357.1 187.5 356.6C182.4 356.2 177.3 355.7 172.2 355.2C167.2 354.7 162.1 354.2 157.0 353.7C151.9 353.1 146.8 352.6 141.8 352.0C136.7 351.4 131.6 350.8 126.5 350.2C121.4 349.5 116.3 348.9 111.2 348.2C106.2 347.5 98.5 346.4 96.0 346.0 Z"/></g>
+  <path class="mid draw" d="M96.0 250.0C98.5 251.5 106.2 256.2 111.2 259.1C116.3 262.0 121.4 264.8 126.5 267.5C131.6 270.2 136.7 272.8 141.8 275.3C146.8 277.8 151.9 280.2 157.0 282.5C162.1 284.8 167.2 287.1 172.2 289.2C177.3 291.3 182.4 293.4 187.5 295.4C192.6 297.3 197.7 299.2 202.8 301.1C207.8 302.9 212.9 304.7 218.0 306.4C223.1 308.1 228.2 309.7 233.2 311.3C238.3 312.8 243.4 314.3 248.5 315.8C253.6 317.2 258.7 318.6 263.8 320.0C268.8 321.3 273.9 322.6 279.0 323.9C284.1 325.1 289.2 326.3 294.2 327.5C299.3 328.6 304.4 329.7 309.5 330.8C314.6 331.8 319.7 332.9 324.8 333.9C329.8 334.8 334.9 335.8 340.0 336.7C345.1 337.6 350.2 338.5 355.2 339.3C360.3 340.2 365.4 341.0 370.5 341.8C375.6 342.5 380.7 343.3 385.8 344.0C390.8 344.7 395.9 345.4 401.0 346.1C406.1 346.8 411.2 347.4 416.2 348.0C421.3 348.7 426.4 349.3 431.5 349.8C436.6 350.4 441.7 350.9 446.8 351.5C451.8 352.0 456.9 352.5 462.0 353.0C467.1 353.5 472.2 354.0 477.2 354.4C482.3 354.9 487.4 355.3 492.5 355.7C497.6 356.2 502.7 356.6 507.8 356.9C512.8 357.3 517.9 357.7 523.0 358.1C528.1 358.4 533.2 358.8 538.2 359.1C543.3 359.4 548.4 359.8 553.5 360.1C558.6 360.4 563.7 360.7 568.8 361.0C573.8 361.2 578.9 361.5 584.0 361.8C589.1 362.0 594.2 362.3 599.2 362.5C604.3 362.8 609.4 363.0 614.5 363.3C619.6 363.5 624.7 363.7 629.8 363.9C634.8 364.1 639.9 364.3 645.0 364.5C650.1 364.7 655.2 364.9 660.2 365.1C665.3 365.2 670.4 365.4 675.5 365.6C680.6 365.7 685.7 365.9 690.8 366.1C695.8 366.2 703.5 366.4 706.0 366.5"/>
+
+  <!-- three read-offs as the record grows -->
+  <g class="p1">
+    <path class="pin" d="M96 250V440"/>
+    <circle class="dot" cx="96" cy="250" r="8"/>
+    <text class="val" x="96" y="228" text-anchor="start">34%</text>
+    <text class="lbl" x="96" y="466">4 settlements</text>
+  </g>
+  <g class="p2">
+    <path class="pin" d="M401 346V440"/>
+    <circle class="dot" cx="401" cy="346" r="8"/>
+    <text class="val" x="401" y="324" text-anchor="middle">13%</text>
+    <text class="lbl" x="401" y="466" text-anchor="middle">80 settlements</text>
+  </g>
+  <g class="p3">
+    <path class="pin" d="M706 366V440"/>
+    <circle class="dot" cx="706" cy="366" r="8"/>
+    <text class="val" x="706" y="344" text-anchor="end">8%</text>
+    <text class="lbl" x="706" y="466" text-anchor="end">1,600 settlements</text>
+  </g>
+
+  <path class="axis" d="M96 440H706"/>
+
+  <!-- the records themselves, thickening under the axis -->
+  <g transform="translate(96 492)">
+    <g class="tickmark">
+      <rect width="5" height="16" rx="2.5"/><rect x="26" width="5" height="16" rx="2.5"/><rect x="58" width="5" height="16" rx="2.5"/>
+      <rect x="96" width="5" height="16" rx="2.5"/><rect x="128" width="5" height="16" rx="2.5"/><rect x="154" width="5" height="16" rx="2.5"/>
+      <rect x="188" width="5" height="16" rx="2.5"/><rect x="206" width="5" height="16" rx="2.5"/><rect x="228" width="5" height="16" rx="2.5"/>
+      <rect x="252" width="5" height="16" rx="2.5"/><rect x="268" width="5" height="16" rx="2.5"/><rect x="286" width="5" height="16" rx="2.5"/>
+      <rect x="302" width="5" height="16" rx="2.5"/><rect x="316" width="5" height="16" rx="2.5"/><rect x="330" width="5" height="16" rx="2.5"/>
+      <rect x="344" width="5" height="16" rx="2.5"/><rect x="356" width="5" height="16" rx="2.5"/><rect x="368" width="5" height="16" rx="2.5"/>
+      <rect x="380" width="5" height="16" rx="2.5"/><rect x="390" width="5" height="16" rx="2.5"/><rect x="400" width="5" height="16" rx="2.5"/>
+      <rect x="410" width="5" height="16" rx="2.5"/><rect x="419" width="5" height="16" rx="2.5"/><rect x="428" width="5" height="16" rx="2.5"/>
+      <rect x="436" width="5" height="16" rx="2.5"/><rect x="444" width="5" height="16" rx="2.5"/><rect x="452" width="5" height="16" rx="2.5"/>
+      <rect x="459" width="5" height="16" rx="2.5"/><rect x="466" width="5" height="16" rx="2.5"/><rect x="473" width="5" height="16" rx="2.5"/>
+      <rect x="480" width="5" height="16" rx="2.5"/><rect x="486" width="5" height="16" rx="2.5"/><rect x="492" width="5" height="16" rx="2.5"/>
+      <rect x="498" width="5" height="16" rx="2.5"/><rect x="504" width="5" height="16" rx="2.5"/><rect x="510" width="5" height="16" rx="2.5"/>
+      <rect x="516" width="5" height="16" rx="2.5"/><rect x="521" width="5" height="16" rx="2.5"/><rect x="526" width="5" height="16" rx="2.5"/>
+      <rect x="531" width="5" height="16" rx="2.5"/><rect x="536" width="5" height="16" rx="2.5"/><rect x="541" width="5" height="16" rx="2.5"/>
+      <rect x="546" width="5" height="16" rx="2.5"/><rect x="551" width="5" height="16" rx="2.5"/><rect x="556" width="5" height="16" rx="2.5"/>
+      <rect x="561" width="5" height="16" rx="2.5"/><rect x="566" width="5" height="16" rx="2.5"/><rect x="571" width="5" height="16" rx="2.5"/>
+      <rect x="576" width="5" height="16" rx="2.5"/><rect x="581" width="5" height="16" rx="2.5"/><rect x="586" width="5" height="16" rx="2.5"/>
+      <rect x="591" width="5" height="16" rx="2.5"/><rect x="596" width="5" height="16" rx="2.5"/><rect x="601" width="5" height="16" rx="2.5"/>
+    </g>
+    <g class="tickmark bad">
+      <rect x="84" width="5" height="16" rx="2.5"/><rect x="240" width="5" height="16" rx="2.5"/><rect x="465" width="5" height="16" rx="2.5"/>
+    </g>
+  </g>
+  <text class="cap" x="96" y="536">every completed settlement, one record</text>
+</svg>

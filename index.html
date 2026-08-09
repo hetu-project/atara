@@ -2,1446 +2,563 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atara · Conditional payment protocol · The cost of trust, priced per payment</title>
-<meta name="description" content="Atara is a conditional payment protocol. A credit model reads what the counterparty has actually done and prices the risk of each payment, instead of locking the full amount on every trade.">
-<meta property="og:title" content="Atara · The cost of trust, priced per payment">
-<meta property="og:description" content="Atara is a conditional payment protocol. A credit model prices the risk of each payment before the money moves.">
-<meta property="og:type" content="website">
-<meta name="theme-color" content="#f7f8f7">
-<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
-<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f%5B%5D=switzer@300,400,500&display=swap">
-<script>document.documentElement.className += ' js';</script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Atara is a conditional payment protocol. It computes the risk on every payment, decides on evidence whether it settled, and locks a fraction instead of the whole trade.">
+<meta name="theme-color" content="#2518eb">
+<title>Atara · Conditional payment protocol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;display=swap">
 <style>
-/* ══════════════════════════════════════════════════════════════
-   ATARA
-   Four rules that keep this from reading as templated:
-     · No eyebrows, no kickers. Sections open on the headline.
-     · Three type sizes. Nothing in between.
-     · Status is stated once, in words, not scattered as chips.
-     · Whitespace separates. Borders are a last resort.
-   ══════════════════════════════════════════════════════════════ */
-:root{
-  --bg:      oklch(97.8% .003 168);
-  --bg-2:    oklch(95.2% .005 168);
-  --ink:     oklch(17%   .012 168);
-  --ink-2:   oklch(38%   .011 168);
-  --muted:   oklch(50%   .010 168);
-  --line:    oklch(89%   .007 168);
-  --accent:  oklch(47%   .135 158);
+  :root {
+    --paper: oklch(97.2% .018 92);
+    --ink: oklch(14% .025 267);
+    --blue: oklch(43% .29 266);
+    --blue-deep: oklch(31% .24 268);
+    --blue-soft: oklch(67% .2 257);
+    --signal: oklch(89% .19 119);
+    --white: oklch(97% .018 264);
+    --muted-white: oklch(93% .03 264 / .69);
+    --line: oklch(97% .018 264 / .2);
+    --maxw: 1200px;
+    --pad: clamp(1.5rem, 5vw, 4rem);
+    --t-display: clamp(2.15rem, 3.4vw, 3.15rem);
+    --t-head: clamp(1.6rem, 2.5vw, 2.15rem);
+    --t-body: clamp(.98rem, .3vw + .9rem, 1.06rem);
+    --gap-section: clamp(6rem, 11vw, 10.5rem);
+    --ease: cubic-bezier(.16,1,.3,1);
+    --sans: 'Inter',-apple-system,'SF Pro Display',system-ui,sans-serif;
+  }
 
-  --dark:      oklch(17.5% .010 168);
-  --dark-line: oklch(29%   .010 168);
-  --dark-ink:  oklch(96%   .004 168);
-  --dark-mut:  oklch(69%   .010 168);
-  --dark-acc:  oklch(80%   .170 160);
+  *,*::before,*::after{box-sizing:border-box}
+  html{scroll-behavior:smooth;background:var(--paper)}
+  body{margin:0;color:var(--ink);font-family:var(--sans);font-size:var(--t-body);font-weight:400;line-height:1.55;overflow-x:clip;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;color:inherit}
+  ::selection{background:var(--signal);color:var(--ink)}
+  :focus-visible{outline:2px solid var(--signal);outline-offset:5px}
+  .num{font-variant-numeric:tabular-nums lining-nums}
+  .skip{position:fixed;z-index:100;left:1rem;top:1rem;padding:.7rem 1rem;background:var(--paper);color:var(--ink);transform:translateY(-180%);transition:transform .2s var(--ease)}
+  .skip:focus{transform:none}
 
-  --sans:'Switzer','Helvetica Neue',Helvetica,Arial,sans-serif;
-  --maxw:1240px;
-  --maxw-hero:1560px;
-  --pad:clamp(1.5rem,5vw,5rem);
-  /* The hero deliberately breaks out past the 1240 text column, but not to the
-     edge: at 1440 this leaves ~130px, against the text column's ~172px. Flush
-     margins read as an accident rather than as a decision. */
-  --pad-hero:clamp(1.5rem,9vw,8.25rem);
-  --ease:cubic-bezier(.16,1,.3,1);
+  .hero{
+    position:relative;min-height:100svh;overflow:hidden;isolation:isolate;color:var(--white);
+    background:var(--blue);
+  }
+  .hero::before{
+    content:"";position:absolute;inset:0;z-index:0;opacity:.18;pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.74' numOctaves='3' seed='17' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)' opacity='.58'/%3E%3C/svg%3E");
+    background-size:15rem 15rem;mix-blend-mode:overlay;
+  }
+  .hero::after{
+    content:"";position:absolute;inset:0;z-index:5;pointer-events:none;opacity:.055;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 90 90' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='turbulence' baseFrequency='.055' numOctaves='2' seed='8' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size:22rem 22rem;mix-blend-mode:multiply;
+  }
 
-  /* three sizes. that is the whole scale. */
-  /* ceiling is set by the longest authored line, "priced per counterparty.",
-     which has to survive on one line inside the hero text column */
-  --t-display:clamp(2.05rem,3.5vw,2.8rem);
-  --t-head:clamp(1.7rem,3.2vw,2.85rem);
-  --t-body:clamp(1rem,.4vw+.92rem,1.15rem);
+  .nav{
+    position:absolute;z-index:10;inset:0 0 auto;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+    width:min(100%,var(--maxw));margin-inline:auto;padding:1.45rem var(--pad);font-size:.82rem;
+  }
+  .brand{display:inline-flex;align-items:center;gap:.65rem;width:max-content}
+  .brand-mark{width:1.05rem;height:1.05rem;position:relative;display:inline-block}
+  .brand-mark::before,.brand-mark::after{content:"";position:absolute;left:50%;top:50%;background:currentColor;transform:translate(-50%,-50%)}
+  .brand-mark::before{width:100%;height:2px}.brand-mark::after{width:2px;height:100%}
+  .brand-mark i,.brand-mark i::before,.brand-mark i::after{position:absolute;width:3px;height:3px;border-radius:50%;background:currentColor}
+  .brand-mark i{left:0;top:calc(50% - 1.5px)}.brand-mark i::before,.brand-mark i::after{content:"";top:0}.brand-mark i::before{left:.5rem}.brand-mark i::after{left:.92rem}
+  .wordmark{font-size:1.0625rem;font-weight:600;letter-spacing:-.01em}
+  .nav-center{display:flex;gap:2rem}.nav-center a{opacity:.7;transition:opacity .15s linear}.nav-center a:hover{opacity:1}
+  .nav-start{justify-self:end;display:inline-flex;align-items:center;gap:.55rem;padding:.67rem 1rem;border:1px solid var(--line);border-radius:999px;transition:background .15s linear,color .15s linear}
+  .nav-start:hover{background:var(--white);color:var(--ink)}
 
-  --gap-section:clamp(7rem,14vw,14rem);
-}
+  .hero-main{
+    width:100%;max-width:var(--maxw);min-height:100svh;margin-inline:auto;display:grid;
+    grid-template-columns:minmax(0,1.08fr) minmax(27rem,.92fr);gap:clamp(2.5rem,5vw,5rem);
+    align-items:center;padding:clamp(8rem,13vh,10rem) var(--pad) clamp(8.5rem,14vh,10.5rem);
+  }
+  .hero-copy{position:relative;z-index:2;align-self:center}
+  h1{margin:0;font-size:var(--t-display);font-weight:300;line-height:1.08;letter-spacing:-.032em;text-wrap:balance}
+  h1 .line{display:block;overflow:hidden;padding-block:.07em;margin-block:-.07em}
+  h1 .line span{display:block;animation:rise .9s var(--ease) both}
+  h1 .line:nth-child(2) span{animation-delay:.08s}
+  @keyframes rise{from{transform:translateY(110%)}}
+  .hero-lede{max-width:44ch;margin:clamp(1.3rem,2vw,1.8rem) 0 0;color:var(--muted-white);font-size:clamp(1.04rem,.4vw + .95rem,1.22rem);line-height:1.5;letter-spacing:-.01em}
+  .hero-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.8rem;margin-top:clamp(1.8rem,3vw,2.8rem)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:3rem;padding:.72em 1.35em;border-radius:999px;font-size:.9375rem;font-weight:500;letter-spacing:-.005em;transition:transform .15s var(--ease),background .15s linear,color .15s linear}
+  .btn:hover{transform:translateY(-2px)}
+  .btn-primary{gap:2.7rem;background:var(--white);color:var(--ink)}
+  .btn-primary::after{content:"\2192";display:grid;place-items:center;width:1.75rem;height:1.75rem;border-radius:50%;background:var(--ink);color:var(--white);transition:transform .2s var(--ease)}
+  .btn-primary:hover{background:var(--signal)}.btn-primary:hover::after{transform:rotate(-28deg)}
+  .btn-secondary{border:1px solid var(--line)}.btn-secondary:hover{background:oklch(97% .018 264 / .1)}
 
-*,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-body{
-  margin:0;background:var(--bg);color:var(--ink);
-  font-family:var(--sans);font-size:var(--t-body);font-weight:400;line-height:1.6;
-  -webkit-font-smoothing:antialiased;overflow-x:hidden;
-}
-h1,h2,h3,p,ul,figure,dl,dd{margin:0}
-ul{padding:0;list-style:none}
-a{color:inherit;text-decoration:none}
-::selection{background:var(--accent);color:oklch(97% .01 160)}
+  .instrument{
+    position:relative;z-index:2;align-self:center;justify-self:end;display:grid;grid-template-rows:3.4rem repeat(3,minmax(0,1fr));
+    width:min(100%,34rem);margin:0;min-height:clamp(29rem,58vh,35rem);overflow:hidden;
+    border:1px solid oklch(97% .018 264 / .22);border-radius:.65rem;background:oklch(46% .265 265);
+  }
+  .instrument-head{position:relative;z-index:3;display:grid;grid-template-columns:1fr auto auto;gap:1.2rem;align-items:center;padding:0 1.25rem;font-size:.61rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-white);border-bottom:1px solid var(--line)}
+  .instrument-head .sample{color:var(--signal)}
+  .instrument-head .illus{opacity:.72}
+  .stage{position:relative;z-index:3;display:grid;grid-template-columns:3.6rem 1fr;min-height:0;transition:opacity .45s linear}
+  .stage:not(:last-child){border-bottom:1px solid var(--line)}
+  .stage-index{position:relative;display:flex;align-items:flex-start;justify-content:center;padding-top:1.3rem;font-size:.61rem;letter-spacing:.12em;color:var(--muted-white);opacity:.62}
+  .stage-index::after{content:"";position:absolute;left:50%;bottom:1.15rem;width:.35rem;height:.35rem;background:var(--white);opacity:0;transform:translateX(-50%) scale(.4);transition:opacity .25s linear,transform .45s var(--ease),background .25s linear}
+  .stage-body{display:flex;flex-direction:column;justify-content:center;min-width:0;padding:1.1rem 1.15rem 1.15rem 1.25rem}
+  .stage-label{font-size:.72rem;color:var(--muted-white)}
+  .stage-value{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-top:.45rem}
+  .stage-value strong{font-family:var(--sans);font-size:clamp(1.45rem,2.2vw,2.05rem);font-weight:500;line-height:1;letter-spacing:-.032em}
+  .stage-note{font-size:.65rem;text-transform:uppercase;letter-spacing:.11em;color:var(--signal);opacity:0;transform:translateY(.3rem);transition:opacity .35s linear,transform .45s var(--ease)}
+  .stage.is-active .stage-index::after{opacity:1;transform:translateX(-50%) scale(1);background:var(--signal)}
+  .stage.is-done .stage-index::after{opacity:.42;transform:translateX(-50%) scale(.65)}
+  .stage.is-active .stage-note,.stage.is-done .stage-note{opacity:1;transform:none}
+  .stage:not(.is-active):not(.is-done){opacity:.58}
+  .risk-copy{max-width:17rem}
+  .lock-value strong{color:var(--signal)}
+  .lock-track{height:.35rem;margin-top:1.35rem;background:oklch(97% .018 264 / .14);overflow:hidden}
+  .lock-track i{display:block;width:0;height:100%;background:var(--signal);transform-origin:left;transition:width 1s var(--ease)}
+  .lock-legend{display:flex;justify-content:space-between;gap:1rem;margin-top:.65rem;color:var(--muted-white);font-size:.68rem}
+  .lock-legend b{font-weight:400;color:var(--white)}
+  .sample-dots{display:flex;gap:.38rem;align-items:center}
+  .sample-dots i{width:.3rem;height:.3rem;border-radius:50%;background:var(--white);opacity:.25;transition:opacity .25s linear,transform .25s var(--ease),background .25s linear}
+  .sample-dots i.is-active{opacity:1;background:var(--signal);transform:scale(1.45)}
 
-.wrap{max-width:var(--maxw);margin-inline:auto;padding-inline:var(--pad)}
-.sec{padding-block:var(--gap-section)}
-.js .r{opacity:0}
+  .ecosystem{position:absolute;z-index:3;left:50%;bottom:1.2rem;width:min(calc(100% - 2 * var(--pad)),var(--maxw));transform:translateX(-50%);display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2.4rem;border-top:1px solid var(--line);padding-top:1rem}
+  .ecosystem-label{font-size:.64rem;text-transform:uppercase;letter-spacing:.13em;color:var(--muted-white);white-space:nowrap}
+  .logo-window{overflow:hidden}
+  .logo-track{display:flex;align-items:center;width:max-content;gap:clamp(2.5rem,4.5vw,5rem);animation:marquee 35s linear infinite}
+  .logo-track img{display:block;max-width:6.6rem;max-height:1.65rem;object-fit:contain;filter:grayscale(1) brightness(0) invert(1);opacity:.4}
+  @keyframes marquee{to{transform:translateX(-50%)}}
 
-.display{font-size:var(--t-display);font-weight:400;line-height:1.0;letter-spacing:-.04em;text-wrap:balance}
-.head{font-size:var(--t-head);font-weight:400;line-height:1.08;letter-spacing:-.032em;text-wrap:balance}
-.lede{font-size:clamp(1.08rem,.5vw+.98rem,1.32rem);line-height:1.5;color:var(--ink-2);letter-spacing:-.014em}
-.sub{color:var(--muted)}
-.num{font-variant-numeric:tabular-nums}
+  .wrap{width:100%;max-width:var(--maxw);margin-inline:auto;padding-inline:var(--pad)}
+  .section{padding-block:var(--gap-section)}
+  .section h2,.cta h2{margin:0;max-width:24ch;font-size:var(--t-head);font-weight:400;line-height:1.14;letter-spacing:-.026em;text-wrap:balance}
+  .section-lede{max-width:56ch;margin:1.4rem 0 0;font-size:clamp(1.04rem,.4vw + .95rem,1.22rem);line-height:1.5;letter-spacing:-.01em;color:oklch(41% .018 267)}
+  .reveal{opacity:0;transform:translateY(1rem);transition:opacity .75s var(--ease),transform .75s var(--ease)}
+  .reveal.in{opacity:1;transform:none}
 
-/* the only small-text treatment on the page */
-.tag{display:inline-flex;align-items:center;gap:.5rem;font-size:.8125rem;color:var(--muted)}
-.tag::before{content:"";width:6px;height:6px;flex:none;border-radius:50%;background:var(--muted)}
-.tag.on{color:var(--accent)}
-.tag.on::before{background:var(--accent)}
-.dark .tag{color:var(--dark-mut)}
-.dark .tag::before{background:var(--dark-mut)}
-.dark .tag.on{color:var(--dark-acc)}
-.dark .tag.on::before{background:var(--dark-acc)}
+  .protocol-section{position:relative;height:320svh;padding:0;background:var(--paper)}
+  .protocol-sticky{position:sticky;top:0;display:flex;align-items:center;min-height:100svh;padding-block:clamp(4.5rem,8vh,6.5rem);overflow:hidden}
+  .protocol-demo{display:grid;grid-template-columns:minmax(0,.65fr) minmax(32rem,1.35fr);gap:clamp(2rem,4vw,4rem);align-items:center;margin-top:clamp(2.5rem,4vw,3.5rem)}
+  .protocol-steps{border-top:1px solid oklch(14% .025 267 / .13)}
+  .protocol-step{position:relative;display:grid;grid-template-columns:2.4rem minmax(0,1fr);gap:1rem;width:100%;padding:1.15rem 0 1.15rem 1.15rem;border:0;border-bottom:1px solid oklch(14% .025 267 / .13);background:transparent;text-align:left;cursor:pointer;opacity:.34;transition:opacity .3s linear}
+  .protocol-step::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:oklch(14% .025 267 / .12)}
+  .protocol-step::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--blue);transform:scaleY(var(--progress,0));transform-origin:top;transition:transform .12s linear}
+  .protocol-step.is-active{opacity:1}.protocol-step-num{padding-top:.16rem;font-size:.9375rem;font-weight:500;color:var(--blue)}
+  .protocol-step h3{margin:0;font-size:1.0625rem;font-weight:600;line-height:1.35;letter-spacing:-.014em}
+  .protocol-step-detail{display:grid;grid-template-rows:0fr;transition:grid-template-rows .5s var(--ease)}.protocol-step.is-active .protocol-step-detail{grid-template-rows:1fr}.protocol-step-detail > div{min-height:0;overflow:hidden}
+  .protocol-step p{margin:.8rem 0 0;font-size:.9375rem;line-height:1.55;color:oklch(45% .018 267)}
+  .protocol-step ul{margin:.8rem 0 0;padding:0;list-style:none}.protocol-step li{position:relative;padding:.3rem 0 .3rem 1rem;font-size:.875rem;color:oklch(34% .018 267)}.protocol-step li::before{content:"";position:absolute;left:0;top:.75rem;width:.3rem;height:.3rem;background:var(--blue)}
+  .protocol-field{position:relative;min-width:0;aspect-ratio:4/3;margin:0;overflow:hidden;background:#eee9de;contain:layout paint}
+  .protocol-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:translate3d(0,1rem,0) scale(.985);filter:saturate(.92);transition:opacity .5s linear,transform .85s var(--ease),filter .65s linear;will-change:transform,opacity}
+  .protocol-art.is-active{z-index:1;opacity:1;transform:translate3d(0,0,0) scale(1.015);filter:saturate(1)}
 
-/* ── buttons ─────────────────────────────────────────────────── */
-.btn{display:inline-flex;align-items:center;gap:.6em;padding:.95em 1.7em;
-  font-size:.9375rem;font-weight:500;letter-spacing:-.008em;
-  transition:background .35s var(--ease),color .35s var(--ease),
-             border-color .35s var(--ease),transform .35s var(--ease)}
-.btn-solid{background:var(--ink);color:var(--bg)}
-.btn-solid:hover{background:var(--accent);transform:translateY(-1px)}
-/* the second action: present, clearly not the one being recommended */
-.btn-ghost{color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
-.btn-ghost:hover{box-shadow:inset 0 0 0 1px var(--ink);transform:translateY(-1px)}
-.arw{transition:transform .35s var(--ease)}
-.btn:hover .arw,.tlink:hover .arw{transform:translateX(4px)}
-.tlink{display:inline-flex;align-items:center;gap:.5em;font-weight:500;color:var(--ink);
-  border-bottom:1px solid var(--line);padding-bottom:.2em;transition:border-color .3s var(--ease)}
-.tlink:hover{border-color:var(--ink)}
-.dark .tlink{color:var(--dark-ink);border-color:var(--dark-line)}
-.dark .tlink:hover{border-color:var(--dark-ink)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
-.skip{position:absolute;left:-9999px;background:var(--ink);color:var(--bg);padding:.8rem 1.2rem}
-.skip:focus{left:.5rem;top:.5rem;z-index:99}
-@media (pointer:coarse){.btn{padding-block:1.1em}}
+  .engine-section{position:relative;overflow:hidden;background:oklch(17% .025 267);color:var(--white)}
+  .engine-section::before{content:"";position:absolute;inset:0;opacity:.12;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' seed='29' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.55'/%3E%3C/svg%3E");background-size:15rem 15rem;mix-blend-mode:overlay}
+  .engine-section .wrap{position:relative;z-index:1}.engine-section .section-lede{color:oklch(82% .018 267)}
+  .model-map{display:grid;grid-template-columns:minmax(0,1fr) minmax(12rem,.72fr) minmax(0,1fr);gap:clamp(2rem,5vw,5rem);align-items:center;margin-top:clamp(3rem,5vw,4.5rem);padding-block:2rem;border-top:1px solid oklch(97% .018 264 / .16);border-bottom:1px solid oklch(97% .018 264 / .16)}
+  .model-col{display:grid}.model-node{position:relative;min-height:4.8rem;padding:1rem 0;border-bottom:1px solid oklch(97% .018 264 / .13);opacity:.42;transition:opacity .4s linear}.model-node:first-child{border-top:1px solid oklch(97% .018 264 / .13)}.model-node.is-live{opacity:1}.model-node b{display:block;font-size:.9375rem;font-weight:500}.model-node span{display:block;margin-top:.28rem;font-size:.8125rem;line-height:1.4;color:oklch(72% .02 267)}
+  .model-core{display:grid;place-items:center;aspect-ratio:1;border:1px solid oklch(97% .018 264 / .22);background:oklch(21% .035 267);text-align:center;transition:border-color .4s linear}.model-core.is-computing{border-color:var(--signal)}.model-core span{font-size:.75rem;color:oklch(72% .02 267)}.model-core b{display:block;margin-top:.55rem;font-size:clamp(1.25rem,2vw,1.75rem);font-weight:400;line-height:1.2;letter-spacing:-.03em;color:var(--signal)}.model-core i{display:block;width:.4rem;height:.4rem;margin:1rem auto 0;background:var(--signal);animation:corePulse 1.4s linear infinite alternate}@keyframes corePulse{to{opacity:.2}}
+  .model-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:clamp(2.5rem,4vw,3.5rem);border-top:1px solid oklch(97% .018 264 / .16)}.model-point{padding:1.5rem 1.5rem 0 0}.model-point + .model-point{padding-left:1.5rem;border-left:1px solid oklch(97% .018 264 / .16)}.model-point b{font-size:.9375rem;font-weight:600}.model-point p{margin:.55rem 0 0;font-size:.875rem;line-height:1.5;color:oklch(72% .02 267)}
 
-/* ══ NAV ══════════════════════════════════════════════════════ */
-.nav{position:sticky;top:0;z-index:60;background:var(--bg)}
-.nav-in{display:flex;align-items:center;gap:2.5rem;height:80px}
-.brand{display:flex;align-items:center;gap:.6rem;margin-right:auto;
-  font-weight:500;letter-spacing:-.01em;font-size:1.0625rem}
-.mark{width:14px;height:14px;background:var(--accent);flex:none}
-.nav a.lnk{font-size:.9375rem;color:var(--muted);transition:color .25s}
-.nav a.lnk:hover{color:var(--ink)}
-.nav .btn{padding:.6em 1.25em;font-size:.875rem}
-@media (max-width:880px){.nav a.lnk{display:none}}
+  .conditions-section{background:oklch(96.8% .008 92)}
+  /* One thick arrow, crisp where the condition is crisp and dissolving
+     into grey where nobody can settle it. It replaces a hairline axis
+     with five dots, which read as a chart nobody had to think about. */
+  .spectrum{margin:clamp(3rem,5vw,4.5rem) 0 0;overflow-x:auto}
+  .spectrum img{display:block;width:100%;min-width:40rem;height:auto}
+  .conditions-detail{margin-top:clamp(5rem,8vw,7rem)}.conditions-detail > h3{margin:0;max-width:30ch;font-size:clamp(1.3rem,1.9vw,1.65rem);font-weight:400;line-height:1.2;letter-spacing:-.02em}
+  .condition-list{margin-top:clamp(2.5rem,4vw,4rem);border-top:1px solid oklch(14% .025 267 / .15)}.condition-row{display:grid;grid-template-columns:2.6rem minmax(13rem,.85fr) minmax(0,1.35fr);gap:clamp(1.25rem,2.6vw,2.75rem);padding:clamp(1.75rem,3vw,2.5rem) 0;border-bottom:1px solid oklch(14% .025 267 / .15)}.condition-index{font-size:.9375rem;font-weight:500;color:var(--blue)}.condition-row h3{margin:0;max-width:22ch;font-size:1.0625rem;font-weight:600;line-height:1.35;letter-spacing:-.014em}.condition-copy p{max-width:58ch;margin:0;font-size:.9375rem;line-height:1.6;color:oklch(43% .018 267)}.condition-copy .today{margin-top:1rem;padding-left:1rem;border-left:2px solid oklch(43% .29 266 / .24);color:oklch(29% .018 267)}
+  .evidence-ledger{max-width:34rem;margin-top:1.2rem;border-top:1px solid oklch(14% .025 267 / .15)}.evidence-ledger div{display:grid;grid-template-columns:10rem 1fr;gap:1rem;padding:.65rem 0;border-bottom:1px solid oklch(14% .025 267 / .15);font-size:.875rem}.evidence-ledger span{color:oklch(48% .018 267)}
 
-/* ══ HERO ═════════════════════════════════════════════════════ */
-/* Hero fills the viewport minus the nav and lays out as a column, so the
-   ecosystem strip lands on the fold instead of below it. */
-.hero{position:relative;isolation:isolate;overflow:hidden;
-  min-height:calc(100svh - 80px);
-  display:flex;flex-direction:column;justify-content:center;
-  padding-block:clamp(2.5rem,5vw,4.5rem) clamp(1.75rem,3vw,2.75rem)}
-/* as a flex item the auto inline margins from .wrap collapse this to
-   its content width instead of stretching, so it needs width:100% */
-.hero-grid{flex:1 1 auto;width:100%;align-content:center}
-.hero > .wrap{max-width:var(--maxw-hero);padding-inline:var(--pad-hero)}
+  .cta{background:var(--paper);padding-block:var(--gap-section)}.cta-panel{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:2rem;align-items:center;padding:clamp(2.5rem,5vw,4.5rem);border-radius:.65rem;background:var(--blue);color:var(--white)}.cta-panel::before{content:"";position:absolute;inset:0;opacity:.16;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.76' numOctaves='3' seed='11' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.55'/%3E%3C/svg%3E");background-size:14rem 14rem;mix-blend-mode:overlay}.cta-panel > *{position:relative;z-index:1}.cta p{max-width:44ch;margin:1.1rem 0 0;color:var(--muted-white)}.cta-action{display:flex;justify-content:flex-end}
+  footer{padding-block:3.5rem 2.5rem;border-top:1px solid oklch(14% .025 267 / .12);background:var(--paper)}.footer-main{display:flex;justify-content:space-between;gap:2rem;flex-wrap:wrap}.footer-main nav{display:flex;gap:2rem;flex-wrap:wrap}.footer-main a{font-size:.9375rem;color:oklch(46% .018 267)}.footer-note{display:flex;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;margin-top:2.5rem;font-size:.8125rem;color:oklch(50% .018 267)}
 
-/* ── silk: three very large blurred planes drifting against each other,
-   plus a fine noise wash. No gradient stops, no pattern. The blur is what
-   makes it read as material rather than as a graphic. ─────────────── */
-.silk{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
-.silk span{position:absolute;display:block;filter:blur(80px);opacity:.8;
-  animation:drift 25s infinite alternate ease-in-out;will-change:transform}
-.silk .s1{width:120%;height:42%;background:#fff;top:-12%;left:-10%;
-  --rot:-15deg;animation-delay:0s}
-.silk .s2{width:82%;height:62%;background:oklch(94.6% .006 168);bottom:-22%;right:-10%;
-  --rot:20deg;animation-duration:35s;animation-delay:-5s}
-.silk .s3{width:100%;height:52%;background:oklch(92.8% .008 168);top:28%;left:-20%;
-  --rot:-5deg;animation-duration:30s;animation-delay:-15s}
-@keyframes drift{
-  0%   {transform:translate(0,0) scale(1) rotate(var(--rot))}
-  50%  {transform:translate(3%,5%) scale(1.05) rotate(calc(var(--rot) + 2deg))}
-  100% {transform:translate(-2%,-3%) scale(.95) rotate(calc(var(--rot) - 2deg))}
-}
-/* the svg needs explicit sizing or it falls back to the 300x150 default
-   and the noise only covers the top-left corner */
-.grain{position:absolute;inset:0;width:100%;height:100%;
-  z-index:-1;pointer-events:none;opacity:.4;mix-blend-mode:multiply}
-@media (prefers-reduced-motion:reduce){.silk span{animation:none}}
-
-
-.hero-grid{display:grid;grid-template-columns:minmax(0,1.14fr) minmax(0,.86fr);
-  gap:clamp(2.5rem,5vw,5rem);align-items:center}
-.hero-grid > *{min-width:0}
-/* the break is authored, not left to the wrap algorithm: it lands on the
-   comma so the two clauses read as a pair. Released below 600px. */
-.hero h1{max-width:none}
-@media (max-width:600px){.brk{display:none}}
-
-/* ── ecosystem strip, inside the hero ────────────────────────── */
-.strip{flex:0 0 auto;width:100%;min-width:0;
-  padding-top:clamp(2.5rem,4.5vw,4rem)}
-.strip-lbl{font-size:.8125rem;color:var(--muted);margin-bottom:1.1rem}
-.ticker{overflow:hidden;
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);
-  mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
-.ticker-in{display:flex;align-items:center;gap:clamp(2.75rem,5vw,4.5rem);
-  width:max-content;animation:slide 52s linear infinite}
-@keyframes slide{to{transform:translateX(-50%)}}
-.ticker:hover .ticker-in{animation-play-state:paused}
-.ticker img{height:clamp(17px,1.6vw,21px);width:auto;flex:none;
-  filter:grayscale(1) brightness(0);opacity:.32;
-  transition:opacity .3s var(--ease),filter .3s var(--ease)}
-.ticker img:hover{opacity:1;filter:none}
-@media (prefers-reduced-motion:reduce){.ticker-in{animation:none;flex-wrap:wrap}}
-.hero .lede{max-width:46ch;margin-top:clamp(1.5rem,2.4vw,2.1rem)}
-.hero-act{display:flex;flex-wrap:wrap;gap:.85rem;align-items:center;margin-top:clamp(2rem,3.4vw,2.9rem)}
-.hero-state{margin-top:clamp(2.4rem,4vw,3.4rem);display:flex;gap:2rem;flex-wrap:wrap}
-
-/* ── the engine: a trade moving through pricing ────────────────
-   Reads top to bottom: the trade arrives, four checks stamp in order,
-   a verdict prints, the trade is archived. No card, no chart to decode. */
-/* A frosted panel, not an outlined box. The silk shows faintly through
-   it, which ties the card to the background instead of pasting it on
-   top; the lift comes from two shadows rather than a border ring. The
-   translucency is doing real work here, so it is not decoration. */
-.engine{position:relative;display:flex;flex-direction:column;
-  gap:clamp(.72rem,1.1vw,.95rem);
-  padding:clamp(1.1rem,1.5vw,1.35rem);
-  border-radius:20px;
-  background:rgba(255,255,255,.66);
-  box-shadow:0 1px 2px rgb(20 30 25 / .04),
-             0 18px 40px -24px rgb(20 30 25 / .16),
-             0 48px 90px -60px rgb(20 30 25 / .22);
-}
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .engine{-webkit-backdrop-filter:blur(22px) saturate(1.12);
-          backdrop-filter:blur(22px) saturate(1.12)}
-}
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .engine{background:rgba(255,255,255,.94)}
-}
-/* the hairline that makes glass read as glass: bright on top, gone at the
-   bottom. a uniform 1px ring is what made the previous card look pasted. */
-.engine::before{content:"";position:absolute;inset:0;border-radius:inherit;
-  padding:1px;pointer-events:none;
-  background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,0) 42%);
-  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
-  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
-  -webkit-mask-composite:xor;mask-composite:exclude}
-
-.eng-head{display:flex;align-items:center;gap:.75rem;font-size:.8125rem;color:var(--muted)}
-.eng-state{display:inline-flex;align-items:center;gap:.55rem;color:var(--accent)}
-.eng-state::before{content:"";width:6px;height:6px;border-radius:50%;flex:none;
-  background:var(--accent);animation:beat 2s ease-in-out infinite}
-@keyframes beat{0%,100%{opacity:1}50%{opacity:.3}}
-.eng-illus{margin-left:auto}
-
-/* the trade slides in from the left, then settles */
-.lane{overflow:hidden;border-radius:12px}
-/* flat inside the panel: nesting a card in a card is the fastest way to
-   make an interface look generic */
-/* No fill, no ring, no radius. The amount carries the row; a hairline below
-   separates it. The old inset-ring box was a card inside a card. */
-.trade{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;
-  padding:.15rem .1rem .55rem;will-change:transform,opacity}
-.t-ref{font-size:.8125rem;color:var(--muted);font-variant-numeric:tabular-nums;
-  letter-spacing:.02em}
-.t-amt{font-size:1.5rem;letter-spacing:-.032em}
-.rule{height:1px;background:var(--line);margin-block:-.1rem .1rem}
-
-/* the four checks. each fills its rail left to right as it clears. */
-.checks{display:flex;flex-direction:column}
-.chk{position:relative;display:flex;align-items:baseline;gap:.8rem;
-  padding:.44rem 0 .44rem 1.05rem;font-size:.9375rem;
-  opacity:.3;transition:opacity .45s var(--ease)}
-.chk.on{opacity:1}
-/* a 5px dot that fills, not a 2px rail that grows. at this size the rail read
-   as a stray green tick; a dot reads as a state. */
-.chk i{position:absolute;left:0;top:.72em;width:5px;height:5px;border-radius:50%;
-  box-shadow:inset 0 0 0 1px var(--line);
-  transition:box-shadow .45s var(--ease),background .45s var(--ease)}
-.chk.on i{background:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
-.chk span{color:var(--muted)}
-.chk b{margin-left:auto;font-weight:400;font-variant-numeric:tabular-nums;
-  color:var(--ink);white-space:nowrap}
-
-/* the verdict block */
-.verdict{padding-top:1.1rem;border-top:1px solid var(--line);
-  opacity:0;transform:translateY(5px);
-  transition:opacity .5s var(--ease),transform .5s var(--ease)}
-.verdict.on{opacity:1;transform:none}
-.v-k{display:block;font-size:.8125rem;color:var(--muted);margin-bottom:.25rem}
-.v-pd{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;
-  padding-bottom:.8rem}
-.v-pd-n{font-size:clamp(1.85rem,2.5vw,2.3rem);line-height:1;letter-spacing:-.045em;
-  color:var(--accent);font-variant-numeric:tabular-nums}
-/* ruled columns rather than three loose stacks: it reads like a quote sheet,
-   which is what it is */
-.v-out{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:clamp(.9rem,1.8vw,1.5rem);padding-top:.95rem;margin-top:.15rem;
-  border-top:1px solid var(--line)}
-.v-out > div{display:flex;flex-direction:column;position:relative}
-.v-out > div + div{padding-left:clamp(.9rem,1.8vw,1.5rem)}
-.v-out > div + div::before{content:"";position:absolute;left:0;top:.15em;bottom:.1em;
-  width:1px;background:var(--line)}
-.v-out b{font-weight:400;font-size:1.05rem;letter-spacing:-.022em}
-
-/* ══ DARK BAND ════════════════════════════════════════════════ */
-/* clip, not hidden: the trust-model panel is wider than the text column,
-   and clip does not make this a scroll container */
-.dark{background:var(--dark);color:var(--dark-ink);padding-block:var(--gap-section);
-  overflow-x:clip}
-.dark .head{color:var(--dark-ink)}
-/* the provenance module is the second one in this band, so its heading sits at
-   the smaller end of the scale: the band opens on "The trust model" */
-.why .head{font-size:clamp(1.5rem,2.4vw,2.05rem);max-width:16ch}
-.dark .lede,.dark .sub{color:var(--dark-mut)}
-
-/* ── the trust model figure ───────────────────────────────────────
-   The drawing is the argument: four kinds of evidence converge on one
-   model, one probability leaves it, three terms hang off that number.
-   The wires are measured from where the cards actually landed, so the
-   picture stays correct at any width instead of at one width. */
-/* The figure breaks out of the text column. Not decoration: the wires need
-   horizontal room or the curves come out as short steep diagonals, and the
-   convergence stops reading as convergence. Carries the reveal class so
-   GSAP's transform does not fight the centering transform below. */
-/* the same edge line as the hero, so the two widest things on the page share
-   a margin instead of each inventing one */
-.tm-bleed{margin-top:clamp(2.5rem,5vw,4.25rem);
-  width:min(calc(100vw - 2 * var(--pad-hero)),var(--maxw-hero));
-  margin-left:50%;transform:translateX(-50%)}
-
-.tm{--tm-cols:clamp(10.5rem,15vw,15rem) minmax(0,1fr) clamp(10.5rem,15vw,15rem);
-    --tm-gap:clamp(1rem,3.6vw,4rem);
-  position:relative;
-  padding:clamp(1.35rem,2.6vw,2.4rem);border-radius:26px;
-  background:oklch(12.6% .010 168);
-  box-shadow:inset 0 0 0 1px oklch(27.5% .010 168),
-             0 50px 90px -60px oklch(4% .010 168);
-  overflow:hidden}
-/* one light source, behind the model. without it the middle column is
-   just three more rectangles instead of the place everything points at. */
-.tm::after{content:"";position:absolute;left:50%;top:52%;
-  width:min(54%,640px);aspect-ratio:1;transform:translate(-50%,-50%);
-  pointer-events:none;
-  background:radial-gradient(circle,oklch(80% .17 160/.085),transparent 62%)}
-
-/* No column headers. The rows say what they are, and three uppercase mono
-   labels across the top was the reference's signature more than ours. */
-.tm-grid{display:grid;grid-template-columns:var(--tm-cols);gap:var(--tm-gap);
-  align-items:center;position:relative;z-index:2}
-.tm-grid > *{min-width:0}
-
-.tm-col{display:grid;gap:.75rem;align-content:center}
-/* Ledger rows, not filled cards: a rail that lights and a hairline underneath.
-   This is the same language as the hero card, and it is the main thing that
-   keeps the figure from reading as a copy of the reference it started from. */
-.node{position:relative;z-index:2;padding:.45rem 0 .5rem .85rem;
-  border-left:1px solid oklch(27% .010 168);
-  transition:border-color .55s var(--ease)}
-.node::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;
-  background:oklch(24% .010 168)}
-.node b{display:block;font-weight:400;font-size:.9375rem;letter-spacing:-.012em;
-  line-height:1.3;color:oklch(70% .006 168);transition:color .55s var(--ease)}
-/* the reserved height must equal one filled line exactly. short by even 3px
-   and lighting a card resizes the panel, which rebuilds the wires and kills
-   whatever packets are in flight. hence 1.25em, matching the line-height. */
-/* a description of the input, not a reading off one trade. the hero card
-   already shows a trade being priced; this figure explains the model. */
-/* Two lines are reserved whether or not two are used. The columns are fluid,
-   so between the stacking breakpoint and about 1300px they are narrower than
-   at 1440 and some of these lines wrap; if a wrap could change a row's height
-   the rows would stop being evenly spaced and the fan would go crooked. This
-   also makes the figure safe to re-word later. */
-.node i{display:block;margin-top:.26rem;font-size:.8125rem;line-height:1.35;
-  min-height:2.7em;font-style:normal;color:oklch(52% .010 168)}
-/* lit only while a packet is passing through, so the rail shows flow */
-.node.on{border-left-color:var(--dark-acc)}
-.node.on b{color:var(--dark-ink)}
-.node.on i{color:oklch(60% .012 168)}
-
-/* The orb alone occupies the middle column. Anything stacked with it (the
-   caption used to be) makes the column taller than the orb, which drops the
-   orb's centre below the row's centre axis and skews the whole fan. */
-.tm-core{display:grid;place-items:center}
-.orb{position:relative;flex:none;display:grid;place-items:center;
-  width:clamp(186px,19vw,252px);aspect-ratio:1}
-.orb .ring,.orb .wave{position:absolute;inset:0;margin:auto;border-radius:50%}
-/* two rings, not a concentric stack: the dial is the model, and the number
-   inside it is the output. the stack of four was the reference's signature. */
-.orb .r1{width:62%;height:62%;border:1px solid oklch(24% .010 168)}
-.orb .r2{width:100%;height:100%;border:1px solid oklch(20.5% .010 168)}
-.orb .wave{width:100%;height:100%;border:1px solid oklch(60% .075 162);
-  opacity:0;will-change:transform,opacity}
-
-/* the sweep: an arc that never stops travelling round the dial, and runs a
-   full fast lap while the estimate is being made */
-.orb-sweep{position:absolute;inset:0;width:100%;height:100%;
-  animation:orbSpin 14s linear infinite;transform-origin:50% 50%}
-.orb-sweep circle{fill:none;stroke:oklch(34% .020 164);stroke-width:1;
-  stroke-linecap:round;stroke-dasharray:34 266;
-  transition:stroke .5s var(--ease),stroke-width .5s var(--ease)}
-.tm.computing .orb-sweep{animation-duration:7s}
-.tm.computing .orb-sweep circle{stroke:oklch(58% .085 162);stroke-width:1.2}
-@keyframes orbSpin{to{transform:rotate(360deg)}}
-
-/* what the dial produces, named. deliberately not a number: a number here
-   would be a second trade running beside the hero's. */
-.orb-out{grid-area:1/1;position:relative;z-index:3;text-align:center;
-  font-size:clamp(1.05rem,1.5vw,1.22rem);line-height:1.25;letter-spacing:-.02em;
-  color:var(--dark-acc)}
-
-.tm-mod{text-align:center}
-.tm-mod .head{margin-inline:auto}
-.tm-mod .lede{margin-inline:auto;text-align:center}
-.tm-mod .tm{text-align:left}
-.tm-cap{margin:clamp(1.4rem,2.4vw,2rem) auto 0;text-align:center;
-  font-size:.875rem;line-height:1.5;color:oklch(62% .010 168);max-width:48ch}
-
-.tm-wires{position:absolute;inset:0;width:100%;height:100%;z-index:1;
-  pointer-events:none;overflow:visible}
-.tm-wires path{fill:none}
-.tm-wires .base{stroke:oklch(25% .010 168);stroke-width:1}
-/* sparse dashes creeping along every wire. the period is fixed, so one
-   loop distance works for all seven paths regardless of their length. */
-.tm-wires .shim{stroke:oklch(37% .012 168);stroke-width:1;stroke-linecap:round;
-  stroke-dasharray:3 26;opacity:0}
-.tm.live .tm-wires .shim{opacity:1;animation:wireShim 9s linear infinite}
-@keyframes wireShim{to{stroke-dashoffset:-290px}}
-/* the packet is a hint of light, not a laser. the glow and the full accent
-   were doing too much for a figure that sits behind body copy. */
-.tm-wires .pulse{stroke:oklch(62% .10 162);stroke-width:1.2;stroke-linecap:round;
-  opacity:0;filter:drop-shadow(0 0 3px oklch(80% .17 160/.18))}
-.tm-wires .port{fill:oklch(62% .010 168)}
-
-@media (max-width:900px){
-  .tm-bleed{width:100%;margin-left:0;transform:none}
-  .tm{--tm-cols:minmax(0,1fr);--tm-gap:1.75rem;border-radius:20px}
-  .tm-wires{display:none}
-  .tm-in{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
-@media (prefers-reduced-motion:reduce){
-  .orb-sweep,.tm.live .tm-wires .shim{animation:none}
-}
-
-/* ══ THE BAND ═════════════════════════════════════════════════
-   Three full-bleed panels, hairline divided, middle one inverted. The
-   structure is borrowed from long-scroll explainer pages that punctuate
-   with edge-to-edge signature panels; the surface is not, because saturated
-   colour blocks are the one thing this brand has ruled out. Radius 0.
-
-   Claim first, evidence under it. Every figure here is a small ledger with
-   labelled columns, because a ledger is this product's native form and it
-   needs no decoding. The previous version used bars, chips and arrows that
-   looked like data without being any. */
-.band-sec{padding-bottom:0}
-.band{margin-top:clamp(3.5rem,6vw,5.5rem);
-  width:100vw;margin-left:calc(50% - 50vw);
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-  background:var(--line)}         /* the 1px gaps are this showing through */
-.panel{background:var(--bg-2);padding:clamp(2rem,3.4vw,3.25rem) clamp(1.5rem,2.4vw,2.5rem);
-  display:flex;flex-direction:column;gap:.85rem;
-  transition:background .4s var(--ease)}
-.panel + .panel{margin-left:1px}
-.panel:hover{background:oklch(93.4% .006 168)}
-.panel.dk{background:var(--dark);color:var(--dark-ink)}
-.panel.dk:hover{background:oklch(20% .010 168)}
-
-.p-ix{font-size:.8125rem;font-variant-numeric:tabular-nums;color:var(--muted);
-  margin-bottom:.4rem}
-.panel.dk .p-ix{color:oklch(58% .010 168)}
-.panel h3{font-size:1.0625rem;font-weight:500;letter-spacing:-.015em}
-/* two lines reserved: the three ledgers below must start on the same line, and
-   three header rules at three different heights is what makes a band of panels
-   read as three unrelated boxes */
-.panel p{font-size:.9375rem;line-height:1.55;color:var(--muted);max-width:32ch;
-  min-height:3.1em}
-.panel.dk p{color:var(--dark-mut)}
-
-/* the ledger: labelled rows, ruled, tabular. no chrome. */
-.led{padding-top:clamp(1.75rem,3vw,2.75rem)}
-.led-h{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;
-  padding-bottom:.6rem;font-size:.8125rem;color:var(--muted)}
-.led-h em{font-style:normal;font-size:.75rem;color:oklch(52% .010 168)}
-.panel.dk .led-h{color:oklch(60% .010 168)}
-.panel.dk .led-h em{color:oklch(62% .010 168)}
-/* one fixed row height for every row in the band, so the chips in panel 02 do
-   not push their rules 5px below the plain-text rules either side of them */
-.led-r{display:flex;align-items:center;gap:.9rem;min-height:2.9rem;
-  border-top:1px solid var(--line);font-size:.875rem}
-.panel.dk .led-r{border-top-color:oklch(27% .010 168)}
-.led-r:last-of-type{border-bottom:1px solid var(--line)}
-.panel.dk .led-r:last-of-type{border-bottom-color:oklch(27% .010 168)}
-.led-k{flex:none;width:8.2rem;color:var(--muted)}
-.panel.dk .led-k{color:var(--dark-mut)}
-.led-v{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:.4rem;color:var(--ink)}
-.panel.dk .led-v{color:var(--dark-ink)}
-.led-n{flex:none;margin-left:auto;color:var(--ink)}
-.led-n.on{color:var(--accent)}
-.led-f{margin-top:.7rem;font-size:.8125rem;color:var(--muted)}
-.panel.dk .led-f{color:oklch(58% .010 168)}
-
-/* what a gate returns vs what a price returns, side by side */
-.chip{font-weight:400;padding:.16rem .5rem;
-  box-shadow:inset 0 0 0 1px var(--line);color:var(--muted)}
-.panel.dk .chip{box-shadow:inset 0 0 0 1px oklch(30% .010 168);color:var(--dark-mut)}
-.panel.dk .chip.on{box-shadow:inset 0 0 0 1px oklch(40% .06 162);color:var(--dark-acc)}
-
-@media (max-width:900px){
-  .band{grid-template-columns:minmax(0,1fr)}
-  .panel + .panel{margin-left:0;margin-top:1px}
-  .panel p{min-height:0}
-}
-
-/* ══ PROVENANCE ═══════════════════════════════════════════════
-   Two columns: the argument, and the five steps that produce the records
-   it argues from. The right column is a ledger with a labelled header, so
-   "Nothing has moved / Held by Atara" reads as a column and not as a set
-   of loose remarks. */
-.why{margin-top:clamp(4rem,7vw,6.5rem);display:grid;
-  grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:clamp(2rem,4vw,4.5rem);align-items:start}
-.why > *{min-width:0}
-.why p + p{margin-top:1.1rem}
-.why .lede{max-width:44ch}
-.step-h{display:grid;grid-template-columns:2.2rem minmax(0,1fr) auto;gap:1rem;
-  padding-bottom:.8rem;font-size:.8125rem;color:oklch(58% .010 168)}
-.step-h span:last-child{text-align:right}
-.step{display:grid;grid-template-columns:2.2rem minmax(0,1fr) auto;gap:1rem;align-items:baseline;
-  padding:1rem 0;border-bottom:1px solid var(--dark-line);font-size:.9375rem}
-.step-h + .step{border-top:1px solid var(--dark-line)}
-.step .n{color:var(--dark-mut);font-variant-numeric:tabular-nums}
-.step .who{color:var(--dark-mut);font-size:.8125rem;text-align:right}
-.step.hold .who{color:var(--dark-acc)}
-@media (max-width:820px){.why{grid-template-columns:minmax(0,1fr)}}
-
-/* ══ DOMAINS ═════════════════════════════════════════════════
-   A rail of six, one open at a time. A flat six-row table showed the breadth
-   but gave every domain the same two lines, which is not "an example" of
-   anything. This keeps the breadth visible in the rail and spends real space
-   on whichever one is open.
-
-   Deliberately not a third panel band: the claims band directly above is
-   already full-bleed panels, and repeating that device here would read as
-   the same module twice. */
-.dm{margin-top:clamp(3rem,5vw,4.5rem);display:grid;
-  grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);
-  gap:clamp(2rem,4vw,4.5rem);align-items:start}
-.dm > *{min-width:0}
-
-.dm-rail{display:flex;flex-direction:column}
-.dm-t{appearance:none;background:none;border:0;width:100%;cursor:pointer;
-  font:inherit;color:inherit;text-align:left;
-  display:grid;grid-template-columns:2.4rem minmax(0,1fr) auto;
-  gap:.9rem;align-items:baseline;
-  padding:1.05rem .25rem 1.05rem 0;border-top:1px solid var(--line);
-  transition:color .3s var(--ease)}
-.dm-t:last-child{border-bottom:1px solid var(--line)}
-.dm-ix{font-size:.8125rem;font-variant-numeric:tabular-nums;color:var(--muted);
-  transition:color .3s var(--ease)}
-.dm-nm{font-size:1.0625rem;letter-spacing:-.015em;color:var(--muted);
-  transition:color .3s var(--ease)}
-.dm-nm em{display:block;margin-top:.2rem;font-style:normal;font-size:.8125rem;
-  letter-spacing:0;color:var(--muted);opacity:.75}
-.dm-live{font-size:.8125rem;color:var(--accent)}
-.dm-t:hover .dm-nm{color:var(--ink-2)}
-/* the open one: ink, and the index turns to the accent. no fill, no chevron. */
-.dm-t.on .dm-nm{color:var(--ink)}
-.dm-t.on .dm-ix{color:var(--accent)}
-.dm-t:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-
-.dm-stage{position:relative;padding:clamp(1.75rem,3vw,2.6rem);
-  background:var(--bg-2);min-height:22rem}
-.dm-pair + .dm-pair{margin-top:1.5rem}
-.dm-lb{display:block;font-size:.8125rem;color:var(--muted);margin-bottom:.4rem}
-.dm-vl{font-size:1.0625rem;line-height:1.45;letter-spacing:-.012em;color:var(--ink)}
-/* the sentence that says why today's answer is not good enough */
-.dm-cf{margin-top:1.75rem;padding-top:1.5rem;border-top:1px solid var(--line);
-  font-size:.9375rem;line-height:1.55;color:var(--muted);max-width:44ch}
-.dm-fig{margin-top:1.75rem}
-.dm-fig b{display:block;font-weight:400;font-size:clamp(1.9rem,3vw,2.5rem);
-  line-height:1;letter-spacing:-.04em;color:var(--accent)}
-.dm-fig span{display:block;margin-top:.55rem;font-size:.8125rem;color:var(--muted);
-  max-width:30ch}
-.dm-p[hidden]{display:none}
-
-@media (max-width:820px){
-  .dm{grid-template-columns:minmax(0,1fr);gap:1.75rem}
-  .dm-stage{min-height:0}
-}
-
-/* ══ PAIN BLOCKS ══════════════════════════════════════════════ */
-.pains{margin-top:clamp(3.5rem,6.5vw,6rem);display:flex;flex-direction:column;
-  gap:clamp(3.5rem,6.5vw,6rem)}
-.pain{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);
-  gap:clamp(1.75rem,4vw,4.5rem);align-items:start}
-.pain > *{min-width:0}
-.pain .q{font-size:clamp(1.45rem,2.5vw,2.05rem);line-height:1.14;letter-spacing:-.028em;text-wrap:balance}
-.pain .cost{margin-top:1.1rem;color:var(--muted);max-width:38ch}
-.pain .a{padding-left:clamp(1.25rem,2vw,2rem);border-left:1px solid var(--line)}
-.pain .a p + p{margin-top:1rem}
-.pain .a .tag{margin-top:1.5rem}
-.pain .a b{font-weight:500}
-@media (max-width:820px){
-  .pain{grid-template-columns:minmax(0,1fr);gap:1.5rem}
-  .pain .a{padding-left:1.25rem}
-}
-
-/* ══ FAQ ══════════════════════════════════════════════════════ */
-.faq{max-width:920px;margin-top:clamp(2.5rem,4.5vw,4rem)}
-.faq details{border-bottom:1px solid var(--line)}
-.faq details:first-child{border-top:1px solid var(--line)}
-.faq summary{list-style:none;cursor:pointer;padding:1.6rem 0;display:flex;
-  align-items:baseline;justify-content:space-between;gap:2rem;
-  font-size:1.0625rem;letter-spacing:-.015em;transition:color .25s}
-.faq summary::-webkit-details-marker{display:none}
-.faq summary:hover{color:var(--accent)}
-.faq summary .pm{position:relative;width:12px;height:12px;flex:none;margin-top:.4em}
-.faq summary .pm::before,.faq summary .pm::after{content:"";position:absolute;
-  background:var(--muted);transition:transform .3s var(--ease)}
-.faq summary .pm::before{left:0;top:5.5px;width:12px;height:1px}
-.faq summary .pm::after{left:5.5px;top:0;width:1px;height:12px}
-.faq details[open] summary .pm::after{transform:scaleY(0)}
-.faq .ans{padding:0 0 1.7rem;max-width:68ch;color:var(--muted)}
-
-/* ══ CTA / FOOTER ═════════════════════════════════════════════ */
-.cta{padding-block:var(--gap-section);background:var(--bg-2)}
-.cta .head{max-width:18ch}
-.cta p{margin-top:1.3rem;color:var(--muted);max-width:46ch}
-footer{padding-block:4rem 2.5rem;border-top:1px solid var(--line)}
-.foot{display:flex;justify-content:space-between;gap:2rem;flex-wrap:wrap;align-items:flex-start}
-.foot nav{display:flex;gap:2rem;flex-wrap:wrap}
-.foot a{font-size:.9375rem;color:var(--muted);transition:color .25s}
-.foot a:hover{color:var(--ink)}
-.foot-note{margin-top:3rem;font-size:.875rem;color:var(--muted);
-  display:flex;justify-content:space-between;gap:1.5rem;flex-wrap:wrap}
-
-@media (max-width:900px){
-  .hero-grid{grid-template-columns:minmax(0,1fr)}
-  .hero h1{max-width:none}
-}
+  @media(max-width:900px){
+    .nav{grid-template-columns:1fr auto}.nav-center{display:none}
+    .hero-main{grid-template-columns:1fr;padding-top:7.2rem;padding-bottom:9.5rem;gap:3.2rem}
+    .instrument{width:100%;min-height:35rem}
+    .protocol-section{height:auto}.protocol-sticky{position:relative;min-height:0;padding-block:var(--gap-section);overflow:visible}.protocol-demo{grid-template-columns:1fr;gap:2.5rem}.protocol-step{opacity:.48}.protocol-step.is-active{opacity:1}
+    .model-map{grid-template-columns:1fr}.model-core{width:min(15rem,70vw);margin-inline:auto}.model-col{grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.model-node:first-child{border-top:0}
+    .condition-row{grid-template-columns:2.6rem 1fr}.condition-copy{grid-column:2}
+  }
+  @media(max-width:560px){
+    .nav{padding-top:max(1.15rem,env(safe-area-inset-top))}.nav-start{padding:.55rem .8rem}
+    .hero-main{padding-top:7rem;padding-bottom:8rem;gap:2.6rem}
+    h1{font-size:clamp(2.15rem,9.2vw,2.85rem);line-height:1.08}
+    .hero-lede{font-size:1rem}
+    .btn{min-height:3.3rem}.btn-primary{gap:1.6rem}
+    .instrument{min-height:32rem}
+    .instrument-head{grid-template-columns:1fr auto;padding-left:1.1rem}.instrument-head .illus{display:none}
+    .stage{grid-template-columns:3.65rem 1fr}
+    .stage-value{align-items:flex-end}.stage-value strong{font-size:clamp(1.45rem,6vw,2.05rem)}
+    .risk-copy{max-width:12rem}.stage-note{font-size:.54rem}
+    .ecosystem{grid-template-columns:1fr;gap:.75rem}.ecosystem-label{display:none}
+    .model-col,.model-points{grid-template-columns:1fr}.model-point + .model-point{padding-left:0;border-left:0}.model-point{padding-right:0}
+    .condition-row{grid-template-columns:1fr;gap:.8rem}.condition-copy{grid-column:auto}.evidence-ledger div{grid-template-columns:1fr;gap:.2rem}
+    .cta-panel{grid-template-columns:1fr}.cta-action{justify-content:flex-start}
+  }
+  @media(hover:none),(pointer:coarse){.btn,.nav-start{min-height:44px}}
+  @media(prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+    .logo-track{animation:none;flex-wrap:wrap;width:auto}.reveal{opacity:1;transform:none}.protocol-section{height:auto}.protocol-sticky{position:relative}.protocol-step{opacity:1}.protocol-step-detail{grid-template-rows:1fr}
+  }
 </style>
 </head>
 <body>
-<a class="skip" href="#main">Skip to content</a>
+<a class="skip" href="#different">Skip to content</a>
 
-<header class="nav">
-  <div class="wrap nav-in">
-    <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>Atara</a>
-    <a class="lnk" href="#engine">How it works</a>
-    <a class="lnk" href="#pains">What it solves</a>
-    <a class="btn btn-solid" href="#contact">Start <span class="arw" aria-hidden="true">&rarr;</span></a>
-  </div>
-</header>
+<main>
+  <section class="hero" id="top" aria-labelledby="hero-title">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="#top" aria-label="Atara home"><span class="brand-mark" aria-hidden="true"><i></i></span><span class="wordmark">Atara</span></a>
+      <div class="nav-center"><a href="#different">Why this</a><a href="#engine">How it works</a><a href="#conditions">Payment conditions</a></div>
+      <a class="nav-start" href="#contact">Start <span aria-hidden="true">&rarr;</span></a>
+    </nav>
 
-<main id="main">
-
-<!-- ══ HERO ═══════════════════════════════════════════════════ -->
-<section class="hero" id="top">
-  <div class="silk" aria-hidden="true">
-    <span class="s1"></span><span class="s2"></span><span class="s3"></span>
-  </div>
-  <svg class="grain" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-    <filter id="grainFilter">
-      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>
-      <feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 0.05 0"/>
-    </filter>
-    <rect width="100%" height="100%" filter="url(#grainFilter)"/>
-  </svg>
-
-  <div class="wrap hero-grid">
-    <div>
-      <h1 class="display r" data-hero>The cost of trust,<br class="brk">priced per payment.</h1>
-      <p class="lede r" data-hero>Atara is a conditional payment protocol. A credit model reads what the counterparty has actually done, and prices the risk before the money moves.</p>
-      <div class="hero-act r" data-hero>
-        <a class="btn btn-solid" href="#contact">Start <span class="arw" aria-hidden="true">&rarr;</span></a>
-        <a class="btn btn-ghost" href="#contact">Talk to us</a>
+    <div class="hero-main">
+      <div class="hero-copy">
+        <h1 id="hero-title"><span class="line"><span>A conditional payment protocol.</span></span><span class="line"><span>Computable risk, minimal cost.</span></span></h1>
+        <p class="hero-lede">Atara is a conditional payment protocol. It computes the risk on every payment, decides on evidence whether it settled, and locks a fraction instead of the whole trade.</p>
+        <div class="hero-actions"><a class="btn btn-primary" href="#contact">Start</a><a class="btn btn-secondary" href="#contact">Talk to us</a></div>
       </div>
-    </div>
 
-    <figure class="r" data-hero>
-      <div class="engine" id="engine-fig">
-        <div class="eng-head">
-          <span class="eng-state" id="state">Incoming</span>
-          <span class="eng-illus">Illustrative</span>
-        </div>
-
-        <!-- the trade in hand -->
-        <div class="lane">
-          <div class="trade" id="trade">
-            <span class="t-ref" id="ref">A&#8209;2291</span>
-            <span class="t-amt num" id="amt">2,000,000.00</span>
-          </div>
-        </div>
-        <div class="rule" aria-hidden="true"></div>
-
-        <!-- four checks, stamped in order as the trade passes -->
-        <div class="checks" id="checks">
-          <div class="chk"><i></i><span>Settlement history</span><b data-v></b></div>
-          <div class="chk"><i></i><span>Delivered on time</span><b data-v></b></div>
-          <div class="chk"><i></i><span>Disputes</span><b data-v></b></div>
-          <div class="chk"><i></i><span>Wallet provenance</span><b data-v></b></div>
-        </div>
-
-        <!-- the verdict -->
-        <div class="verdict" id="verdict">
-          <div class="v-pd">
-            <span class="v-k">Probability of default</span>
-            <span class="v-pd-n num" id="pd">&mdash;</span>
-          </div>
-          <div class="v-out">
-            <div><span class="v-k">Collateral</span><b class="num" id="oColl">&mdash;</b></div>
-            <div><span class="v-k">Fee</span><b class="num" id="oFee">&mdash;</b></div>
-            <div><span class="v-k">Recourse</span><b id="oRec">&mdash;</b></div>
-          </div>
-        </div>
-      </div>
-    </figure>
-  </div>
-
-  <div class="wrap strip r">
-    <div class="strip-lbl">Advaita ecosystem</div>
-    <div class="ticker"><div class="ticker-in" id="ticker" aria-hidden="true"></div></div>
-  </div>
-</section>
-
-<!-- ══ THE ENGINE ═════════════════════════════════════════════ -->
-<section class="dark" id="engine">
-  <div class="wrap">
-    <div class="tm-mod">
-    <h2 class="head r">The trust model</h2>
-    <p class="lede r" style="max-width:52ch;margin-top:1.6rem">Trust here is computed, not assumed. The model reads what a counterparty has actually done, and turns it into the three numbers that decide a trade.</p>
-
-    <div class="tm-bleed r">
-    <div class="tm" id="tm">
-      <div class="tm-grid">
-        <div class="tm-col tm-in">
-          <div class="node"><b>Settlement history</b><i>Delivered, late, or defaulted</i></div>
-          <div class="node"><b>Dispute outcomes</b><i>Who was found at fault</i></div>
-          <div class="node"><b>Verification checks</b><i>Six, on both sides</i></div>
-          <div class="node"><b>Wallet provenance</b><i>Where the funds came from</i></div>
-        </div>
-
-        <div class="tm-core">
-          <div class="orb" id="tmOrb">
-            <span class="ring r1" aria-hidden="true"></span>
-            <span class="ring r2" aria-hidden="true"></span>
-            <span class="wave" aria-hidden="true"></span>
-            <svg class="orb-sweep" viewBox="0 0 100 100" aria-hidden="true">
-              <circle cx="50" cy="50" r="47.7"/>
-            </svg>
-            <div class="orb-out">Probability<br>of default</div>
+      <figure class="instrument" id="pricingInstrument" aria-label="Illustrative order risk and collateral calculation">
+        <figcaption class="instrument-head">
+          <span id="instrumentState" aria-live="polite">Incoming order</span>
+          <span class="sample"><span id="sampleIndex">01 / 04</span></span>
+          <span class="illus">Illustrative</span>
+        </figcaption>
+        <div class="stage stage-order is-active" data-stage="0">
+          <span class="stage-index">01</span>
+          <div class="stage-body">
+            <span class="stage-label">Order</span>
+            <div class="stage-value"><strong class="num" id="orderAmount">$2,000,000.00</strong><span class="stage-note">Received</span></div>
           </div>
         </div>
 
-        <div class="tm-col tm-out">
-          <div class="node"><b>Collateral</b><i>What fraction has to be posted</i></div>
-          <div class="node"><b>Fee</b><i>Priced to that probability</i></div>
-          <div class="node"><b>Recourse</b><i>On what evidence it unwinds</i></div>
-        </div>
-      </div>
-
-      <div class="tm-cap">
-        One estimate, made per counterparty and per payment. The three terms are
-        outputs of that estimate, not settings on an account.
-      </div>
-
-      <svg class="tm-wires" id="tmWires" aria-hidden="true"></svg>
-    </div>
-    </div>
-
-    </div>
-
-    <div class="why r">
-      <div>
-        <h2 class="head">Where the defaults come from.</h2>
-        <p class="lede" style="margin-top:1.5rem">A model that prices default needs real defaults to learn from. Simulated
-          rounds and wallet activity signals do not produce them. Completed settlements do.</p>
-        <p class="sub" style="margin-top:1.4rem">Every trade runs the same five steps. Each one leaves a labelled record:
-          who delivered, who was late, who defaulted, with a real amount attached.</p>
-        <p style="margin-top:2rem"><a class="tlink" href="desk.html">See the full flow and the unwind table <span class="arw" aria-hidden="true">&rarr;</span></a></p>
-      </div>
-      <div>
-        <div class="step-h"><span></span><span>Every trade, the same five steps</span><span>Who holds it</span></div>
-        <div class="step"><span class="n">01</span><span>Both sides verified, trade matched</span><span class="who">Nothing has moved</span></div>
-        <div class="step hold"><span class="n">02</span><span>Digital leg into custody, screened again</span><span class="who">Held by Atara</span></div>
-        <div class="step"><span class="n">03</span><span>Fiat sent bank to bank</span><span class="who">Never touches us</span></div>
-        <div class="step hold"><span class="n">04</span><span>Bank confirmation received</span><span class="who">Release unlocked</span></div>
-        <div class="step"><span class="n">05</span><span>Digital leg released, documents issued</span><span class="who">Settled</span></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ══ THREE THINGS THIS CHANGES ══════════════════════════════ -->
-<section class="sec band-sec" id="claims">
-  <div class="wrap">
-    <h2 class="head r">Three things this changes.</h2>
-    <p class="lede r" style="max-width:44ch;margin-top:1.5rem">Most systems answer with a limit,
-      a block, or a promise. A price answers with numbers instead.</p>
-  </div>
-
-  <!-- full bleed, three panels, hairline divided. no radius, no shadow. -->
-  <div class="band r" id="band">
-
-    <article class="panel">
-      <div class="p-ix">01</div>
-      <h3>Per payment, not per account</h3>
-      <p>Priced twice, three months apart. Nothing changed but the record.</p>
-      <div class="led">
-        <div class="led-h"><span>Counterparty A&#8209;2291</span><em>Illustrative</em></div>
-        <div class="led-r">
-          <span class="led-k">March</span>
-          <span class="led-v">88 trades, 1 late</span>
-          <span class="led-n num">34%</span>
-        </div>
-        <div class="led-r">
-          <span class="led-k">August</span>
-          <span class="led-v">142 trades, 0 late</span>
-          <span class="led-n num on">13%</span>
-        </div>
-        <div class="led-f">Collateral required on the next trade</div>
-      </div>
-    </article>
-
-    <article class="panel dk">
-      <div class="p-ix">02</div>
-      <h3>A price, not a verdict</h3>
-      <p>A gate has two answers. A price has three numbers you can act on.</p>
-      <div class="led">
-        <div class="led-h"><span>What comes back</span><em>Illustrative</em></div>
-        <div class="led-r">
-          <span class="led-k">A gate</span>
-          <span class="led-v"><b class="chip">Allow</b><b class="chip">Block</b></span>
-        </div>
-        <div class="led-r">
-          <span class="led-k">A price</span>
-          <span class="led-v"><b class="chip on num">13%</b><b class="chip on num">0.19%</b><b class="chip on">Full</b></span>
-        </div>
-        <div class="led-f">Collateral, fee, recourse</div>
-      </div>
-    </article>
-
-    <article class="panel">
-      <div class="p-ix">03</div>
-      <h3>Reversible by design</h3>
-      <p>Every way it can fail is written down before anyone commits.</p>
-      <div class="led">
-        <div class="led-h"><span>Agreed up front</span></div>
-        <div class="led-r"><span class="led-k">It completes</span><span class="led-v">Digital leg to buyer</span></div>
-        <div class="led-r"><span class="led-k">Fiat never confirms</span><span class="led-v">Back to seller</span></div>
-        <div class="led-r"><span class="led-k">Screening fails</span><span class="led-v">Returned before release</span></div>
-        <div class="led-f">Six cases in total, on the desk page</div>
-      </div>
-    </article>
-
-  </div>
-</section>
-
-<!-- ══ WHERE IT APPLIES ═══════════════════════════════════════ -->
-<section class="sec" id="domains">
-  <div class="wrap">
-    <h2 class="head r" style="max-width:22ch">These markets already pay on conditions.</h2>
-    <p class="lede r" style="max-width:54ch;margin-top:1.5rem">What none of them has is a neutral way to decide the
-      condition was met. That job currently belongs to institutions that are slow, expensive, or
-      holding a position in the outcome they are judging.</p>
-
-    <div class="dm r" id="dm">
-      <div class="dm-rail" role="tablist" aria-label="Domains">
-        <button class="dm-t on" role="tab" id="dmt-settlement" aria-controls="dmp-settlement"
-                aria-selected="true" tabindex="0">
-          <span class="dm-ix">01</span>
-          <span class="dm-nm">Large settlement<em>OTC and treasury</em></span>
-          <span class="dm-live">Live</span>
-        </button>
-        <button class="dm-t" role="tab" id="dmt-trade" aria-controls="dmp-trade"
-                aria-selected="false" tabindex="-1">
-          <span class="dm-ix">02</span>
-          <span class="dm-nm">Cross-border trade<em>Letter of credit</em></span>
-        </button>
-        <button class="dm-t" role="tab" id="dmt-insurance" aria-controls="dmp-insurance"
-                aria-selected="false" tabindex="-1">
-          <span class="dm-ix">03</span>
-          <span class="dm-nm">Parametric insurance<em>And reinsurance</em></span>
-        </button>
-        <button class="dm-t" role="tab" id="dmt-ads" aria-controls="dmp-ads"
-                aria-selected="false" tabindex="-1">
-          <span class="dm-ix">04</span>
-          <span class="dm-nm">Advertising and traffic<em>Performance media</em></span>
-        </button>
-        <button class="dm-t" role="tab" id="dmt-milestones" aria-controls="dmp-milestones"
-                aria-selected="false" tabindex="-1">
-          <span class="dm-ix">05</span>
-          <span class="dm-nm">Outsourced milestones<em>Software and services</em></span>
-        </button>
-        <button class="dm-t" role="tab" id="dmt-agent" aria-controls="dmp-agent"
-                aria-selected="false" tabindex="-1">
-          <span class="dm-ix">06</span>
-          <span class="dm-nm">Agent to agent<em>API and compute</em></span>
-        </button>
-      </div>
-
-      <div class="dm-stage">
-      <div class="dm-p on" role="tabpanel" id="dmp-settlement" aria-labelledby="dmt-settlement">
-        <div class="dm-pair">
-          <span class="dm-lb">Release condition</span>
-          <p class="dm-vl">Bank confirmation</p>
-        </div>
-        <div class="dm-pair">
-          <span class="dm-lb">Who decides it today</span>
-          <p class="dm-vl">A custodian, or an intermediary who is also a counterparty on the trade</p>
-        </div>
-        <p class="dm-cf">The party holding the money is the party you are being asked to trust.</p>
-          <div class="dm-fig">
-            <b class="num">100%</b>
-            <span>of the trade locked while it waits</span>
+        <div class="stage stage-risk" data-stage="1">
+          <span class="stage-index">02</span>
+          <div class="stage-body">
+            <span class="stage-label risk-copy">Risk of default, this counterparty</span>
+            <div class="stage-value"><strong class="num" id="riskValue">&middot;&middot;&middot;</strong><span class="stage-note">Computed per trade</span></div>
           </div>
-      </div>
-      <div class="dm-p" role="tabpanel" id="dmp-trade" aria-labelledby="dmt-trade" hidden>
-        <div class="dm-pair">
-          <span class="dm-lb">Release condition</span>
-          <p class="dm-vl">Bill of lading, inspection</p>
         </div>
-        <div class="dm-pair">
-          <span class="dm-lb">Who decides it today</span>
-          <p class="dm-vl">An issuing bank, reading documents by hand</p>
-        </div>
-        <p class="dm-cf">The first conditional payment instrument humans built, still priced and paced for paper.</p>
-          <div class="dm-fig">
-            <b class="num">5 to 10 days</b>
-            <span>and 1 to 3% of the value, per shipment</span>
+
+        <div class="stage stage-lock" data-stage="2">
+          <span class="stage-index">03</span>
+          <div class="stage-body">
+            <span class="stage-label">You lock</span>
+            <div class="stage-value lock-value"><strong class="num" id="lockValue">&middot;&middot;&middot;</strong><span class="stage-note">Priced</span></div>
+            <div class="lock-track" aria-hidden="true"><i id="lockFill"></i></div>
+            <div class="lock-legend"><span><b class="num" id="lockPercent">&middot;&middot;&middot;</b> of the trade</span><span class="num" id="freeValue">&middot;&middot;&middot;</span></div>
           </div>
-      </div>
-      <div class="dm-p" role="tabpanel" id="dmp-insurance" aria-labelledby="dmt-insurance" hidden>
-        <div class="dm-pair">
-          <span class="dm-lb">Release condition</span>
-          <p class="dm-vl">A measured threshold</p>
         </div>
-        <div class="dm-pair">
-          <span class="dm-lb">Who decides it today</span>
-          <p class="dm-vl">The insurer</p>
-        </div>
-        <p class="dm-cf">The insurer controls the oracle that triggers its own payout. Both sides are asked to accept the payer’s own instrument.</p>
-      </div>
-      <div class="dm-p" role="tabpanel" id="dmp-ads" aria-labelledby="dmt-ads" hidden>
-        <div class="dm-pair">
-          <span class="dm-lb">Release condition</span>
-          <p class="dm-vl">Verified conversions, not claimed clicks</p>
-        </div>
-        <div class="dm-pair">
-          <span class="dm-lb">Who decides it today</span>
-          <p class="dm-vl">Verification vendors, retained by one side</p>
-        </div>
-        <p class="dm-cf">The largest conditional payment dispute market that exists today.</p>
-          <div class="dm-fig">
-            <b class="num">10 to 20%</b>
-            <span>fraud rate on the very condition being paid for</span>
-          </div>
-      </div>
-      <div class="dm-p" role="tabpanel" id="dmp-milestones" aria-labelledby="dmt-milestones" hidden>
-        <div class="dm-pair">
-          <span class="dm-lb">Release condition</span>
-          <p class="dm-vl">Acceptance of delivery</p>
-        </div>
-        <div class="dm-pair">
-          <span class="dm-lb">Who decides it today</span>
-          <p class="dm-vl">The platform</p>
-        </div>
-        <p class="dm-cf">It takes a cut of the payment it is ruling on. Highest dispute rate of any category.</p>
-      </div>
-      <div class="dm-p" role="tabpanel" id="dmp-agent" aria-labelledby="dmt-agent" hidden>
-        <div class="dm-pair">
-          <span class="dm-lb">Release condition</span>
-          <p class="dm-vl">Output passes the acceptance test</p>
-        </div>
-        <div class="dm-pair">
-          <span class="dm-lb">Who decides it today</span>
-          <p class="dm-vl">Nobody</p>
-        </div>
-        <p class="dm-cf">Prepaid, so there is nothing to decide and nothing to recover.</p>
-          <div class="dm-fig">
-            <b class="num">100%</b>
-            <span>paid before any work is done</span>
-          </div>
-      </div>
-      </div>
+      </figure>
     </div>
 
-    <p class="sub r" style="margin-top:1.8rem;max-width:58ch">Large settlement is the one we run. The rest is where the
-      same mechanism applies and where somebody is already judging the condition; we are not
-      operating in those markets.</p>
-  </div>
-</section>
-
-<!-- ══ PAINS ══════════════════════════════════════════════════ -->
-<section class="sec" id="pains">
-  <div class="wrap">
-    <h2 class="head r" style="max-width:18ch">What makes a large trade hard.</h2>
-
-    <div class="pains">
-
-      <div class="pain r">
-        <div>
-          <p class="q">Someone has to send first.</p>
-          <p class="cost">Whoever moves first carries the whole trade until the other side performs. Which is why large trades end up inside a small circle of people you already know, at whatever price that circle offers.</p>
-        </div>
-        <div class="a">
-          <p><b>Neither side sends to the other.</b> The digital leg comes into our custody and the fiat goes bank to bank. The seller does move first, but to us, not to the buyer.</p>
-          <p class="sub">Release runs on the bank receipt rather than on the buyer&rsquo;s confirmation, so a counterparty who has been paid and refuses to confirm cannot stall the trade. Neither party learns who the other is, which also means there is nothing to route around next time.</p>
-          <span class="tag on">Live</span>
-        </div>
-      </div>
-
-      <div class="pain r">
-        <div>
-          <p class="q">One tainted transfer freezes the account.</p>
-          <p class="cost">Funds arrive carrying a history you cannot see, the receiving account is frozen, and the loss can be the entire amount. Checking it yourself is not realistic.</p>
-        </div>
-        <div class="a">
-          <p><b>We screen twice, not once.</b> The wallet is traced through multiple hops before that counterparty ever reaches the book, and the specific transaction that lands in custody is screened again on arrival.</p>
-          <p class="sub">Anything failing the second screen goes back the way it came. It never reaches you, and the trade unwinds under terms agreed in advance.</p>
-          <span class="tag on">Live</span>
-        </div>
-      </div>
-
-      <div class="pain r">
-        <div>
-          <p class="q">Your capital is safe because it is stuck.</p>
-          <p class="cost">Full escrow works, and it costs the same on every trade whether the counterparty was ever going to be a problem. Two million held for thirty days is roughly eight thousand in carry, earning nothing.</p>
-        </div>
-        <div class="a">
-          <p><b>Post what the risk is worth.</b> The engine estimates how likely this counterparty is to fail on this payment and sizes the collateral to match. A counterparty with a record posts a fraction, and the rest of the money keeps working.</p>
-          <p class="sub">The first two problems are solved by custody and verification, which run today. This one can only be solved by pricing, which is why the engine exists.</p>
-          <span class="tag">In build</span>
-        </div>
-      </div>
-
+    <div class="ecosystem" aria-label="Advaita ecosystem">
+      <span class="ecosystem-label">Advaita ecosystem</span>
+      <div class="logo-window"><div class="logo-track" id="logoTrack" aria-hidden="true"></div></div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- ══ FAQ ════════════════════════════════════════════════════ -->
-<section class="sec" id="faq" style="padding-top:0">
-  <div class="wrap">
-    <h2 class="head r">Questions we get first.</h2>
-    <div class="faq r">
-      <details>
-        <summary>Is the credit engine live?<span class="pm" aria-hidden="true"></span></summary>
-        <div class="ans">No. It is in build and it is not extending credit to anyone. What runs today is the settlement desk, and the records its completed trades produce are what the engine will learn from. Everything on this site is labelled with its actual status, including this.</div>
-      </details>
-      <details>
-        <summary>Are you a payment rail?<span class="pm" aria-hidden="true"></span></summary>
-        <div class="ans">No. Settlement runs on existing rails, chains and banks. We build the credit and conditions layer above them, which is why we can sit on top of a rail rather than asking anyone to migrate to a new one.</div>
-      </details>
-      <details>
-        <summary>How is this different from fraud detection?<span class="pm" aria-hidden="true"></span></summary>
-        <div class="ans">Fraud detection is binary: allow or block. It stops bad payments and frees no capital. A credit engine outputs a price instead, which is a different kind of answer: how much collateral, what fee, what recourse. Blocking the bad ones is table stakes. Pricing the good ones is the product.</div>
-      </details>
-      <details>
-        <summary>How is this different from identity or reputation systems?<span class="pm" aria-hidden="true"></span></summary>
-        <div class="ans">Identity proves who a counterparty is. Reputation ranks how they have behaved. A reputation tier can shorten a lock or raise a ceiling, but it does not reduce the amount you have to post. The amount is the number a treasury actually needs, and that is what we compute.</div>
-      </details>
-      <details>
-        <summary>What data trains the model?<span class="pm" aria-hidden="true"></span></summary>
-        <div class="ans">Settlement performance from trades our own desk completes: delivery, timing, disputes, outcomes, each with a real amount attached. First-party records of real obligations, rather than simulated rounds or behaviour inferred from wallet activity.</div>
-      </details>
-      <details>
-        <summary>What can I use today?<span class="pm" aria-hidden="true"></span></summary>
-        <div class="ans">The settlement desk. Send a size and a side and you will get a specific answer: whether we have the other side, what documents are needed, and what it costs. If we cannot do your trade, that comes back in the first reply.</div>
-      </details>
+  <section class="protocol-section" id="different">
+    <div class="protocol-sticky">
+      <div class="wrap">
+        <h2>An AI-native conditional payment protocol.</h2>
+        <p class="section-lede">Pricing needs somebody to decide the condition was met, and both of them need a record of what actually happened.</p>
+
+        <div class="protocol-demo" id="protocolDemo">
+          <div class="protocol-steps">
+            <div class="protocol-step is-active" role="button" tabindex="0" data-protocol-step="0" aria-expanded="true">
+              <span class="protocol-step-num num">01</span>
+              <div><h3>AI prices the risk on every trade</h3><div class="protocol-step-detail"><div><p>The model computes this counterparty&rsquo;s probability of default on this trade and sets the collateral from it, instead of locking the full amount whoever you are.</p><ul><li>Lock a fraction, not the whole trade</li><li>The more you settle, the less you post</li></ul></div></div></div>
+            </div>
+            <div class="protocol-step" role="button" tabindex="0" data-protocol-step="1" aria-expanded="false">
+              <span class="protocol-step-num num">02</span>
+              <div><h3>The condition is judged on evidence</h3><div class="protocol-step-detail"><div><p>Whether the condition was met is decided on what the evidence says, under rules published before the trade.</p><ul><li>No position, no profit in the outcome</li><li>Rules published up front</li><li>Release follows the evidence</li></ul></div></div></div>
+            </div>
+            <div class="protocol-step" role="button" tabindex="0" data-protocol-step="2" aria-expanded="false">
+              <span class="protocol-step-num num">03</span>
+              <div><h3>Real settlement data</h3><div class="protocol-step-detail"><div><p>Every completed trade leaves one record with a real amount attached: who paid on time, who defaulted. It is the only data the pricing model trains on.</p><ul><li>Sharper with every settlement</li><li>Clean records post less and less</li><li>Models can be copied, records cannot</li></ul></div></div></div>
+            </div>
+          </div>
+
+          <figure class="protocol-field" id="protocolField" aria-label="Three illustrations represent risk pricing, evidence judgement, and accumulated settlement history">
+            <img class="protocol-art is-active" data-protocol-art="0" src="assets/illustrations/protocol-pricing.svg" alt="" decoding="async">
+            <img class="protocol-art" data-protocol-art="1" src="assets/illustrations/protocol-judgement.svg" alt="" loading="lazy" decoding="async">
+            <img class="protocol-art" data-protocol-art="2" src="assets/illustrations/protocol-records.svg" alt="" loading="lazy" decoding="async">
+          </figure>
+        </div>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
+  <section class="section engine-section" id="engine">
+    <div class="wrap">
+      <h2 class="reveal">An AI model prices every payment.</h2>
+      <p class="section-lede reveal">It reads what this counterparty has actually done and computes the probability of default on this trade. What you post, what you pay, and how it unwinds all follow from that number.</p>
+
+      <div class="model-map reveal" id="modelMap" aria-label="Evidence inputs enter an AI model and determine payment terms">
+        <div class="model-col model-inputs">
+          <div class="model-node"><b>Settlement history</b><span>Delivered, late, or defaulted</span></div>
+          <div class="model-node"><b>Dispute outcomes</b><span>Who was found at fault</span></div>
+          <div class="model-node"><b>Verification checks</b><span>Six, on both sides</span></div>
+          <div class="model-node"><b>Wallet provenance</b><span>Where the funds came from</span></div>
+        </div>
+        <div class="model-core" id="modelCore"><div><span>AI model</span><b>One estimate,<br>per trade</b><i aria-hidden="true"></i></div></div>
+        <div class="model-col model-outputs">
+          <div class="model-node"><b>Collateral</b><span>What fraction has to be posted</span></div>
+          <div class="model-node"><b>Fee</b><span>Priced to that probability</span></div>
+          <div class="model-node"><b>Recourse</b><span>On what evidence it unwinds</span></div>
+        </div>
+      </div>
+
+      <div class="model-points reveal">
+        <div class="model-point"><b>Priced per trade</b><p>A limit set when the account opens says nothing about who is on the other side of this one.</p></div>
+        <div class="model-point"><b>A price, not a gate</b><p>Other systems answer whether you may proceed. This answers what you post and what you pay.</p></div>
+        <div class="model-point"><b>The exit is written first</b><p>How a trade unwinds is fixed before either side commits, not negotiated after something breaks.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section conditions-section" id="conditions">
+    <div class="wrap">
+      <h2 class="reveal">Most payment conditions cannot be judged today.</h2>
+
+      <figure class="spectrum reveal">
+        <img src="assets/illustrations/conditions-spectrum.svg" alt="One thick arrow runs from conditions a machine can read, such as a bank receipt, into a region that is hard to define, where insurance claims, ad conversion, outsourced delivery and service acceptance sit and somebody has to rule" decoding="async">
+      </figure>
+
+      <div class="conditions-detail">
+        <h3 class="reveal">The Atara protocol makes the condition decidable.</h3>
+        <div class="condition-list">
+          <article class="condition-row reveal">
+            <span class="condition-index num">01</span>
+            <h3>Subjective conditions become verifiable tests before the trade</h3>
+            <div class="condition-copy">
+              <p>A clause like &ldquo;pay on acceptable quality&rdquo; is broken down, before the trade, into standards both sides accept, each bound to a named source of evidence: a document, a reading, or a test result. The ruling is about what the source says, not about what either side believes.</p>
+              <p class="today">Today, each side reads &ldquo;acceptable&rdquo; its own way once money is at stake, and the reading comes off one party&rsquo;s own instrument.</p>
+            </div>
+          </article>
+          <article class="condition-row reveal">
+            <span class="condition-index num">02</span>
+            <h3>The judge has no stake in the outcome</h3>
+            <div class="condition-copy">
+              <p>Whichever way a case is decided, the judge earns the same. Forfeited collateral never flows to the judge.</p>
+              <p class="today">Today, a dispute goes to the custodian or the platform: the party that holds the money and takes a cut of the trade it is asked to rule on.</p>
+            </div>
+          </article>
+          <article class="condition-row reveal">
+            <span class="condition-index num">03</span>
+            <h3>Release follows evidence, not the other side&rsquo;s confirmation</h3>
+            <div class="condition-copy">
+              <p>Objective evidence such as a bank receipt triggers the release. A counterparty that owes performance cannot stall your money by withholding confirmation.</p>
+              <div class="evidence-ledger">
+                <div><span>It completes</span><b>Value to the payee</b></div>
+                <div><span>Evidence never arrives</span><b>Returned to the payer</b></div>
+                <div><span>Screening fails</span><b>Returned before release</b></div>
+              </div>
+              <p class="today">Today, you deliver, the other side declines to confirm, and the funds sit in escrow.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <section class="cta" id="contact">
   <div class="wrap">
-    <h2 class="head r">Send us a hard trade.</h2>
-    <p class="r">A size, a side, and a counterparty you do not trust yet. If the desk can settle it we will tell you exactly how. If it cannot, you will know in the first reply.</p>
-    <div class="hero-act r">
-      <a class="btn btn-solid" id="ctaBtn" href="#contact">Talk to us <span class="arw" aria-hidden="true">&rarr;</span></a>
-      <a class="tlink" href="desk.html">See the desk <span class="arw" aria-hidden="true">&rarr;</span></a>
+    <div class="cta-panel reveal">
+      <div><h2>Send us a hard trade.</h2><p>A size, a side, and a counterparty you do not trust yet.</p></div>
+      <div class="cta-action"><a class="btn btn-primary" href="#contact">Talk to us</a></div>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
-    <div class="foot">
-      <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>Atara</a>
-      <nav>
-        <a href="#engine">How it works</a>
-        <a href="#pains">What it solves</a>
-        <a href="desk.html">Settlement desk</a>
-        <a href="#faq">FAQ</a>
-        <a href="#contact">Contact</a>
-      </nav>
+    <div class="footer-main">
+      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i></span><span class="wordmark">Atara</span></a>
+      <nav aria-label="Footer"><a href="#different">Why this</a><a href="#engine">How it works</a><a href="#conditions">Payment conditions</a></nav>
     </div>
-    <div class="foot-note">
-      <span>© 2026 Atara</span>
-      <span>Atara is not a bank. The credit engine is in development and is not extending credit.</span>
-    </div>
+    <div class="footer-note"><span>&copy; 2026 Atara</span><span>Atara is not a bank. The credit engine is in development and is not extending credit.</span></div>
   </div>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-'use strict';
-
-const CONTACT_EMAIL = "";   // ← wire before launch
-const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const el = id => document.getElementById(id);
-
-if (CONTACT_EMAIL) {
-  const b = el('ctaBtn');
-  if (b) b.href = 'mailto:' + CONTACT_EMAIL + '?subject=Atara%20enquiry';
-}
-
-/* Ecosystem strip. Duplicated once so the -50% keyframe loops seamlessly. */
-(function ticker(){
-  const host = el('ticker'); if (!host) return;
-  const LOGOS = ['ethereum-foundation','g42','cyberport','hkstp','a-star','ai-singapore',
-    'vana','pr-spera','intelligent-internet','desci-world','bio','hetu','researchhub','open-targets'];
-  host.innerHTML = LOGOS.concat(LOGOS)
-    .map(n => `<img src="assets/logos/${n}.png" alt="" loading="lazy" decoding="async">`).join('');
-})();
-
-/* ── the credit engine ────────────────────────────────────────────
-   A trade arrives, four checks stamp in sequence, the verdict prints,
-   and it holds. Then the next trade. The pauses matter: this is one
-   decision at a time, not a number wandering. Four counterparties with
-   real spread between them, so the verdict visibly depends on the data
-   rather than on a timer. */
-(function creditEngine(){
-  const state = el('state'), trade = el('trade'), ref = el('ref'), amt = el('amt'),
-        checks = el('checks'), verdict = el('verdict'),
-        pd = el('pd'), oColl = el('oColl'), oFee = el('oFee'), oRec = el('oRec');
-  if (!state || !trade || !checks || !verdict) return;
-
-  const rows = [...checks.querySelectorAll('.chk')];
+(() => {
+  'use strict';
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const instrument = document.getElementById('pricingInstrument');
+  const state = document.getElementById('instrumentState');
+  const sampleIndex = document.getElementById('sampleIndex');
+  const orderAmount = document.getElementById('orderAmount');
+  const riskValue = document.getElementById('riskValue');
+  const lockValue = document.getElementById('lockValue');
+  const lockFill = document.getElementById('lockFill');
+  const lockPercent = document.getElementById('lockPercent');
+  const freeValue = document.getElementById('freeValue');
+  const stages = [...document.querySelectorAll('.stage')];
 
   const BOOK = [
-    { ref:'A-2291', amt:2000000, pd:1.54, rec:'Full',
-      vals:['142 trades','99.3%','None','Clean, 6 hops'] },
-    { ref:'B-0417', amt:5400000, pd:0.62, rec:'Full',
-      vals:['1,208 trades','99.9%','None','Clean, 9 hops'] },
-    { ref:'C-8830', amt:750000,  pd:4.10, rec:'Partial',
-      vals:['23 trades','94.1%','2, resolved','Clean, 4 hops'] },
-    { ref:'D-1165', amt:3100000, pd:2.35, rec:'Full',
-      vals:['87 trades','97.6%','1, resolved','Clean, 7 hops'] },
+    { amount:2000000, risk:1.8, collateral:.13 },
+    { amount:5400000, risk:.6, collateral:.05 },
+    { amount:750000, risk:4.1, collateral:.34 },
+    { amount:3100000, risk:2.4, collateral:.17 }
   ];
+  let bookIndex = 0;
+  let alive = true;
+  let timers = [];
 
-  let idx = -1, alive = false;
-  const timers = [];
-  const at = (ms, fn) => timers.push(setTimeout(fn, ms));
-  const clearAll = () => timers.splice(0).forEach(clearTimeout);
+  const money = n => '$' + Math.round(n).toLocaleString('en-US');
+  const money2 = n => '$' + n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const later = (ms,fn) => timers.push(setTimeout(fn,ms));
+  const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
 
-  const setVerdict = c => {
-    const coll = Math.min(.45, Math.max(.05, c.pd / 12));
-    pd.textContent    = c.pd.toFixed(2) + '%';
-    oColl.textContent = (coll * 100).toFixed(1) + '%';
-    oFee.textContent  = (c.pd * .122).toFixed(2) + '%';
-    oRec.textContent  = c.rec;
-    return coll;
-  };
+  function setStage(index) {
+    stages.forEach((el,i) => {
+      el.classList.toggle('is-active',i === index);
+      el.classList.toggle('is-done',i < index);
+    });
+  }
 
-  const cycle = () => {
-    clearAll();
-    idx = (idx + 1) % BOOK.length;
-    const c = BOOK[idx];
-
-    /* reset */
-    rows.forEach(r => { r.classList.remove('on'); r.querySelector('[data-v]').textContent = ''; });
-    verdict.classList.remove('on');
-    state.textContent = 'Incoming';
-    ref.textContent = c.ref;
-    amt.textContent = c.amt.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-
-    /* the trade slides in */
-    trade.animate(
-      [ { transform:'translateX(-14%)', opacity:0 },
-        { transform:'translateX(0)',    opacity:1 } ],
-      { duration:620, easing:'cubic-bezier(.16,1,.3,1)', fill:'both' });
-
-    /* four checks stamp in order */
-    at(760, () => { state.textContent = 'Checking counterparty'; });
-    rows.forEach((r, k) => at(820 + k * 480, () => {
-      r.classList.add('on');
-      r.querySelector('[data-v]').textContent = c.vals[k];
-    }));
-
-    const done = 820 + rows.length * 480;
-
-    at(done + 180, () => { state.textContent = 'Pricing'; });
-    at(done + 520,  () => { verdict.classList.add('on'); state.textContent = 'Priced'; setVerdict(c); });
-    at(done + 4300, cycle);
-  };
-
-  /* a composed still, used for reduced motion and as the fallback */
-  const rest = () => {
-    const c = BOOK[0];
-    ref.textContent = c.ref;
-    amt.textContent = c.amt.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-    rows.forEach((r, k) => { r.classList.add('on'); r.querySelector('[data-v]').textContent = c.vals[k]; });
-    setVerdict(c);
-    verdict.classList.add('on'); state.textContent = 'Priced';
-  };
-
-  if (reduced) { rest(); return; }
-
-  const start = () => { if (alive) return; alive = true; cycle(); };
-  const stop  = () => { alive = false; clearAll(); };
-
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? start() : stop()),
-      { threshold:.15 }).observe(trade);
-  } else start();
-
-  /* only fires if the observer never did; must not clobber a running cycle */
-  setTimeout(() => { if (!alive) rest(); }, 4000);
-})();
-
-/* ── the trust model ──────────────────────────────────────────────
-   This figure explains the model; it does not price a trade. The hero card
-   already runs one transaction end to end, and an earlier version of this
-   ran a second one beside it: same counterparties, same numbers, twice. So
-   there are no values here and no counterparty. Evidence flows in, the dial
-   turns, terms flow out, continuously.
-
-   The wires are generated from the rendered row geometry rather than authored
-   as fixed path data, because the columns are fluid: any hand drawn curve
-   would be correct at exactly one viewport width. Rebuilt on resize.
-   Everything degrades. Reduced motion, no WAAPI, no observers, or a throttled
-   rAF all leave a correct static diagram, because the diagram is static and
-   only the motion on top of it is not. */
-(function trustModel(){
-  const tm = el('tm'); if (!tm) return;
-  const wires = el('tmWires'), orb = el('tmOrb');
-  const ins  = [...tm.querySelectorAll('.tm-in .node')];
-  const outs = [...tm.querySelectorAll('.tm-out .node')];
-  const waves = [...tm.querySelectorAll('.orb .wave')];
-  if (!wires || !orb || ins.length !== 4 || outs.length !== 3) return;
-
-  const NS = 'http://www.w3.org/2000/svg';
-  let pulses = [], alive = false;
-  const timers = [];
-  const at = (ms, fn) => timers.push(setTimeout(fn, ms));
-  /* packets carry their own delay, so clearing timers is not enough: leaving
-     the section mid pass would let them land on the next one */
-  const clearAll = () => {
-    timers.splice(0).forEach(clearTimeout);
-    [...pulses, ...waves].forEach(n =>
-      n.getAnimations && n.getAnimations().forEach(a => a.cancel()));
-  };
-
-  /* ---- geometry ---- */
-  let lastW = 0, lastH = 0;
-  const build = () => {
-    if (getComputedStyle(wires).display === 'none') {          // stacked layout
-      pulses = []; wires.innerHTML = ''; lastW = lastH = 0; return;
-    }
-    const box = tm.getBoundingClientRect(), o = orb.getBoundingClientRect();
-    if (!box.width || !o.width) return;
-    /* Rebuilding discards every packet in flight, so only rebuild when the box
-       genuinely moved. Without this, sub pixel reflow emptied the wires. */
-    if (Math.abs(box.width - lastW) < 1 && Math.abs(box.height - lastH) < 1) return;
-    lastW = box.width; lastH = box.height;
-
-    pulses = [];
-    wires.innerHTML = '';
-    /* every input converges on one point and every output leaves from one:
-       that single meeting point is what says "one model", not four */
-    const midY = o.top - box.top + o.height / 2;
-    const hubL = { x: o.left  - box.left - 12, y: midY };
-    const hubR = { x: o.right - box.left + 12, y: midY };
-    wires.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
-
-    const arc = (a, b) => {
-      const dx = Math.max(36, (b.x - a.x) * .5);
-      return `M${a.x} ${a.y} C${a.x + dx} ${a.y} ${b.x - dx} ${b.y} ${b.x} ${b.y}`;
+  function roll(node,to,duration,format) {
+    const start = performance.now();
+    const frame = now => {
+      const t = Math.min(1,(now-start)/duration);
+      const e = 1-Math.pow(1-t,3);
+      node.textContent = format(to*e);
+      if(t<1 && alive) requestAnimationFrame(frame);
+      else node.textContent = format(to);
     };
-    const add = (a, b) => {
-      const d = arc(a, b);
-      ['base','shim','pulse'].forEach(cls => {
-        const p = document.createElementNS(NS, 'path');
-        p.setAttribute('d', d);
-        p.setAttribute('class', cls);
-        if (cls === 'shim') p.style.animationDelay = (-Math.random() * 9).toFixed(2) + 's';
-        wires.appendChild(p);
-        if (cls === 'pulse') pulses.push(p);
-      });
-      [a, b].forEach(pt => {
-        const c = document.createElementNS(NS, 'circle');
-        c.setAttribute('cx', pt.x); c.setAttribute('cy', pt.y);
-        c.setAttribute('r', '2.5'); c.setAttribute('class', 'port');
-        wires.appendChild(c);
-      });
-    };
-    const port = (n, side) => {
-      const r = n.getBoundingClientRect();
-      return { x: (side === 'right' ? r.right : r.left) - box.left,
-               y: r.top - box.top + r.height / 2 };
-    };
-    ins.forEach(n  => add(port(n, 'right'), hubL));   // pulses 0..3
-    outs.forEach(n => add(hubR, port(n, 'left')));    // pulses 4..6
-  };
+    requestAnimationFrame(frame);
+  }
 
-  /* one packet of light down one wire: a short dash chased along the path by
-     its own offset, which is cheaper than moving an element */
-  const fire = (p, dur, delay) => {
-    if (!p || !p.animate) return;
-    const L = p.getTotalLength();
-    if (!L) return;
-    const dash = Math.min(84, L * .3);
-    p.style.strokeDasharray = `${dash} ${L + dash}`;
-    p.animate([
-      { strokeDashoffset: dash,      opacity: 0 },
-      { strokeDashoffset: dash * .4, opacity: .8, offset: .14 },
-      { strokeDashoffset: -L * .86,  opacity: .8, offset: .88 },
-      { strokeDashoffset: -L,        opacity: 0 },
-    ], { duration: dur, delay, easing: 'cubic-bezier(.42,0,.5,1)', fill: 'none' });
-  };
+  function showStill(c,index=0) {
+    sampleIndex.textContent = String(index+1).padStart(2,'0') + ' / 04';
+    orderAmount.textContent = money2(c.amount);
+    riskValue.textContent = c.risk.toFixed(1) + '%';
+    lockValue.textContent = money(c.amount*c.collateral);
+    lockPercent.textContent = Math.round(c.collateral*100) + '%';
+    freeValue.textContent = money(c.amount*(1-c.collateral)) + ' stays free';
+    lockFill.style.width = (c.collateral*100) + '%';
+    state.textContent = 'Priced';
+    setStage(2);
+  }
 
-  /* one ring out of the dial as the inputs land. a single faint ripple: three
-     bright ones read as an alarm rather than as an estimate being made. */
-  const burst = () => waves.forEach(w => w.animate && w.animate(
-    [ { transform:'scale(.42)', opacity:.2 }, { transform:'scale(1.02)', opacity:0 } ],
-    { duration:2200, easing:'cubic-bezier(.22,.9,.3,1)', fill:'none' }));
+  function cycle() {
+    clearTimers();
+    const c = BOOK[bookIndex];
+    sampleIndex.textContent = String(bookIndex+1).padStart(2,'0') + ' / 04';
+    orderAmount.textContent = money2(c.amount);
+    riskValue.textContent = '\u00b7\u00b7\u00b7';
+    lockValue.textContent = '\u00b7\u00b7\u00b7';
+    lockPercent.textContent = '\u00b7\u00b7\u00b7';
+    freeValue.textContent = '\u00b7\u00b7\u00b7';
+    lockFill.style.width = '0%';
+    state.textContent = 'Incoming order';
+    setStage(0);
+    instrument.animate([{opacity:.82,transform:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}],{duration:560,easing:'cubic-bezier(.16,1,.3,1)'});
 
-  /* the rail lights while a packet is passing, then lets go */
-  const blink = (n, hold) => {
-    n.classList.add('on');
-    at(hold, () => n.classList.remove('on'));
-  };
-
-  /* One pass: evidence in, the dial turns, terms out. No numbers, no state
-     text, nothing that reads as a specific trade. */
-  const PASS = 5200;
-  const pass = () => {
-    clearAll();
-    ins.forEach((n, k) => {
-      fire(pulses[k], 1100, 120 + k * 220);
-      at(1100 + k * 220, () => blink(n, 1500));
+    later(900,() => {
+      state.textContent = 'Computing risk';
+      setStage(1);
+      roll(riskValue,c.risk,850,v => v.toFixed(1)+'%');
     });
-    const landed = 120 + 1100 + ins.length * 220;          // ~2100
-
-    at(landed - 120, () => { tm.classList.add('computing'); burst(); });
-    at(landed + 1150, () => { tm.classList.remove('computing'); });
-
-    outs.forEach((n, k) => {
-      fire(pulses[4 + k], 1000, landed + 620 + k * 200);
-      at(landed + 1520 + k * 200, () => blink(n, 1500));
+    later(2350,() => {
+      state.textContent = 'Priced';
+      setStage(2);
+      roll(lockValue,c.amount*c.collateral,900,money);
+      lockPercent.textContent = Math.round(c.collateral*100) + '%';
+      freeValue.textContent = money(c.amount*(1-c.collateral)) + ' stays free';
+      lockFill.style.width = (c.collateral*100) + '%';
     });
+    later(6600,() => { bookIndex=(bookIndex+1)%BOOK.length; cycle(); });
+  }
 
-    at(PASS, pass);
-  };
+  const logos=['ethereum-foundation','g42','cyberport','hkstp','a-star','ai-singapore','vana','pr-spera','intelligent-internet','desci-world','bio','hetu','researchhub','open-targets'];
+  const logoTrack=document.getElementById('logoTrack');
+  logoTrack.innerHTML=logos.concat(logos).map(name=>`<img src="assets/logos/${name}.png" alt="" loading="lazy" decoding="async">`).join('');
 
-  build();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(build);
-  addEventListener('load', build);
+  if(reduced){alive=false;showStill(BOOK[0]);}
+  else cycle();
 
-  /* the diagram is already complete and legible without any of the above */
-  if (reduced) return;
-
-  let rafR = 0;
-  const relayout = () => {
-    if (rafR) return;
-    rafR = requestAnimationFrame(() => { rafR = 0; build(); });
-  };
-  if ('ResizeObserver' in window) new ResizeObserver(relayout).observe(tm);
-  else addEventListener('resize', relayout);
-
-  const start = () => { if (alive) return; alive = true; tm.classList.add('live'); pass(); };
-  const stop  = () => {
-    alive = false;
-    tm.classList.remove('live'); tm.classList.remove('computing');
-    clearAll();
-    [...ins, ...outs].forEach(n => n.classList.remove('on'));
-  };
-
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? start() : stop()),
-      { threshold:.2 }).observe(tm);
-  } else start();
-})();
-
-/* ── domains: a rail of six, one open ─────────────────────────────
-   A proper tablist: roving tabindex, arrow keys, Home and End. The panels are
-   all in the DOM and the first is open in the markup, so with no JS at all the
-   section still reads as a complete statement about one domain rather than as
-   an empty shell. */
-(function domains(){
-  const host = el('dm'); if (!host) return;
-  const tabs   = [...host.querySelectorAll('.dm-t')];
-  const panels = [...host.querySelectorAll('.dm-p')];
-  if (tabs.length !== panels.length || !tabs.length) return;
-
-  const open = (i, focus) => {
-    tabs.forEach((t, k) => {
-      const on = k === i;
-      t.classList.toggle('on', on);
-      t.setAttribute('aria-selected', on ? 'true' : 'false');
-      t.tabIndex = on ? 0 : -1;
-      panels[k].hidden = !on;
-      panels[k].classList.toggle('on', on);
-    });
-    if (focus) tabs[i].focus();
-    if (reduced) return;
-    /* a short settle on the panel, not a slide: the rail is the thing that
-       moved, the panel is just what is now underneath it */
-    const p = panels[i];
-    if (p.animate) p.animate(
-      [ { opacity:0, transform:'translateY(6px)' }, { opacity:1, transform:'none' } ],
-      { duration:320, easing:'cubic-bezier(.16,1,.3,1)' });
-  };
-
-  tabs.forEach((t, i) => {
-    t.addEventListener('click', () => open(i, false));
-    t.addEventListener('keydown', e => {
-      const last = tabs.length - 1;
-      let n = null;
-      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') n = i === last ? 0 : i + 1;
-      else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') n = i === 0 ? last : i - 1;
-      else if (e.key === 'Home') n = 0;
-      else if (e.key === 'End') n = last;
-      if (n === null) return;
-      e.preventDefault();
-      open(n, true);
-    });
+  const observer=new IntersectionObserver(([entry])=>{
+    if(reduced)return;
+    if(entry.isIntersecting && !alive){alive=true;cycle();}
+    if(!entry.isIntersecting){alive=false;clearTimers();}
+  },{threshold:.05});
+  observer.observe(instrument);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){alive=false;clearTimers();}
+    else if(instrument.getBoundingClientRect().bottom>0){alive=true;cycle();}
   });
+
+  const protocolSection=document.getElementById('different');
+  const protocolSteps=[...document.querySelectorAll('[data-protocol-step]')];
+  const protocolArts=[...document.querySelectorAll('[data-protocol-art]')];
+  let protocolMode=0;
+
+  const setProtocolMode=index=>{
+    protocolMode=index;
+    protocolSteps.forEach((step,i)=>{const active=i===index;step.classList.toggle('is-active',active);step.setAttribute('aria-expanded',String(active));});
+    protocolArts.forEach((art,i)=>art.classList.toggle('is-active',i===index));
+  };
+  const updateProtocolScroll=()=>{
+    if(innerWidth<=900||reduced)return;
+    const rect=protocolSection.getBoundingClientRect();
+    const span=Math.max(1,protocolSection.offsetHeight-innerHeight);
+    const progress=Math.max(0,Math.min(.999,-rect.top/span));
+    const raw=progress*3;
+    const index=Math.min(2,Math.floor(raw));
+    const fraction=raw-index;
+    if(index!==protocolMode)setProtocolMode(index);
+    protocolSteps.forEach((step,i)=>step.style.setProperty('--progress',i<index?1:i>index?0:fraction));
+  };
+  let protocolScrollRaf=0;
+  addEventListener('scroll',()=>{if(!protocolScrollRaf)protocolScrollRaf=requestAnimationFrame(()=>{protocolScrollRaf=0;updateProtocolScroll();});},{passive:true});
+  addEventListener('resize',updateProtocolScroll);
+  protocolSteps.forEach((step,index)=>{
+    const activate=()=>{
+      if(innerWidth>900&&!reduced){const span=protocolSection.offsetHeight-innerHeight;scrollTo({top:scrollY+protocolSection.getBoundingClientRect().top+span*((index+.5)/3),behavior:'smooth'});}
+      else setProtocolMode(index);
+    };
+    step.addEventListener('click',activate);
+    step.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();activate();}});
+  });
+  setProtocolMode(0);updateProtocolScroll();
+
+  const revealNodes=[...document.querySelectorAll('.reveal')];
+  if(reduced){revealNodes.forEach(node=>node.classList.add('in'));}
+  else{
+    const revealObserver=new IntersectionObserver(entries=>{
+      entries.forEach(entry=>{
+        if(entry.isIntersecting){entry.target.classList.add('in');revealObserver.unobserve(entry.target);}
+      });
+    },{threshold:.12,rootMargin:'0px 0px -5%'});
+    revealNodes.forEach(node=>revealObserver.observe(node));
+  }
+
+  const modelMap=document.getElementById('modelMap');
+  const modelCore=document.getElementById('modelCore');
+  const inputNodes=[...modelMap.querySelectorAll('.model-inputs .model-node')];
+  const outputNodes=[...modelMap.querySelectorAll('.model-outputs .model-node')];
+  let modelTimer=0;
+  let modelStep=0;
+  const paintModel=()=>{
+    inputNodes.forEach((node,index)=>node.classList.toggle('is-live',index<=modelStep));
+    modelCore.classList.toggle('is-computing',modelStep>=4&&modelStep<7);
+    outputNodes.forEach((node,index)=>node.classList.toggle('is-live',modelStep>=5+index));
+    modelStep=(modelStep+1)%10;
+    if(modelStep===0){inputNodes.concat(outputNodes).forEach(node=>node.classList.remove('is-live'));modelCore.classList.remove('is-computing');}
+  };
+  const startModel=()=>{if(modelTimer||reduced)return;modelStep=0;paintModel();modelTimer=setInterval(paintModel,650);};
+  const stopModel=()=>{clearInterval(modelTimer);modelTimer=0;};
+  if(reduced){inputNodes.concat(outputNodes).forEach(node=>node.classList.add('is-live'));}
+  else new IntersectionObserver(([entry])=>entry.isIntersecting?startModel():stopModel(),{threshold:.15}).observe(modelMap);
 })();
-
-/* fromTo only. gsap.from() records the CSS-hidden opacity 0 as the tween's
-   END value, so sections would animate 0 to 0 and never appear. */
-if (window.gsap && !reduced) {
-  const g = window.gsap;
-  if (window.ScrollTrigger) g.registerPlugin(window.ScrollTrigger);
-  g.timeline().fromTo('[data-hero]',
-    { y:18, opacity:0 },
-    { y:0, opacity:1, duration:.9, stagger:.1, ease:'power3.out' });
-  if (window.ScrollTrigger) {
-    document.querySelectorAll('.r:not([data-hero])').forEach(n => {
-      g.fromTo(n, { y:26, opacity:0 },
-        { y:0, opacity:1, duration:.85, ease:'power3.out',
-          scrollTrigger:{ trigger:n, start:'top 88%', once:true } });
-    });
-  } else {
-    g.set('.r:not([data-hero])', { opacity:1, y:0 });
-  }
-} else {
-  document.querySelectorAll('.r').forEach(n => { n.style.opacity = '1'; });
-}
-
-/* Failsafe. Some embedded browsers throttle requestAnimationFrame to
-   near zero, which parks a tween mid-flight: the hero headline was
-   sticking at opacity .28 while the later-staggered subhead finished,
-   inverting the type hierarchy. Kill every tween and land the end state.
-   Covers [data-hero] too, which is on its own timeline. */
-setTimeout(() => {
-  const stuck = [...document.querySelectorAll('.r, [data-hero]')]
-    .filter(n => getComputedStyle(n).opacity !== '1');
-  if (!stuck.length) return;
-  if (window.gsap) {
-    stuck.forEach(n => window.gsap.killTweensOf(n));
-    window.gsap.set(stuck, { opacity:1, y:0, clearProps:'transform' });
-  } else {
-    stuck.forEach(n => { n.style.opacity = '1'; n.style.transform = 'none'; });
-  }
-}, 2500);
-
-});
 </script>
 </body>
 </html>

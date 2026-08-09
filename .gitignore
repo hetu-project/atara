@@ -28,6 +28,12 @@ LANDING-COPY.md
 # Landing page content spec. Internal only.
 LANDING-SPEC.md
 
-# Local editing backups of the landing page.
+# Local editing backups of the landing page. The bracket form only matched
+# a single digit, so .bak10 and up were being offered to a public repo.
 *.bak
-*.bak[0-9]
+*.bak[0-9]*
+
+# Superseded design variant, kept locally for reference.
+v2.html
+# 条件支付知识库：含内部战略推演、竞品定性与未决事项。内部只读。
+KNOWLEDGE.md

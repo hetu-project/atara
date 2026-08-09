@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="An AI model reads a counterparty's record of 142 settlements and 3 defaults through a weighted network and computes a probability of default of 1.8 percent for this trade">
+  <style>
+    .paper{fill:#f1ede6}.card{fill:#fbfaf6;stroke:#ddd8cf}
+    .pane{fill:#fbfaf6;stroke:#ddd8cf;stroke-width:1.5}
+    /* a hairline of light along the top edge, so a panel reads as a
+       surface rather than an outlined rectangle */
+    .gloss{fill:none;stroke:#fff;stroke-width:1.5;opacity:.9}
+    .port{fill:#fbfaf6;stroke:#cdc7bc;stroke-width:1.5}
+    .rule{stroke:#e7e2d9;stroke-width:1}
+    .cap{fill:#a49d90;font:400 15px/1 Inter,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase}
+    .lbl{fill:#5b6478;font:400 16px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+    .out{fill:#1b2233;font:500 60px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.025em}
+    .chip{fill:#2f24e7}
+    .chip-t{fill:#fbfaf6;font:500 14px/1 Inter,system-ui,sans-serif;letter-spacing:.06em}
+    .ok{fill:#8e88ef}.miss{fill:#e58272}
+    /* edge weight is the point: a heavier line counted for more */
+    .e{stroke:#cdc7bc;fill:none}
+    .n{fill:#fbfaf6;stroke:#8e88ef;stroke-width:2}
+    /* one pass of the computation. Resting state is the finished pass,
+       so the figure is complete even where animation never runs. */
+    .l1{animation:fire 4.6s ease-in-out -3.4s infinite}
+    .l2{animation:fire 4.6s ease-in-out -3s infinite}
+    .l3{animation:fire 4.6s ease-in-out -2.5s infinite}
+    @keyframes fire{0%,6%{opacity:.3}20%,100%{opacity:1}}
+    .flow{stroke:#2f24e7;stroke-width:2;fill:none;stroke-linecap:round;
+      stroke-dasharray:58;animation:flow 4.6s ease-in-out -3.1s infinite}
+    @keyframes flow{0%,6%{stroke-dashoffset:58}26%,100%{stroke-dashoffset:0}}
+    .flow-2{animation-delay:-2.2s}
+
+    @media(prefers-reduced-motion:reduce){
+      .l1,.l2,.l3{animation:none;opacity:1}
+      .flow{animation:none;stroke-dashoffset:0}
+    }
+  </style>
+
+  <rect class="paper" width="800" height="600"/>
+  <rect class="card" x="18" y="18" width="764" height="564" rx="18"/>
+
+  <!-- what this counterparty has actually done -->
+  <text class="cap" x="60" y="152">this counterparty</text>
+  <rect class="pane" x="60" y="172" width="182" height="238" rx="12"/>
+  <path class="gloss" d="M72 173.5h158"/>
+  <path class="rule" d="M84 330h134"/>
+  <g transform="translate(84 206)">
+    <g class="ok">
+      <rect width="14" height="14" rx="3"/><rect x="26" width="14" height="14" rx="3"/><rect x="52" width="14" height="14" rx="3"/><rect x="78" width="14" height="14" rx="3"/><rect x="104" width="14" height="14" rx="3"/>
+      <rect y="26" width="14" height="14" rx="3"/><rect x="26" y="26" width="14" height="14" rx="3"/><rect x="78" y="26" width="14" height="14" rx="3"/><rect x="104" y="26" width="14" height="14" rx="3"/>
+      <rect y="52" width="14" height="14" rx="3"/><rect x="26" y="52" width="14" height="14" rx="3"/><rect x="52" y="52" width="14" height="14" rx="3"/><rect x="78" y="52" width="14" height="14" rx="3"/><rect x="104" y="52" width="14" height="14" rx="3"/>
+      <rect y="78" width="14" height="14" rx="3"/><rect x="52" y="78" width="14" height="14" rx="3"/><rect x="78" y="78" width="14" height="14" rx="3"/><rect x="104" y="78" width="14" height="14" rx="3"/>
+    </g>
+    <g class="miss">
+      <rect x="52" y="26" width="14" height="14" rx="3"/><rect x="26" y="78" width="14" height="14" rx="3"/>
+    </g>
+    <text class="lbl" y="148">142 settlements</text>
+    <text class="lbl" y="176">3 defaults</text>
+  </g>
+
+  <!-- the model doing the assessing: a weighted network, three layers -->
+  <text class="cap" x="290" y="152">ai model</text>
+  <rect class="pane" x="290" y="172" width="212" height="238" rx="12"/>
+  <path class="gloss" d="M302 173.5h188"/>
+  <g class="e">
+    <g class="l1" stroke-width="1">
+      <path d="M330 218L396 244M330 218L396 298M330 266L396 244M330 266L396 298M330 266L396 352M330 322L396 244M330 322L396 298M330 322L396 352M330 374L396 298M330 374L396 352"/>
+    </g>
+    <g class="l1" stroke-width="2.6" stroke="#8e88ef">
+      <path d="M330 266L396 244M330 322L396 298"/>
+    </g>
+    <g class="l2" stroke-width="1">
+      <path d="M396 244L462 291M396 298L462 291M396 352L462 291"/>
+    </g>
+    <g class="l2" stroke-width="2.8" stroke="#2f24e7">
+      <path d="M396 244L462 291M396 298L462 291"/>
+    </g>
+  </g>
+  <g class="n">
+    <circle class="l1" cx="330" cy="218" r="9"/><circle class="l1" cx="330" cy="266" r="9"/><circle class="l1" cx="330" cy="322" r="9"/><circle class="l1" cx="330" cy="374" r="9"/>
+    <circle class="l2" cx="396" cy="244" r="9"/><circle class="l2" cx="396" cy="298" r="9"/><circle class="l2" cx="396" cy="352" r="9"/>
+  </g>
+  <circle class="l3" cx="462" cy="291" r="13" fill="#2f24e7"/>
+
+  <!-- the record goes in, the estimate comes out -->
+  <path class="flow" d="M248 291H284"/>
+  <path class="flow flow-2" d="M508 291H552"/>
+  <circle class="port" cx="242" cy="291" r="5"/>
+  <circle class="port" cx="502" cy="291" r="5"/>
+
+  <g>
+    <path class="rule" d="M552 236h176"/>
+    <text class="cap" x="552" y="266">probability of default</text>
+    <text class="out" x="552" y="326">1.8%</text>
+    <rect class="chip" x="552" y="352" width="120" height="28" rx="14"/>
+    <text class="chip-t" x="612" y="371" text-anchor="middle">THIS TRADE</text>
+  </g>
+</svg>

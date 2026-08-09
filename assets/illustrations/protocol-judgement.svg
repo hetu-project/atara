@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="A subjective clause reading pay on acceptable quality is rewritten before the trade into three objective tests, each bound to a named source of evidence">
+  <style>
+    .paper{fill:#f1ede6}.card{fill:#fbfaf6;stroke:#ddd8cf}
+    .pane{fill:#fbfaf6;stroke:#ddd8cf;stroke-width:1.5}
+    .vague{fill:#f4efe6;stroke:#d8d2c6;stroke-width:1.5;stroke-dasharray:7 6}
+    .cap{fill:#a49d90;font:400 15px/1 Inter,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase}
+    .clause{fill:#8a8478;font:400 25px/1 Inter,system-ui,sans-serif;font-style:italic}
+    .test{fill:#1b2233;font:500 21px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+    .src{fill:#8a8478;font:400 15px/1 Inter,system-ui,sans-serif}
+    .qm{fill:#c9c2b4;font:400 44px/1 Inter,system-ui,sans-serif}
+    .ghost{fill:#c4bcae;font:400 25px/1 Inter,system-ui,sans-serif;font-style:italic}
+    .gloss{fill:none;stroke:#fff;stroke-width:1.5;opacity:.9}
+    .sep{stroke:#eee9e0;stroke-width:1}
+    .arrow{stroke:#2f24e7;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .chip{fill:#2f24e7}.chip-t{fill:#fbfaf6;font:500 14px/1 Inter,system-ui,sans-serif;letter-spacing:.05em}
+    .box{fill:#fbfaf6;stroke:#cdc7bc;stroke-width:2}
+    .t1{animation:tick 5.4s ease-out -3.6s infinite}
+    .t2{animation:tick 5.4s ease-out -3.05s infinite}
+    .t3{animation:tick 5.4s ease-out -2.5s infinite}
+    @keyframes tick{0%,14%{opacity:0}26%,100%{opacity:1}}
+    @media(prefers-reduced-motion:reduce){.t1,.t2,.t3{animation:none;opacity:1}}
+  </style>
+
+  <rect class="paper" width="800" height="600"/>
+  <rect class="card" x="18" y="18" width="764" height="564" rx="18"/>
+
+  <!-- the clause as it is written today: nobody can settle on it -->
+  <text class="cap" x="58" y="122">what the contract says</text>
+  <g>
+    <rect class="vague" x="58" y="146" width="252" height="196" rx="12"/>
+    <g class="ghost" transform="translate(6 5)">
+      <text x="82" y="212">&#8220;pay on</text>
+      <text x="82" y="248">acceptable</text>
+      <text x="82" y="284">quality&#8221;</text>
+    </g>
+    <text class="clause" x="82" y="212">&#8220;pay on</text>
+    <text class="clause" x="82" y="248">acceptable</text>
+    <text class="clause" x="82" y="284">quality&#8221;</text>
+    <text class="qm" x="276" y="318" text-anchor="end">?</text>
+  </g>
+  <text class="src" x="58" y="382">Two readings, two invoices,</text>
+  <text class="src" x="58" y="406">and no way to settle either.</text>
+
+  <!-- the rewrite happens before anyone commits -->
+  <g>
+    <path class="arrow" d="M334 244h84M404 232l14 12-14 12"/>
+    <rect class="chip" x="288" y="272" width="178" height="28" rx="14"/>
+    <text class="chip-t" x="377" y="291" text-anchor="middle">BEFORE THE TRADE</text>
+  </g>
+
+  <!-- the same clause, rewritten as tests a machine can settle -->
+  <text class="cap" x="458" y="122">what the protocol settles on</text>
+  <rect class="pane" x="458" y="146" width="286" height="308" rx="12"/>
+  <path class="gloss" d="M470 147.5h262"/>
+  <g class="sep"><path d="M486 248h230"/><path d="M486 338h230"/></g>
+
+  <g transform="translate(486 188)">
+    <rect class="box" width="26" height="26" rx="5"/>
+    <path class="t1" d="M6 13l6 6 10-12" stroke="#2f24e7" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="test" x="44" y="14">moisture &#8804; 12%</text>
+    <text class="src" x="44" y="38">lab certificate</text>
+  </g>
+  <g transform="translate(486 278)">
+    <rect class="box" width="26" height="26" rx="5"/>
+    <path class="t2" d="M6 13l6 6 10-12" stroke="#2f24e7" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="test" x="44" y="14">count = 400 units</text>
+    <text class="src" x="44" y="38">inspection report</text>
+  </g>
+  <g transform="translate(486 368)">
+    <rect class="box" width="26" height="26" rx="5"/>
+    <path class="t3" d="M6 13l6 6 10-12" stroke="#2f24e7" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="test" x="44" y="14">landed by 30 Sep</text>
+    <text class="src" x="44" y="38">bill of lading</text>
+  </g>
+
+  <text class="src" x="458" y="492">Each test names its own source of evidence,</text>
+  <text class="src" x="458" y="516">so the ruling is a reading, not an opinion.</text>
+</svg>
