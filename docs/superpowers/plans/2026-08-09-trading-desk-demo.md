@@ -865,8 +865,8 @@ git commit -m "feat(demo): 领域类型、种子数据与状态容器"
 - Test: `src/demo/engine/__tests__/matching.test.ts`, `src/demo/engine/__tests__/queueMachine.test.ts`
 
 **Interfaces:**
-- Consumes: `Desk`、`PoolOrder`、`TxStatus`（Task 2 的 `types.ts`）
-- Produces: `matchOrder(myDesk: Desk, order: PoolOrder, now?: Date): MatchResult`；`nextStatus(current: TxStatus, event: QueueEvent): TxStatus | null`
+- Consumes: `Desk`、`TxStatus`（Task 2 的 `types.ts`）
+- Produces: `matchOrder(myDesk: Desk): MatchResult`；`nextStatus(current: TxStatus, event: QueueEvent): TxStatus | null`
 
 - [ ] **Step 1: 写 matching 的失败测试**
 
@@ -875,9 +875,7 @@ git commit -m "feat(demo): 领域类型、种子数据与状态容器"
 ```ts
 import { describe, expect, it } from 'vitest';
 import { matchOrder } from '@/demo/engine/matching';
-import type { Desk, PoolOrder } from '@/demo/types';
-
-const NOW = new Date('2026-08-09T10:00:00Z');
+import type { Desk } from '@/demo/types';
 
 function desk(over: Partial<Desk> = {}): Desk {
   return {
@@ -892,76 +890,19 @@ function desk(over: Partial<Desk> = {}): Desk {
   };
 }
 
-function order(over: Partial<PoolOrder> = {}): PoolOrder {
-  return {
-    id: 'po_1',
-    side: 'sell',
-    asset: 'USDT',
-    chain: 'TRON',
-    amount: 5000,
-    fiatCurrency: 'USD',
-    price: 1,
-    fiatTotal: 5000,
-    counterparty: {
-      displayId: 'D999999',
-      name: 'Meridian Capital',
-      score: 88,
-      completedTrades: 40,
-      disputes: 0,
-      avgResponseMin: 5,
-      verified: true,
-      firstSeenAt: '2025-01-01T00:00:00Z',
-    },
-    postedAt: '2026-08-09T09:00:00Z',
-    expiresAt: '2026-08-09T12:00:00Z',
-    ...over,
-  };
-}
-
 describe('matchOrder', () => {
-  it('买方席位吃卖单可以撮合', () => {
-    expect(matchOrder(desk(), order(), NOW)).toEqual({ ok: true });
+  it('席位已开通就能撮合', () => {
+    expect(matchOrder(desk())).toEqual({ ok: true });
   });
 
   it('席位未开通时拒绝，且提示对应的席位类型', () => {
-    expect(matchOrder(desk({ verifiedAt: null }), order(), NOW)).toEqual({
+    expect(matchOrder(desk({ verifiedAt: null }))).toEqual({
       ok: false,
       reason: '请先开通买方席位',
     });
-    expect(matchOrder(desk({ kind: 'sell', verifiedAt: null }), order({ side: 'buy' }), NOW)).toEqual({
+    expect(matchOrder(desk({ kind: 'sell', verifiedAt: null }))).toEqual({
       ok: false,
       reason: '请先开通卖方席位',
-    });
-  });
-
-  it('方向不互补时拒绝', () => {
-    expect(matchOrder(desk(), order({ side: 'buy' }), NOW)).toEqual({
-      ok: false,
-      reason: '买方席位只能撮合卖单',
-    });
-    expect(matchOrder(desk({ kind: 'sell' }), order({ side: 'sell' }), NOW)).toEqual({
-      ok: false,
-      reason: '卖方席位只能撮合买单',
-    });
-  });
-
-  it('挂单过期时拒绝', () => {
-    expect(matchOrder(desk(), order({ expiresAt: '2026-08-09T09:59:00Z' }), NOW)).toEqual({
-      ok: false,
-      reason: '该挂单已过期',
-    });
-  });
-
-  it('不能撮合自己的挂单', () => {
-    const mine = order({ counterparty: { ...order().counterparty, displayId: 'D000001' } });
-    expect(matchOrder(desk(), mine, NOW)).toEqual({ ok: false, reason: '不能撮合自己的挂单' });
-  });
-
-  it('席位未开通优先于方向不符报出', () => {
-    // 两个条件同时不满足时，先提示开通——那是用户要做的第一件事
-    expect(matchOrder(desk({ verifiedAt: null }), order({ side: 'buy' }), NOW)).toEqual({
-      ok: false,
-      reason: '请先开通买方席位',
     });
   });
 });
@@ -1008,37 +949,23 @@ npx vitest run src/demo/engine
 - [ ] **Step 4: 实现 matching.ts**
 
 ```ts
-import type { Desk, DeskKind, PoolOrder } from '@/demo/types';
+import type { Desk, DeskKind } from '@/demo/types';
 
 export type MatchResult = { ok: true } | { ok: false; reason: string };
 
 const LABEL: Record<DeskKind, string> = { buy: '买方', sell: '卖方' };
 
 /**
- * 我的席位能不能吃下这笔挂单。
+ * 能不能撮合。**只有一条规则：席位得先开通。**
  *
- * 检查顺序即提示优先级：席位没开通是用户要做的第一件事，先报它；
- * 方向不符次之；过期和自成交是数据层面的问题，放最后。
+ * 方向互补、挂单过期、自成交这些一概不做——这是 Demo，池子里每一笔单都能撮合。
+ * 保留这一条纯粹是为了给「我的席位」页一个存在的理由，并在抽屉里引出一个
+ * 「去开通席位」的跳转。
  */
-export function matchOrder(myDesk: Desk, order: PoolOrder, now = new Date()): MatchResult {
+export function matchOrder(myDesk: Desk): MatchResult {
   if (myDesk.verifiedAt === null) {
     return { ok: false, reason: `请先开通${LABEL[myDesk.kind]}席位` };
   }
-
-  const wanted: DeskKind = myDesk.kind === 'buy' ? 'sell' : 'buy';
-  if (order.side !== wanted) {
-    const want = myDesk.kind === 'buy' ? '卖单' : '买单';
-    return { ok: false, reason: `${LABEL[myDesk.kind]}席位只能撮合${want}` };
-  }
-
-  if (new Date(order.expiresAt).getTime() <= now.getTime()) {
-    return { ok: false, reason: '该挂单已过期' };
-  }
-
-  if (order.counterparty.displayId === myDesk.displayId) {
-    return { ok: false, reason: '不能撮合自己的挂单' };
-  }
-
   return { ok: true };
 }
 ```
@@ -1084,7 +1011,7 @@ npx vitest run src/demo/engine
 npm test
 ```
 
-预期：24 文件 / 144 通过。
+预期：24 文件 / 140 通过。
 
 ```bash
 git add src/demo/engine
@@ -1095,133 +1022,102 @@ git commit -m "feat(demo): 撮合规则与队列状态机"
 
 ## Task 4: 风控引擎
 
-六项加权检查产出分数与裁决。这是让 AI 看起来在思考的地方——检查项和数值由这里算出，不是写死的台词。
+产出分数、六条检查项和裁决。这是让 AI 看起来在思考的地方。
+
+**刻意写得很薄**：先由种子定分数，再倒推出几条好看的检查项——不是先算检查再加权。这个顺序保证屏幕上永远自洽（分数低就一定看得到问题项），代码量只有加权模型的三分之一。这是 Demo，没人会核验规则是否合理。
 
 **Files:**
 - Create: `src/demo/engine/riskEngine.ts`
 - Test: `src/demo/engine/__tests__/riskEngine.test.ts`
 
 **Interfaces:**
-- Consumes: `Transaction`、`Desk`、`RiskResult`、`RiskCheck`、`seededRandom`
-- Produces: `assessRisk(tx: Transaction, myDesk: Desk): RiskResult`；导出常量 `THRESHOLD = 70`
+- Consumes: `Transaction`、`RiskResult`、`RiskCheck`、`seededRandom`
+- Produces: `assessRisk(tx: Transaction): RiskResult`；导出常量 `THRESHOLD = 70`
 
 - [ ] **Step 1: 写失败的测试**
 
-创建 `src/demo/engine/__tests__/riskEngine.test.ts`：
+创建 `src/demo/engine/__tests__/riskEngine.test.ts`。测试只钉住「屏幕上不会出现自相矛盾的东西」，不去验证任何业务规则是否合理——那些规则本来就是编的：
 
 ```ts
 import { describe, expect, it } from 'vitest';
 import { assessRisk, THRESHOLD } from '@/demo/engine/riskEngine';
-import type { Counterparty, Desk, Transaction } from '@/demo/types';
-
-function cp(over: Partial<Counterparty> = {}): Counterparty {
-  return {
-    displayId: 'D999999',
-    name: 'Meridian Capital',
-    score: 88,
-    completedTrades: 60,
-    disputes: 0,
-    avgResponseMin: 4,
-    verified: true,
-    firstSeenAt: new Date(Date.now() - 400 * 86400_000).toISOString(),
-    ...over,
-  };
-}
+import type { Transaction } from '@/demo/types';
 
 function tx(over: Partial<Transaction> = {}): Transaction {
   return {
-    id: 'tx_clean',
+    id: 'tx_1',
     poolOrderId: 'po_1',
     side: 'buy',
     asset: 'USDT',
     amount: 5000,
     fiatTotal: 5000,
     fiatCurrency: 'USD',
-    counterparty: cp(),
+    counterparty: {
+      displayId: 'D999999',
+      name: 'Meridian Capital',
+      score: 88,
+      completedTrades: 60,
+      disputes: 0,
+      avgResponseMin: 4,
+      verified: true,
+      firstSeenAt: '2025-06-01T00:00:00Z',
+    },
     status: 'validating',
-    createdAt: new Date().toISOString(),
+    createdAt: '2026-08-09T10:00:00Z',
     risk: null,
     resubmits: 0,
     ...over,
   };
 }
 
-const myDesk: Desk = {
-  kind: 'buy',
-  displayId: 'D000001',
-  name: '我的买方席位',
-  verifiedAt: new Date(Date.now() - 96 * 86400_000).toISOString(),
-  completedTrades: 34,
-  disputes: 0,
-  avgResponseMin: 4,
-};
-
 describe('assessRisk', () => {
   it('总是产出六项检查', () => {
-    expect(assessRisk(tx(), myDesk).checks).toHaveLength(6);
+    expect(assessRisk(tx()).checks).toHaveLength(6);
   });
 
   it('同一笔交易反复评估结果一致', () => {
-    const a = assessRisk(tx(), myDesk);
-    const b = assessRisk(tx(), myDesk);
-    expect(a).toEqual(b);
+    expect(assessRisk(tx())).toEqual(assessRisk(tx()));
   });
 
-  it('干净的对手方拿到高分并放行', () => {
-    const r = assessRisk(tx(), myDesk);
-    expect(r.score).toBeGreaterThanOrEqual(THRESHOLD);
-    expect(r.verdict).toBe('pass');
-  });
-
-  it('未实名会拉低实名检查项', () => {
-    const r = assessRisk(tx({ counterparty: cp({ verified: false }) }), myDesk);
-    const kyc = r.checks.find((c) => c.id === 'kyc');
-    expect(kyc?.status).not.toBe('pass');
-  });
-
-  it('争议率高会拉低历史检查项并压低总分', () => {
-    const bad = assessRisk(tx({ counterparty: cp({ completedTrades: 10, disputes: 5 }) }), myDesk);
-    const clean = assessRisk(tx(), myDesk);
-    expect(bad.checks.find((c) => c.id === 'history')?.status).not.toBe('pass');
-    expect(bad.score).toBeLessThan(clean.score);
-  });
-
-  it('金额远高于席位均值时金额检查项降级', () => {
-    const r = assessRisk(tx({ id: 'tx_big', fiatTotal: 900_000 }), myDesk);
-    expect(r.checks.find((c) => c.id === 'amount')?.status).not.toBe('pass');
-  });
-
-  it('任何一项 fail 直接拒绝，不管总分多高', () => {
-    // 制裁命中不该被其他项的高分洗掉
-    const hitResult = assessRisk(tx({ id: findSanctionHitTxId() }), myDesk);
-    expect(hitResult.checks.find((c) => c.id === 'sanctions')?.status).toBe('fail');
-    expect(hitResult.verdict).toBe('decline');
-  });
-
-  it('补充材料后分数提高', () => {
-    const first = assessRisk(tx({ id: 'tx_resub' }), myDesk);
-    const second = assessRisk(tx({ id: 'tx_resub', resubmits: 1 }), myDesk);
-    expect(second.score).toBeGreaterThan(first.score);
+  it('不同交易结果不同', () => {
+    const a = assessRisk(tx({ id: 'tx_a' }));
+    const b = assessRisk(tx({ id: 'tx_b' }));
+    expect(a).not.toEqual(b);
   });
 
   it('分数始终落在 0..100', () => {
-    for (let i = 0; i < 60; i++) {
-      const r = assessRisk(tx({ id: `tx_${i}` }), myDesk);
-      expect(r.score).toBeGreaterThanOrEqual(0);
-      expect(r.score).toBeLessThanOrEqual(100);
+    for (let i = 0; i < 100; i++) {
+      const { score } = assessRisk(tx({ id: `tx_${i}` }));
+      expect(score).toBeGreaterThanOrEqual(0);
+      expect(score).toBeLessThanOrEqual(100);
     }
   });
-});
 
-/** 扫出一个会命中制裁筛查的交易 id，用来测「fail 直接 decline」。 */
-function findSanctionHitTxId(): string {
-  for (let i = 0; i < 500; i++) {
-    const id = `scan_${i}`;
-    const r = assessRisk(tx({ id }), myDesk);
-    if (r.checks.find((c) => c.id === 'sanctions')?.status === 'fail') return id;
-  }
-  throw new Error('500 次内没扫到制裁命中，说明命中率配置有问题');
-}
+  it('分数与裁决自洽', () => {
+    for (let i = 0; i < 100; i++) {
+      const { score, verdict } = assessRisk(tx({ id: `tx_${i}` }));
+      const expected = score >= THRESHOLD ? 'pass' : score >= 50 ? 'challenge' : 'decline';
+      expect(verdict).toBe(expected);
+    }
+  });
+
+  it('分数与问题项自洽：放行的单不该出现 fail，拒绝的单必须看得到问题', () => {
+    for (let i = 0; i < 100; i++) {
+      const r = assessRisk(tx({ id: `tx_${i}` }));
+      if (r.verdict === 'pass') {
+        expect(r.checks.some((c) => c.status === 'fail')).toBe(false);
+      } else {
+        expect(r.checks.some((c) => c.status !== 'pass')).toBe(true);
+      }
+    }
+  });
+
+  it('补充材料后分数提高', () => {
+    const first = assessRisk(tx({ id: 'tx_resub' }));
+    const second = assessRisk(tx({ id: 'tx_resub', resubmits: 1 }));
+    expect(second.score).toBeGreaterThan(first.score);
+  });
+});
 ```
 
 - [ ] **Step 2: 跑测试，确认失败**
@@ -1236,148 +1132,102 @@ npx vitest run src/demo/engine/__tests__/riskEngine.test.ts
 
 ```ts
 import { seededRandom } from '@/demo/random';
-import type { CheckStatus, Desk, RiskCheck, RiskResult, Transaction } from '@/demo/types';
+import type { RiskCheck, RiskResult, Transaction } from '@/demo/types';
 
 export const THRESHOLD = 70;
 
-/** 权重合计 100 */
-const WEIGHTS = {
-  kyc: 20,
-  history: 25,
-  sanctions: 20,
-  amount: 15,
-  response: 10,
-  tenure: 10,
-} as const;
-
 /**
- * 连续因子转成三档状态。中间那档（warn）是演示里最有戏的部分——
- * 它让「综合评分 82，其中一项警告」这种结论成立，比非黑即白可信得多。
+ * 六个固定检查项。ok / bad 是文案模板，`{n}` 由种子填数字。
+ * 顺序即屏幕上的显示顺序。
  */
-function statusOf(factor: number): CheckStatus {
-  if (factor >= 0.8) return 'pass';
-  if (factor >= 0.35) return 'warn';
-  return 'fail';
-}
-
-function clamp01(n: number): number {
-  return Math.max(0, Math.min(1, n));
-}
-
-function daysSince(iso: string): number {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400_000);
-}
-
-/**
- * 一笔交易的风控评估。纯函数，不发任何网络请求，不调用任何 AI 服务。
- *
- * 随机成分（制裁筛查是否命中、席位历史均值）由 tx.id 做种子，所以同一笔单
- * 反复评估结果完全一致——重新渲染不会让分数跳变。
- */
-export function assessRisk(tx: Transaction, myDesk: Desk): RiskResult {
-  const cp = tx.counterparty;
-  const rand = seededRandom(tx.id);
-  const checks: RiskCheck[] = [];
-
-  // 1. 席位实名状态
-  const kycFactor = cp.verified ? 1 : 0.3;
-  checks.push({
+const CHECKS = [
+  {
     id: 'kyc',
     label: '核对席位实名状态',
-    status: statusOf(kycFactor),
-    detail: cp.verified
-      ? `已验证 · ${new Date(cp.firstSeenAt).toISOString().slice(0, 7)} 起`
-      : '对手方未完成实名认证',
-    weight: WEIGHTS.kyc,
-  });
-
-  // 2. 历史成交
-  const disputeRate = cp.completedTrades === 0 ? 1 : cp.disputes / cp.completedTrades;
-  let historyFactor = clamp01(1 - disputeRate * 8);
-  if (cp.completedTrades < 5) historyFactor = Math.min(historyFactor, 0.7);
-  checks.push({
+    ok: () => '已验证 · 证件与地址一致',
+    bad: () => '对手方未完成实名认证',
+  },
+  {
     id: 'history',
     label: '拉取对手方历史成交',
-    status: statusOf(historyFactor),
-    detail:
-      cp.completedTrades === 0
-        ? '无历史成交记录'
-        : `${cp.completedTrades} 笔完成 · ${cp.disputes} 争议`,
-    weight: WEIGHTS.history,
-  });
-
-  // 3. 链上地址制裁筛查（约 6% 命中）
-  const sanctionHit = rand() < 0.06;
-  checks.push({
+    ok: (n: number) => `${n} 笔完成 · 0 争议`,
+    bad: (n: number) => `${n} 笔完成 · ${1 + (n % 4)} 争议`,
+  },
+  {
     id: 'sanctions',
     label: '链上地址制裁名单筛查',
-    status: sanctionHit ? 'fail' : 'pass',
-    detail: sanctionHit ? '命中 OFAC SDN 关联地址' : '无命中（OFAC / UN / EU）',
-    weight: WEIGHTS.sanctions,
-  });
-
-  // 4. 金额异常：与该席位历史均值比
-  const avgTicket = 4_000 + rand() * 26_000;
-  const multiple = tx.fiatTotal / avgTicket;
-  const amountFactor = multiple <= 1.5 ? 1 : multiple <= 3 ? 0.7 : multiple <= 5 ? 0.45 : 0.25;
-  checks.push({
+    ok: () => '无命中（OFAC / UN / EU）',
+    bad: () => '命中 OFAC SDN 关联地址',
+  },
+  {
     id: 'amount',
     label: '金额异常检测',
-    status: statusOf(amountFactor),
-    detail:
-      multiple <= 1.5
-        ? `与席位均值相当（${multiple.toFixed(1)}×）`
-        : `高于席位均值 ${multiple.toFixed(1)}×`,
-    weight: WEIGHTS.amount,
-  });
-
-  // 5. 响应时效
-  const m = cp.avgResponseMin;
-  const responseFactor = m <= 5 ? 1 : m <= 15 ? 0.8 : m <= 60 ? 0.5 : 0.3;
-  checks.push({
+    ok: (n: number) => `与席位均值相当（${(0.8 + (n % 60) / 100).toFixed(1)}×）`,
+    bad: (n: number) => `高于席位均值 ${(2.5 + (n % 45) / 10).toFixed(1)}×`,
+  },
+  {
     id: 'response',
     label: '对手方响应时效',
-    status: statusOf(responseFactor),
-    detail: `中位 ${m} 分钟`,
-    weight: WEIGHTS.response,
-  });
-
-  // 6. 账户存续时长
-  const days = daysSince(cp.firstSeenAt);
-  const tenureFactor = days >= 180 ? 1 : days >= 90 ? 0.8 : days >= 30 ? 0.5 : 0.3;
-  checks.push({
+    ok: (n: number) => `中位 ${1 + (n % 9)} 分钟`,
+    bad: (n: number) => `中位 ${45 + (n % 120)} 分钟，偏慢`,
+  },
+  {
     id: 'tenure',
     label: '账户存续时长',
-    status: statusOf(tenureFactor),
-    detail: `${days} 天`,
-    weight: WEIGHTS.tenure,
+    ok: (n: number) => `${180 + (n % 600)} 天`,
+    bad: (n: number) => `仅 ${3 + (n % 25)} 天`,
+  },
+] as const;
+
+/**
+ * 一笔交易的风控评估。**不调用任何 AI 服务，不发任何网络请求。**
+ *
+ * 刻意写得很薄：先由种子定分数，再倒推出几条问题项——不是先算检查再加权。
+ * 这个顺序保证屏幕上永远自洽（分数低就一定看得到问题），代码量只有加权模型
+ * 的三分之一。这是 Demo，没人会核验这些规则是否合理，把它写"真"只会增加
+ * 会出错的代码。
+ *
+ * 随机成分由 tx.id 做种子，所以同一笔单反复评估结果完全一致——重新渲染不会
+ * 让分数跳变，那是最容易穿帮的地方。
+ */
+export function assessRisk(tx: Transaction): RiskResult {
+  const rand = seededRandom(tx.id);
+
+  // 1. 先定分数。补过材料的加分，让「补充后重新提交」这条路径有实际效果。
+  const score = Math.min(100, 45 + Math.floor(rand() * 55) + tx.resubmits * 15);
+
+  // 2. 分数决定有几项不合格，以及最差的那项是 warn 还是 fail
+  const flawCount = score >= 85 ? 0 : score >= THRESHOLD ? 1 : score >= 50 ? 2 : 3;
+  const hasFail = score < 50;
+
+  // 3. 按种子挑出哪几项是问题项
+  const order = CHECKS.map((c, i) => ({ i, k: rand() }))
+    .sort((a, b) => a.k - b.k)
+    .slice(0, flawCount)
+    .map((x) => x.i);
+  const flawed = new Set(order);
+
+  const checks: RiskCheck[] = CHECKS.map((c, i) => {
+    const n = Math.floor(rand() * 200) + 3;
+    const isFlawed = flawed.has(i);
+    return {
+      id: c.id,
+      label: c.label,
+      // 最差的那一项在 decline 时标 fail，其余问题项标 warn
+      status: isFlawed ? (hasFail && i === order[0] ? 'fail' : 'warn') : 'pass',
+      detail: isFlawed ? c.bad(n) : c.ok(n),
+      weight: 0, // 不再做加权，保留字段是为了类型兼容
+    };
   });
 
-  const factors: Record<string, number> = {
-    kyc: kycFactor,
-    history: historyFactor,
-    sanctions: sanctionHit ? 0 : 1,
-    amount: amountFactor,
-    response: responseFactor,
-    tenure: tenureFactor,
-  };
-
-  const base = checks.reduce((sum, c) => sum + c.weight * factors[c.id], 0);
-  // 补过材料的加分：让「补充后重新提交」这条路径有实际效果
-  const score = Math.round(Math.min(100, base + tx.resubmits * 12));
-
-  const hasFail = checks.some((c) => c.status === 'fail');
-  const verdict: RiskResult['verdict'] = hasFail
-    ? 'decline'
-    : score >= THRESHOLD
-      ? 'pass'
-      : score >= 50
-        ? 'challenge'
-        : 'decline';
+  const verdict: RiskResult['verdict'] =
+    score >= THRESHOLD ? 'pass' : score >= 50 ? 'challenge' : 'decline';
 
   return { score, threshold: THRESHOLD, verdict, checks };
 }
 ```
+
+`weight` 字段保留但恒为 0——`types.ts` 里已经定义了它，删掉要改类型和别处引用，留着代价是零。如果实现时觉得碍眼，可以从 `RiskCheck` 里删掉这个字段并同步改 `types.ts`，两种做法都行。
 
 - [ ] **Step 4: 跑测试，确认通过**
 
@@ -1385,9 +1235,7 @@ export function assessRisk(tx: Transaction, myDesk: Desk): RiskResult {
 npx vitest run src/demo/engine/__tests__/riskEngine.test.ts
 ```
 
-预期：9 个测试 PASS。
-
-若「干净的对手方拿到高分」那条失败，检查 `tx_clean` 这个 id 是否恰好命中了制裁筛查——若是，换一个测试用的 id（例如 `tx_clean2`）并同步改断言，不要为了让测试过而调低命中率。
+预期：7 个测试 PASS。
 
 - [ ] **Step 5: 全量测试并提交**
 
@@ -1395,11 +1243,11 @@ npx vitest run src/demo/engine/__tests__/riskEngine.test.ts
 npm test
 ```
 
-预期：25 文件 / 153 通过。
+预期：25 文件 / 147 通过。
 
 ```bash
 git add src/demo/engine
-git commit -m "feat(demo): 风控评分引擎，六项加权检查"
+git commit -m "feat(demo): 风控评分引擎，六项检查与流式结论"
 ```
 
 ---
@@ -1513,7 +1361,7 @@ export default function KpiTile({
 npm run build && npm test
 ```
 
-预期：构建通过（注意 `noUnusedLocals`，未用到的 import 会直接报错）；测试仍 25 文件 / 153 通过。
+预期：构建通过（注意 `noUnusedLocals`，未用到的 import 会直接报错）；测试仍 25 文件 / 147 通过。
 
 ```bash
 git add src/demo/components src/demo/hooks
@@ -1538,7 +1386,13 @@ git commit -m "feat(demo): 共享 UI 组件与动效基元"
 
 其下一行三个 KPI 磁贴：池中挂单（`pool.length`）、可撮合（能通过 `matchOrder` 的数量）、平均挂单时长。
 
-再下面是筛选控件（**这些是真的**，与 `FilterBar` 的装饰按钮区分开）：方向（全部/买单/卖单）、资产（全部/USDT/USDC/BTC/ETH）三个下拉。
+再下面是筛选控件（**这些是真的**，与 `FilterBar` 的装饰按钮区分开）：
+
+- **以哪个席位撮合**：买方席位 / 卖方席位（默认买方）。这个选择器决定传给 `matchOrder` 的是哪个 `Desk`
+- 方向：全部 / 买单 / 卖单
+- 资产：全部 / USDT / USDC / BTC / ETH
+
+第一个选择器是撮合那条唯一规则的**唯一出场机会**：种子里卖方席位是未开通的，切过去后每笔单的抽屉都会提示「请先开通卖方席位」并给出跳转。没有它，那条规则在默认流程里永远不会触发，「我的席位」页也就失去了意义。
 
 然后 `FilterBar` + `DataTable`。列：
 
@@ -1556,14 +1410,14 @@ git commit -m "feat(demo): 共享 UI 组件与动效基元"
 
 - [ ] **Step 2: 撮合抽屉**
 
-`MatchDrawer.tsx` 接受 `{ order, onClose }`。内容：
+`MatchDrawer.tsx` 接受 `{ order, desk, onClose }`（`desk` 是页面上那个选择器选中的席位）。内容：
 
 1. 挂单摘要（资产、数量、对价、单价）
 2. 对手方卡片：名称、`displayId`、评分环（小号 `ScoreRing`）、成交数、争议数、响应中位数、实名状态
-3. 一行「初判」：调 `matchOrder(state.desks.buy, order)`，`ok` 为真显示薄荷绿「可撮合」，为假显示对应 `reason`（红字）
-4. 底部按钮：`ok` 为假时禁用并显示 `reason`；为真时是「确认撮合」
+3. 一行「初判」：调 `matchOrder(desk)`，`ok` 为真显示薄荷绿「可撮合」，为假显示对应 `reason`（红字）
+4. 底部按钮：`ok` 为假时按钮换成「去开通席位」，点了跳 `/desk`；为真时是「确认撮合」
 
-`reason` 为「请先开通买方席位」时，按钮换成「去开通席位」，点了跳 `/desk` —— 死路要给出出口。
+唯一的失败原因就是席位未开通，所以不必做通用的禁用态——直接给出口。死路要有门。
 
 - [ ] **Step 3: 撮合动画与落库**
 
@@ -1576,7 +1430,7 @@ git commit -m "feat(demo): 共享 UI 组件与动效基元"
 const tx: Transaction = {
   id: `tx_${Date.now().toString(36)}`,
   poolOrderId: order.id,
-  side: myDesk.kind,
+  side: desk.kind,
   asset: order.asset,
   amount: order.amount,
   fiatTotal: order.fiatTotal,
@@ -1614,8 +1468,8 @@ npm run dev
 
 - 订单池有约 40 行，方向和资产筛选都生效
 - 点任意行弹出抽屉，对手方信息完整，评分环有绘制动画
-- 点一笔**买单**（买方席位吃不了），按钮禁用并显示「买方席位只能撮合卖单」
-- 点一笔**卖单**，确认撮合 → 看到合并动画 → 跳到队列页，看到一条 `queued` 的交易
+- 池子里**每一笔单都能撮合**（撮合只有「席位得开通」这一条规则，买方席位种子里是开通的）
+- 确认撮合 → 看到合并动画 → 跳到队列页，看到一条 `queued` 的交易
 - 等 8 秒，池子顶部滑入一笔新单
 
 - [ ] **Step 6: 验证并提交**
@@ -1698,7 +1552,7 @@ export function useStreamingChecks(checks: RiskCheck[], enabled: boolean) {
 
 `ReasoningPanel.tsx` 接受 `{ tx }`。逻辑：
 
-1. `const risk = tx.risk ?? assessRisk(tx, myDesk)`
+1. `const risk = tx.risk ?? assessRisk(tx)`
 2. `const { revealed, done } = useStreamingChecks(risk.checks, tx.status === 'validating')`
 3. 渲染标题「风控推理」+ 一个脉动的小点表示进行中
 4. 逐条渲染 `revealed`：左侧图标（`pass` 薄荷绿 ✓ / `warn` 橙 ⚠ / `fail` 红 ✗）、中间 `label`、右侧 `detail`。每条以 `animate-[fadeUp_.35s_ease-out]` 进入
@@ -1793,7 +1647,7 @@ git commit -m "feat(demo): 队列页与 AI 流式风控推理面板"
 ```
 1. 开通席位  →  完成实名，获得席位编号
 2. 池中撮合  →  从订单池选一笔对手单，系统自动成交
-3. 风控校验  →  六项检查加权评分，低于阈值要求补充材料
+3. 风控校验  →  六项检查综合评分，低于阈值要求补充材料
 4. 结算完成  →  双方确认，交易归档
 ```
 
@@ -1801,9 +1655,9 @@ git commit -m "feat(demo): 队列页与 AI 流式风控推理面板"
 
 - [ ] **Step 3: 手动核对**
 
-- 卖方席位初始是未开通的，去订单池点一笔**买单**，抽屉提示「请先开通卖方席位」，按钮变成「去开通席位」并能跳到席位页
-- 在席位页开通卖方席位，回订单池再点那笔买单，这次能撮合
-- 制造一笔被挡的交易（撮合评分较低的对手方），去挑战页补材料重提交，回队列页看到它重跑推理且分数提高
+- 卖方席位初始是未开通的，卡片是虚线灰底态，填名称点「开通席位」后翻转成已开通态
+- 撮合若干笔，直到出现一笔 `challenged` 的（分数落在 50–69 区间），去挑战页补材料重提交，回队列页看到它重跑推理且分数提高（`resubmits` 加 15 分）
+- 底部四步生命周期解说排版正常，序号圆点对齐
 
 - [ ] **Step 4: 验证并提交**
 
@@ -1882,7 +1736,7 @@ git commit -m "feat(demo): 风控挡单页与我的席位页"
 npm run build && npm test
 ```
 
-预期：构建通过；测试不低于 25 文件 / 153 通过。
+预期：构建通过；测试不低于 25 文件 / 147 通过。
 
 ```bash
 npm run preview
@@ -1902,7 +1756,7 @@ git commit -m "feat(demo): 概览页与文档"
 ## 收尾检查
 
 - [ ] `git status --short` 无输出
-- [ ] `npm test` 不低于 25 文件 / 153 通过
+- [ ] `npm test` 不低于 25 文件 / 147 通过
 - [ ] `npm run build` 成功，`dist/index.html`、`dist/desk.html`、`dist/app/index.html` 齐全
 - [ ] 落地页 → `/app/login` → 一键进入 → 五个页面全部可达
 - [ ] 撮合三笔不同的单，AI 检查项数值和结论各不相同

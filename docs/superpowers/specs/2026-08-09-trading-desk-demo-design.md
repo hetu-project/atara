@@ -152,43 +152,36 @@ interface Challenge {
 
 ## 三个引擎（纯函数，各配单测）
 
-Demo 最容易烂成一堆写死的假数据加定时器。核心逻辑做成纯函数，UI 只负责渲染它们的输出。这既是可测性的来源，也是「换一笔单结果就不同」的来源。
+**刻意写得很薄。** 这是 Demo，没有人会去核验规则是否合理，把风控写成一套真的加权模型只是在增加会出错的代码。引擎存在的意义只有两个：让屏幕上的数字和结论**互相对得上**，以及让**不同的单看起来不一样**。除此之外一条业务规则都不加。
 
 ### `matching.ts`
 
 ```ts
-matchOrder(myDesk: Desk, order: PoolOrder): { ok: true } | { ok: false; reason: string }
+matchOrder(myDesk: Desk): { ok: true } | { ok: false; reason: string }
 ```
 
-拒绝规则，按优先级：
+**只有一条规则**：席位未开通（`verifiedAt === null`）就不能撮合，提示「请先开通{买方|卖方}席位」。
 
-1. 席位未开通（`verifiedAt === null`）→ 「请先开通{买方|卖方}席位」
-2. 方向不互补（买方席位只能吃 `side === 'sell'` 的单）→ 「买方席位只能撮合卖单」
-3. 挂单已过期（`expiresAt < now`）→ 「该挂单已过期」
-4. 对手方就是自己（`displayId` 相同）→ 「不能撮合自己的挂单」
+方向互补、挂单过期、自成交这些统统不做 —— 订单池里的每一笔单都可以撮合。保留这一条是因为它给「我的席位」页一个存在的理由，并且在抽屉里能引出一个「去开通席位」的跳转，成本三行。
 
 ### `riskEngine.ts`
 
 ```ts
-assessRisk(tx: Transaction, myDesk: Desk): RiskResult
+assessRisk(tx: Transaction): RiskResult
 ```
 
-六项检查，每项有权重，加权得分决定裁决：
+**先由种子定分数，再倒推出几条好看的检查项** —— 不是先算检查再加权得分。这个顺序反过来是有意的：它保证画面上的结论永远自洽（分数低就一定能看到问题项），而且代码量只有加权模型的三分之一。
 
-| 检查 | 判定依据 | 权重 |
-|---|---|---|
-| 席位实名状态 | `counterparty.verified` | 20 |
-| 对手方历史成交 | `completedTrades` 与 `disputes` 之比 | 25 |
-| 链上地址制裁筛查 | 由交易 id 种子决定（约 5% 命中） | 20 |
-| 金额异常检测 | `fiatTotal` 与该席位历史均值之比 | 15 |
-| 对手方响应时效 | `avgResponseMin` | 10 |
-| 账户存续时长 | `firstSeenAt` 距今天数 | 10 |
+1. `score = 45 + floor(rand() * 55) + resubmits * 15`，上限 100
+2. 按分数决定有几项不合格：`≥85` 全过；`≥70` 一项警告；`≥50` 两项警告；`<50` 三项，其中一项为 fail
+3. 从六个固定检查项里按种子挑出这几项标记为问题项，其余为通过
+4. 每项的 detail 文案从模板生成，数字由种子填充（成交笔数、响应分钟、存续天数、金额倍数）
 
 裁决：`score >= 70` → pass；`50 <= score < 70` → challenge；`< 50` → decline。
 
-任何一项 `fail` 直接 decline，不论总分 —— 制裁命中不该被高分洗掉。
+六个检查项是固定的：核对席位实名状态、拉取对手方历史成交、链上地址制裁名单筛查、金额异常检测、对手方响应时效、账户存续时长。
 
-伪随机一律用 `seededRandom(tx.id + checkId)`，保证同一笔单结果稳定。
+伪随机一律用 `seededRandom(tx.id)`，保证同一笔单反复查看结果一致。
 
 ### `queueMachine.ts`
 
@@ -291,7 +284,7 @@ passed / declined                          // 终态
 
 ## 测试
 
-- 三个引擎各配单测：`matching`（4 条拒绝规则 + 正常路径）、`riskEngine`（六项检查的边界、fail 直接 decline、种子稳定性）、`queueMachine`（全部合法转换 + 非法转换返回 null）。
+- 三个引擎各配单测：`matching`（唯一那条规则的两侧）、`riskEngine`（分数落在 0..100、种子稳定、六项检查、分数与裁决自洽、补材料后加分）、`queueMachine`（全部合法转换 + 非法转换返回 null）。测试只钉住「屏幕上不会出现自相矛盾的东西」，不去验证任何业务规则的合理性 —— 那些规则本来就是编的。
 - 现有 132 个测试保持通过。
 - `src/__tests__/landingEntry.test.ts` 保持通过。
 - `npm run build` 通过（`tsc -b` 严格模式，开了 `noUnusedLocals` / `noUnusedParameters`）。
