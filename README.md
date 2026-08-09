@@ -22,6 +22,10 @@ npm run dev
 
 ## Supabase 接入（四步）
 
+> 当前 `/app` 跑的是纯前端演示，**不需要 Supabase 也能完整运行**。下面这节是给
+> 把真实应用接回来时用的（见上面「应用（演示模式）」章节末尾）。
+
+
 1. 到 [supabase.com](https://supabase.com) 新建一个项目，记下数据库密码。
 2. 打开项目的 **SQL Editor**，把 `supabase/migrations/0001_init.sql` 全文粘贴进去执行。
    执行成功后在 **Table Editor** 应能看到 `counterparties`、`orders`、`order_status_logs`、
@@ -53,6 +57,41 @@ npm run dev
 
    若 `npm run dev` 已经在跑，改完 `.env` 后必须重启它 —— Vite 只在启动时读取
    `import.meta.env`，不重启会看到 client 初始化失败。
+
+## 应用（演示模式）
+
+`/app` 下是订单池撮合的演示，**纯前端，不连数据库**：
+
+| 路由 | 页面 |
+|---|---|
+| `/app/login` · `/app/register` | 一键进入，任意输入即可 |
+| `/app/overview` | 概览 |
+| `/app/pool` | 订单池，从中撮合挂单 |
+| `/app/queue` | 队列，AI 风控推理 |
+| `/app/challenges` | 风控挡单，补材料重提交 |
+| `/app/desk` | 我的买方 / 卖方席位 |
+
+**风控推理不调用任何 AI 服务，也不发网络请求。** 结论由 `src/demo/engine/riskEngine.ts`
+本地算出，UI 按节奏逐条显示。做成引擎而非写死文案，是为了让不同的单跑出不同的
+检查数值和结论 —— 撮合十笔不会弹十遍相同台词。
+
+三个引擎都刻意写得很薄，各自配了单测：
+
+| 文件 | 职责 |
+|---|---|
+| `engine/matching.ts` | 能否撮合。**只有一条规则**：席位得先开通 |
+| `engine/riskEngine.ts` | 先由种子定分数，再倒推出几条问题项 |
+| `engine/queueMachine.ts` | `queued → validating → passed / challenged / declined` |
+
+测试只钉住「屏幕上不会自相矛盾」（分数与裁决一致、放行的单不出现 fail、同一笔单
+反复看结果不变），不去验证业务规则是否合理 —— 那些规则本来就是编的。
+
+状态存在 sessionStorage，刷新不丢，关掉标签页即重置。所有伪随机用
+`seededRandom(种子)` 而非 `Math.random()`，否则重新渲染会让分数跳变，一眼穿帮。
+
+原先接 Supabase 的真实应用代码保留在 `src/features/`、`src/lib/supabase.ts`、
+`src/layouts/`，但不再挂路由，也已从 `src/App.tsx` 摘除（留着会在挂载时拉起
+Supabase 客户端并发网络请求）。要接回来改 `src/routes.tsx` 和 `src/App.tsx` 即可。
 
 ## 落地页
 

@@ -1,3 +1,4 @@
+import { challengeFromRisk } from './engine/challenge';
 import { assessRisk } from './engine/riskEngine';
 import { seededRandom } from './random';
 import type { Challenge, Counterparty, DemoState, PoolOrder, Transaction, TxStatus } from './types';
@@ -108,29 +109,19 @@ function seedTransactions(now: number): { transactions: Transaction[]; challenge
     transactions.push({ ...draft, status, risk });
 
     if (status === 'challenged') {
-      const flaw = risk.checks.find((c) => c.status !== 'pass');
-      challenges.push({
-        id: `ch_seed_${i}`,
-        txId: draft.id,
-        reason: flaw ? `${flaw.label}：${flaw.detail}` : '风控评分低于阈值',
-        required: flaw ? SEED_REQUIRED[flaw.id] : ['补充交易背景说明'],
-        state: 'open',
-        openedAt: new Date(now - (i + 1) * 2_300_000).toISOString(),
-      });
+      challenges.push(
+        challengeFromRisk(
+          `ch_seed_${i}`,
+          draft.id,
+          risk,
+          new Date(now - (i + 1) * 2_300_000).toISOString(),
+        ),
+      );
     }
   }
 
   return { transactions, challenges };
 }
-
-const SEED_REQUIRED: Record<string, string[]> = {
-  kyc: ['对手方实名证件', '席位授权书'],
-  history: ['近三个月成交流水', '争议处理说明'],
-  sanctions: ['地址归属说明', '合规意见书'],
-  amount: ['资金来源证明', '交易背景说明'],
-  response: ['联系人确认函'],
-  tenure: ['账户开立证明'],
-};
 
 export function createSeedState(): DemoState {
   const now = Date.now();

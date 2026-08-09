@@ -5,6 +5,7 @@ import FilterBar from '@/demo/components/FilterBar';
 import KpiTile from '@/demo/components/KpiTile';
 import ReasoningPanel from '@/demo/components/ReasoningPanel';
 import StatusBadge from '@/demo/components/StatusBadge';
+import { challengeFromRisk } from '@/demo/engine/challenge';
 import { assessRisk } from '@/demo/engine/riskEngine';
 import { nextStatus } from '@/demo/engine/queueMachine';
 import { fmtAmount, fmtFiat, fmtTime } from '@/demo/format';
@@ -21,16 +22,6 @@ const COLUMNS: Column[] = [
   { key: 'amount', label: '金额', width: '18%', align: 'right' },
   { key: 'cp', label: '对手方', width: '20%' },
 ];
-
-/** 挑战要求补充的材料，按第一条非 pass 的检查项给。 */
-const REQUIRED: Record<string, string[]> = {
-  kyc: ['对手方实名证件', '席位授权书'],
-  history: ['近三个月成交流水', '争议处理说明'],
-  sanctions: ['地址归属说明', '合规意见书'],
-  amount: ['资金来源证明', '交易背景说明'],
-  response: ['联系人确认函'],
-  tenure: ['账户开立证明'],
-};
 
 export default function QueuePage() {
   const { state, dispatch } = useDemo();
@@ -74,17 +65,14 @@ export default function QueuePage() {
           dispatch({ type: 'setTxStatus', txId: t.id, status: next });
 
           if (risk.verdict === 'challenge') {
-            const flaw = risk.checks.find((c) => c.status !== 'pass');
             dispatch({
               type: 'openChallenge',
-              challenge: {
-                id: `ch_${t.id}_${t.resubmits}`,
-                txId: t.id,
-                reason: flaw ? `${flaw.label}：${flaw.detail}` : '风控评分低于阈值',
-                required: (flaw && REQUIRED[flaw.id]) ?? ['补充交易背景说明'],
-                state: 'open',
-                openedAt: new Date().toISOString(),
-              },
+              challenge: challengeFromRisk(
+                `ch_${t.id}_${t.resubmits}`,
+                t.id,
+                risk,
+                new Date().toISOString(),
+              ),
             });
           }
         }, streamingDurationMs(risk.checks.length)),
