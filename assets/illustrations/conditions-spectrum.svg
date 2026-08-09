@@ -77,15 +77,12 @@
     <text x="536" y="206" fill="#fbfaf6" opacity=".88">HARD TO DEFINE</text>
   </g>
 
-  <!-- the questions the mass cannot answer, thickening toward the tip -->
-  <g fill="#9b9488" font-family="Inter,system-ui,sans-serif" font-weight="400" text-anchor="middle">
-    <text x="512" y="130" font-size="26" opacity=".38" class="q1">?</text>
-    <text x="628" y="112" font-size="34" opacity=".46" class="q2">?</text>
-    <text x="742" y="126" font-size="28" opacity=".40" class="q3">?</text>
-    <text x="556" y="314" font-size="30" opacity=".42" class="q2">?</text>
-    <text x="660" y="300" font-size="24" opacity=".34" class="q1">?</text>
-    <text x="836" y="120" font-size="40" opacity=".50" class="q3">?</text>
-    <text x="744" y="316" font-size="30" opacity=".40" class="q2">?</text>
+  <!-- three is enough to say the questions have nowhere to land; seven
+       reads as decoration and starts competing with the labels -->
+  <g fill="#9b9488" font-family="Inter,system-ui,sans-serif" text-anchor="middle">
+    <text x="528" y="118" font-size="30" opacity=".40" class="q1">?</text>
+    <text x="748" y="124" font-size="42" opacity=".46" class="q3">?</text>
+    <text x="632" y="308" font-size="26" opacity=".34" class="q2">?</text>
   </g>
 
   <g font-family="Inter,system-ui,sans-serif" font-size="16" fill="#8a8478">
