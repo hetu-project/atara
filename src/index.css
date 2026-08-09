@@ -80,6 +80,16 @@
   }
 }
 
+/* 队列行的校验进度条 */
+@keyframes grow {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
 /* 撮合动画：两张卡从左右向中间汇聚，合并处闪一下薄荷绿 */
 @keyframes mergeLeft {
   0% {

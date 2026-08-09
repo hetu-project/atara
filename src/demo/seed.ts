@@ -1,5 +1,6 @@
+import { assessRisk } from './engine/riskEngine';
 import { seededRandom } from './random';
-import type { Counterparty, DemoState, PoolOrder } from './types';
+import type { Challenge, Counterparty, DemoState, PoolOrder, Transaction, TxStatus } from './types';
 
 const NAMES = [
   'Meridian Capital',
@@ -72,14 +73,76 @@ export function makePoolOrder(i: number, now = Date.now()): PoolOrder {
   };
 }
 
+/**
+ * 预置一批历史交易。没有它的话，首次进入时队列和概览全是 0，页面看起来是死的
+ * ——那正是我们要避免的空账号观感。
+ *
+ * 这些交易的状态直接取自各自 risk 的裁决，所以屏幕上不会出现「评分 91 却被拒绝」
+ * 这种自相矛盾。它们都已是终态，不会触发队列页的自动推进。
+ */
+function seedTransactions(now: number): { transactions: Transaction[]; challenges: Challenge[] } {
+  const transactions: Transaction[] = [];
+  const challenges: Challenge[] = [];
+
+  for (let i = 0; i < 9; i++) {
+    const order = makePoolOrder(500 + i, now);
+    const draft: Transaction = {
+      id: `tx_seed_${i}`,
+      poolOrderId: order.id,
+      side: 'buy',
+      asset: order.asset,
+      amount: order.amount,
+      fiatTotal: order.fiatTotal,
+      fiatCurrency: order.fiatCurrency,
+      counterparty: order.counterparty,
+      status: 'validating',
+      createdAt: new Date(now - (i + 1) * 2_400_000).toISOString(),
+      risk: null,
+      resubmits: 0,
+    };
+
+    const risk = assessRisk(draft);
+    const status: TxStatus =
+      risk.verdict === 'pass' ? 'passed' : risk.verdict === 'challenge' ? 'challenged' : 'declined';
+
+    transactions.push({ ...draft, status, risk });
+
+    if (status === 'challenged') {
+      const flaw = risk.checks.find((c) => c.status !== 'pass');
+      challenges.push({
+        id: `ch_seed_${i}`,
+        txId: draft.id,
+        reason: flaw ? `${flaw.label}：${flaw.detail}` : '风控评分低于阈值',
+        required: flaw ? SEED_REQUIRED[flaw.id] : ['补充交易背景说明'],
+        state: 'open',
+        openedAt: new Date(now - (i + 1) * 2_300_000).toISOString(),
+      });
+    }
+  }
+
+  return { transactions, challenges };
+}
+
+const SEED_REQUIRED: Record<string, string[]> = {
+  kyc: ['对手方实名证件', '席位授权书'],
+  history: ['近三个月成交流水', '争议处理说明'],
+  sanctions: ['地址归属说明', '合规意见书'],
+  amount: ['资金来源证明', '交易背景说明'],
+  response: ['联系人确认函'],
+  tenure: ['账户开立证明'],
+};
+
 export function createSeedState(): DemoState {
+  const now = Date.now();
+  const seeded = seedTransactions(now);
+
   return {
     desks: {
       buy: {
         kind: 'buy',
         displayId: 'D000001',
         name: '我的买方席位',
-        verifiedAt: new Date(Date.now() - 86400_000 * 96).toISOString(),
+        verifiedAt: new Date(now - 86400_000 * 96).toISOString(),
         completedTrades: 34,
         disputes: 0,
         avgResponseMin: 4,
@@ -96,8 +159,8 @@ export function createSeedState(): DemoState {
         avgResponseMin: 0,
       },
     },
-    pool: Array.from({ length: 40 }, (_, i) => makePoolOrder(i)),
-    transactions: [],
-    challenges: [],
+    pool: Array.from({ length: 40 }, (_, i) => makePoolOrder(i, now)),
+    transactions: seeded.transactions,
+    challenges: seeded.challenges,
   };
 }
