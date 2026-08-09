@@ -1,6 +1,9 @@
 # advaita-web
 
-买卖家档案与订单管理后台。React + Vite + Tailwind + Supabase。
+Atara —— 落地页 + 订单池撮合演示后台。React + Vite + Tailwind。
+
+根路径是静态落地页，`/app` 是应用。应用当前跑纯前端演示，不连数据库；
+原先接 Supabase 的实现保留在仓库里但未挂路由。
 
 ## 本地运行
 
@@ -16,15 +19,14 @@ npm run dev
 |---|---|
 | `http://localhost:5173/` | Atara 落地页（静态） |
 | `http://localhost:5173/desk.html` | Settlement desk（静态） |
-| `http://localhost:5173/app/` | 运营后台（React 应用） |
+| `http://localhost:5173/app/` | 撮合演示后台（React 应用） |
 
 落地页导航栏的 **Sign in** / **Get started** 直接进应用。
 
 ## Supabase 接入（四步）
 
 > 当前 `/app` 跑的是纯前端演示，**不需要 Supabase 也能完整运行**。下面这节是给
-> 把真实应用接回来时用的（见上面「应用（演示模式）」章节末尾）。
-
+> 把真实应用接回来时用的（见下面「应用（演示模式）」章节末尾）。
 
 1. 到 [supabase.com](https://supabase.com) 新建一个项目，记下数据库密码。
 2. 打开项目的 **SQL Editor**，把 `supabase/migrations/0001_init.sql` 全文粘贴进去执行。
@@ -124,7 +126,7 @@ dist/assets/           →  构建产物 + 14 个 logo
 ```
 
 **宿主必须配一条 rewrite 规则**：`/app/*` 下所有未命中静态文件的请求都返回
-`dist/app/index.html`，否则用户刷新 `/app/orders` 会 404。这是客户端路由的常规要求，
+`dist/app/index.html`，否则用户刷新 `/app/queue` 会 404。这是客户端路由的常规要求，
 但因为应用不在根路径，默认的 SPA 模板通常不覆盖这种情况。
 
 本地 `npm run dev` 和 `npm run preview` 由 `vite.config.ts` 里的
@@ -169,4 +171,6 @@ SPA：没有 loader、没有 action、没有 server，不会触发这个漏洞�
 - 实施计划：`docs/superpowers/plans/2026-08-06-advaita-web.md`
 - 自助注册设计文档：`docs/superpowers/specs/2026-08-06-self-registration-design.md`
 - 自助注册实施计划：`docs/superpowers/plans/2026-08-06-self-registration.md`
+- 落地页合并设计与计划：`docs/superpowers/specs/2026-08-07-landing-page-merge-design.md`、`docs/superpowers/plans/2026-08-07-landing-page-merge.md`
+- 撮合演示设计与计划：`docs/superpowers/specs/2026-08-09-trading-desk-demo-design.md`、`docs/superpowers/plans/2026-08-09-trading-desk-demo.md`
 - 交付说明（含手工验收清单，务必在上线前跑一遍）：`docs/HANDOFF.md`
