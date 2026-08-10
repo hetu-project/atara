@@ -707,7 +707,11 @@
       const th=p.th+spin, sp=Math.sin(p.ps);
       const x=Math.cos(th)*sp, y=Math.cos(p.ps), z=Math.sin(th)*sp;
       const k=.62+.38*((z+1)/2);              /* nearer is bigger, brighter */
-      return {x:CX+x*.30*k, y:CY+y*.34*k, k};
+      /* the card is wider than it is tall and the coordinates are
+         normalised per axis, so an equal radius on both would draw an
+         ellipse. Scale x by the inverse aspect to keep it round. */
+      const R=.34, ar=H?W/H:1.7;
+      return {x:CX+x*(R/ar)*k, y:CY+y*R*k, k};
     };
     const posB=p=>{const s=sphere(p);p.tx=s.x;p.ty=s.y;p.kk=s.k;};
     /* one estimate: everything collapses onto a single narrow column.
