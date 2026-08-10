@@ -21,14 +21,15 @@ const router = createBrowserRouter(
     {
       element: <DemoLayout />,
       children: [
-        { path: '/', element: <Navigate to="/overview" replace /> },
+        { path: '/', element: <Navigate to="/quick" replace /> },
+        // 智能总览不挂在侧边栏里，只保留路由（直接输 URL 仍可访问）
         { path: '/overview', element: <OverviewPage /> },
         { path: '/quick', element: <QuickTradePage /> },
         { path: '/pool', element: <OrderPoolPage /> },
         { path: '/trades', element: <QueuePage /> },
         { path: '/todo', element: <ChallengesPage /> },
         { path: '/desk', element: <DeskPage /> },
-        { path: '*', element: <Navigate to="/overview" replace /> },
+        { path: '*', element: <Navigate to="/quick" replace /> },
       ],
     },
   ],

@@ -26,7 +26,7 @@ export default function DemoAuthPage({
 
   function enter() {
     signInDemo();
-    navigate('/overview', { replace: true });
+    navigate('/quick', { replace: true });
   }
 
   return (

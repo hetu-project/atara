@@ -16,7 +16,6 @@ const NAV = [
   {
     group: '账户中心',
     items: [
-      { to: '/overview', label: '智能总览' },
       { to: '/trades', label: 'AI 审核记录' },
       { to: '/todo', label: '待我确认' },
       { to: '/desk', label: '我的账户' },
