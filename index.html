@@ -179,7 +179,7 @@
     background:#fff;box-shadow:var(--ring),var(--lift)}
   .protocol-figure img{display:block;width:100%;height:auto}
 
-  .engine-section{position:relative;height:340svh;background:#fff;color:var(--white)}
+  .engine-section{position:relative;height:340svh;background:#0a0c1e;color:var(--white)}
   .engine-sticky{position:sticky;top:0;height:100svh;display:grid;place-items:center;
     padding:clamp(1.5rem,4vh,3rem) var(--pad)}
   /* the field is a card with edges, not a wash across the whole viewport:
@@ -187,9 +187,9 @@
      background that happened to be there */
   .engine-card{position:relative;width:min(100%,var(--maxw));height:100%;
     max-height:clamp(30rem,78vh,46rem);
-    border-radius:20px;overflow:hidden;background:#0a0c1e;
-    box-shadow:0 0 0 1px oklch(97% .018 264 / .14),
-               0 40px 80px -40px oklch(6% .08 267 / .75);
+    border-radius:20px;overflow:hidden;background:#12152c;
+    box-shadow:0 0 0 1px oklch(97% .018 264 / .12),
+               0 40px 80px -40px oklch(4% .06 267 / .8);
     display:flex;align-items:flex-end}
   .engine-card::before{
     content:"";position:absolute;inset:0;z-index:1;opacity:.1;pointer-events:none;
@@ -200,7 +200,7 @@
   /* the copy gets a bed from below, not a wall down the middle */
   .engine-card::after{
     content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-    background:linear-gradient(0deg,#0a0c1e 6%,rgba(10,12,30,.9) 26%,rgba(10,12,30,.45) 46%,transparent 66%);
+    background:linear-gradient(0deg,#12152c 6%,rgba(18,21,44,.92) 26%,rgba(18,21,44,.48) 46%,transparent 66%);
   }
   .engine-stage{position:relative;z-index:2;width:100%;padding:0 clamp(1.75rem,4vw,3.25rem) clamp(2rem,5vh,3.25rem)}
   .engine-stage h2{margin:0;max-width:24ch;font-size:var(--t-head);font-weight:400;line-height:1.14;letter-spacing:-.026em}
@@ -229,12 +229,23 @@
 
   /* the map: what goes in and what comes out. The field above shows the
      act of pricing; this shows the interface. Both earn their place. */
-  .model-map{display:grid;grid-template-columns:minmax(0,1fr) minmax(12rem,.72fr) minmax(0,1fr);gap:clamp(2rem,5vw,5rem);align-items:center;padding-block:2rem;border-top:1px solid oklch(97% .018 264 / .16);border-bottom:1px solid oklch(97% .018 264 / .16)}
+  .model-map{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(12rem,.72fr) minmax(0,1fr);gap:clamp(2rem,5vw,5rem);align-items:center;padding-block:2rem;border-top:1px solid oklch(97% .018 264 / .16);border-bottom:1px solid oklch(97% .018 264 / .16)}
+  .model-wires{position:absolute;inset:0;width:100%;height:100%;z-index:0;
+    pointer-events:none;overflow:visible}
+  .model-wires path{fill:none}
+  .model-wires .w{stroke:oklch(97% .018 264 / .16);stroke-width:1}
+  /* sparse dashes creeping along every wire, one fixed period so a single
+     loop distance works for all seven regardless of their length */
+  .model-wires .s{stroke:oklch(97% .018 264 / .34);stroke-width:1;stroke-linecap:round;
+    stroke-dasharray:3 26;animation:wireShim 9s linear infinite}
+  @keyframes wireShim{to{stroke-dashoffset:-290px}}
+  .model-wires .port{fill:oklch(97% .018 264 / .35)}
+  .model-col,.model-core{position:relative;z-index:1}
   .model-col{display:grid}.model-node{position:relative;min-height:4.8rem;padding:1rem 0;border-bottom:1px solid oklch(97% .018 264 / .13);opacity:.42;transition:opacity .4s linear}.model-node:first-child{border-top:1px solid oklch(97% .018 264 / .13)}.model-node.is-live{opacity:1}.model-node b{display:block;font-size:.9375rem;font-weight:500}.model-node span{display:block;margin-top:.28rem;font-size:.8125rem;line-height:1.4;color:oklch(72% .02 267)}
   .model-core{display:grid;place-items:center;aspect-ratio:1;border:1px solid oklch(97% .018 264 / .22);background:oklch(21% .035 267);text-align:center;transition:border-color .4s linear}.model-core.is-computing{border-color:var(--signal)}.model-core span{font-size:.75rem;color:oklch(72% .02 267)}.model-core b{display:block;margin-top:.55rem;font-size:clamp(1.25rem,2vw,1.75rem);font-weight:400;line-height:1.2;letter-spacing:-.03em;color:var(--signal)}.model-core i{display:block;width:.4rem;height:.4rem;margin:1rem auto 0;background:var(--signal);animation:corePulse 1.4s linear infinite alternate}@keyframes corePulse{to{opacity:.2}}
 
   /* the argument, after the mechanism has finished playing */
-  .engine-points{position:relative;background:#0a0c1e;border-radius:20px;color:var(--white);
+  .engine-points{position:relative;background:#0a0c1e;color:var(--white);
     padding-block:clamp(3rem,6vh,5rem) var(--gap-section)}
   .engine-points .model-points{margin-top:clamp(3rem,6vw,5rem)}
   .model-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(1.5rem,3vw,2.75rem)}
@@ -284,6 +295,7 @@
   @media(hover:none),(pointer:coarse){.btn,.nav-start{min-height:44px}}
   @media(prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+    .model-wires .s{animation:none}
     .logo-track{animation:none;flex-wrap:wrap;width:auto}.reveal{opacity:1;transform:none}
   }
 </style>
@@ -439,6 +451,7 @@
   <section class="engine-points">
     <div class="wrap">
       <div class="model-map reveal" id="modelMap" aria-label="Evidence inputs enter an AI model and determine payment terms">
+        <svg class="model-wires" id="modelWires" aria-hidden="true"></svg>
         <div class="model-col model-inputs">
           <div class="model-node"><b>Settlement history</b><span>Delivered, late, or defaulted</span></div>
           <div class="model-node"><b>Dispute outcomes</b><span>Who was found at fault</span></div>
@@ -728,9 +741,9 @@
       /* a deep backdrop with a centre, so the field falls away at the edges
          instead of stopping at a rectangle */
       const bg=ctx.createRadialGradient(CX*W,CY*H,0,CX*W,CY*H,Math.max(W,H)*.78);
-      bg.addColorStop(0,'#161a3a');
-      bg.addColorStop(.55,'#0e1129');
-      bg.addColorStop(1,'#080a1c');
+      bg.addColorStop(0,'#1b1f45');
+      bg.addColorStop(.55,'#141831');
+      bg.addColorStop(1,'#0e1128');
       ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
 
       const pale=[],lit=[],bad=[];
@@ -842,6 +855,76 @@
         .observe(engineSection);
       setEngineMode(0);updateEngineScroll();
     }
+  }
+
+  /* ── the model map ───────────────────────────────────────────────
+     Evidence in, one estimate, terms out. The wires are generated from
+     where the rows actually landed rather than authored as fixed path
+     data: the columns are fluid, so any hand-drawn curve would be
+     correct at exactly one viewport width. Rebuilt on resize. */
+  const modelMap=document.getElementById('modelMap');
+  if(modelMap){
+    const modelCore=document.getElementById('modelCore');
+    const modelWires=document.getElementById('modelWires');
+    const inputNodes=[...modelMap.querySelectorAll('.model-inputs .model-node')];
+    const outputNodes=[...modelMap.querySelectorAll('.model-outputs .model-node')];
+    const NS='http://www.w3.org/2000/svg';
+
+    let wireW=0,wireH=0;
+    const buildWires=()=>{
+      if(!modelWires||!modelCore)return;
+      const box=modelMap.getBoundingClientRect(),o=modelCore.getBoundingClientRect();
+      if(!box.width||!o.width)return;
+      if(Math.abs(box.width-wireW)<1&&Math.abs(box.height-wireH)<1)return;
+      wireW=box.width;wireH=box.height;
+      modelWires.innerHTML='';
+      modelWires.setAttribute('viewBox','0 0 '+box.width+' '+box.height);
+      const midY=o.top-box.top+o.height/2;
+      const hubL={x:o.left-box.left-10,y:midY};
+      const hubR={x:o.right-box.left+10,y:midY};
+      const arc=(a,b)=>{const dx=Math.max(30,(b.x-a.x)*.5);
+        return 'M'+a.x+' '+a.y+' C'+(a.x+dx)+' '+a.y+' '+(b.x-dx)+' '+b.y+' '+b.x+' '+b.y;};
+      const add=(a,b)=>{
+        const d=arc(a,b);
+        ['w','s'].forEach(cls=>{
+          const path=document.createElementNS(NS,'path');
+          path.setAttribute('d',d);path.setAttribute('class',cls);
+          if(cls==='s')path.style.animationDelay=(-Math.random()*9).toFixed(2)+'s';
+          modelWires.appendChild(path);
+        });
+        [a,b].forEach(pt=>{
+          const c=document.createElementNS(NS,'circle');
+          c.setAttribute('cx',pt.x);c.setAttribute('cy',pt.y);
+          c.setAttribute('r','2.5');c.setAttribute('class','port');
+          modelWires.appendChild(c);
+        });
+      };
+      const port=(node,side)=>{const r=node.getBoundingClientRect();
+        return {x:(side==='right'?r.right:r.left)-box.left,y:r.top-box.top+r.height/2};};
+      inputNodes.forEach(n=>add(port(n,'right'),hubL));
+      outputNodes.forEach(n=>add(hubR,port(n,'left')));
+    };
+    buildWires();
+    if(document.fonts&&document.fonts.ready)document.fonts.ready.then(buildWires);
+    if('ResizeObserver' in window)new ResizeObserver(buildWires).observe(modelMap);
+    else addEventListener('resize',buildWires);
+
+    /* one pass: evidence lights, the core computes, terms follow */
+    let modelTimer=0,modelStep=0;
+    const paintModel=()=>{
+      inputNodes.forEach((node,i)=>node.classList.toggle('is-live',i<=modelStep));
+      modelCore.classList.toggle('is-computing',modelStep>=4&&modelStep<7);
+      outputNodes.forEach((node,i)=>node.classList.toggle('is-live',modelStep>=5+i));
+      modelStep=(modelStep+1)%10;
+      if(modelStep===0){
+        inputNodes.concat(outputNodes).forEach(n=>n.classList.remove('is-live'));
+        modelCore.classList.remove('is-computing');
+      }
+    };
+    const startModel=()=>{if(modelTimer||reduced)return;modelStep=0;paintModel();modelTimer=setInterval(paintModel,650);};
+    const stopModel=()=>{clearInterval(modelTimer);modelTimer=0;};
+    if(reduced)inputNodes.concat(outputNodes).forEach(n=>n.classList.add('is-live'));
+    else new IntersectionObserver(([e])=>e.isIntersecting?startModel():stopModel(),{threshold:.15}).observe(modelMap);
   }
 })();
 </script>
