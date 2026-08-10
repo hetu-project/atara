@@ -1,92 +1,43 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 344" role="img" aria-label="One thick arrow runs from conditions a machine can read, such as a bank receipt, into a region that is hard to define, where insurance claims, ad conversion, outsourced delivery and service acceptance sit and nobody can settle the condition">
-  <defs>
-    <!-- the arrow leaves the brand and drains into grey as it travels -->
-    <linearGradient id="drain" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0"   stop-color="#2518eb"/>
-      <stop offset=".22" stop-color="#3a30e0"/>
-      <stop offset=".48" stop-color="#9298b8"/>
-      <stop offset=".72" stop-color="#c3c7d2"/>
-      <stop offset="1"   stop-color="#d4d7de"/>
-    </linearGradient>
-    <!-- a little form, so the mass is not a flat sticker -->
-    <linearGradient id="form" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0"  stop-color="#fff" stop-opacity=".16"/>
-      <stop offset=".5" stop-color="#fff" stop-opacity="0"/>
-      <stop offset="1"  stop-color="#000" stop-opacity=".07"/>
-    </linearGradient>
-
-    <!-- crisp while the condition is crisp: opaque, then handed over -->
-    <linearGradient id="mCrisp" x1="0" y1="0" x2="1" y2="0">
-      <stop offset=".46" stop-color="#fff"/>
-      <stop offset=".62" stop-color="#000"/>
-    </linearGradient>
-    <!-- and only the soft copy past that point, so nothing doubles up -->
-    <linearGradient id="mSoft" x1="0" y1="0" x2="1" y2="0">
-      <stop offset=".46" stop-color="#000"/>
-      <stop offset=".62" stop-color="#fff"/>
-      <stop offset=".88" stop-color="#e2e2e2"/>
-      <stop offset="1"   stop-color="#8f8f8f"/>
-    </linearGradient>
-    <mask id="crisp"><rect width="960" height="344" fill="url(#mCrisp)"/></mask>
-    <mask id="soft"><rect width="960" height="344" fill="url(#mSoft)"/></mask>
-    <filter id="blur" x="-12%" y="-30%" width="124%" height="160%">
-      <feGaussianBlur stdDeviation="6.5"/>
-    </filter>
-    <path id="arrow" d="M28.0 166L774.0 152L774.0 106L936.0 198L774.0 290L774.0 244L28.0 230Z"/>
-  </defs>
-
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 260" role="img" aria-label="A bank receipt sits in the narrow band of conditions a machine can read. Insurance claims, ad conversion, outsourced delivery and service acceptance all fall in the much wider band where somebody has to rule.">
   <style>
-    .q1{animation:drift 9s ease-in-out -2s infinite alternate}
-    .q2{animation:drift 11s ease-in-out -4s infinite alternate}
-    .q3{animation:drift 13s ease-in-out -6s infinite alternate}
-    @keyframes drift{from{transform:translateY(-3px)}to{transform:translateY(5px)}}
-    @media(prefers-reduced-motion:reduce){.q1,.q2,.q3{animation:none}}
+    .lbl{fill:#6b7180;font:400 15px/1 Inter,system-ui,sans-serif}
+    .lbl-on{fill:#2518eb;font:500 15px/1 Inter,system-ui,sans-serif}
+    .zone{font:500 12px/1 Inter,system-ui,sans-serif;letter-spacing:.14em}
+    .lead{stroke:#c8ccd5;stroke-width:1}
+    .pin{fill:#b4b9c4}.pin-on{fill:#2518eb}
   </style>
 
-  <!-- one shape, drawn twice: sharp where a machine can read the condition,
-       soft where somebody has to rule. The two halves never overlap, so the
-       handoff reads as the same object losing its definition. -->
-  <g mask="url(#crisp)">
-    <use href="#arrow" fill="url(#drain)" stroke="url(#drain)" stroke-width="8" stroke-linejoin="round"/>
-    <use href="#arrow" fill="url(#form)"/>
-  </g>
-  <g mask="url(#soft)" filter="url(#blur)">
-    <use href="#arrow" fill="url(#drain)" stroke="url(#drain)" stroke-width="8" stroke-linejoin="round"/>
+  <rect width="960" height="260" fill="#ffffff"/>
+
+  <!-- Where each condition falls. The split does the arguing: a hard
+       edge says most of them are on one side, which a gradient cannot. -->
+  <g>
+    <path class="lead" d="M108 84V140"/>
+    <circle class="pin-on" cx="108" cy="84" r="3.5"/>
+    <text class="lbl-on" x="108" y="68" text-anchor="middle">Bank receipt</text>
+
+    <path class="lead" d="M352 118V140"/>
+    <circle class="pin" cx="352" cy="118" r="3.5"/>
+    <text class="lbl" x="352" y="102" text-anchor="middle">Insurance claims</text>
+
+    <path class="lead" d="M492 84V140"/>
+    <circle class="pin" cx="492" cy="84" r="3.5"/>
+    <text class="lbl" x="492" y="68" text-anchor="middle">Ad conversion</text>
+
+    <path class="lead" d="M652 118V140"/>
+    <circle class="pin" cx="652" cy="118" r="3.5"/>
+    <text class="lbl" x="652" y="102" text-anchor="middle">Outsourced delivery</text>
+
+    <path class="lead" d="M824 84V140"/>
+    <circle class="pin" cx="824" cy="84" r="3.5"/>
+    <text class="lbl" x="824" y="68" text-anchor="middle">Service acceptance</text>
   </g>
 
-  <!-- where the conditions actually fall -->
-  <g font-family="Inter,system-ui,sans-serif" font-size="16">
-    <g stroke="#c4c9d4" stroke-width="1.5" fill="none">
-      <path d="M100 98V158"/><path d="M470 74V152"/><path d="M580 98V150"/><path d="M690 74V148"/><path d="M800 98V146"/>
-    </g>
-    <g fill="#aeb3bf">
-      <circle cx="100" cy="96" r="3"/><circle cx="470" cy="72" r="3"/><circle cx="580" cy="96" r="3"/><circle cx="690" cy="72" r="3"/><circle cx="800" cy="96" r="3"/>
-    </g>
-    <text x="100" y="78" text-anchor="middle" fill="#2518eb" font-weight="500">Bank receipt</text>
-    <g fill="#6b7180">
-      <text x="470" y="54" text-anchor="middle">Insurance claims</text>
-      <text x="580" y="78" text-anchor="middle">Ad conversion</text>
-      <text x="690" y="54" text-anchor="middle">Outsourced delivery</text>
-      <text x="800" y="78" text-anchor="middle">Service acceptance</text>
-    </g>
-  </g>
+  <!-- the narrow band a machine can settle, and the wide one it cannot -->
+  <path d="M40 140h136v72H44a4 4 0 0 1-4-4Z" fill="#2518eb"/>
+  <path d="M180 140h736a4 4 0 0 1 4 4v64a4 4 0 0 1-4 4H180Z" fill="#e8eaf0"/>
 
-  <!-- what each end means, set at one size inside the mass -->
-  <g font-family="Inter,system-ui,sans-serif" font-weight="500" font-size="22" letter-spacing="2.8">
-    <text x="58" y="206" fill="#ffffff">DECIDABLE</text>
-    <text x="536" y="206" fill="#fbfaf6" opacity=".88">HARD TO DEFINE</text>
-  </g>
-
-  <!-- three is enough to say the questions have nowhere to land; seven
-       reads as decoration and starts competing with the labels -->
-  <g fill="#aeb3bf" font-family="Inter,system-ui,sans-serif" text-anchor="middle">
-    <text x="528" y="118" font-size="30" opacity=".40" class="q1">?</text>
-    <text x="748" y="124" font-size="42" opacity=".46" class="q3">?</text>
-    <text x="632" y="308" font-size="26" opacity=".34" class="q2">?</text>
-  </g>
-
-  <g font-family="Inter,system-ui,sans-serif" font-size="16" fill="#8a8f9e">
-    <text x="28" y="330">A machine can read it</text>
-    <text x="932" y="330" text-anchor="end">Somebody has to rule</text>
-  </g>
+  <text class="zone" x="204" y="182" fill="#6b7180">SOMEBODY HAS TO RULE</text>
+  <text class="zone" x="900" y="182" fill="#a2a7b4" text-anchor="end">MOST PAYMENT CONDITIONS</text>
+  <text class="zone" x="40" y="240" fill="#2518eb">A MACHINE CAN READ IT</text>
 </svg>
