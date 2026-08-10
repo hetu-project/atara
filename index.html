@@ -164,28 +164,34 @@
      Below 900px nothing pins; the field rests on its last arrangement
      and the three steps stack. */
   .engine-section{position:relative;height:340svh;background:#0a0c1e;color:var(--white)}
-  .engine-sticky{position:sticky;top:0;height:100svh;overflow:hidden;display:flex;align-items:center}
+  .engine-sticky{position:sticky;top:0;height:100svh;overflow:hidden;display:flex;align-items:flex-end}
   .engine-sticky::before{
     content:"";position:absolute;inset:0;z-index:1;opacity:.1;pointer-events:none;
     background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' seed='29' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.55'/%3E%3C/svg%3E");
     background-size:15rem 15rem;mix-blend-mode:overlay;
   }
   .engine-field{position:absolute;inset:0;z-index:0;width:100%;height:100%;display:block}
-  /* the field is densest on the right, so the copy keeps a dark bed */
+  /* the field owns the whole frame; the copy gets a bed from below,
+     not a wall down the middle */
   .engine-sticky::after{
     content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-    background:linear-gradient(100deg,#0a0c1e 4%,rgba(10,12,30,.86) 24%,rgba(10,12,30,.45) 44%,transparent 68%);
+    background:linear-gradient(0deg,#0a0c1e 6%,rgba(10,12,30,.9) 26%,rgba(10,12,30,.45) 46%,transparent 66%);
   }
-  .engine-stage{position:relative;z-index:2;width:100%}
-  .engine-stage h2{margin:0;max-width:20ch;font-size:var(--t-head);font-weight:400;line-height:1.14;letter-spacing:-.026em}
-  .engine-steps{margin-top:clamp(2rem,4vh,3rem);max-width:32rem}
-  .engine-step{position:relative;padding:1.15rem 0 1.15rem 1.4rem;opacity:.3;transition:opacity .35s linear}
+  .engine-stage{position:relative;z-index:2;width:100%;padding-bottom:clamp(2.5rem,6vh,4.5rem)}
+  .engine-stage h2{margin:0;max-width:24ch;font-size:var(--t-head);font-weight:400;line-height:1.14;letter-spacing:-.026em}
+  .engine-steps{margin-top:clamp(1.4rem,3vh,2.2rem);max-width:34rem}
+  .engine-step{position:relative;padding:.85rem 0 .85rem 1.4rem;opacity:.34;transition:opacity .35s linear}
   .engine-step.is-active{opacity:1}
   .engine-step::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:oklch(97% .018 264 / .18)}
   .engine-step::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--signal);
     transform:scaleY(var(--progress,0));transform-origin:top;opacity:0;transition:opacity .3s linear}
   .engine-step.is-active::after{opacity:1}
   .engine-step b{display:block;font-size:1.0625rem;font-weight:600;letter-spacing:-.014em}
+  /* only the live step carries its description, so three steps sit in
+     the height of one and the field keeps the frame */
+  .engine-step .body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s var(--ease)}
+  .engine-step.is-active .body{grid-template-rows:1fr}
+  .engine-step .body > div{overflow:hidden;min-height:0}
   .engine-step p{margin:.5rem 0 0;font-size:.9375rem;line-height:1.55;color:oklch(82% .018 267)}
   .engine-num{position:absolute;left:-2.6rem;top:1.2rem;font-size:.8125rem;color:var(--signal);opacity:.75}
 
@@ -196,9 +202,16 @@
   .engine-readout strong{font-size:clamp(2rem,4vw,3rem);font-weight:400;letter-spacing:-.03em;color:var(--signal);line-height:1}
   .engine-readout span{font-size:.8125rem;letter-spacing:.12em;text-transform:uppercase;color:oklch(78% .02 267)}
 
+  /* the map: what goes in and what comes out. The field above shows the
+     act of pricing; this shows the interface. Both earn their place. */
+  .model-map{display:grid;grid-template-columns:minmax(0,1fr) minmax(12rem,.72fr) minmax(0,1fr);gap:clamp(2rem,5vw,5rem);align-items:center;padding-block:2rem;border-top:1px solid oklch(97% .018 264 / .16);border-bottom:1px solid oklch(97% .018 264 / .16)}
+  .model-col{display:grid}.model-node{position:relative;min-height:4.8rem;padding:1rem 0;border-bottom:1px solid oklch(97% .018 264 / .13);opacity:.42;transition:opacity .4s linear}.model-node:first-child{border-top:1px solid oklch(97% .018 264 / .13)}.model-node.is-live{opacity:1}.model-node b{display:block;font-size:.9375rem;font-weight:500}.model-node span{display:block;margin-top:.28rem;font-size:.8125rem;line-height:1.4;color:oklch(72% .02 267)}
+  .model-core{display:grid;place-items:center;aspect-ratio:1;border:1px solid oklch(97% .018 264 / .22);background:oklch(21% .035 267);text-align:center;transition:border-color .4s linear}.model-core.is-computing{border-color:var(--signal)}.model-core span{font-size:.75rem;color:oklch(72% .02 267)}.model-core b{display:block;margin-top:.55rem;font-size:clamp(1.25rem,2vw,1.75rem);font-weight:400;line-height:1.2;letter-spacing:-.03em;color:var(--signal)}.model-core i{display:block;width:.4rem;height:.4rem;margin:1rem auto 0;background:var(--signal);animation:corePulse 1.4s linear infinite alternate}@keyframes corePulse{to{opacity:.2}}
+
   /* the argument, after the mechanism has finished playing */
   .engine-points{position:relative;background:#0a0c1e;color:var(--white);
     padding-block:clamp(3rem,6vh,5rem) var(--gap-section)}
+  .engine-points .model-points{margin-top:clamp(3rem,6vw,5rem)}
   .model-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(1.5rem,3vw,2.75rem)}
   .model-point{padding-left:1.1rem;border-left:1px solid oklch(97% .018 264 / .2)}
   .model-point b{display:block;font-size:.9375rem;font-weight:600;letter-spacing:-.012em}
@@ -221,7 +234,8 @@
     .nav{grid-template-columns:1fr auto}.nav-center{display:none}
     .hero-main{grid-template-columns:1fr;padding-top:7.2rem;padding-bottom:9.5rem;gap:3.2rem}
     .instrument{width:100%;min-height:35rem}
-    .engine-section{height:auto}.engine-sticky{position:relative;height:auto;min-height:0;padding-block:var(--gap-section)}.engine-step{opacity:1}
+    .model-map{grid-template-columns:1fr;gap:2rem}.model-core{width:min(15rem,70vw);margin-inline:auto}.model-col{grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.model-node:first-child{border-top:0}
+    .engine-section{height:auto}.engine-sticky{position:relative;height:auto;min-height:0;padding-block:var(--gap-section)}.engine-step{opacity:1}.engine-step .body{grid-template-rows:1fr}
     .model-points{grid-template-columns:1fr;gap:1.5rem}
     .protocol-section{height:auto}.protocol-sticky{position:relative;min-height:0;padding-block:var(--gap-section);overflow:visible}.protocol-demo{grid-template-columns:1fr;gap:2.5rem}.protocol-step{opacity:.48}.protocol-step.is-active{opacity:1}
     .condition-row{grid-template-columns:2.6rem 1fr}.condition-copy{grid-column:2}
@@ -349,17 +363,17 @@
           <div class="engine-step is-active" data-engine-step>
             <span class="engine-num">01</span>
             <b>It reads what this counterparty has actually done</b>
-            <p>Settlement history, dispute outcomes, verification checks, and where the funds came from.</p>
+            <div class="body"><div><p>Settlement history, dispute outcomes, verification checks, and where the funds came from.</p></div></div>
           </div>
           <div class="engine-step" data-engine-step>
             <span class="engine-num">02</span>
             <b>It computes one probability of default</b>
-            <p>For this counterparty, on this trade. Not a tier set when the account opened.</p>
+            <div class="body"><div><p>For this counterparty, on this trade. Not a tier set when the account opened.</p></div></div>
           </div>
           <div class="engine-step" data-engine-step>
             <span class="engine-num">03</span>
             <b>Collateral, fee and recourse follow from that number</b>
-            <p>What you post, what you pay, and on what evidence it unwinds.</p>
+            <div class="body"><div><p>What you post, what you pay, and on what evidence it unwinds.</p></div></div>
           </div>
         </div>
 
@@ -373,6 +387,21 @@
 
   <section class="engine-points">
     <div class="wrap">
+      <div class="model-map reveal" id="modelMap" aria-label="Evidence inputs enter an AI model and determine payment terms">
+        <div class="model-col model-inputs">
+          <div class="model-node"><b>Settlement history</b><span>Delivered, late, or defaulted</span></div>
+          <div class="model-node"><b>Dispute outcomes</b><span>Who was found at fault</span></div>
+          <div class="model-node"><b>Verification checks</b><span>Six, on both sides</span></div>
+          <div class="model-node"><b>Wallet provenance</b><span>Where the funds came from</span></div>
+        </div>
+        <div class="model-core" id="modelCore"><div><span>AI model</span><b>One estimate,<br>per trade</b><i aria-hidden="true"></i></div></div>
+        <div class="model-col model-outputs">
+          <div class="model-node"><b>Collateral</b><span>What fraction has to be posted</span></div>
+          <div class="model-node"><b>Fee</b><span>Priced to that probability</span></div>
+          <div class="model-node"><b>Recourse</b><span>On what evidence it unwinds</span></div>
+        </div>
+      </div>
+
       <div class="model-points reveal">
         <div class="model-point"><b>Priced per trade</b><p>A limit set when the account opens says nothing about who is on the other side of this one.</p></div>
         <div class="model-point"><b>A price, not a gate</b><p>Other systems answer whether you may proceed. This answers what you post and what you pay.</p></div>
@@ -629,7 +658,7 @@
       const ang=rnd()*TAU, rad=Math.pow(rnd(),.62);
       P[i]={x:rnd(),y:rnd(),tx:0,ty:0,
         k:.04+rnd()*.05+z*.03,
-        ax:.66+Math.cos(ang)*rad*.34, ay:.5+Math.sin(ang)*rad*.40,
+        ax:.5+Math.cos(ang)*rad*.46, ay:.44+Math.sin(ang)*rad*.46,
         sx:rnd(), g, z,
         s:.7+z*1.9,                              /* size */
         a:.10+z*.68,                             /* brightness */
@@ -645,10 +674,10 @@
       engineField.width=Math.round(W*dpr);engineField.height=Math.round(H*dpr);
       ctx.setTransform(dpr,0,0,dpr,0,0);
     };
-    const CX=.68,CY=.5;
+    const CX=.5,CY=.44;
     const posA=p=>{p.tx=p.ax;p.ty=p.ay;};
     /* sorted along a risk axis: tight, so the mass reads as a mass */
-    const posB=p=>{p.tx=.30+p.sx*.64;p.ty=CY+p.g*(.19-p.sx*.10);};
+    const posB=p=>{p.tx=.10+p.sx*.80;p.ty=CY+p.g*(.22-p.sx*.12);};
     /* one estimate: a small bright knot */
     const posC=p=>{const r=.012+Math.abs(p.g)*.045;
       p.tx=CX+Math.cos(p.sx*TAU)*r*.62;p.ty=CY+Math.sin(p.sx*TAU)*r;};
@@ -710,17 +739,20 @@
         ctx.beginPath();let any=false;
         for(let i=0;i<pale.length;i++){
           const p=pale[i];if(p.z<lo||p.z>=hi)continue;any=true;
-          const s=p.s;ctx.rect(p.x*W-s/2,p.y*H-s/2,s,s);
+          const r=p.s/2,cx=p.x*W,cy=p.y*H;
+          ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,TAU);
         }
         if(any)ctx.fill();
       }
       ctx.fillStyle='rgba(226,250,150,.95)';
       ctx.beginPath();
-      for(let i=0;i<lit.length;i++){const p=lit[i],s=p.s+.7;ctx.rect(p.x*W-s/2,p.y*H-s/2,s,s);}
+      for(let i=0;i<lit.length;i++){const p=lit[i],r=(p.s+.9)/2,cx=p.x*W,cy=p.y*H;
+        ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,TAU);}
       ctx.fill();
       ctx.fillStyle='rgba(240,132,112,.92)';
       ctx.beginPath();
-      for(let i=0;i<bad.length;i++){const p=bad[i],s=p.s+.3;ctx.rect(p.x*W-s/2,p.y*H-s/2,s,s);}
+      for(let i=0;i<bad.length;i++){const p=bad[i],r=(p.s+.5)/2,cx=p.x*W,cy=p.y*H;
+        ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,TAU);}
       ctx.fill();
 
       /* the knot gets a soft bloom, so the third arrangement lands */
