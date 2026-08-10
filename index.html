@@ -179,79 +179,86 @@
     background:#fff;box-shadow:var(--ring),var(--lift)}
   .protocol-figure img{display:block;width:100%;height:auto}
 
-  .engine-section{position:relative;height:340svh;background:#0a0c1e;color:var(--white)}
-  .engine-sticky{position:sticky;top:0;height:100svh;display:grid;place-items:center;
-    padding:clamp(1.5rem,4vh,3rem) var(--pad)}
-  /* the field is a card with edges, not a wash across the whole viewport:
-     a bounded object reads as a made thing, a full bleed reads as a
-     background that happened to be there */
-  .engine-card{position:relative;width:min(100%,var(--maxw));height:100%;
-    max-height:clamp(30rem,78vh,46rem);
-    border-radius:20px;overflow:hidden;background:#12152c;
-    box-shadow:0 0 0 1px oklch(97% .018 264 / .12),
-               0 40px 80px -40px oklch(4% .06 267 / .8);
-    display:flex;align-items:flex-end}
-  .engine-card::before{
-    content:"";position:absolute;inset:0;z-index:1;opacity:.1;pointer-events:none;
-    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' seed='29' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.55'/%3E%3C/svg%3E");
-    background-size:15rem 15rem;mix-blend-mode:overlay;
-  }
-  .engine-field{position:absolute;inset:0;z-index:0;width:100%;height:100%;display:block}
-  /* the copy gets a bed from below, not a wall down the middle */
-  .engine-card::after{
-    content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-    background:linear-gradient(0deg,#12152c 6%,rgba(18,21,44,.92) 26%,rgba(18,21,44,.48) 46%,transparent 66%);
-  }
-  .engine-stage{position:relative;z-index:2;width:100%;padding:0 clamp(1.75rem,4vw,3.25rem) clamp(2rem,5vh,3.25rem)}
-  .engine-stage h2{margin:0;max-width:24ch;font-size:var(--t-head);font-weight:400;line-height:1.14;letter-spacing:-.026em}
-  .engine-steps{margin-top:clamp(1.4rem,3vh,2.2rem);max-width:34rem}
-  .engine-step{position:relative;padding:.85rem 0 .85rem 1.4rem;opacity:.34;transition:opacity .35s linear}
-  .engine-step.is-active{opacity:1}
-  .engine-step::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:oklch(97% .018 264 / .18)}
-  .engine-step::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--signal);
-    transform:scaleY(var(--progress,0));transform-origin:top;opacity:0;transition:opacity .3s linear}
-  .engine-step.is-active::after{opacity:1}
-  .engine-step b{display:block;font-size:1.0625rem;font-weight:600;letter-spacing:-.014em}
-  /* only the live step carries its description, so three steps sit in
-     the height of one and the field keeps the frame */
-  .engine-step .body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s var(--ease)}
-  .engine-step.is-active .body{grid-template-rows:1fr}
-  .engine-step .body > div{overflow:hidden;min-height:0}
-  .engine-step p{margin:.5rem 0 0;font-size:.9375rem;line-height:1.55;color:oklch(82% .018 267)}
-  .engine-num{position:absolute;left:-2.6rem;top:1.2rem;font-size:.8125rem;color:var(--signal);opacity:.75}
+  /* ── module 3 · the model ──────────────────────────────────────
+     A neutral card on white — no blue ground, all four corners equal.
+     Heading centred at the top, the diagram on white inside it, the
+     argument underneath. Evidence in on the left, one estimate in the
+     middle, the terms it sets on the right. */
+  .engine-section{background:#fff;padding-block:var(--gap-section)}
+  .engine-card{position:relative;border-radius:22px;
+    background:oklch(96.6% .0015 250);
+    box-shadow:0 0 0 1px oklch(20% 0 0 / .07);
+    padding:clamp(2.75rem,5.5vw,5rem) clamp(1.35rem,3.5vw,3.5rem) clamp(3rem,5.5vw,4.5rem)}
+  .engine-head{text-align:center}
+  .engine-head h2{margin:0 auto;max-width:22ch;font-size:var(--t-head);font-weight:300;
+    line-height:1.08;letter-spacing:-.032em}
+  .engine-head p{max-width:54ch;margin:clamp(1.1rem,2vw,1.5rem) auto 0;
+    font-size:1.0625rem;line-height:1.6;color:oklch(43% .012 267)}
 
-  /* the estimate the third arrangement lands on */
-  .engine-readout{margin-top:clamp(1.6rem,3vh,2.4rem);display:flex;align-items:baseline;gap:.9rem;
-    opacity:0;transform:translateY(6px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
-  .engine-readout.is-on{opacity:1;transform:none}
-  .engine-readout strong{font-size:clamp(2rem,4vw,3rem);font-weight:400;letter-spacing:-.03em;color:var(--signal);line-height:1}
-  .engine-readout span{font-size:.8125rem;letter-spacing:.12em;text-transform:uppercase;color:oklch(78% .02 267)}
+  .tm{--tm-cols:clamp(10.5rem,15vw,15rem) minmax(0,1fr) clamp(10.5rem,15vw,15rem);
+      --tm-gap:clamp(1rem,3.6vw,4rem);
+    position:relative;margin-top:clamp(2.5rem,5vw,4.25rem);
+    padding:clamp(1.5rem,3vw,2.75rem);border-radius:16px;
+    background:#fff;box-shadow:var(--ring),var(--lift);
+    overflow:hidden}
+  .tm::after{content:"";position:absolute;left:50%;top:52%;
+    width:min(54%,640px);aspect-ratio:1;transform:translate(-50%,-50%);pointer-events:none;
+    background:radial-gradient(circle,oklch(50% .004 267 / .05),transparent 64%)}
+  .tm-grid{display:grid;grid-template-columns:var(--tm-cols);gap:var(--tm-gap);
+    align-items:center;position:relative;z-index:2}
+  .tm-grid > *{min-width:0}
+  .tm-col{display:grid;gap:.75rem;align-content:center}
+  .node{position:relative;z-index:2;padding:.45rem 0 .5rem .85rem;
+    border-left:1px solid oklch(88% .008 267);transition:border-color .55s var(--ease)}
+  .node::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:var(--hairline)}
+  .node b{display:block;font-weight:500;font-size:.9375rem;letter-spacing:-.012em;
+    line-height:1.3;color:oklch(48% .014 267);transition:color .55s var(--ease)}
+  .node i{display:block;margin-top:.26rem;font-size:.8125rem;line-height:1.35;
+    min-height:2.7em;font-style:normal;color:oklch(60% .012 267)}
+  .node.on{border-left-color:var(--blue)}
+  .node.on b{color:var(--ink)}
+  .node.on i{color:oklch(46% .014 267)}
 
-  /* the map: what goes in and what comes out. The field above shows the
-     act of pricing; this shows the interface. Both earn their place. */
-  .model-map{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(12rem,.72fr) minmax(0,1fr);gap:clamp(2rem,5vw,5rem);align-items:center;padding-block:2rem;border-top:1px solid oklch(97% .018 264 / .16);border-bottom:1px solid oklch(97% .018 264 / .16)}
-  .model-wires{position:absolute;inset:0;width:100%;height:100%;z-index:0;
+  .tm-core{display:grid;place-items:center}
+  .orb{position:relative;flex:none;display:grid;place-items:center;
+    width:clamp(186px,19vw,252px);aspect-ratio:1}
+  .orb .ring,.orb .wave{position:absolute;inset:0;margin:auto;border-radius:50%}
+  .orb .r1{width:62%;height:62%;border:1px solid oklch(90% .006 267)}
+  .orb .r2{width:100%;height:100%;border:1px solid oklch(93.5% .005 267)}
+  .orb .wave{width:100%;height:100%;border:1px solid oklch(43% .29 266 / .45);
+    opacity:0;will-change:transform,opacity}
+  .orb-sweep{position:absolute;inset:0;width:100%;height:100%;
+    animation:orbSpin 14s linear infinite;transform-origin:50% 50%}
+  .orb-sweep circle{fill:none;stroke:oklch(83% .008 267);stroke-width:1;
+    stroke-linecap:round;stroke-dasharray:34 266;
+    transition:stroke .5s var(--ease),stroke-width .5s var(--ease)}
+  .tm.computing .orb-sweep{animation-duration:7s}
+  .tm.computing .orb-sweep circle{stroke:var(--blue);stroke-width:1.4}
+  @keyframes orbSpin{to{transform:rotate(360deg)}}
+  .orb-out{grid-area:1/1;position:relative;z-index:3;text-align:center;
+    font-size:clamp(1.05rem,1.5vw,1.22rem);line-height:1.25;letter-spacing:-.02em;
+    color:var(--blue)}
+
+  /* generated from where the rows actually landed rather than authored
+     as fixed path data: the columns are fluid, so any hand-drawn curve
+     would be correct at exactly one viewport width */
+  .tm-wires{position:absolute;inset:0;width:100%;height:100%;z-index:1;
     pointer-events:none;overflow:visible}
-  .model-wires path{fill:none}
-  .model-wires .w{stroke:oklch(97% .018 264 / .16);stroke-width:1}
-  /* sparse dashes creeping along every wire, one fixed period so a single
-     loop distance works for all seven regardless of their length */
-  .model-wires .s{stroke:oklch(97% .018 264 / .34);stroke-width:1;stroke-linecap:round;
-    stroke-dasharray:3 26;animation:wireShim 9s linear infinite}
+  .tm-wires path{fill:none}
+  .tm-wires .base{stroke:oklch(87% .007 267);stroke-width:1}
+  .tm-wires .shim{stroke:oklch(76% .012 267);stroke-width:1;stroke-linecap:round;
+    stroke-dasharray:3 26;opacity:0}
+  .tm.live .tm-wires .shim{opacity:1;animation:wireShim 9s linear infinite}
   @keyframes wireShim{to{stroke-dashoffset:-290px}}
-  .model-wires .port{fill:oklch(97% .018 264 / .35)}
-  .model-col,.model-core{position:relative;z-index:1}
-  .model-col{display:grid}.model-node{position:relative;min-height:4.8rem;padding:1rem 0;border-bottom:1px solid oklch(97% .018 264 / .13);opacity:.42;transition:opacity .4s linear}.model-node:first-child{border-top:1px solid oklch(97% .018 264 / .13)}.model-node.is-live{opacity:1}.model-node b{display:block;font-size:.9375rem;font-weight:500}.model-node span{display:block;margin-top:.28rem;font-size:.8125rem;line-height:1.4;color:oklch(72% .02 267)}
-  .model-core{display:grid;place-items:center;aspect-ratio:1;border:1px solid oklch(97% .018 264 / .22);background:oklch(21% .035 267);text-align:center;transition:border-color .4s linear}.model-core.is-computing{border-color:var(--signal)}.model-core span{font-size:.75rem;color:oklch(72% .02 267)}.model-core b{display:block;margin-top:.55rem;font-size:clamp(1.25rem,2vw,1.75rem);font-weight:400;line-height:1.2;letter-spacing:-.03em;color:var(--signal)}.model-core i{display:block;width:.4rem;height:.4rem;margin:1rem auto 0;background:var(--signal);animation:corePulse 1.4s linear infinite alternate}@keyframes corePulse{to{opacity:.2}}
+  .tm-wires .pulse{stroke:var(--blue);stroke-width:1.4;stroke-linecap:round;opacity:0}
+  .tm-wires .port{fill:oklch(76% .01 267)}
 
-  /* the argument, after the mechanism has finished playing */
-  .engine-points{position:relative;background:#0a0c1e;color:var(--white);
-    padding-block:clamp(3rem,6vh,5rem) var(--gap-section)}
-  .engine-points .model-points{margin-top:clamp(3rem,6vw,5rem)}
-  .model-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(1.5rem,3vw,2.75rem)}
-  .model-point{padding-left:1.1rem;border-left:1px solid oklch(97% .018 264 / .2)}
+  .model-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:clamp(1.5rem,3vw,2.75rem);margin-top:clamp(2.25rem,4vw,3.25rem)}
+  .model-point{padding-left:1.1rem;border-left:1px solid oklch(87% .008 267)}
   .model-point b{display:block;font-size:.9375rem;font-weight:600;letter-spacing:-.012em}
-  .model-point p{margin:.5rem 0 0;font-size:.875rem;line-height:1.5;color:oklch(80% .018 267)}
+  .model-point p{margin:.5rem 0 0;font-size:.875rem;line-height:1.5;color:oklch(43% .018 267)}
 
   .conditions-section{background:#fff;border-top:1px solid var(--hairline)}
   /* One thick arrow, crisp where the condition is crisp and dissolving
@@ -270,8 +277,9 @@
     .nav{grid-template-columns:1fr auto}.nav-center{display:none}
     .hero-main{grid-template-columns:1fr;padding-top:7.2rem;padding-bottom:9.5rem;gap:3.2rem}
     .instrument{width:100%;min-height:35rem}
-    .model-map{grid-template-columns:1fr;gap:2rem}.model-core{width:min(15rem,70vw);margin-inline:auto}.model-col{grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.model-node:first-child{border-top:0}
-    .engine-section{height:auto}.engine-sticky{position:relative;height:auto;min-height:0;padding-block:var(--gap-section)}.engine-step{opacity:1}.engine-step .body{grid-template-rows:1fr}
+    .tm{--tm-cols:minmax(0,1fr);--tm-gap:1.75rem;border-radius:12px}
+    .tm-wires{display:none}
+    .tm-in{grid-template-columns:repeat(2,minmax(0,1fr))}
     .protocol-layout{grid-template-columns:1fr;gap:2.5rem}.protocol-intro{position:static}
     .model-points{grid-template-columns:1fr;gap:1.5rem}
     .condition-row{grid-template-columns:2.6rem 1fr}.condition-copy{grid-column:2}
@@ -288,7 +296,7 @@
     .stage-value{align-items:flex-end}.stage-value strong{font-size:clamp(1.45rem,6vw,2.05rem)}
     .risk-copy{max-width:12rem}.stage-note{font-size:.54rem}
     .ecosystem{grid-template-columns:1fr;gap:.75rem}.ecosystem-label{display:none}
-    .model-col,.model-points{grid-template-columns:1fr}.model-point + .model-point{padding-left:0;border-left:0}.model-point{padding-right:0}
+    .model-points{grid-template-columns:1fr}
     .condition-row{grid-template-columns:1fr;gap:.8rem}.condition-copy{grid-column:auto}.evidence-ledger div{grid-template-columns:1fr;gap:.2rem}
     .cta-panel{grid-template-columns:1fr}.cta-action{justify-content:flex-start}
   }
@@ -415,61 +423,51 @@
   </section>
 
   <section class="engine-section" id="engine">
-    <div class="engine-sticky">
-      <div class="engine-card">
-      <canvas class="engine-field" id="engineField" aria-hidden="true"></canvas>
-      <div class="wrap engine-stage">
-        <h2>An AI model prices every payment.</h2>
-
-        <div class="engine-steps">
-          <div class="engine-step is-active" data-engine-step>
-            <span class="engine-num">01</span>
-            <b>It reads what this counterparty has actually done</b>
-            <div class="body"><div><p>Settlement history, dispute outcomes, verification checks, and where the funds came from.</p></div></div>
-          </div>
-          <div class="engine-step" data-engine-step>
-            <span class="engine-num">02</span>
-            <b>It computes one probability of default</b>
-            <div class="body"><div><p>For this counterparty, on this trade. Not a tier set when the account opened.</p></div></div>
-          </div>
-          <div class="engine-step" data-engine-step>
-            <span class="engine-num">03</span>
-            <b>Collateral, fee and recourse follow from that number</b>
-            <div class="body"><div><p>What you post, what you pay, and on what evidence it unwinds.</p></div></div>
-          </div>
-        </div>
-
-        <div class="engine-readout" id="engineReadout">
-          <strong class="num">1.8%</strong>
-          <span>probability of default &middot; illustrative</span>
-        </div>
-      </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="engine-points">
     <div class="wrap">
-      <div class="model-map reveal" id="modelMap" aria-label="Evidence inputs enter an AI model and determine payment terms">
-        <svg class="model-wires" id="modelWires" aria-hidden="true"></svg>
-        <div class="model-col model-inputs">
-          <div class="model-node"><b>Settlement history</b><span>Delivered, late, or defaulted</span></div>
-          <div class="model-node"><b>Dispute outcomes</b><span>Who was found at fault</span></div>
-          <div class="model-node"><b>Verification checks</b><span>Six, on both sides</span></div>
-          <div class="model-node"><b>Wallet provenance</b><span>Where the funds came from</span></div>
+      <div class="engine-card reveal">
+        <div class="engine-head">
+          <h2>An AI model prices every payment.</h2>
+          <p>It reads what this counterparty has actually done and computes the probability
+            of default on this trade. What you post, what you pay, and how it unwinds all
+            follow from that number.</p>
         </div>
-        <div class="model-core" id="modelCore"><div><span>AI model</span><b>One estimate,<br>per trade</b><i aria-hidden="true"></i></div></div>
-        <div class="model-col model-outputs">
-          <div class="model-node"><b>Collateral</b><span>What fraction has to be posted</span></div>
-          <div class="model-node"><b>Fee</b><span>Priced to that probability</span></div>
-          <div class="model-node"><b>Recourse</b><span>On what evidence it unwinds</span></div>
-        </div>
-      </div>
 
-      <div class="model-points reveal">
-        <div class="model-point"><b>Priced per trade</b><p>A limit set when the account opens says nothing about who is on the other side of this one.</p></div>
-        <div class="model-point"><b>A price, not a gate</b><p>Other systems answer whether you may proceed. This answers what you post and what you pay.</p></div>
-        <div class="model-point"><b>The exit is written first</b><p>How a trade unwinds is fixed before either side commits, not negotiated after something breaks.</p></div>
+        <div class="tm" id="tm" aria-label="Evidence inputs enter an AI model and determine payment terms">
+          <div class="tm-grid">
+            <div class="tm-col tm-in">
+              <div class="node"><b>Settlement history</b><i>Delivered, late, or defaulted</i></div>
+              <div class="node"><b>Dispute outcomes</b><i>Who was found at fault</i></div>
+              <div class="node"><b>Verification checks</b><i>Six, on both sides</i></div>
+              <div class="node"><b>Wallet provenance</b><i>Where the funds came from</i></div>
+            </div>
+
+            <div class="tm-core">
+              <div class="orb" id="tmOrb">
+                <span class="ring r1" aria-hidden="true"></span>
+                <span class="ring r2" aria-hidden="true"></span>
+                <span class="wave" aria-hidden="true"></span>
+                <svg class="orb-sweep" viewBox="0 0 100 100" aria-hidden="true">
+                  <circle cx="50" cy="50" r="47.7"/>
+                </svg>
+                <div class="orb-out">Probability<br>of default</div>
+              </div>
+            </div>
+
+            <div class="tm-col tm-out">
+              <div class="node"><b>Collateral</b><i>What fraction has to be posted</i></div>
+              <div class="node"><b>Fee</b><i>Priced to that probability</i></div>
+              <div class="node"><b>Recourse</b><i>On what evidence it unwinds</i></div>
+            </div>
+          </div>
+
+          <svg class="tm-wires" id="tmWires" aria-hidden="true"></svg>
+        </div>
+
+        <div class="model-points">
+          <div class="model-point"><b>Priced per trade</b><p>A limit set when the account opens says nothing about who is on the other side of this one.</p></div>
+          <div class="model-point"><b>A price, not a gate</b><p>Other systems answer whether you may proceed. This answers what you post and what you pay.</p></div>
+          <div class="model-point"><b>The exit is written first</b><p>How a trade unwinds is fixed before either side commits, not negotiated after something breaks.</p></div>
+        </div>
       </div>
     </div>
   </section>
@@ -662,270 +660,119 @@
     revealNodes.forEach(node=>revealObserver.observe(node));
   }
 
-  /* ── module 3 · the field ────────────────────────────────────────
-     One array of marks, three arrangements, driven by where the pinned
-     section sits. A mark stands for one settlement; the arrangements
-     are the record, the model reading it, and the estimate it lands on.
-     Canvas 2D rather than WebGL: this page has no build step, and a few
-     thousand batched rects hold 60fps without a shader dependency. */
-  const engineField=document.getElementById('engineField');
-  const engineSection=document.getElementById('engine');
-  const engineSteps=[...document.querySelectorAll('[data-engine-step]')];
-  const engineReadout=document.getElementById('engineReadout');
+  /* ── module 3 · the model ───────────────────────────────────────
+     Evidence in, one estimate, terms out. One pass runs on a loop while
+     the diagram is on screen: pulses travel the wires, rows light as
+     they land, the core computes, then the terms follow. */
+  (function trustModel(){
+    const tm=document.getElementById('tm');if(!tm)return;
+    const wires=document.getElementById('tmWires'),orb=document.getElementById('tmOrb');
+    const ins=[...tm.querySelectorAll('.tm-in .node')];
+    const outs=[...tm.querySelectorAll('.tm-out .node')];
+    const waves=[...tm.querySelectorAll('.orb .wave')];
+    if(!wires||!orb||ins.length!==4||outs.length!==3)return;
 
-  const field=(()=>{
-    const ctx=engineField&&engineField.getContext&&engineField.getContext('2d');
-    if(!ctx)return null;
-    const N=4800;
-    const rnd=Math.random;
-    const TAU=6.2831853;
-    const P=new Array(N);
-    for(let i=0;i<N;i++){
-      const g=(rnd()+rnd()+rnd()-1.5)/1.5;      /* centre-weighted */
-      /* depth drives size, brightness and drift together. A field where
-         every mark is the same weight reads flat however many there are. */
-      const z=Math.pow(rnd(),1.7);
-      /* the record: a cloud with a dense core and a sparse fringe, not a
-         rectangle. sqrt-biased radius keeps the area evenly filled, the
-         extra power pulls mass inward. */
-      const ang=rnd()*TAU, rad=Math.pow(rnd(),.62);
-      P[i]={x:rnd(),y:rnd(),tx:0,ty:0,
-        k:.04+rnd()*.05+z*.03,
-        ax:.5+Math.cos(ang)*rad*.46, ay:.44+Math.sin(ang)*rad*.46,
-        sx:rnd(), g, z,
-        s:.7+z*1.9,                              /* size */
-        a:.10+z*.68,                             /* brightness */
-        ph:rnd()*TAU,                            /* idle drift phase */
-        /* a point on a sphere, evenly distributed: acos keeps the poles
-           from bunching the way a naive uniform angle does */
-        th:rnd()*TAU, ps:Math.acos(2*rnd()-1),
-        link:rnd()<.05,                          /* wired to a neighbour */
-        bad:rnd()<.028,
-        core:rnd()<.014};                        /* the sample that wires up */
-    }
-    let W=0,H=0,dpr=1,mode=0,raf=0,alive=false,t=0;
-    const size=()=>{
-      const r=engineField.getBoundingClientRect();
-      if(!r.width)return;
-      dpr=Math.min(2,devicePixelRatio||1);W=r.width;H=r.height;
-      engineField.width=Math.round(W*dpr);engineField.height=Math.round(H*dpr);
-      ctx.setTransform(dpr,0,0,dpr,0,0);
-    };
-    const CX=.5,CY=.44;
-    const posA=p=>{p.tx=p.ax;p.ty=p.ay;};
-    /* a sphere of counterparties, wired to one another. Rotating, with
-       depth from the z axis, so it reads as a body rather than a disc. */
-    let spin=0;
-    const sphere=p=>{
-      const th=p.th+spin, sp=Math.sin(p.ps);
-      const x=Math.cos(th)*sp, y=Math.cos(p.ps), z=Math.sin(th)*sp;
-      const k=.62+.38*((z+1)/2);              /* nearer is bigger, brighter */
-      /* the card is wider than it is tall and the coordinates are
-         normalised per axis, so an equal radius on both would draw an
-         ellipse. Scale x by the inverse aspect to keep it round. */
-      const R=.34, ar=H?W/H:1.7;
-      return {x:CX+x*(R/ar)*k, y:CY+y*R*k, k};
-    };
-    const posB=p=>{const s=sphere(p);p.tx=s.x;p.ty=s.y;p.kk=s.k;};
-    /* one estimate: everything collapses onto a single narrow column.
-       A ring left a hole in the middle and read as a doughnut; a column
-       reads as many things resolving to one value. */
-    const posC=p=>{
-      p.tx=CX+p.g*.035;
-      p.ty=CY-.30+Math.pow(p.sx,1.5)*.60;
-    };
-
-    const draw=()=>{
-      if(!W){raf=alive?requestAnimationFrame(draw):0;return;}
-      t+=.006; spin+=.0028;
-      /* a deep backdrop with a centre, so the field falls away at the edges
-         instead of stopping at a rectangle */
-      const bg=ctx.createRadialGradient(CX*W,CY*H,0,CX*W,CY*H,Math.max(W,H)*.78);
-      bg.addColorStop(0,'#1b1f45');
-      bg.addColorStop(.55,'#141831');
-      bg.addColorStop(1,'#0e1128');
-      ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-
-      const pale=[],lit=[],bad=[];
-      for(let i=0;i<N;i++){
-        const p=P[i];
-        if(mode===0)posA(p);else if(mode===1)posB(p);else posC(p);
-        /* it breathes at rest, by depth, so nothing is ever frozen */
-        const d=(1-p.z)*.004;
-        p.x+=(p.tx+Math.sin(t+p.ph)*d-p.x)*p.k;
-        p.y+=(p.ty+Math.cos(t*.8+p.ph)*d-p.y)*p.k;
-        (p.bad?bad:(mode>0&&p.core)?lit:pale).push(p);
-      }
-
-      /* Inside the sphere, counterparties are wired to one another: the
-         model reads a population, not a queue. Only near-neighbours are
-         joined, so it stays a mesh rather than a ball of wool. */
-      if(mode===1){
-        ctx.strokeStyle='rgba(214,246,120,.15)';ctx.lineWidth=1;ctx.beginPath();
-        const wired=[];
-        for(let i=0;i<N;i++){if(P[i].link)wired.push(P[i]);}
-        for(let i=0;i<wired.length;i++){
-          const a=wired[i];
-          for(let j=i+1;j<wired.length;j++){
-            const b=wired[j];
-            const dx=(a.x-b.x)*W, dy=(a.y-b.y)*H;
-            const d2=dx*dx+dy*dy;
-            if(d2<9000){ctx.moveTo(a.x*W,a.y*H);ctx.lineTo(b.x*W,b.y*H);}
-          }
-        }
-        ctx.stroke();
-      }
-      /* marks are drawn in brightness bands: one fill per band keeps the
-         count cheap while still giving the field depth */
-      const bands=6;
-      for(let b=0;b<bands;b++){
-        const lo=b/bands,hi=(b+1)/bands;
-        const al=(.10+((lo+hi)/2)*.68).toFixed(3);
-        ctx.fillStyle='rgba(214,224,255,'+al+')';
-        ctx.beginPath();let any=false;
-        for(let i=0;i<pale.length;i++){
-          const p=pale[i];if(p.z<lo||p.z>=hi)continue;any=true;
-          const r=p.s*(mode===1?(p.kk||1):1)/2,cx=p.x*W,cy=p.y*H;
-          ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,TAU);
-        }
-        if(any)ctx.fill();
-      }
-      ctx.fillStyle='rgba(226,250,150,.95)';
-      ctx.beginPath();
-      for(let i=0;i<lit.length;i++){const p=lit[i],r=(p.s+.9)/2,cx=p.x*W,cy=p.y*H;
-        ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,TAU);}
-      ctx.fill();
-      ctx.fillStyle='rgba(240,132,112,.92)';
-      ctx.beginPath();
-      for(let i=0;i<bad.length;i++){const p=bad[i],r=(p.s+.5)/2,cx=p.x*W,cy=p.y*H;
-        ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,TAU);}
-      ctx.fill();
-
-      /* the knot gets a soft bloom, so the third arrangement lands */
-      if(mode===2){
-        const gl=ctx.createRadialGradient(CX*W,CY*H,0,CX*W,CY*H,Math.min(W,H)*.22);
-        gl.addColorStop(0,'rgba(214,246,120,.16)');
-        gl.addColorStop(1,'rgba(214,246,120,0)');
-        ctx.fillStyle=gl;ctx.fillRect(0,0,W,H);
-      }
-      raf=alive?requestAnimationFrame(draw):0;
-    };
-    const start=()=>{if(alive)return;alive=true;if(!raf)raf=requestAnimationFrame(draw);};
-    const stop=()=>{alive=false;if(raf){cancelAnimationFrame(raf);raf=0;}};
-    size();
-    /* the card lays out after this runs, so a one-shot call plus a window
-       listener leaves the backing store at its 300x150 default forever.
-       Watch the element itself. */
-    if('ResizeObserver' in window)new ResizeObserver(size).observe(engineField);
-    else addEventListener('resize',size);
-    document.addEventListener('visibilitychange',()=>document.hidden?stop():start());
-    return {start,stop,set(m){mode=m;},
-      still(m){mode=m;for(let i=0;i<N;i++){const p=P[i];
-        if(m===0)posA(p);else if(m===1)posB(p);else posC(p);p.x=p.tx;p.y=p.ty;}
-        draw();stop();}};
-  })();
-
-  let engineMode=-1;
-  const setEngineMode=index=>{
-    if(index===engineMode)return;
-    engineMode=index;
-    engineSteps.forEach((step,i)=>step.classList.toggle('is-active',i===index));
-    if(engineReadout)engineReadout.classList.toggle('is-on',index===2);
-    if(field)field.set(index);
-  };
-  const updateEngineScroll=()=>{
-    if(!engineSection)return;
-    if(innerWidth<=900||reduced){setEngineMode(2);return;}
-    const rect=engineSection.getBoundingClientRect();
-    const span=Math.max(1,engineSection.offsetHeight-innerHeight);
-    const progress=Math.max(0,Math.min(.999,-rect.top/span));
-    const raw=progress*3;
-    const index=Math.min(2,Math.floor(raw));
-    setEngineMode(index);
-    engineSteps.forEach((step,i)=>step.style.setProperty('--progress',i<index?1:i>index?0:raw-index));
-  };
-  let engineRaf=0;
-  addEventListener('scroll',()=>{if(!engineRaf)engineRaf=requestAnimationFrame(()=>{engineRaf=0;updateEngineScroll();});},{passive:true});
-  addEventListener('resize',updateEngineScroll);
-
-  if(field){
-    if(reduced){field.still(2);setEngineMode(2);}
-    else{
-      new IntersectionObserver(([entry])=>entry.isIntersecting?field.start():field.stop(),{threshold:.02})
-        .observe(engineSection);
-      setEngineMode(0);updateEngineScroll();
-    }
-  }
-
-  /* ── the model map ───────────────────────────────────────────────
-     Evidence in, one estimate, terms out. The wires are generated from
-     where the rows actually landed rather than authored as fixed path
-     data: the columns are fluid, so any hand-drawn curve would be
-     correct at exactly one viewport width. Rebuilt on resize. */
-  const modelMap=document.getElementById('modelMap');
-  if(modelMap){
-    const modelCore=document.getElementById('modelCore');
-    const modelWires=document.getElementById('modelWires');
-    const inputNodes=[...modelMap.querySelectorAll('.model-inputs .model-node')];
-    const outputNodes=[...modelMap.querySelectorAll('.model-outputs .model-node')];
     const NS='http://www.w3.org/2000/svg';
+    let pulses=[],alive=false;
+    const timers=[];
+    const at=(ms,fn)=>timers.push(setTimeout(fn,ms));
+    const clearAll=()=>{
+      timers.splice(0).forEach(clearTimeout);
+      [...pulses,...waves].forEach(n=>n.getAnimations&&n.getAnimations().forEach(a=>a.cancel()));
+    };
 
-    let wireW=0,wireH=0;
-    const buildWires=()=>{
-      if(!modelWires||!modelCore)return;
-      const box=modelMap.getBoundingClientRect(),o=modelCore.getBoundingClientRect();
+    /* the wires are measured, not authored: the columns are fluid, so a
+       hand-drawn curve would be right at exactly one viewport width */
+    let lastW=0,lastH=0;
+    const build=()=>{
+      if(getComputedStyle(wires).display==='none'){pulses=[];wires.innerHTML='';lastW=lastH=0;return;}
+      const box=tm.getBoundingClientRect(),o=orb.getBoundingClientRect();
       if(!box.width||!o.width)return;
-      if(Math.abs(box.width-wireW)<1&&Math.abs(box.height-wireH)<1)return;
-      wireW=box.width;wireH=box.height;
-      modelWires.innerHTML='';
-      modelWires.setAttribute('viewBox','0 0 '+box.width+' '+box.height);
+      if(Math.abs(box.width-lastW)<1&&Math.abs(box.height-lastH)<1)return;
+      lastW=box.width;lastH=box.height;
+      pulses=[];wires.innerHTML='';
       const midY=o.top-box.top+o.height/2;
-      const hubL={x:o.left-box.left-10,y:midY};
-      const hubR={x:o.right-box.left+10,y:midY};
-      const arc=(a,b)=>{const dx=Math.max(30,(b.x-a.x)*.5);
+      const hubL={x:o.left-box.left-12,y:midY};
+      const hubR={x:o.right-box.left+12,y:midY};
+      wires.setAttribute('viewBox','0 0 '+box.width+' '+box.height);
+      const arc=(a,b)=>{const dx=Math.max(36,(b.x-a.x)*.5);
         return 'M'+a.x+' '+a.y+' C'+(a.x+dx)+' '+a.y+' '+(b.x-dx)+' '+b.y+' '+b.x+' '+b.y;};
       const add=(a,b)=>{
         const d=arc(a,b);
-        ['w','s'].forEach(cls=>{
+        ['base','shim','pulse'].forEach(cls=>{
           const path=document.createElementNS(NS,'path');
           path.setAttribute('d',d);path.setAttribute('class',cls);
-          if(cls==='s')path.style.animationDelay=(-Math.random()*9).toFixed(2)+'s';
-          modelWires.appendChild(path);
+          if(cls==='shim')path.style.animationDelay=(-Math.random()*9).toFixed(2)+'s';
+          wires.appendChild(path);
+          if(cls==='pulse')pulses.push(path);
         });
         [a,b].forEach(pt=>{
           const c=document.createElementNS(NS,'circle');
           c.setAttribute('cx',pt.x);c.setAttribute('cy',pt.y);
           c.setAttribute('r','2.5');c.setAttribute('class','port');
-          modelWires.appendChild(c);
+          wires.appendChild(c);
         });
       };
-      const port=(node,side)=>{const r=node.getBoundingClientRect();
+      const port=(n,side)=>{const r=n.getBoundingClientRect();
         return {x:(side==='right'?r.right:r.left)-box.left,y:r.top-box.top+r.height/2};};
-      inputNodes.forEach(n=>add(port(n,'right'),hubL));
-      outputNodes.forEach(n=>add(hubR,port(n,'left')));
+      ins.forEach(n=>add(port(n,'right'),hubL));
+      outs.forEach(n=>add(hubR,port(n,'left')));
     };
-    buildWires();
-    if(document.fonts&&document.fonts.ready)document.fonts.ready.then(buildWires);
-    if('ResizeObserver' in window)new ResizeObserver(buildWires).observe(modelMap);
-    else addEventListener('resize',buildWires);
 
-    /* one pass: evidence lights, the core computes, terms follow */
-    let modelTimer=0,modelStep=0;
-    const paintModel=()=>{
-      inputNodes.forEach((node,i)=>node.classList.toggle('is-live',i<=modelStep));
-      modelCore.classList.toggle('is-computing',modelStep>=4&&modelStep<7);
-      outputNodes.forEach((node,i)=>node.classList.toggle('is-live',modelStep>=5+i));
-      modelStep=(modelStep+1)%10;
-      if(modelStep===0){
-        inputNodes.concat(outputNodes).forEach(n=>n.classList.remove('is-live'));
-        modelCore.classList.remove('is-computing');
-      }
+    const fire=(p,dur,delay)=>{
+      if(!p||!p.animate)return;
+      const L=p.getTotalLength();if(!L)return;
+      const dash=Math.min(84,L*.3);
+      p.style.strokeDasharray=dash+' '+(L+dash);
+      p.animate([
+        {strokeDashoffset:dash,opacity:0},
+        {strokeDashoffset:dash*.4,opacity:.85,offset:.14},
+        {strokeDashoffset:-L*.86,opacity:.85,offset:.88},
+        {strokeDashoffset:-L,opacity:0}
+      ],{duration:dur,delay,easing:'cubic-bezier(.42,0,.5,1)',fill:'none'});
     };
-    const startModel=()=>{if(modelTimer||reduced)return;modelStep=0;paintModel();modelTimer=setInterval(paintModel,650);};
-    const stopModel=()=>{clearInterval(modelTimer);modelTimer=0;};
-    if(reduced)inputNodes.concat(outputNodes).forEach(n=>n.classList.add('is-live'));
-    else new IntersectionObserver(([e])=>e.isIntersecting?startModel():stopModel(),{threshold:.15}).observe(modelMap);
-  }
+    const burst=()=>waves.forEach(w=>w.animate&&w.animate(
+      [{transform:'scale(.42)',opacity:.28},{transform:'scale(1.02)',opacity:0}],
+      {duration:2200,easing:'cubic-bezier(.22,.9,.3,1)',fill:'none'}));
+    const blink=(n,hold)=>{n.classList.add('on');at(hold,()=>n.classList.remove('on'));};
+
+    const PASS=5200;
+    const pass=()=>{
+      clearAll();
+      ins.forEach((n,k)=>{
+        fire(pulses[k],1100,120+k*220);
+        at(1100+k*220,()=>blink(n,1500));
+      });
+      const landed=120+1100+ins.length*220;
+      at(landed-120,()=>{tm.classList.add('computing');burst();});
+      at(landed+1150,()=>tm.classList.remove('computing'));
+      outs.forEach((n,k)=>{
+        fire(pulses[4+k],1000,landed+620+k*200);
+        at(landed+1520+k*200,()=>blink(n,1500));
+      });
+      at(PASS,pass);
+    };
+
+    build();
+    if(document.fonts&&document.fonts.ready)document.fonts.ready.then(build);
+    addEventListener('load',build);
+    if(reduced){[...ins,...outs].forEach(n=>n.classList.add('on'));return;}
+
+    let rafR=0;
+    const relayout=()=>{if(rafR)return;rafR=requestAnimationFrame(()=>{rafR=0;build();});};
+    if('ResizeObserver' in window)new ResizeObserver(relayout).observe(tm);
+    else addEventListener('resize',relayout);
+
+    const start=()=>{if(alive)return;alive=true;tm.classList.add('live');pass();};
+    const stop=()=>{
+      alive=false;tm.classList.remove('live');tm.classList.remove('computing');
+      clearAll();[...ins,...outs].forEach(n=>n.classList.remove('on'));
+    };
+    if('IntersectionObserver' in window)
+      new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting?start():stop()),{threshold:.2}).observe(tm);
+    else start();
+    document.addEventListener('visibilitychange',()=>document.hidden?stop():start());
+  })();
 })();
 </script>
 </body>
