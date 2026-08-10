@@ -35,5 +35,12 @@ LANDING-SPEC.md
 
 # Superseded design variant, kept locally for reference.
 v2.html
+# Superseded page, kept locally for reference. index.html is the page.
+desk.html
+
+# Working screenshots dropped in the repo root.
+cond-*.png
+
 # 条件支付知识库：含内部战略推演、竞品定性与未决事项。内部只读。
 KNOWLEDGE.md
+.playwright-mcp/

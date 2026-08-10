@@ -304,12 +304,62 @@
      into grey where nobody can settle it. It replaces a hairline axis
      with five dots, which read as a chart nobody had to think about. */
   .spectrum{margin:clamp(3rem,5vw,4.5rem) 0 0;overflow-x:auto}
-  .spectrum img{display:block;width:100%;min-width:40rem;height:auto}
+  .spectrum svg{display:block;width:100%;min-width:40rem;height:auto}
+  .spectrum .lbl{fill:#6b7180;font:400 15px/1 Inter,system-ui,sans-serif}
+  .spectrum .lbl.on{fill:var(--blue);font-weight:500}
+  .spectrum .lead{stroke:#c8ccd5;stroke-width:1}
+  .spectrum .pin{fill:#b4b9c4}.spectrum .pin.on{fill:var(--blue)}
+  .spectrum .zone{font:500 14px/1 Inter,system-ui,sans-serif;letter-spacing:.01em}
+  .spectrum .z-a{fill:var(--blue)}.spectrum .z-b{fill:#9aa0ad}
+  /* the bar fills the way the argument runs: certainty first, then the
+     long grey. Each condition lands just after the fill reaches it. */
+  /* A sweep, not a snap: the site's usual ease-out-expo lands the bar
+     at 99% inside 700ms, which left the last two conditions dropping
+     onto a bar that had already arrived. Each --d below is the moment
+     the fill actually reaches that condition's x. */
+  .spectrum .bar{clip-path:inset(0 100% 0 0);transition:clip-path 1.2s cubic-bezier(.45,.05,.2,1)}
+  .spectrum.in .bar{clip-path:inset(0 0 0 0)}
+  .spectrum .lead{transform:scaleY(0);transform-box:fill-box;transform-origin:top;
+    transition:transform .4s var(--ease) var(--d)}
+  .spectrum .pin,.spectrum .lbl{opacity:0;transition:opacity .38s linear calc(var(--d) + .1s)}
+  .spectrum.in .lead{transform:scaleY(1)}
+  .spectrum.in .pin,.spectrum.in .lbl{opacity:1}
+  .spectrum .zone{opacity:0;transition:opacity .5s linear}
+  .spectrum .z-a{transition-delay:.2s}.spectrum .z-b{transition-delay:1.22s}
+  .spectrum.in .zone{opacity:1}
   .conditions-detail{margin-top:clamp(5rem,8vw,7rem)}.conditions-detail > h3{margin:0;max-width:30ch;font-size:clamp(1.3rem,1.9vw,1.65rem);font-weight:400;line-height:1.2;letter-spacing:-.02em}
   .condition-list{margin-top:clamp(2.5rem,4vw,4rem);border-top:1px solid var(--hairline)}.condition-row{display:grid;grid-template-columns:2.6rem minmax(13rem,.85fr) minmax(0,1.35fr);gap:clamp(1.25rem,2.6vw,2.75rem);padding:clamp(1.75rem,3vw,2.5rem) 0;border-bottom:1px solid var(--hairline)}.condition-index{font-size:.9375rem;font-weight:500;color:var(--blue)}.condition-row h3{margin:0;max-width:22ch;font-size:1.0625rem;font-weight:600;line-height:1.35;letter-spacing:-.014em}.condition-copy p{max-width:58ch;margin:0;font-size:.9375rem;line-height:1.6;color:oklch(43% .018 267)}.condition-copy .today{margin-top:1rem;padding-left:1rem;border-left:2px solid oklch(43% .29 266 / .24);color:oklch(29% .018 267)}
+  /* Photographs, not more drawings: this section is the one place the
+     page talks about work that actually happens in a warehouse or on a
+     quay. Graded cool and low-saturation so three stock frames read as
+     one set and sit inside the palette rather than beside it. */
+  .condition-shot{position:relative;margin:0 0 1.4rem;border-radius:14px;overflow:hidden;box-shadow:var(--ring);background:oklch(93% .008 267);aspect-ratio:16/7}
+  /* two layers on purpose: the span carries the entrance, which is
+     eased, and the image carries the scroll travel, which must not be
+     — a transition on the parallax makes it lag the finger. The span
+     is taller than the frame so the travel never shows an edge. */
+  .condition-shot span{position:absolute;inset:-7% 0;display:block;
+    transform:scale(1.07);transition:transform 1.3s var(--ease),opacity .25s linear}
+  .reveal.in .condition-shot span{transform:scale(1)}
+  .condition-shot img{display:block;width:100%;height:100%;object-fit:cover;
+    transform:translate3d(0,var(--ty,0),0);will-change:transform}
   .evidence-ledger{max-width:34rem;margin-top:1.2rem;border-top:1px solid oklch(14% .025 267 / .15)}.evidence-ledger div{display:grid;grid-template-columns:10rem 1fr;gap:1rem;padding:.65rem 0;border-bottom:1px solid oklch(14% .025 267 / .15);font-size:.875rem}.evidence-ledger span{color:oklch(48% .018 267)}
 
-  .cta{background:var(--paper);padding-block:var(--gap-section)}.cta-panel{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:2rem;align-items:center;padding:clamp(2.5rem,5vw,4.5rem);border-radius:16px;box-shadow:var(--lift);background:var(--blue);color:var(--white)}.cta-panel::before{content:"";position:absolute;inset:0;opacity:.16;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.76' numOctaves='3' seed='11' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.55'/%3E%3C/svg%3E");background-size:14rem 14rem;mix-blend-mode:overlay}.cta-panel > *{position:relative;z-index:1}.cta p{max-width:44ch;margin:1.1rem 0 0;color:var(--muted-white)}.cta-action{display:flex;justify-content:flex-end}
+  /* The last thing on the page is the only full-bleed image on it. A
+     flat blue panel with a noise overlay was doing the same job with
+     none of the pull; a photograph earns the scroll to the bottom. */
+  .cta{position:relative;isolation:isolate;overflow:hidden;display:flex;background:oklch(24% .05 250)}
+  .cta-bg{position:absolute;inset:0;z-index:-2}
+  .cta-bg img{display:block;width:100%;height:100%;object-fit:cover}
+  /* diagonal scrim: heavy where the heading sits, light across the
+     open water so the picture is still the picture */
+  .cta::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background:linear-gradient(112deg,oklch(20% .05 255 / .66) 0%,oklch(20% .05 255 / .3) 42%,oklch(20% .05 255 / .16) 62%,oklch(18% .05 255 / .58) 100%)}
+  .cta .wrap{display:flex;flex-direction:column;justify-content:space-between;gap:clamp(6rem,16vh,11rem);
+    min-height:clamp(30rem,74svh,44rem);padding-block:clamp(3.5rem,7vw,5.5rem)}
+  .cta h2{margin:0;max-width:13ch;font-size:clamp(2.5rem,5.4vw,4.4rem);font-weight:300;line-height:1.02;letter-spacing:-.035em;color:#fff;text-wrap:balance}
+  .cta-foot{align-self:flex-end;display:flex;flex-direction:column;align-items:flex-end;max-width:30rem;text-align:right}
+  .cta p{margin:0 0 1.75rem;font-size:clamp(1rem,1.3vw,1.125rem);line-height:1.45;color:oklch(97% .01 264 / .9)}
   footer{padding-block:3.5rem 2.5rem;border-top:1px solid var(--hairline);background:var(--paper)}.footer-main{display:flex;justify-content:space-between;gap:2rem;flex-wrap:wrap}.footer-main nav{display:flex;gap:2rem;flex-wrap:wrap}.footer-main a{font-size:.9375rem;color:oklch(46% .018 267)}.footer-note{display:flex;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;margin-top:2.5rem;font-size:.8125rem;color:oklch(50% .018 267)}
 
   @media(max-width:900px){
@@ -338,13 +388,18 @@
     .ecosystem{grid-template-columns:1fr;gap:.75rem}.ecosystem-label{display:none}
     .model-points{grid-template-columns:1fr}
     .condition-row{grid-template-columns:1fr;gap:.8rem}.condition-copy{grid-column:auto}.evidence-ledger div{grid-template-columns:1fr;gap:.2rem}
-    .cta-panel{grid-template-columns:1fr}.cta-action{justify-content:flex-start}
+    .cta .wrap{gap:3.5rem;min-height:clamp(26rem,66svh,34rem)}
+    .cta-foot{align-self:stretch;align-items:flex-start;text-align:left}
   }
   @media(hover:none),(pointer:coarse){.btn,.nav-start{min-height:44px}}
   @media(prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
     .model-wires .s{animation:none}
     .logo-track{animation:none;flex-wrap:wrap;width:auto}.reveal{opacity:1;transform:none}
+    /* the bar and its markers land finished; the JS parallax never
+       starts, so the photos need their resting transform back */
+    .spectrum .bar{clip-path:none}.spectrum .lead{transform:none}.spectrum .pin,.spectrum .lbl,.spectrum .zone{opacity:1}
+    .condition-shot span{transform:none}.condition-shot img{transform:none}
   }
 </style>
 </head>
@@ -540,8 +595,29 @@
     <div class="wrap">
       <h2 class="reveal">Most payment conditions cannot be judged today.</h2>
 
-      <figure class="spectrum reveal">
-        <img src="assets/illustrations/conditions-spectrum.svg" alt="One thick arrow runs from conditions a machine can read, such as a bank receipt, into a region that is hard to define, where insurance claims, ad conversion, outsourced delivery and service acceptance sit and somebody has to rule" decoding="async">
+      <!-- Inline rather than an <img> so the scroll observer can reach
+           inside it: the bar has to fill left to right, because that is
+           the argument. -->
+      <figure class="spectrum reveal" role="img" aria-label="A range from objective to subjective payment conditions. A bank receipt sits at the objective end. Insurance claims, ad conversion, outsourced delivery and service acceptance fall along the subjective side">
+        <svg viewBox="0 0 960 260" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="drain" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#2518eb"/><stop offset=".13" stop-color="#2518eb"/>
+              <stop offset=".26" stop-color="#4a40e4"/><stop offset=".46" stop-color="#9fa4c2"/>
+              <stop offset=".70" stop-color="#dcdfe6"/><stop offset="1" stop-color="#e8eaf0"/>
+            </linearGradient>
+          </defs>
+          <g class="marks">
+            <g class="mark" style="--d:.22s"><path class="lead" d="M108 84V140"/><circle class="pin on" cx="108" cy="84" r="3.5"/><text class="lbl on" x="108" y="68" text-anchor="middle">Bank receipt</text></g>
+            <g class="mark" style="--d:.40s"><path class="lead" d="M352 118V140"/><circle class="pin" cx="352" cy="118" r="3.5"/><text class="lbl" x="352" y="102" text-anchor="middle">Insurance claims</text></g>
+            <g class="mark" style="--d:.48s"><path class="lead" d="M492 84V140"/><circle class="pin" cx="492" cy="84" r="3.5"/><text class="lbl" x="492" y="68" text-anchor="middle">Ad conversion</text></g>
+            <g class="mark" style="--d:.58s"><path class="lead" d="M652 118V140"/><circle class="pin" cx="652" cy="118" r="3.5"/><text class="lbl" x="652" y="102" text-anchor="middle">Outsourced delivery</text></g>
+            <g class="mark" style="--d:.78s"><path class="lead" d="M824 84V140"/><circle class="pin" cx="824" cy="84" r="3.5"/><text class="lbl" x="824" y="68" text-anchor="middle">Service acceptance</text></g>
+          </g>
+          <rect class="bar" x="40" y="140" width="880" height="72" rx="4" fill="url(#drain)"/>
+          <text class="zone z-a" x="40" y="240">Objective</text>
+          <text class="zone z-b" x="920" y="240" text-anchor="end">Subjective</text>
+        </svg>
       </figure>
 
       <div class="conditions-detail">
@@ -551,6 +627,7 @@
             <span class="condition-index num">01</span>
             <h3>Subjective conditions become verifiable tests before the trade</h3>
             <div class="condition-copy">
+              <figure class="condition-shot"><span><img src="assets/photos/condition-rule.jpg" width="1600" height="700" loading="lazy" decoding="async" alt="Two riders cross an empty road from above, each keeping to their own line"></span></figure>
               <p>A clause like &ldquo;pay on acceptable quality&rdquo; is broken down, before the trade, into standards both sides accept, each bound to a named source of evidence: a document, a reading, or a test result. The ruling is about what the source says, not about what either side believes.</p>
               <p class="today">Today, each side reads &ldquo;acceptable&rdquo; its own way once money is at stake, and the reading comes off one party&rsquo;s own instrument.</p>
             </div>
@@ -559,6 +636,7 @@
             <span class="condition-index num">02</span>
             <h3>The judge has no stake in the outcome</h3>
             <div class="condition-copy">
+              <figure class="condition-shot"><span><img src="assets/photos/condition-verify.jpg" width="1600" height="700" loading="lazy" decoding="async" alt="Seen from above, two people cross a road on bold painted stripes"></span></figure>
               <p>Whichever way a case is decided, the judge earns the same. Forfeited collateral never flows to the judge.</p>
               <p class="today">Today, a dispute goes to the custodian or the platform: the party that holds the money and takes a cut of the trade it is asked to rule on.</p>
             </div>
@@ -567,6 +645,7 @@
             <span class="condition-index num">03</span>
             <h3>Release follows evidence, not the other side&rsquo;s confirmation</h3>
             <div class="condition-copy">
+              <figure class="condition-shot"><span><img src="assets/photos/condition-evidence.jpg" width="1600" height="700" loading="lazy" decoding="async" alt="A lone worker stands on a quay at dusk facing the hull of a loading vessel, recording what has arrived"></span></figure>
               <p>Objective evidence such as a bank receipt triggers the release. A counterparty that owes performance cannot stall your money by withholding confirmation.</p>
               <div class="evidence-ledger">
                 <div><span>It completes</span><b>Value to the payee</b></div>
@@ -583,10 +662,12 @@
 </main>
 
 <section class="cta" id="contact">
+  <div class="cta-bg" aria-hidden="true"><img src="assets/photos/cta-field.jpg" width="2400" height="1350" loading="lazy" decoding="async" alt=""></div>
   <div class="wrap">
-    <div class="cta-panel reveal">
-      <div><h2>Send us a hard trade.</h2><p>A size, a side, and a counterparty you do not trust yet.</p></div>
-      <div class="cta-action"><a class="btn btn-primary" href="#contact">Talk to us</a></div>
+    <h2 class="reveal">Send us a trade.</h2>
+    <div class="cta-foot reveal">
+      <p>A size, a side, and a counterparty you do not trust yet.</p>
+      <a class="btn btn-primary" href="#contact">Start</a>
     </div>
   </div>
 </section>
@@ -721,6 +802,38 @@
     revealNodes.forEach(node=>revealObserver.observe(node));
   }
 
+  /* ── module 4 · the three photographs ────────────────────────────
+     One scroll pass over whichever shots are on screen. Each drifts
+     against the scroll and loses a little light on the way out, so the
+     block reads as three moments rather than three pictures. The
+     entrance scale is CSS; this only owns the travel. */
+  const shots=[...document.querySelectorAll('.condition-shot')];
+  if(!reduced&&shots.length){
+    const live=new Set();
+    let queued=false;
+    const paint=()=>{
+      queued=false;
+      const half=innerHeight/2;
+      live.forEach(frame=>{
+        const r=frame.getBoundingClientRect();
+        /* -1 still below the fold, 0 dead centre, 1 gone off the top */
+        const c=Math.max(-1,Math.min(1,(half-(r.top+r.height/2))/(half+r.height/2)));
+        const out=Math.max(0,(Math.abs(c)-.62)/.38);   /* only near the edges */
+        frame.querySelector('img').style.setProperty('--ty',(c*3.4).toFixed(2)+'%');
+        frame.querySelector('span').style.opacity=(1-out*.45).toFixed(3);
+      });
+    };
+    const onScroll=()=>{if(!queued){queued=true;requestAnimationFrame(paint);}};
+    const io=new IntersectionObserver(entries=>{
+      entries.forEach(e=>e.isIntersecting?live.add(e.target):live.delete(e.target));
+      onScroll();
+    },{rootMargin:'20% 0px'});
+    shots.forEach(s=>io.observe(s));
+    addEventListener('scroll',onScroll,{passive:true});
+    addEventListener('resize',onScroll);
+    onScroll();
+  }
+
   /* ── module 3 · the field ────────────────────────────────────────
      One array of marks, three arrangements, driven by where the pinned
      section sits. A mark stands for one settlement; the arrangements
@@ -739,6 +852,8 @@
     const rnd=Math.random;
     const TAU=6.2831853;
     const P=new Array(N);
+    const GA=Math.PI*(3-Math.sqrt(5)), FYS=new Float64Array(N), FRS=new Float64Array(N);
+    for(let i=0;i<N;i++){const y=1-(i/(N-1))*2;FYS[i]=y;FRS[i]=Math.sqrt(Math.max(0,1-y*y));}
     for(let i=0;i<N;i++){
       const g=(rnd()+rnd()+rnd()-1.5)/1.5;      /* centre-weighted */
       /* depth drives size, brightness and drift together. A field where
@@ -748,7 +863,7 @@
          rectangle. sqrt-biased radius keeps the area evenly filled, the
          extra power pulls mass inward. */
       const ang=rnd()*TAU, rad=Math.pow(rnd(),.62);
-      P[i]={x:rnd(),y:rnd(),tx:0,ty:0,
+      P[i]={idx:i,x:rnd(),y:rnd(),tx:0,ty:0,
         k:.04+rnd()*.05+z*.03,
         ac:Math.cos(ang)*rad, as:Math.sin(ang)*rad,
         sx:rnd(), g, z,
@@ -758,9 +873,13 @@
         /* a point on a sphere, evenly distributed: acos keeps the poles
            from bunching the way a naive uniform angle does */
         th:rnd()*TAU, ps:Math.acos(2*rnd()-1),
+        /* and a slot on an evenly spaced lattice, for the third
+           arrangement: a golden-angle spiral is the cheap way to get
+           4,800 points spread over a sphere with no seams and no
+           bunching at the poles */
+        fy:FYS[i], fx:Math.cos(GA*i)*FRS[i], fz:Math.sin(GA*i)*FRS[i],
         link:rnd()<.05,                          /* wired to a neighbour */
         bad:rnd()<.028,
-        arm:i%3,
         core:rnd()<.014};                        /* the sample that wires up */
     }
     let W=0,H=0,dpr=1,mode=0,raf=0,alive=false,t=0;
@@ -776,41 +895,99 @@
        for the same reason they would on the sphere, so x is scaled by
        the inverse aspect. */
     const posA=p=>{const ar=H?W/H:1.7;p.tx=CX+p.ac*(.46/ar);p.ty=CY+p.as*.46;};
-    /* a sphere of counterparties, wired to one another. Rotating, with
-       depth from the z axis, so it reads as a body rather than a disc. */
-    let spin=0;
-    const sphere=p=>{
-      const th=p.th+spin, sp=Math.sin(p.ps);
-      const x=Math.cos(th)*sp, y=Math.cos(p.ps), z=Math.sin(th)*sp;
-      const k=.62+.38*((z+1)/2);              /* nearer is bigger, brighter */
-      /* the card is wider than it is tall and the coordinates are
-         normalised per axis, so an equal radius on both would draw an
-         ellipse. Scale x by the inverse aspect to keep it round. */
-      const R=.34, ar=H?W/H:1.7;
-      return {x:CX+x*(R/ar)*k, y:CY+y*R*k, k};
+
+    /* Arrangements two and three are the "solving" and "composing" states
+       from thinking-orbs (MIT, (c) Jakub Antalik & Alex Brinza) —
+       github.com/Jakubantalik/thinking-orbs, src/engine/lattice.ts and
+       src/engine/ribbon.ts. That package is a React component drawing a
+       64px badge from a fresh dot list every frame; this page has no
+       build step and no React, so the maths is ported onto the marks
+       that already carried the first arrangement. The lattice is then
+       assembled out of the record rather than appearing over it. */
+    const ORB_Y=.355;
+    const hashD=(a,b)=>{const h=Math.sin(a*12.9898+b*78.233)*43758.5453;return h-Math.floor(h);};
+
+    /* ── working: particles running tilted orbits. The tuned preset is
+       coreless — just the ghost paths and the particles doing the work ── */
+    const ORBN=14, GHOSTN=160, PARTS=5, SLOTS=GHOSTN+PARTS;
+    const OB=[];                       /* per-orbit basis, fixed at build */
+    for(let o=0;o<ORBN;o++){
+      const h1=hashD(o,1.7), h2=hashD(o,5.2), h3=hashD(o,8.9);
+      const th=h1*TAU, phi=Math.acos(2*h2-1);
+      const nx=Math.sin(phi)*Math.cos(th), ny=Math.cos(phi), nz=Math.sin(phi)*Math.sin(th);
+      let ux=-ny, uy=nx; const uz=0;
+      const ul=Math.max(1e-6,Math.sqrt(ux*ux+uy*uy));ux/=ul;uy/=ul;
+      OB.push({ro:.45+.52*h1, ux,uy,uz,
+        vx:ny*uz-nz*uy, vy:nz*ux-nx*uz, vz:nx*uy-ny*ux,
+        sp:(.25+.55*h3)*(h3>.5?1:-1), ph:h2*6});
+    }
+    const ORBIT_N=ORBN*SLOTS;
+    let PSY=0,PCY=1;
+    const OST=Math.sin(.3), OCT=Math.cos(.3);
+    const orbitTick=()=>{const yaw=t*4*.12;PSY=Math.sin(yaw);PCY=Math.cos(yaw);};
+    const posB=p=>{
+      const i=p.idx;
+      if(i>=ORBIT_N){p.hide=1;return;}
+      p.hide=0;
+      const o=OB[(i/SLOTS)|0], k=i%SLOTS, ghost=k<GHOSTN;
+      const a=ghost?(k/GHOSTN)*TAU:t*4*o.sp+((k-GHOSTN)/PARTS)*TAU+o.ph;
+      const ca=Math.cos(a), sa=Math.sin(a);
+      const x=(o.ux*ca+o.vx*sa)*o.ro, y=(o.uy*ca+o.vy*sa)*o.ro, z=(o.uz*ca+o.vz*sa)*o.ro;
+      const x1=x*PCY+z*PSY, z1=-x*PSY+z*PCY;
+      const y1=y*OCT-z1*OST, z2=y*OST+z1*OCT;
+      const d=(z2/o.ro+1)/2, ar=H?W/H:1.7, R=.30;
+      /* the paths sit low in the depth bands and the runners high, which
+         is how their painter separates ghost ink from particle ink */
+      p.zz=ghost?Math.max(0,Math.min(.999,d*.42)):Math.max(0,Math.min(.999,.62+.37*d));
+      p.kk=ghost?.85:1.6+3.2*d;
+      p.tx=CX+x1*(R/ar);
+      p.ty=ORB_Y-y1*R;
     };
-    const posB=p=>{const s=sphere(p);p.tx=s.x;p.ty=s.y;p.kk=s.k;};
-    /* what step 03 actually says: three terms follow from that number.
-       Earlier passes drew the number again — a ring, a column, a blob —
-       which is step 02's job, so the third beat said nothing new. The
-       mass leaves one point and blooms into three knots. */
-    const ARM=[-.115,0,.115], FY=.30;
+
+    /* ── weaving: three strands plait around the sphere. Each runs pole
+       to pole on a helix, and a radial breathing term makes them trade
+       places, which is what reads as the over/under of a plait ── */
+    const STRAND=230, TURNS=3, GH=700, BRAID_N=GH+3*STRAND;
+    const GHP=new Float64Array(GH*3);
+    for(let i=0;i<GH;i++){
+      const y=1-(2*(i+.5))/GH, rad=Math.sqrt(Math.max(0,1-y*y)), a=i*GA;
+      GHP[i*3]=rad*Math.cos(a);GHP[i*3+1]=y;GHP[i*3+2]=rad*Math.sin(a);
+    }
+    const frac=x=>x-Math.floor(x);
+    let BSY=0,BCY=1;
+    const braidTick=()=>{const yaw=t*2.6*.4;BSY=Math.sin(yaw);BCY=Math.cos(yaw);};
     const posC=p=>{
-      const ar=H?W/H:1.7, u=1.7/ar;
-      /* the dense end is the heavy end, so the origin sits further out
-         than the knots do to keep the whole fan centred */
-      const ox=CX-.20*u, tx=CX+.13*u;
-      const t=Math.pow(p.sx,.5);
-      /* ease y so the arms leave together and separate late */
-      const e=t*t*(3-2*t);
-      const r=.005+.028*t*t;
-      p.tx=ox+(tx-ox)*t+Math.cos(p.th)*(r/ar);
-      p.ty=FY+ARM[p.arm]*e+Math.sin(p.th)*r;
+      const i=p.idx;
+      if(i>=BRAID_N){p.hide=1;return;}
+      p.hide=0;
+      const ghost=i<GH, T=t*2.6;
+      let x,y,z,fade=1;
+      if(ghost){x=GHP[i*3];y=GHP[i*3+1];z=GHP[i*3+2];}
+      else{
+        const j=i-GH, st=(j/STRAND)|0, k=j%STRAND, phase=(st/3)*TAU;
+        /* u walks pole to pole; the frac() drift slides the whole strand */
+        const u=(frac(k/STRAND+T*.045)*2-1)*.96;
+        const surf=Math.sqrt(Math.max(0,1-u*u));
+        fade=Math.min(1,(1-Math.abs(u))/.1);
+        const a=u*Math.PI*TURNS+phase;
+        const weave=1+.075*Math.sin(u*Math.PI*TURNS*2+phase*2+T*.8);
+        x=Math.cos(a)*surf*weave;y=u*weave;z=Math.sin(a)*surf*weave;
+      }
+      const x1=x*BCY+z*BSY, z1=-x*BSY+z*BCY;
+      const y1=y*OCT-z1*OST, z2=y*OST+z1*OCT;
+      const d=(z2+1)/2, ar=H?W/H:1.7, R=.27;
+      /* the ghost sphere is held far down the bands; the strands carry
+         the ink, faded out at the poles where they turn over */
+      if(ghost){p.zz=Math.min(.999,d*.24);p.kk=1;}
+      else{p.zz=Math.max(0,Math.min(.999,fade*(.10+.86*d)));p.kk=1+1.5*d;}
+      p.tx=CX+x1*(R/ar);
+      p.ty=ORB_Y-y1*R;
     };
 
     const draw=()=>{
       if(!W){raf=alive?requestAnimationFrame(draw):0;return;}
-      t+=.006; spin+=.0028;
+      t+=.006;
+      if(mode===1)orbitTick();else if(mode===2)braidTick();
       /* flat: a radial backdrop put a visible vignette on a card that is
          supposed to read as one grey */
       ctx.fillStyle='#151517';ctx.fillRect(0,0,W,H);
@@ -823,57 +1000,44 @@
         const d=(1-p.z)*.004;
         p.x+=(p.tx+Math.sin(t+p.ph)*d-p.x)*p.k;
         p.y+=(p.ty+Math.cos(t*.8+p.ph)*d-p.y)*p.k;
+        if(p.hide)continue;
         (p.bad?bad:(mode>0&&p.core)?lit:pale).push(p);
       }
 
-      /* Inside the sphere, counterparties are wired to one another: the
-         model reads a population, not a queue. Only near-neighbours are
-         joined, so it stays a mesh rather than a ball of wool. */
-      if(mode===1){
-        /* neutral: lime at this alpha over a grey ground reads olive */
-        ctx.strokeStyle='rgba(226,226,234,.13)';ctx.lineWidth=1;ctx.beginPath();
-        const wired=[];
-        for(let i=0;i<N;i++){if(P[i].link)wired.push(P[i]);}
-        for(let i=0;i<wired.length;i++){
-          const a=wired[i];
-          for(let j=i+1;j<wired.length;j++){
-            const b=wired[j];
-            const dx=(a.x-b.x)*W, dy=(a.y-b.y)*H;
-            const d2=dx*dx+dy*dy;
-            if(d2<9000){ctx.moveTo(a.x*W,a.y*H);ctx.lineTo(b.x*W,b.y*H);}
-          }
-        }
-        ctx.stroke();
-      }
       /* marks are drawn in brightness bands: one fill per band keeps the
          count cheap while still giving the field depth */
       const bands=6;
       for(let b=0;b<bands;b++){
         const lo=b/bands,hi=(b+1)/bands;
-        const al=(.10+((lo+hi)/2)*.68).toFixed(3);
+        const m=(lo+hi)/2, al=(mode?.13+m*.80:.10+m*.68).toFixed(3);
         ctx.fillStyle='rgba(228,228,234,'+al+')';
         ctx.beginPath();let any=false;
         for(let i=0;i<pale.length;i++){
-          const p=pale[i];if(p.z<lo||p.z>=hi)continue;any=true;
-          const r=p.s*(mode===1?(p.kk||1):1)/2,cx=p.x*W,cy=p.y*H;
+          const p=pale[i];
+          /* the lattice is lit by where a mark actually is, not by the
+             fixed depth the loose arrangements sort on */
+          const zz=mode===2?p.zz:p.z;
+          if(zz<lo||zz>=hi)continue;any=true;
+          const r=mode?p.kk:p.s/2,
+                cx=p.x*W,cy=p.y*H;
           ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,TAU);
         }
         if(any)ctx.fill();
       }
       ctx.fillStyle='rgba(110,160,255,.95)';
       ctx.beginPath();
-      for(let i=0;i<lit.length;i++){const p=lit[i],r=(p.s+.9)/2,cx=p.x*W,cy=p.y*H;
+      for(let i=0;i<lit.length;i++){const p=lit[i],r=mode===2?p.kk+.35:(p.s+.9)/2,cx=p.x*W,cy=p.y*H;
         ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,TAU);}
       ctx.fill();
       ctx.fillStyle='rgba(240,132,112,.92)';
       ctx.beginPath();
-      for(let i=0;i<bad.length;i++){const p=bad[i],r=(p.s+.5)/2,cx=p.x*W,cy=p.y*H;
+      for(let i=0;i<bad.length;i++){const p=bad[i],r=mode===2?p.kk+.25:(p.s+.5)/2,cx=p.x*W,cy=p.y*H;
         ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,TAU);}
       ctx.fill();
 
       /* the knot gets a soft bloom, so the third arrangement lands */
       if(mode===2){
-        const gl=ctx.createRadialGradient((CX-.16)*W,.30*H,0,(CX-.16)*W,.30*H,Math.min(W,H)*.22);
+        const gl=ctx.createRadialGradient(CX*W,CY*H,0,CX*W,CY*H,Math.min(W,H)*.20);
         gl.addColorStop(0,'rgba(226,226,234,.10)');
         gl.addColorStop(1,'rgba(226,226,234,0)');
         ctx.fillStyle=gl;ctx.fillRect(0,0,W,H);
