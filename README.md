@@ -105,13 +105,14 @@ hex 的后果是浅色主题下那一处会瞎——实底按钮的文字色尤�
 本地算出，UI 按节奏逐条显示。做成引擎而非写死文案，是为了让不同的单跑出不同的
 检查数值和结论 —— 撮合十笔不会弹十遍相同台词。
 
-三个引擎都刻意写得很薄，各自配了单测：
+引擎层刻意写得很薄，各自配了单测：
 
 | 文件 | 职责 |
 |---|---|
-| `engine/matching.ts` | 能否撮合。**只有一条规则**：席位得先开通 |
-| `engine/riskEngine.ts` | 先由种子定分数，再倒推出几条问题项 |
+| `engine/matching.ts` | `matchOrder` 能否成交（**只有一条规则**：账户得先开通）；`pickBestMatch` 快捷兑换的自动选单 |
+| `engine/riskEngine.ts` | 先由种子定分数，再倒推出几条问题项，附置信度与自然语言结论 |
 | `engine/queueMachine.ts` | `queued → validating → passed / challenged / declined` |
+| `engine/challenge.ts` | 由检查结果生成待办，原因点名全部问题项 |
 
 测试只钉住「屏幕上不会自相矛盾」（分数与裁决一致、放行的单不出现 fail、同一笔单
 反复看结果不变），不去验证业务规则是否合理 —— 那些规则本来就是编的。
