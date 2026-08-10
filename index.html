@@ -163,7 +163,7 @@
        3  what falls out           collapsed onto one estimate
      Below 900px nothing pins; the field rests on its last arrangement
      and the three steps stack. */
-  .engine-section{position:relative;height:340svh;background:oklch(17% .025 267);color:var(--white)}
+  .engine-section{position:relative;height:340svh;background:#0a0c1e;color:var(--white)}
   .engine-sticky{position:sticky;top:0;height:100svh;overflow:hidden;display:flex;align-items:center}
   .engine-sticky::before{
     content:"";position:absolute;inset:0;z-index:1;opacity:.1;pointer-events:none;
@@ -174,7 +174,7 @@
   /* the field is densest on the right, so the copy keeps a dark bed */
   .engine-sticky::after{
     content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-    background:linear-gradient(90deg,oklch(17% .025 267) 6%,oklch(17% .025 267 / .82) 30%,transparent 62%);
+    background:linear-gradient(100deg,#0a0c1e 4%,rgba(10,12,30,.86) 24%,rgba(10,12,30,.45) 44%,transparent 68%);
   }
   .engine-stage{position:relative;z-index:2;width:100%}
   .engine-stage h2{margin:0;max-width:20ch;font-size:var(--t-head);font-weight:400;line-height:1.14;letter-spacing:-.026em}
@@ -197,7 +197,7 @@
   .engine-readout span{font-size:.8125rem;letter-spacing:.12em;text-transform:uppercase;color:oklch(78% .02 267)}
 
   /* the argument, after the mechanism has finished playing */
-  .engine-points{position:relative;background:oklch(17% .025 267);color:var(--white);
+  .engine-points{position:relative;background:#0a0c1e;color:var(--white);
     padding-block:clamp(3rem,6vh,5rem) var(--gap-section)}
   .model-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(1.5rem,3vw,2.75rem)}
   .model-point{padding-left:1.1rem;border-left:1px solid oklch(97% .018 264 / .2)}
@@ -614,21 +614,30 @@
   const field=(()=>{
     const ctx=engineField&&engineField.getContext&&engineField.getContext('2d');
     if(!ctx)return null;
-    const N=3200;
+    const N=4800;
     const rnd=Math.random;
+    const TAU=6.2831853;
     const P=new Array(N);
     for(let i=0;i<N;i++){
-      /* centre-weighted, so the sorted arrangement has a real shape */
-      const g=(rnd()+rnd()+rnd()-1.5)/1.5;
+      const g=(rnd()+rnd()+rnd()-1.5)/1.5;      /* centre-weighted */
+      /* depth drives size, brightness and drift together. A field where
+         every mark is the same weight reads flat however many there are. */
+      const z=Math.pow(rnd(),1.7);
+      /* the record: a cloud with a dense core and a sparse fringe, not a
+         rectangle. sqrt-biased radius keeps the area evenly filled, the
+         extra power pulls mass inward. */
+      const ang=rnd()*TAU, rad=Math.pow(rnd(),.62);
       P[i]={x:rnd(),y:rnd(),tx:0,ty:0,
-        k:.045+rnd()*.06,
-        rx:.10+rnd()*.84, ry:.12+rnd()*.76,   /* its slot in the book */
-        sx:rnd(), g,
-        a:.3+rnd()*.55,
-        bad:rnd()<.03,
-        core:rnd()<.02};                       /* the sample that lights */
+        k:.04+rnd()*.05+z*.03,
+        ax:.66+Math.cos(ang)*rad*.34, ay:.5+Math.sin(ang)*rad*.40,
+        sx:rnd(), g, z,
+        s:.7+z*1.9,                              /* size */
+        a:.10+z*.68,                             /* brightness */
+        ph:rnd()*TAU,                            /* idle drift phase */
+        bad:rnd()<.028,
+        core:rnd()<.014};                        /* the sample that wires up */
     }
-    let W=0,H=0,dpr=1,mode=0,mix=0,raf=0,alive=false;
+    let W=0,H=0,dpr=1,mode=0,raf=0,alive=false,t=0;
     const size=()=>{
       const r=engineField.getBoundingClientRect();
       if(!r.width)return;
@@ -636,42 +645,92 @@
       engineField.width=Math.round(W*dpr);engineField.height=Math.round(H*dpr);
       ctx.setTransform(dpr,0,0,dpr,0,0);
     };
-    /* 1 · the record: a loose book, denser to the right */
-    const posA=p=>{p.tx=p.rx;p.ty=p.ry;};
-    /* 2 · read: sorted along a risk axis, height by density */
-    const posB=p=>{p.tx=.30+p.sx*.66;p.ty=.5+p.g*(.34-p.sx*.2);};
-    /* 3 · one estimate: collapsed onto a single point */
-    const posC=p=>{
-      const r=.04+Math.abs(p.g)*.06;
-      p.tx=.72+Math.cos(p.sx*6.2832)*r*.6;
-      p.ty=.5+Math.sin(p.sx*6.2832)*r;
-    };
+    const CX=.68,CY=.5;
+    const posA=p=>{p.tx=p.ax;p.ty=p.ay;};
+    /* sorted along a risk axis: tight, so the mass reads as a mass */
+    const posB=p=>{p.tx=.30+p.sx*.64;p.ty=CY+p.g*(.19-p.sx*.10);};
+    /* one estimate: a small bright knot */
+    const posC=p=>{const r=.012+Math.abs(p.g)*.045;
+      p.tx=CX+Math.cos(p.sx*TAU)*r*.62;p.ty=CY+Math.sin(p.sx*TAU)*r;};
+
     const draw=()=>{
-      if(!W)return;
-      ctx.clearRect(0,0,W,H);
+      if(!W){raf=alive?requestAnimationFrame(draw):0;return;}
+      t+=.006;
+      /* a deep backdrop with a centre, so the field falls away at the edges
+         instead of stopping at a rectangle */
+      const bg=ctx.createRadialGradient(CX*W,CY*H,0,CX*W,CY*H,Math.max(W,H)*.78);
+      bg.addColorStop(0,'#161a3a');
+      bg.addColorStop(.55,'#0e1129');
+      bg.addColorStop(1,'#080a1c');
+      ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
       const pale=[],lit=[],bad=[];
       for(let i=0;i<N;i++){
         const p=P[i];
         if(mode===0)posA(p);else if(mode===1)posB(p);else posC(p);
-        p.x+=(p.tx-p.x)*p.k;p.y+=(p.ty-p.y)*p.k;
+        /* it breathes at rest, by depth, so nothing is ever frozen */
+        const d=(1-p.z)*.004;
+        p.x+=(p.tx+Math.sin(t+p.ph)*d-p.x)*p.k;
+        p.y+=(p.ty+Math.cos(t*.8+p.ph)*d-p.y)*p.k;
         (p.bad?bad:(mode>0&&p.core)?lit:pale).push(p);
       }
-      const s=mode===2?2.4:1.9;
-      [['rgba(206,214,255,.55)',pale],['rgba(214,246,120,.95)',lit],['rgba(236,128,110,.9)',bad]]
-        .forEach(([c,list])=>{
-          if(!list.length)return;
-          ctx.fillStyle=c;ctx.beginPath();
-          for(let j=0;j<list.length;j++){const p=list[j];ctx.rect(p.x*W-s/2,p.y*H-s/2,s,s);}
-          ctx.fill();
-        });
-      /* while it is reading, the sampled marks are wired to the core */
+
+      /* While it reads, sampled records flow into the model. They enter
+         from the left only, bend the same way, and land across a small
+         area rather than one pixel — otherwise the lines converge into a
+         starburst, which is the one shape this should not look like. */
       if(mode===1){
-        ctx.strokeStyle='rgba(214,246,120,.16)';ctx.lineWidth=1;ctx.beginPath();
-        for(let i=0;i<N;i++){const p=P[i];if(!p.core)continue;
-          ctx.moveTo(p.x*W,p.y*H);ctx.lineTo(.72*W,.5*H);}
-        ctx.stroke();
+        ctx.lineWidth=1;
+        const cx=CX*W,cy=CY*H;
+        for(let i=0;i<lit.length;i++){
+          const p=lit[i];
+          const x=p.x*W,y=p.y*H;
+          if(x>cx-24)continue;                    /* only what is upstream */
+          const ex=cx-10+p.g*16, ey=cy+p.g*14;    /* a mouth, not a point */
+          const dx=ex-x, dy=ey-y;
+          /* one consistent perpendicular bend, so they read as a sheaf */
+          const bend=.22;
+          const mx=x+dx*.5-dy*bend, my=y+dy*.5+dx*bend;
+          const grad=ctx.createLinearGradient(x,y,ex,ey);
+          grad.addColorStop(0,'rgba(214,246,120,0)');
+          grad.addColorStop(.7,'rgba(214,246,120,.20)');
+          grad.addColorStop(1,'rgba(214,246,120,.5)');
+          ctx.strokeStyle=grad;
+          ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(mx,my,ex,ey);ctx.stroke();
+        }
       }
-      if(alive)raf=requestAnimationFrame(draw);
+
+      /* marks are drawn in brightness bands: one fill per band keeps the
+         count cheap while still giving the field depth */
+      const bands=6;
+      for(let b=0;b<bands;b++){
+        const lo=b/bands,hi=(b+1)/bands;
+        const al=(.10+((lo+hi)/2)*.68).toFixed(3);
+        ctx.fillStyle='rgba(214,224,255,'+al+')';
+        ctx.beginPath();let any=false;
+        for(let i=0;i<pale.length;i++){
+          const p=pale[i];if(p.z<lo||p.z>=hi)continue;any=true;
+          const s=p.s;ctx.rect(p.x*W-s/2,p.y*H-s/2,s,s);
+        }
+        if(any)ctx.fill();
+      }
+      ctx.fillStyle='rgba(226,250,150,.95)';
+      ctx.beginPath();
+      for(let i=0;i<lit.length;i++){const p=lit[i],s=p.s+.7;ctx.rect(p.x*W-s/2,p.y*H-s/2,s,s);}
+      ctx.fill();
+      ctx.fillStyle='rgba(240,132,112,.92)';
+      ctx.beginPath();
+      for(let i=0;i<bad.length;i++){const p=bad[i],s=p.s+.3;ctx.rect(p.x*W-s/2,p.y*H-s/2,s,s);}
+      ctx.fill();
+
+      /* the knot gets a soft bloom, so the third arrangement lands */
+      if(mode===2){
+        const gl=ctx.createRadialGradient(CX*W,CY*H,0,CX*W,CY*H,Math.min(W,H)*.22);
+        gl.addColorStop(0,'rgba(214,246,120,.16)');
+        gl.addColorStop(1,'rgba(214,246,120,0)');
+        ctx.fillStyle=gl;ctx.fillRect(0,0,W,H);
+      }
+      raf=alive?requestAnimationFrame(draw):0;
     };
     const start=()=>{if(alive)return;alive=true;if(!raf)raf=requestAnimationFrame(draw);};
     const stop=()=>{alive=false;if(raf){cancelAnimationFrame(raf);raf=0;}};
@@ -681,7 +740,7 @@
     return {start,stop,set(m){mode=m;},
       still(m){mode=m;for(let i=0;i<N;i++){const p=P[i];
         if(m===0)posA(p);else if(m===1)posB(p);else posC(p);p.x=p.tx;p.y=p.ty;}
-        draw();}};
+        draw();stop();}};
   })();
 
   let engineMode=-1;
