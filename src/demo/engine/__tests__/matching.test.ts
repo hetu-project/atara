@@ -65,31 +65,37 @@ function withScore(id: string, score: number, over: Partial<PoolOrder> = {}): Po
 describe('pickBestMatch', () => {
   it('我要买就只看别人的卖单', () => {
     const pool = [withScore('sellA', 70), withScore('buyB', 99, { side: 'buy' })];
-    const hit = pickBestMatch(pool, { asset: 'BTC', side: 'buy', amount: 1 });
+    const hit = pickBestMatch(pool, { asset: 'BTC', fiat: 'USD', side: 'buy', amount: 1 });
     expect(hit?.id).toBe('sellA');
   });
 
   it('我要卖就只看别人的买单', () => {
     const pool = [withScore('sellA', 99), withScore('buyB', 70, { side: 'buy' })];
-    const hit = pickBestMatch(pool, { asset: 'BTC', side: 'sell', amount: 1 });
+    const hit = pickBestMatch(pool, { asset: 'BTC', fiat: 'USD', side: 'sell', amount: 1 });
     expect(hit?.id).toBe('buyB');
   });
 
   it('优先取信用分最高的对手方', () => {
     const pool = [withScore('low', 61), withScore('high', 97), withScore('mid', 80)];
-    expect(pickBestMatch(pool, { asset: 'BTC', side: 'buy', amount: 1 })?.id).toBe('high');
+    expect(pickBestMatch(pool, { asset: 'BTC', fiat: 'USD', side: 'buy', amount: 1 })?.id).toBe('high');
   });
 
   it('信用分相同时取金额更接近的那笔', () => {
     const pool = [withScore('far', 90, { amount: 10 }), withScore('near', 90, { amount: 2 })];
-    expect(pickBestMatch(pool, { asset: 'BTC', side: 'buy', amount: 2.1 })?.id).toBe('near');
+    expect(pickBestMatch(pool, { asset: 'BTC', fiat: 'USD', side: 'buy', amount: 2.1 })?.id).toBe('near');
   });
 
   it('币种不匹配时返回 null', () => {
-    expect(pickBestMatch([withScore('a', 90)], { asset: 'ETH', side: 'buy', amount: 1 })).toBeNull();
+    expect(pickBestMatch([withScore('a', 90)], { asset: 'ETH', fiat: 'USD', side: 'buy', amount: 1 })).toBeNull();
+  });
+
+  it('结算货币不匹配时返回 null', () => {
+    // 用户说「花 10000 USD」，却撮出一笔以 HKD 计价的挂单，屏幕上两个币种对不上
+    const pool = [withScore('hkd', 99, { fiatCurrency: 'HKD' })];
+    expect(pickBestMatch(pool, { asset: 'BTC', fiat: 'USD', side: 'buy', amount: 1 })).toBeNull();
   });
 
   it('空池返回 null', () => {
-    expect(pickBestMatch([], { asset: 'BTC', side: 'buy', amount: 1 })).toBeNull();
+    expect(pickBestMatch([], { asset: 'BTC', fiat: 'USD', side: 'buy', amount: 1 })).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import { challengeFromRisk } from './engine/challenge';
-import { ASSETS, FIATS } from './prices';
+import { ASSETS, FIATS, TRADABLE, chainOf, priceOf } from './prices';
 import { assessRisk } from './engine/riskEngine';
 import { seededRandom } from './random';
 import type { Challenge, Counterparty, DemoState, PoolOrder, Transaction, TxStatus } from './types';
@@ -40,9 +40,16 @@ function makeCounterparty(i: number): Counterparty {
   };
 }
 
-export function makePoolOrder(i: number, now = Date.now()): PoolOrder {
+export function makePoolOrder(
+  i: number,
+  now = Date.now(),
+  /** 强制指定组合，用于保证种子覆盖到快捷兑换能选出的每一种搭配 */
+  force?: { asset: string; fiat: string; side: PoolOrder['side'] },
+): PoolOrder {
   const r = seededRandom(`po_${i}`);
-  const spec = ASSETS[Math.floor(r() * ASSETS.length)];
+  const spec = force
+    ? { asset: force.asset, chain: chainOf(force.asset), px: priceOf(force.asset) }
+    : ASSETS[Math.floor(r() * ASSETS.length)];
   const amount =
     spec.asset === 'BTC'
       ? Number((r() * 3 + 0.05).toFixed(3))
@@ -52,11 +59,11 @@ export function makePoolOrder(i: number, now = Date.now()): PoolOrder {
   const price = Number((spec.px * (0.985 + r() * 0.03)).toFixed(spec.px > 100 ? 0 : 4));
   return {
     id: `po_${i}`,
-    side: r() > 0.42 ? 'sell' : 'buy',
+    side: force ? force.side : r() > 0.42 ? 'sell' : 'buy',
     asset: spec.asset,
     chain: spec.chain,
     amount,
-    fiatCurrency: FIATS[Math.floor(r() * FIATS.length)],
+    fiatCurrency: force ? force.fiat : FIATS[Math.floor(r() * FIATS.length)],
     price,
     fiatTotal: Number((amount * price).toFixed(2)),
     counterparty: makeCounterparty(i),
@@ -114,6 +121,27 @@ function seedTransactions(now: number): { transactions: Transaction[]; challenge
   return { transactions, challenges };
 }
 
+/**
+ * 大厅的初始挂单。
+ *
+ * 前一段是**覆盖网格**：快捷兑换的下拉能选出 4 币种 × 4 结算货币 × 买卖两向共
+ * 32 种组合，每种都得至少有一笔，否则用户一进页面选中默认的 BTC/USD 就撞空态。
+ * 后一段是随机单，让池子看起来自然。
+ */
+function buildPool(now: number): PoolOrder[] {
+  const grid: PoolOrder[] = [];
+  let i = 0;
+  for (const asset of TRADABLE) {
+    for (const fiat of FIATS) {
+      for (const side of ['sell', 'buy'] as const) {
+        grid.push(makePoolOrder(i++, now, { asset, fiat, side }));
+      }
+    }
+  }
+  const filler = Array.from({ length: 16 }, (_, k) => makePoolOrder(200 + k, now));
+  return [...grid, ...filler];
+}
+
 export function createSeedState(): DemoState {
   const now = Date.now();
   const seeded = seedTransactions(now);
@@ -141,7 +169,7 @@ export function createSeedState(): DemoState {
         avgResponseMin: 0,
       },
     },
-    pool: Array.from({ length: 40 }, (_, i) => makePoolOrder(i, now)),
+    pool: buildPool(now),
     transactions: seeded.transactions,
     challenges: seeded.challenges,
   };

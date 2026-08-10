@@ -25,14 +25,19 @@ export function matchOrder(myDesk: Desk): MatchResult {
  * 这不是把先前删掉的方向规则加回来——matchOrder 依然只管账户是否开通；
  * 这里是自动撮合的选单逻辑，两回事。
  *
+ * 结算货币必须一并匹配：用户说「花 10000 USD」，却撮出一笔以 HKD 计价的挂单，
+ * 屏幕上两个币种对不上，一眼就是错的。
+ *
  * 「最优」= 对手方信用分最高。信用分相同则取金额更接近目标的那笔。
  */
 export function pickBestMatch(
   pool: PoolOrder[],
-  want: { asset: string; side: DeskKind; amount: number },
+  want: { asset: string; fiat: string; side: DeskKind; amount: number },
 ): PoolOrder | null {
   const needed: DeskKind = want.side === 'buy' ? 'sell' : 'buy';
-  const candidates = pool.filter((o) => o.asset === want.asset && o.side === needed);
+  const candidates = pool.filter(
+    (o) => o.asset === want.asset && o.fiatCurrency === want.fiat && o.side === needed,
+  );
   if (candidates.length === 0) return null;
 
   return candidates.reduce((best, o) => {

@@ -32,79 +32,85 @@ export default function QuickTradePage() {
 
   // AI 从大厅里挑最优对手方。用户只填金额，对手方不用自己找。
   const best = useMemo(
-    () => pickBestMatch(state.pool, { asset, side, amount: wantAmount }),
-    [state.pool, asset, side, wantAmount],
+    () => pickBestMatch(state.pool, { asset, fiat, side, amount: wantAmount }),
+    [state.pool, asset, fiat, side, wantAmount],
+  );
+
+  const candidates = useMemo(
+    () => state.pool.filter((o) => o.asset === asset && o.fiatCurrency === fiat && o.side !== side),
+    [state.pool, asset, fiat, side],
   );
 
   const canTrade = wantAmount > 0 && best !== null;
 
   return (
     <>
-      <DemoPageHeader title="快捷兑换" subtitle="填个金额，AI 自动帮你找最优对手方" />
+      <DemoPageHeader title="快捷兑换" subtitle="输入金额，由 AI 完成对手方匹配与风险审核" />
 
       <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-[minmax(0,1fr)_440px]">
-        {/* 左侧：说明 + AI 匹配结果 */}
-        <div className="flex flex-col gap-[18px]">
-          <div className="bg-surface border-hairline rounded-[var(--radius-panel)] border p-[26px]">
-            <h2 className="text-[30px] leading-tight font-semibold tracking-tight">
-              {side === 'buy' ? '买入' : '卖出'} {asset}
-              <span className="text-muted">，用 {fiat}</span>
-            </h2>
-            <p className="text-muted mt-3 text-[14px] leading-relaxed">
-              不用去大厅一张张翻。填好金额，AI 会在当前 {state.pool.length} 笔在售挂单里
-              按对手方信用和金额匹配度挑出最合适的一笔，成交前照例跑一遍安全检查。
-            </p>
-
-            <div className="border-hairline mt-6 grid grid-cols-3 gap-4 border-t pt-5 text-[13px]">
-              <Stat label="参考单价" value={`${fmtAmount(px)} ${fiat}`} />
-              <Stat label="在售挂单" value={`${state.pool.length} 笔`} />
-              <Stat label="使用账户" value={desk.name} />
+        {/* 左侧：AI 匹配结果 */}
+        <div className="bg-surface border-hairline flex flex-col rounded-[var(--radius-panel)] border p-[26px]">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <div className="text-muted text-[11px] font-semibold tracking-[0.08em]">AI 匹配结果</div>
+              <h2 className="mt-1.5 text-[21px] font-semibold tracking-tight">
+                {side === 'buy' ? '买入' : '卖出'} {asset}
+              </h2>
             </div>
-          </div>
-
-          {/* AI 匹配结果 */}
-          <div className="bg-surface border-hairline rounded-[var(--radius-panel)] border p-[22px]">
-            <div className="text-muted mb-3 flex items-center gap-2 text-[11px] font-semibold tracking-[0.08em]">
-              AI 匹配结果
-              {canTrade && <span className="bg-brand h-1.5 w-1.5 animate-pulse rounded-full" />}
-            </div>
-
-            {!wantAmount ? (
-              <p className="text-muted text-[13px]">填入金额后，AI 会立刻给出匹配的对手方。</p>
-            ) : best ? (
-              <div className="animate-[fadeUp_.35s_ease-out]">
-                <div className="flex items-center gap-3">
-                  <span className="bg-brand/12 text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold">
-                    {best.counterparty.name.slice(0, 1)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="truncate text-[15px] font-medium">
-                        {best.counterparty.name}
-                      </span>
-                      {best.counterparty.verified && <span className="text-ok text-[11px]">✓</span>}
-                    </div>
-                    <div className="text-muted text-[12px]">
-                      成交 {best.counterparty.completedTrades} 笔 · 纠纷{' '}
-                      {best.counterparty.disputes} 次
-                    </div>
-                  </div>
-                  <span className="text-ok bg-ok/12 shrink-0 rounded-[6px] px-2 py-1 text-[13px] font-semibold tabular-nums">
-                    {best.counterparty.score}
-                  </span>
-                </div>
-                <div className="border-hairline mt-3.5 grid grid-cols-3 gap-3 border-t pt-3.5 text-[13px]">
-                  <Stat label="这笔挂单" value={`${fmtAmount(best.amount)} ${best.asset}`} />
-                  <Stat label="对价" value={fmtFiat(best.fiatTotal, best.fiatCurrency)} />
-                  <Stat label="单价" value={fmtAmount(best.price)} />
-                </div>
-              </div>
-            ) : (
-              <p className="text-warn text-[13px]">
-                当前大厅里没有{side === 'buy' ? '出售' : '求购'} {asset} 的挂单，换个币种试试。
-              </p>
+            {canTrade && (
+              <span className="text-brand bg-brand/10 flex items-center gap-2 rounded-[var(--radius-pill)] px-3 py-1.5 text-[12px] font-medium">
+                <span className="bg-brand h-1.5 w-1.5 animate-pulse rounded-full" />
+                已锁定最优对手方
+              </span>
             )}
           </div>
+
+          {!wantAmount ? (
+            <Empty text="输入金额后，AI 会从大厅在售挂单中挑出最合适的一笔。" />
+          ) : best ? (
+            <div className="animate-[fadeUp_.35s_ease-out]">
+              <div className="flex items-center gap-3.5">
+                <span className="bg-brand/12 text-brand flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[17px] font-semibold">
+                  {best.counterparty.name.slice(0, 1)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-[17px] font-medium">{best.counterparty.name}</span>
+                    {best.counterparty.verified && <span className="text-ok text-[12px]">✓</span>}
+                  </div>
+                  <div className="text-muted font-mono text-[12px]">
+                    {best.counterparty.displayId}
+                  </div>
+                </div>
+                <span className="text-ok bg-ok/12 shrink-0 rounded-[8px] px-2.5 py-1.5 text-[16px] font-semibold tabular-nums">
+                  {best.counterparty.score}
+                </span>
+              </div>
+
+              <div className="border-hairline mt-5 grid grid-cols-3 gap-4 border-t pt-5">
+                <Stat label="这笔挂单" value={`${fmtAmount(best.amount)} ${best.asset}`} />
+                <Stat label="对价" value={fmtFiat(best.fiatTotal, best.fiatCurrency)} />
+                <Stat label="单价" value={fmtAmount(best.price)} />
+              </div>
+              <div className="border-hairline mt-4 grid grid-cols-3 gap-4 border-t pt-4">
+                <Stat label="历史成交" value={`${best.counterparty.completedTrades} 笔`} />
+                <Stat label="纠纷" value={`${best.counterparty.disputes} 次`} />
+                <Stat label="平均回复" value={`${best.counterparty.avgResponseMin} 分钟`} />
+              </div>
+
+              {/* 说清楚 AI 为什么选它——不解释的推荐在产品里就是黑箱 */}
+              <div className="bg-bg border-hairline mt-5 rounded-[var(--radius-sm)] border p-4">
+                <div className="text-muted mb-2 text-[11px] font-semibold tracking-[0.08em]">
+                  为什么是这一笔
+                </div>
+                <p className="text-[13px] leading-relaxed">{whyThisOne(best, candidates.length)}</p>
+              </div>
+            </div>
+          ) : (
+            <Empty
+              text={`大厅暂时没有以 ${fiat} 结算的${side === 'buy' ? '出售' : '求购'} ${asset} 挂单，换个币种或结算货币试试。`}
+            />
+          )}
         </div>
 
         {/* 右侧：币安式兑换卡 */}
@@ -246,6 +252,31 @@ function MoneyField({
       </div>
     </div>
   );
+}
+
+function Empty({ text }: { text: string }) {
+  return (
+    <div className="border-hairline text-muted flex flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-dashed px-6 py-14 text-center text-[13px]">
+      {text}
+    </div>
+  );
+}
+
+/** AI 的选单理由。由实际数据算出，不写死。 */
+function whyThisOne(best: PoolOrder, candidateCount: number): string {
+  const cp = best.counterparty;
+  const bits: string[] = [];
+  // 「在 1 笔挂单中信用分最高」是句废话，候选只有一笔时换个说法
+  bits.push(
+    candidateCount > 1
+      ? `在 ${candidateCount} 笔同币种同结算货币的挂单中信用分最高（${cp.score}）`
+      : `当前唯一一笔同币种同结算货币的挂单，对手方信用分 ${cp.score}`,
+  );
+  if (cp.disputes === 0) bits.push(`${cp.completedTrades} 笔履约零纠纷`);
+  else bits.push(`${cp.completedTrades} 笔履约、${cp.disputes} 次纠纷已了结`);
+  if (cp.avgResponseMin <= 10) bits.push(`平均 ${cp.avgResponseMin} 分钟内回复`);
+  if (cp.verified) bits.push('已完成实名认证');
+  return bits.join('，') + '。';
 }
 
 function Stat({ label, value }: { label: string; value: string }) {

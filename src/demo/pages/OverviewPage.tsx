@@ -35,7 +35,6 @@ export default function OverviewPage() {
     scored.length === 0
       ? 0
       : Math.round(scored.reduce((s, t) => s + (t.risk?.score ?? 0), 0) / scored.length);
-  const openChallenges = state.challenges.filter((c) => c.state === 'open');
   const desksOpen = Object.values(state.desks).filter((d) => d.verifiedAt !== null).length;
 
   return (
@@ -85,7 +84,7 @@ export default function OverviewPage() {
         <KpiTile label="未通过" value={pct(txs.filter((t) => t.status === 'declined').length)} sub="AI 判定有风险" />
       </div>
 
-      <div className="mb-[26px] grid grid-cols-[repeat(4,minmax(0,1fr))_360px] gap-[18px]">
+      <div className="mb-[26px] grid grid-cols-4 gap-[18px]">
         <KpiTile label="平均安全分" value={avgScore} sub={`${scored.length} 笔已评分`} />
         <KpiTile label="平均审核用时" value="4.8s" sub="每笔六项检查" />
         <KpiTile label="大厅在售" value={state.pool.length} sub="可以接单" />
@@ -96,31 +95,6 @@ export default function OverviewPage() {
           sub={desksOpen === 2 ? '买入与卖出都已开通' : '还有账户没开通'}
         />
 
-        {/* 任务积压面板，照抄 Trustline 的 All clear 空态 */}
-        <div className="bg-surface border-hairline row-span-1 rounded-[var(--radius-panel)] border p-[22px]">
-          <div className="mb-4 text-[15px] font-semibold">需要你处理</div>
-          {openChallenges.length === 0 ? (
-            <div className="flex flex-col items-center py-4 text-center">
-              <span className="border-ok text-ok mb-3 flex h-8 w-8 items-center justify-center rounded-full border text-[15px]">
-                ✓
-              </span>
-              <div className="text-[14px]">一切正常，没有待办</div>
-              <p className="text-muted mt-1.5 text-[12px]">需要补材料的交易和异常情况会出现在这里。</p>
-            </div>
-          ) : (
-            <ul className="space-y-2.5">
-              {openChallenges.slice(0, 3).map((c) => (
-                <li key={c.id} className="border-hairline border-b pb-2.5 last:border-b-0 last:pb-0">
-                  <div className="text-warn text-[13px]">{c.reason}</div>
-                  <div className="text-muted mt-0.5 font-mono text-[11px]">{c.txId}</div>
-                </li>
-              ))}
-              {openChallenges.length > 3 && (
-                <li className="text-muted text-[12px]">另有 {openChallenges.length - 3} 条</li>
-              )}
-            </ul>
-          )}
-        </div>
       </div>
 
       <div className="text-muted mb-1 text-[11px] font-semibold tracking-[0.08em]">趋势</div>

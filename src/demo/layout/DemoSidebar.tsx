@@ -7,16 +7,16 @@ import { signOutDemo } from '@/demo/auth/demoSession';
 // 改了还要连带动 README 和部署说明。
 const NAV = [
   {
-    group: 'AI 驾驶舱',
+    group: '智能交易',
     items: [
-      { to: '/overview', label: '智能总览' },
+      { to: '/pool', label: 'AI 撮合大厅' },
       { to: '/quick', label: '快捷兑换' },
     ],
   },
   {
-    group: '智能交易',
+    group: '账户中心',
     items: [
-      { to: '/pool', label: 'AI 撮合大厅' },
+      { to: '/overview', label: '智能总览' },
       { to: '/trades', label: 'AI 审核记录' },
       { to: '/todo', label: '待我确认' },
       { to: '/desk', label: '我的账户' },
