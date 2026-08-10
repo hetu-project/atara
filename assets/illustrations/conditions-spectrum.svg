@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 260" role="img" aria-label="A bank receipt sits at the end a machine can read. Insurance claims, ad conversion, outsourced delivery and service acceptance fall along the range where somebody has to rule.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 260" role="img" aria-label="A bank receipt sits at the end where a document settles the condition. Insurance claims, ad conversion, outsourced delivery and service acceptance fall along the range where a person settles it.">
   <defs>
     <!-- solid where the condition is solid, draining as it travels -->
     <linearGradient id="drain" x1="0" y1="0" x2="1" y2="0">
@@ -46,7 +46,7 @@
   <!-- the range itself, carrying no words of its own -->
   <rect x="40" y="140" width="880" height="72" rx="4" fill="url(#drain)"/>
 
-  <!-- what each end means, set clear of the bar -->
-  <text class="zone" x="40" y="240" fill="#2518eb">A MACHINE CAN READ IT</text>
-  <text class="zone" x="920" y="240" fill="#a2a7b4" text-anchor="end">SOMEBODY HAS TO RULE</text>
+  <!-- what each end means: one frame, one word changing -->
+  <text class="zone" x="40" y="240" fill="#2518eb">A DOCUMENT SETTLES IT</text>
+  <text class="zone" x="920" y="240" fill="#a2a7b4" text-anchor="end">A PERSON SETTLES IT</text>
 </svg>
