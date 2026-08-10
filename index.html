@@ -179,7 +179,7 @@
     background:#fff;box-shadow:var(--ring),var(--lift)}
   .protocol-figure img{display:block;width:100%;height:auto}
 
-  .engine-section{position:relative;height:340svh;background:#fff;color:var(--white)}
+  .engine-section{position:relative;height:340svh;background:#fff;color:oklch(97% .004 260)}
   .engine-sticky{position:sticky;top:0;height:100svh;display:grid;place-items:center;
     padding:clamp(.85rem,2vh,1.5rem) clamp(1rem,2.2vw,2rem)}
   /* the field is a card with edges, not a wash across the whole viewport:
@@ -188,7 +188,7 @@
      the same 22px corner as the light card that follows it. */
   .engine-card{position:relative;width:100%;height:100%;
     max-height:none;
-    border-radius:22px;overflow:hidden;background:#0d1024;
+    border-radius:22px;overflow:hidden;background:#141416;
     display:flex;align-items:flex-end}
   .engine-card::before{
     content:"";position:absolute;inset:0;z-index:1;opacity:.1;pointer-events:none;
@@ -199,7 +199,7 @@
   /* the copy gets a bed from below, not a wall down the middle */
   .engine-card::after{
     content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-    background:linear-gradient(0deg,#0d1024 6%,rgba(13,16,36,.92) 26%,rgba(13,16,36,.48) 46%,transparent 66%);
+    background:linear-gradient(0deg,#141416 6%,rgba(20,20,22,.92) 26%,rgba(20,20,22,.48) 46%,transparent 66%);
   }
   /* centred, not parked against the left edge: the field is symmetrical
      so the copy has to be too, or the frame reads lopsided */
@@ -212,13 +212,13 @@
     gap:clamp(1.25rem,3vw,2.5rem);margin-top:clamp(2rem,4vh,3rem);text-align:left}
   .engine-step{position:relative;padding:0 0 0 1.1rem;opacity:.34;transition:opacity .35s linear}
   .engine-step.is-active{opacity:1}
-  .engine-step::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:oklch(97% .018 264 / .18)}
+  .engine-step::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:oklch(97% .004 260 / .2)}
   .engine-step::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--signal);
     transform:scaleY(var(--progress,0));transform-origin:top;opacity:0;transition:opacity .3s linear}
   .engine-step.is-active::after{opacity:1}
   .engine-step b{display:block;margin-top:.5rem;font-size:1rem;font-weight:600;letter-spacing:-.014em;line-height:1.35}
   .engine-step .body > div{min-height:0}
-  .engine-step p{margin:.45rem 0 0;font-size:.875rem;line-height:1.5;color:oklch(80% .018 267)}
+  .engine-step p{margin:.45rem 0 0;font-size:.875rem;line-height:1.5;color:oklch(79% .005 260)}
   .engine-num{display:block;font-size:.75rem;letter-spacing:.14em;color:var(--signal);opacity:.8}
 
   /* the estimate the third arrangement lands on */
@@ -226,7 +226,7 @@
     opacity:0;transform:translateY(6px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
   .engine-readout.is-on{opacity:1;transform:none}
   .engine-readout strong{font-size:clamp(2rem,4vw,3rem);font-weight:400;letter-spacing:-.03em;color:var(--signal);line-height:1}
-  .engine-readout span{font-size:.8125rem;letter-spacing:.12em;text-transform:uppercase;color:oklch(78% .02 267)}
+  .engine-readout span{font-size:.8125rem;letter-spacing:.12em;text-transform:uppercase;color:oklch(77% .005 260)}
 
   /* ── module 3b · the model, as a map ──────────────────────────────────────
      A neutral card on white — no blue ground, all four corners equal.
@@ -234,7 +234,7 @@
      argument underneath. Evidence in on the left, one estimate in the
      middle, the terms it sets on the right. */
   .model-section{background:#fff;
-    padding:clamp(.85rem,2vh,1.5rem) clamp(1rem,2.2vw,2rem) var(--gap-section)}
+    padding:clamp(4rem,8vh,7rem) clamp(1rem,2.2vw,2rem) var(--gap-section)}
   .model-card{position:relative}
   .tm{--tm-cols:clamp(10.5rem,15vw,15rem) minmax(0,1fr) clamp(10.5rem,15vw,15rem);
       --tm-gap:clamp(1rem,3.6vw,4rem);
@@ -812,9 +812,9 @@
       /* a deep backdrop with a centre, so the field falls away at the edges
          instead of stopping at a rectangle */
       const bg=ctx.createRadialGradient(CX*W,CY*H,0,CX*W,CY*H,Math.max(W,H)*.78);
-      bg.addColorStop(0,'#191d42');
-      bg.addColorStop(.55,'#11142c');
-      bg.addColorStop(1,'#0b0e20');
+      bg.addColorStop(0,'#2b2b30');
+      bg.addColorStop(.55,'#1c1c1f');
+      bg.addColorStop(1,'#151517');
       ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
 
       const pale=[],lit=[],bad=[];
@@ -832,7 +832,8 @@
          model reads a population, not a queue. Only near-neighbours are
          joined, so it stays a mesh rather than a ball of wool. */
       if(mode===1){
-        ctx.strokeStyle='rgba(214,246,120,.15)';ctx.lineWidth=1;ctx.beginPath();
+        /* neutral: lime at this alpha over a grey ground reads olive */
+        ctx.strokeStyle='rgba(226,226,234,.13)';ctx.lineWidth=1;ctx.beginPath();
         const wired=[];
         for(let i=0;i<N;i++){if(P[i].link)wired.push(P[i]);}
         for(let i=0;i<wired.length;i++){
@@ -852,7 +853,7 @@
       for(let b=0;b<bands;b++){
         const lo=b/bands,hi=(b+1)/bands;
         const al=(.10+((lo+hi)/2)*.68).toFixed(3);
-        ctx.fillStyle='rgba(214,224,255,'+al+')';
+        ctx.fillStyle='rgba(228,228,234,'+al+')';
         ctx.beginPath();let any=false;
         for(let i=0;i<pale.length;i++){
           const p=pale[i];if(p.z<lo||p.z>=hi)continue;any=true;
