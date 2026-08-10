@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;display=swap">
 <style>
   :root {
-    --paper: oklch(97.2% .018 92);
+    --paper: #ffffff;
     --ink: oklch(14% .025 267);
     --blue: oklch(43% .29 266);
     --blue-deep: oklch(31% .24 268);
@@ -22,8 +22,8 @@
     --line: oklch(97% .018 264 / .2);
     --maxw: 1200px;
     --pad: clamp(1.5rem, 5vw, 4rem);
-    --t-display: clamp(2.15rem, 3.4vw, 3.15rem);
-    --t-head: clamp(1.6rem, 2.5vw, 2.15rem);
+    --t-display: clamp(2.3rem, 3.4vw, 3.2rem);
+    --t-head: clamp(1.9rem, 3.2vw, 2.8rem);
     --t-body: clamp(.98rem, .3vw + .9rem, 1.06rem);
     --gap-section: clamp(6rem, 11vw, 10.5rem);
     --ease: cubic-bezier(.16,1,.3,1);
@@ -73,7 +73,7 @@
 
   .hero-main{
     width:100%;max-width:var(--maxw);min-height:100svh;margin-inline:auto;display:grid;
-    grid-template-columns:minmax(0,1.08fr) minmax(27rem,.92fr);gap:clamp(2.5rem,5vw,5rem);
+    grid-template-columns:minmax(0,1.18fr) minmax(24rem,.82fr);gap:clamp(2.5rem,5vw,4.5rem);
     align-items:center;padding:clamp(8rem,13vh,10rem) var(--pad) clamp(8.5rem,14vh,10.5rem);
   }
   .hero-copy{position:relative;z-index:2;align-self:center}
@@ -131,24 +131,24 @@
 
   .wrap{width:100%;max-width:var(--maxw);margin-inline:auto;padding-inline:var(--pad)}
   .section{padding-block:var(--gap-section)}
-  .section h2,.cta h2{margin:0;max-width:24ch;font-size:var(--t-head);font-weight:400;line-height:1.14;letter-spacing:-.026em;text-wrap:balance}
-  .section-lede{max-width:56ch;margin:1.4rem 0 0;font-size:clamp(1.04rem,.4vw + .95rem,1.22rem);line-height:1.5;letter-spacing:-.01em;color:oklch(41% .018 267)}
+  .section h2,.cta h2,.protocol-section h2{margin:0;max-width:22ch;font-size:var(--t-head);font-weight:300;line-height:1.1;letter-spacing:-.034em;text-wrap:balance}
+  .section-lede{max-width:52ch;margin:1.6rem 0 0;font-size:clamp(1.1rem,.5vw + 1rem,1.35rem);line-height:1.55;letter-spacing:-.012em;color:oklch(45% .015 267)}
   .reveal{opacity:0;transform:translateY(1rem);transition:opacity .75s var(--ease),transform .75s var(--ease)}
   .reveal.in{opacity:1;transform:none}
 
   .protocol-section{position:relative;height:320svh;padding:0;background:var(--paper)}
   .protocol-sticky{position:sticky;top:0;display:flex;align-items:center;min-height:100svh;padding-block:clamp(4.5rem,8vh,6.5rem);overflow:hidden}
-  .protocol-demo{display:grid;grid-template-columns:minmax(0,.65fr) minmax(32rem,1.35fr);gap:clamp(2rem,4vw,4rem);align-items:center;margin-top:clamp(2.5rem,4vw,3.5rem)}
+  .protocol-demo{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(2.5rem,5vw,5.5rem);align-items:center;margin-top:clamp(2.5rem,4vw,3.5rem)}
   .protocol-steps{border-top:1px solid oklch(14% .025 267 / .13)}
   .protocol-step{position:relative;display:grid;grid-template-columns:2.4rem minmax(0,1fr);gap:1rem;width:100%;padding:1.15rem 0 1.15rem 1.15rem;border:0;border-bottom:1px solid oklch(14% .025 267 / .13);background:transparent;text-align:left;cursor:pointer;opacity:.34;transition:opacity .3s linear}
   .protocol-step::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:oklch(14% .025 267 / .12)}
   .protocol-step::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--blue);transform:scaleY(var(--progress,0));transform-origin:top;transition:transform .12s linear}
   .protocol-step.is-active{opacity:1}.protocol-step-num{padding-top:.16rem;font-size:.9375rem;font-weight:500;color:var(--blue)}
-  .protocol-step h3{margin:0;font-size:1.0625rem;font-weight:600;line-height:1.35;letter-spacing:-.014em}
+  .protocol-step h3{margin:0;font-size:1.25rem;font-weight:500;line-height:1.3;letter-spacing:-.02em}
   .protocol-step-detail{display:grid;grid-template-rows:0fr;transition:grid-template-rows .5s var(--ease)}.protocol-step.is-active .protocol-step-detail{grid-template-rows:1fr}.protocol-step-detail > div{min-height:0;overflow:hidden}
   .protocol-step p{margin:.8rem 0 0;font-size:.9375rem;line-height:1.55;color:oklch(45% .018 267)}
   .protocol-step ul{margin:.8rem 0 0;padding:0;list-style:none}.protocol-step li{position:relative;padding:.3rem 0 .3rem 1rem;font-size:.875rem;color:oklch(34% .018 267)}.protocol-step li::before{content:"";position:absolute;left:0;top:.75rem;width:.3rem;height:.3rem;background:var(--blue)}
-  .protocol-field{position:relative;min-width:0;aspect-ratio:4/3;margin:0;overflow:hidden;background:#eee9de;contain:layout paint}
+  .protocol-field{position:relative;min-width:0;max-width:40rem;justify-self:end;width:100%;aspect-ratio:4/3;margin:0;overflow:hidden;background:#fff;contain:layout paint}
   .protocol-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:translate3d(0,1rem,0) scale(.985);filter:saturate(.92);transition:opacity .5s linear,transform .85s var(--ease),filter .65s linear;will-change:transform,opacity}
   .protocol-art.is-active{z-index:1;opacity:1;transform:translate3d(0,0,0) scale(1.015);filter:saturate(1)}
 
@@ -217,7 +217,7 @@
   .model-point b{display:block;font-size:.9375rem;font-weight:600;letter-spacing:-.012em}
   .model-point p{margin:.5rem 0 0;font-size:.875rem;line-height:1.5;color:oklch(80% .018 267)}
 
-  .conditions-section{background:oklch(96.8% .008 92)}
+  .conditions-section{background:#fff;border-top:1px solid #ededf0}
   /* One thick arrow, crisp where the condition is crisp and dissolving
      into grey where nobody can settle it. It replaces a hairline axis
      with five dots, which read as a chart nobody had to think about. */

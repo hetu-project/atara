@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="As completed settlements accumulate, the model's estimate tightens and the collateral it asks of a clean counterparty falls from 34 to 8 percent">
   <style>
-    .paper{fill:#f1ede6}.card{fill:#fbfaf6;stroke:#ddd8cf}
-    .cap{fill:#a49d90;font:400 15px/1 Inter,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase}
-    .lbl{fill:#8a8478;font:400 16px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
-    .val{fill:#1b2233;font:500 24px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
-    .grid{stroke:#e8e3da;stroke-width:1}
-    .axis{stroke:#cdc7bc;stroke-width:1.5;stroke-linecap:round}
+    .paper{fill:#ffffff}
+    .cap{fill:#9aa0ad;font:500 12px/1 Inter,system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase}
+    .lbl{fill:#8a8f9e;font:400 16px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+    .val{fill:#14161f;font:400 26px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+    .grid{stroke:#eef0f4;stroke-width:1}
+    .axis{stroke:#d4d7de;stroke-width:1.5;stroke-linecap:round}
     .band{fill:url(#bandFade)}
-    .mid{stroke:#2f24e7;stroke-width:2.5;fill:none;stroke-linecap:round}
-    .tickmark{fill:#c6e84e}.tickmark.bad{fill:#e58272}
-    .pin{stroke:#8e88ef;stroke-width:1.5;stroke-dasharray:3 4}
-    .dot{fill:#fbfaf6;stroke:#2f24e7;stroke-width:2.5}
+    .mid{stroke:#2518eb;stroke-width:2;fill:none;stroke-linecap:round}
+    .tickmark{fill:#cde94e}.tickmark.bad{fill:#e58272}
+    .pin{stroke:#c4c9d6;stroke-width:1;stroke-dasharray:3 4}
+    .dot{fill:#fff;stroke:#2518eb;stroke-width:2}
     /* the estimate tightens as the record grows */
     .draw{stroke-dasharray:1400;stroke-dashoffset:1400;animation:draw 6s cubic-bezier(.5,0,.3,1) -4.2s infinite}
     @keyframes draw{0%,4%{stroke-dashoffset:1400}62%,100%{stroke-dashoffset:0}}
@@ -27,15 +27,14 @@
     <!-- denser at the estimate, thinner at its edges: a band of belief
          rather than a solid block -->
     <linearGradient id="bandFade" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0"   stop-color="#8e88ef" stop-opacity=".08"/>
-      <stop offset=".5"  stop-color="#8e88ef" stop-opacity=".34"/>
-      <stop offset="1"   stop-color="#8e88ef" stop-opacity=".08"/>
+      <stop offset="0"   stop-color="#2518eb" stop-opacity=".05"/>
+      <stop offset=".5"  stop-color="#2518eb" stop-opacity=".14"/>
+      <stop offset="1"   stop-color="#2518eb" stop-opacity=".05"/>
     </linearGradient>
   </defs>
 
   <rect class="paper" width="800" height="600"/>
-  <rect class="card" x="18" y="18" width="764" height="564" rx="18"/>
-
+  
   <text class="cap" x="96" y="98">collateral asked of the same counterparty</text>
 
   <g class="grid"><path d="M96 190H706M96 260H706M96 330H706M96 400H706"/></g>
