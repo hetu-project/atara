@@ -1,14 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="A subjective clause reading pay on acceptable quality is rewritten before the trade into three objective tests, each bound to a named source of evidence">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" role="img" aria-label="A subjective clause reading pay on acceptable quality is rewritten before the trade into three objective tests, each bound to a named source of evidence">
   <style>
     .cap{fill:#9aa0ad;font:500 12px/1 Inter,system-ui,sans-serif;letter-spacing:.14em}
-    .clause{fill:#6b7180;font:400 27px/1 Inter,system-ui,sans-serif;font-style:italic}
-    .ghost{fill:#d9dce4;font:400 27px/1 Inter,system-ui,sans-serif;font-style:italic}
-    .qm{fill:#c3c7d1;font:300 46px/1 Inter,system-ui,sans-serif}
-    .note{fill:#8a8f9e;font:400 14px/1 Inter,system-ui,sans-serif}
-    .test{fill:#14161f;font:500 19px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+    .clause{fill:#6b7180;font:400 25px/1 Inter,system-ui,sans-serif;font-style:italic}
+    .ghost{fill:#dcdfe6;font:400 25px/1 Inter,system-ui,sans-serif;font-style:italic}
+    .qm{fill:#c8ccd5;font:300 42px/1 Inter,system-ui,sans-serif}
+    .note{fill:#8a8f9e;font:400 13px/1 Inter,system-ui,sans-serif}
+    .test{fill:#14161f;font:500 18px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
     .src{fill:#8a8f9e;font:400 13px/1 Inter,system-ui,sans-serif}
     .rule{stroke:#e7e8ee;stroke-width:1}
-    .arrow{stroke:#2518eb;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .arrow{stroke:#16724d;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
     .t1{animation:tick 5.4s ease-out -3.6s infinite}
     .t2{animation:tick 5.4s ease-out -3.05s infinite}
     .t3{animation:tick 5.4s ease-out -2.5s infinite}
@@ -16,49 +16,49 @@
     @media(prefers-reduced-motion:reduce){.t1,.t2,.t3{animation:none;opacity:1}}
   </style>
 
-  <rect width="800" height="600" fill="#ffffff"/>
+  <rect width="900" height="400" fill="#ffffff"/>
 
   <!-- the clause as written: two readings of the same words -->
-  <text class="cap" x="72" y="204">WHAT THE CONTRACT SAYS</text>
+  <text class="cap" x="60" y="112">WHAT THE CONTRACT SAYS</text>
   <g class="ghost" transform="translate(5 4)">
-    <text x="72" y="262">&#8220;pay on</text>
-    <text x="72" y="298">acceptable</text>
-    <text x="72" y="334">quality&#8221;</text>
+    <text x="60" y="168">&#8220;pay on</text>
+    <text x="60" y="202">acceptable</text>
+    <text x="60" y="236">quality&#8221;</text>
   </g>
-  <text class="clause" x="72" y="262">&#8220;pay on</text>
-  <text class="clause" x="72" y="298">acceptable</text>
-  <text class="clause" x="72" y="334">quality&#8221;</text>
-  <text class="qm" x="252" y="336">?</text>
-  <text class="note" x="72" y="392">Two readings, two invoices,</text>
-  <text class="note" x="72" y="414">and no way to settle either.</text>
+  <text class="clause" x="60" y="168">&#8220;pay on</text>
+  <text class="clause" x="60" y="202">acceptable</text>
+  <text class="clause" x="60" y="236">quality&#8221;</text>
+  <text class="qm" x="228" y="238">?</text>
+  <text class="note" x="60" y="288">Two readings, two invoices,</text>
+  <text class="note" x="60" y="308">and no way to settle either.</text>
 
   <!-- rewritten before anyone commits -->
-  <path class="arrow" d="M318 296h84M390 285l12 11-12 11"/>
-  <text class="cap" x="308" y="330">BEFORE THE TRADE</text>
+  <path class="arrow" d="M310 196h72M370 186l12 10-12 10"/>
+  <text class="cap" x="300" y="228">BEFORE THE TRADE</text>
 
   <!-- the tests the protocol settles on -->
-  <text class="cap" x="472" y="204">WHAT THE PROTOCOL SETTLES ON</text>
+  <text class="cap" x="470" y="112">WHAT THE PROTOCOL SETTLES ON</text>
 
   <g class="t1">
-    <circle cx="486" cy="250" r="10" fill="#cde94e"/>
-    <path d="M481 250l4 4 7.5-8.5" stroke="#14161f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="484" cy="158" r="10" fill="#cde94e"/>
+    <path d="M479 158l4 4 7.5-8.5" stroke="#14161f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
-  <text class="test" x="514" y="256">moisture &#8804; 12%</text>
-  <text class="src" x="514" y="278">lab certificate</text>
-  <path class="rule" d="M472 302h256"/>
+  <text class="test" x="512" y="164">moisture &#8804; 12%</text>
+  <text class="src" x="512" y="184">lab certificate</text>
+  <path class="rule" d="M470 206h370"/>
 
   <g class="t2">
-    <circle cx="486" cy="336" r="10" fill="#cde94e"/>
-    <path d="M481 336l4 4 7.5-8.5" stroke="#14161f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="484" cy="240" r="10" fill="#cde94e"/>
+    <path d="M479 240l4 4 7.5-8.5" stroke="#14161f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
-  <text class="test" x="514" y="342">count = 400 units</text>
-  <text class="src" x="514" y="364">inspection report</text>
-  <path class="rule" d="M472 388h256"/>
+  <text class="test" x="512" y="246">count = 400 units</text>
+  <text class="src" x="512" y="266">inspection report</text>
+  <path class="rule" d="M470 288h370"/>
 
   <g class="t3">
-    <circle cx="486" cy="422" r="10" fill="#cde94e"/>
-    <path d="M481 422l4 4 7.5-8.5" stroke="#14161f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="484" cy="322" r="10" fill="#cde94e"/>
+    <path d="M479 322l4 4 7.5-8.5" stroke="#14161f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
-  <text class="test" x="514" y="428">landed by 30 Sep</text>
-  <text class="src" x="514" y="450">bill of lading</text>
+  <text class="test" x="512" y="328">landed by 30 Sep</text>
+  <text class="src" x="512" y="348">bill of lading</text>
 </svg>
