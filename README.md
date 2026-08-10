@@ -20,8 +20,8 @@ npm run dev
 | `http://localhost:5174/` | Atara 落地页（静态） |
 | `http://localhost:5174/app/` | 撮合演示后台（React 应用） |
 
-落地页的 **Start** / **Talk to us** 会跳到页面内的联系区；演示后台可直接通过
-`/app/` 访问。
+落地页的 **Start** 按钮（导航、hero、页尾各一个）直接进应用的快捷兑换页；
+**Talk to us** 留在落地页的联系区。
 
 ## Supabase 接入（四步）
 
@@ -140,7 +140,9 @@ Supabase 客户端并发网络请求）。要接回来改 `src/routes.tsx` 和 `
 
 设计系统、动效约定和改动注意事项见 `docs/landing-page.md`。
 
-`src/__tests__/landingEntry.test.ts` 会检查主要 CTA 能正确跳到页面内的联系区。
+改落地页时唯一的硬约束：每个 **Start** 按钮都得指向 `/app/quick`。
+`src/__tests__/landingEntry.test.ts` 盯着这一点——改回页内锚点构建不会报错，
+但进应用的入口就没了。
 
 logo 放在 `public/` 而不是项目根的 `assets/`，是因为它们由 JS 拼路径
 （`src="assets/logos/${n}.png"`），Vite 的 HTML 资源管线扫不到模板字符串，
