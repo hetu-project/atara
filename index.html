@@ -152,13 +152,57 @@
   .protocol-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:translate3d(0,1rem,0) scale(.985);filter:saturate(.92);transition:opacity .5s linear,transform .85s var(--ease),filter .65s linear;will-change:transform,opacity}
   .protocol-art.is-active{z-index:1;opacity:1;transform:translate3d(0,0,0) scale(1.015);filter:saturate(1)}
 
-  .engine-section{position:relative;overflow:hidden;background:oklch(17% .025 267);color:var(--white)}
-  .engine-section::before{content:"";position:absolute;inset:0;opacity:.12;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' seed='29' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.55'/%3E%3C/svg%3E");background-size:15rem 15rem;mix-blend-mode:overlay}
-  .engine-section .wrap{position:relative;z-index:1}.engine-section .section-lede{color:oklch(82% .018 267)}
-  .model-map{display:grid;grid-template-columns:minmax(0,1fr) minmax(12rem,.72fr) minmax(0,1fr);gap:clamp(2rem,5vw,5rem);align-items:center;margin-top:clamp(3rem,5vw,4.5rem);padding-block:2rem;border-top:1px solid oklch(97% .018 264 / .16);border-bottom:1px solid oklch(97% .018 264 / .16)}
-  .model-col{display:grid}.model-node{position:relative;min-height:4.8rem;padding:1rem 0;border-bottom:1px solid oklch(97% .018 264 / .13);opacity:.42;transition:opacity .4s linear}.model-node:first-child{border-top:1px solid oklch(97% .018 264 / .13)}.model-node.is-live{opacity:1}.model-node b{display:block;font-size:.9375rem;font-weight:500}.model-node span{display:block;margin-top:.28rem;font-size:.8125rem;line-height:1.4;color:oklch(72% .02 267)}
-  .model-core{display:grid;place-items:center;aspect-ratio:1;border:1px solid oklch(97% .018 264 / .22);background:oklch(21% .035 267);text-align:center;transition:border-color .4s linear}.model-core.is-computing{border-color:var(--signal)}.model-core span{font-size:.75rem;color:oklch(72% .02 267)}.model-core b{display:block;margin-top:.55rem;font-size:clamp(1.25rem,2vw,1.75rem);font-weight:400;line-height:1.2;letter-spacing:-.03em;color:var(--signal)}.model-core i{display:block;width:.4rem;height:.4rem;margin:1rem auto 0;background:var(--signal);animation:corePulse 1.4s linear infinite alternate}@keyframes corePulse{to{opacity:.2}}
-  .model-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:clamp(2.5rem,4vw,3.5rem);border-top:1px solid oklch(97% .018 264 / .16)}.model-point{padding:1.5rem 1.5rem 0 0}.model-point + .model-point{padding-left:1.5rem;border-left:1px solid oklch(97% .018 264 / .16)}.model-point b{font-size:.9375rem;font-weight:600}.model-point p{margin:.55rem 0 0;font-size:.875rem;line-height:1.5;color:oklch(72% .02 267)}
+  /* ── module 3 · the field ──────────────────────────────────────
+     Pinned for three viewport-heights, one full-bleed canvas behind
+     the copy. The band is not a panel in the text column any more:
+     the marks are the substance and the words ride on top of them.
+
+     Three arrangements of one field, driven by scroll position:
+       1  the record it reads      a loose book of settlements
+       2  the model reading it     sorted, with weighted lines to a core
+       3  what falls out           collapsed onto one estimate
+     Below 900px nothing pins; the field rests on its last arrangement
+     and the three steps stack. */
+  .engine-section{position:relative;height:340svh;background:oklch(17% .025 267);color:var(--white)}
+  .engine-sticky{position:sticky;top:0;height:100svh;overflow:hidden;display:flex;align-items:center}
+  .engine-sticky::before{
+    content:"";position:absolute;inset:0;z-index:1;opacity:.1;pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' seed='29' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.55'/%3E%3C/svg%3E");
+    background-size:15rem 15rem;mix-blend-mode:overlay;
+  }
+  .engine-field{position:absolute;inset:0;z-index:0;width:100%;height:100%;display:block}
+  /* the field is densest on the right, so the copy keeps a dark bed */
+  .engine-sticky::after{
+    content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+    background:linear-gradient(90deg,oklch(17% .025 267) 6%,oklch(17% .025 267 / .82) 30%,transparent 62%);
+  }
+  .engine-stage{position:relative;z-index:2;width:100%}
+  .engine-stage h2{margin:0;max-width:20ch;font-size:var(--t-head);font-weight:400;line-height:1.14;letter-spacing:-.026em}
+  .engine-steps{margin-top:clamp(2rem,4vh,3rem);max-width:32rem}
+  .engine-step{position:relative;padding:1.15rem 0 1.15rem 1.4rem;opacity:.3;transition:opacity .35s linear}
+  .engine-step.is-active{opacity:1}
+  .engine-step::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:oklch(97% .018 264 / .18)}
+  .engine-step::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--signal);
+    transform:scaleY(var(--progress,0));transform-origin:top;opacity:0;transition:opacity .3s linear}
+  .engine-step.is-active::after{opacity:1}
+  .engine-step b{display:block;font-size:1.0625rem;font-weight:600;letter-spacing:-.014em}
+  .engine-step p{margin:.5rem 0 0;font-size:.9375rem;line-height:1.55;color:oklch(82% .018 267)}
+  .engine-num{position:absolute;left:-2.6rem;top:1.2rem;font-size:.8125rem;color:var(--signal);opacity:.75}
+
+  /* the estimate the third arrangement lands on */
+  .engine-readout{margin-top:clamp(1.6rem,3vh,2.4rem);display:flex;align-items:baseline;gap:.9rem;
+    opacity:0;transform:translateY(6px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+  .engine-readout.is-on{opacity:1;transform:none}
+  .engine-readout strong{font-size:clamp(2rem,4vw,3rem);font-weight:400;letter-spacing:-.03em;color:var(--signal);line-height:1}
+  .engine-readout span{font-size:.8125rem;letter-spacing:.12em;text-transform:uppercase;color:oklch(78% .02 267)}
+
+  /* the argument, after the mechanism has finished playing */
+  .engine-points{position:relative;background:oklch(17% .025 267);color:var(--white);
+    padding-block:clamp(3rem,6vh,5rem) var(--gap-section)}
+  .model-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(1.5rem,3vw,2.75rem)}
+  .model-point{padding-left:1.1rem;border-left:1px solid oklch(97% .018 264 / .2)}
+  .model-point b{display:block;font-size:.9375rem;font-weight:600;letter-spacing:-.012em}
+  .model-point p{margin:.5rem 0 0;font-size:.875rem;line-height:1.5;color:oklch(80% .018 267)}
 
   .conditions-section{background:oklch(96.8% .008 92)}
   /* One thick arrow, crisp where the condition is crisp and dissolving
@@ -177,8 +221,9 @@
     .nav{grid-template-columns:1fr auto}.nav-center{display:none}
     .hero-main{grid-template-columns:1fr;padding-top:7.2rem;padding-bottom:9.5rem;gap:3.2rem}
     .instrument{width:100%;min-height:35rem}
+    .engine-section{height:auto}.engine-sticky{position:relative;height:auto;min-height:0;padding-block:var(--gap-section)}.engine-step{opacity:1}
+    .model-points{grid-template-columns:1fr;gap:1.5rem}
     .protocol-section{height:auto}.protocol-sticky{position:relative;min-height:0;padding-block:var(--gap-section);overflow:visible}.protocol-demo{grid-template-columns:1fr;gap:2.5rem}.protocol-step{opacity:.48}.protocol-step.is-active{opacity:1}
-    .model-map{grid-template-columns:1fr}.model-core{width:min(15rem,70vw);margin-inline:auto}.model-col{grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.model-node:first-child{border-top:0}
     .condition-row{grid-template-columns:2.6rem 1fr}.condition-copy{grid-column:2}
   }
   @media(max-width:560px){
@@ -294,26 +339,40 @@
     </div>
   </section>
 
-  <section class="section engine-section" id="engine">
-    <div class="wrap">
-      <h2 class="reveal">An AI model prices every payment.</h2>
-      <p class="section-lede reveal">It reads what this counterparty has actually done and computes the probability of default on this trade. What you post, what you pay, and how it unwinds all follow from that number.</p>
+  <section class="engine-section" id="engine">
+    <div class="engine-sticky">
+      <canvas class="engine-field" id="engineField" aria-hidden="true"></canvas>
+      <div class="wrap engine-stage">
+        <h2>An AI model prices every payment.</h2>
 
-      <div class="model-map reveal" id="modelMap" aria-label="Evidence inputs enter an AI model and determine payment terms">
-        <div class="model-col model-inputs">
-          <div class="model-node"><b>Settlement history</b><span>Delivered, late, or defaulted</span></div>
-          <div class="model-node"><b>Dispute outcomes</b><span>Who was found at fault</span></div>
-          <div class="model-node"><b>Verification checks</b><span>Six, on both sides</span></div>
-          <div class="model-node"><b>Wallet provenance</b><span>Where the funds came from</span></div>
+        <div class="engine-steps">
+          <div class="engine-step is-active" data-engine-step>
+            <span class="engine-num">01</span>
+            <b>It reads what this counterparty has actually done</b>
+            <p>Settlement history, dispute outcomes, verification checks, and where the funds came from.</p>
+          </div>
+          <div class="engine-step" data-engine-step>
+            <span class="engine-num">02</span>
+            <b>It computes one probability of default</b>
+            <p>For this counterparty, on this trade. Not a tier set when the account opened.</p>
+          </div>
+          <div class="engine-step" data-engine-step>
+            <span class="engine-num">03</span>
+            <b>Collateral, fee and recourse follow from that number</b>
+            <p>What you post, what you pay, and on what evidence it unwinds.</p>
+          </div>
         </div>
-        <div class="model-core" id="modelCore"><div><span>AI model</span><b>One estimate,<br>per trade</b><i aria-hidden="true"></i></div></div>
-        <div class="model-col model-outputs">
-          <div class="model-node"><b>Collateral</b><span>What fraction has to be posted</span></div>
-          <div class="model-node"><b>Fee</b><span>Priced to that probability</span></div>
-          <div class="model-node"><b>Recourse</b><span>On what evidence it unwinds</span></div>
+
+        <div class="engine-readout" id="engineReadout">
+          <strong class="num">1.8%</strong>
+          <span>probability of default &middot; illustrative</span>
         </div>
       </div>
+    </div>
+  </section>
 
+  <section class="engine-points">
+    <div class="wrap">
       <div class="model-points reveal">
         <div class="model-point"><b>Priced per trade</b><p>A limit set when the account opens says nothing about who is on the other side of this one.</p></div>
         <div class="model-point"><b>A price, not a gate</b><p>Other systems answer whether you may proceed. This answers what you post and what you pay.</p></div>
@@ -541,23 +600,121 @@
     revealNodes.forEach(node=>revealObserver.observe(node));
   }
 
-  const modelMap=document.getElementById('modelMap');
-  const modelCore=document.getElementById('modelCore');
-  const inputNodes=[...modelMap.querySelectorAll('.model-inputs .model-node')];
-  const outputNodes=[...modelMap.querySelectorAll('.model-outputs .model-node')];
-  let modelTimer=0;
-  let modelStep=0;
-  const paintModel=()=>{
-    inputNodes.forEach((node,index)=>node.classList.toggle('is-live',index<=modelStep));
-    modelCore.classList.toggle('is-computing',modelStep>=4&&modelStep<7);
-    outputNodes.forEach((node,index)=>node.classList.toggle('is-live',modelStep>=5+index));
-    modelStep=(modelStep+1)%10;
-    if(modelStep===0){inputNodes.concat(outputNodes).forEach(node=>node.classList.remove('is-live'));modelCore.classList.remove('is-computing');}
+  /* ── module 3 · the field ────────────────────────────────────────
+     One array of marks, three arrangements, driven by where the pinned
+     section sits. A mark stands for one settlement; the arrangements
+     are the record, the model reading it, and the estimate it lands on.
+     Canvas 2D rather than WebGL: this page has no build step, and a few
+     thousand batched rects hold 60fps without a shader dependency. */
+  const engineField=document.getElementById('engineField');
+  const engineSection=document.getElementById('engine');
+  const engineSteps=[...document.querySelectorAll('[data-engine-step]')];
+  const engineReadout=document.getElementById('engineReadout');
+
+  const field=(()=>{
+    const ctx=engineField&&engineField.getContext&&engineField.getContext('2d');
+    if(!ctx)return null;
+    const N=3200;
+    const rnd=Math.random;
+    const P=new Array(N);
+    for(let i=0;i<N;i++){
+      /* centre-weighted, so the sorted arrangement has a real shape */
+      const g=(rnd()+rnd()+rnd()-1.5)/1.5;
+      P[i]={x:rnd(),y:rnd(),tx:0,ty:0,
+        k:.045+rnd()*.06,
+        rx:.10+rnd()*.84, ry:.12+rnd()*.76,   /* its slot in the book */
+        sx:rnd(), g,
+        a:.3+rnd()*.55,
+        bad:rnd()<.03,
+        core:rnd()<.02};                       /* the sample that lights */
+    }
+    let W=0,H=0,dpr=1,mode=0,mix=0,raf=0,alive=false;
+    const size=()=>{
+      const r=engineField.getBoundingClientRect();
+      if(!r.width)return;
+      dpr=Math.min(2,devicePixelRatio||1);W=r.width;H=r.height;
+      engineField.width=Math.round(W*dpr);engineField.height=Math.round(H*dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    };
+    /* 1 · the record: a loose book, denser to the right */
+    const posA=p=>{p.tx=p.rx;p.ty=p.ry;};
+    /* 2 · read: sorted along a risk axis, height by density */
+    const posB=p=>{p.tx=.30+p.sx*.66;p.ty=.5+p.g*(.34-p.sx*.2);};
+    /* 3 · one estimate: collapsed onto a single point */
+    const posC=p=>{
+      const r=.04+Math.abs(p.g)*.06;
+      p.tx=.72+Math.cos(p.sx*6.2832)*r*.6;
+      p.ty=.5+Math.sin(p.sx*6.2832)*r;
+    };
+    const draw=()=>{
+      if(!W)return;
+      ctx.clearRect(0,0,W,H);
+      const pale=[],lit=[],bad=[];
+      for(let i=0;i<N;i++){
+        const p=P[i];
+        if(mode===0)posA(p);else if(mode===1)posB(p);else posC(p);
+        p.x+=(p.tx-p.x)*p.k;p.y+=(p.ty-p.y)*p.k;
+        (p.bad?bad:(mode>0&&p.core)?lit:pale).push(p);
+      }
+      const s=mode===2?2.4:1.9;
+      [['rgba(206,214,255,.55)',pale],['rgba(214,246,120,.95)',lit],['rgba(236,128,110,.9)',bad]]
+        .forEach(([c,list])=>{
+          if(!list.length)return;
+          ctx.fillStyle=c;ctx.beginPath();
+          for(let j=0;j<list.length;j++){const p=list[j];ctx.rect(p.x*W-s/2,p.y*H-s/2,s,s);}
+          ctx.fill();
+        });
+      /* while it is reading, the sampled marks are wired to the core */
+      if(mode===1){
+        ctx.strokeStyle='rgba(214,246,120,.16)';ctx.lineWidth=1;ctx.beginPath();
+        for(let i=0;i<N;i++){const p=P[i];if(!p.core)continue;
+          ctx.moveTo(p.x*W,p.y*H);ctx.lineTo(.72*W,.5*H);}
+        ctx.stroke();
+      }
+      if(alive)raf=requestAnimationFrame(draw);
+    };
+    const start=()=>{if(alive)return;alive=true;if(!raf)raf=requestAnimationFrame(draw);};
+    const stop=()=>{alive=false;if(raf){cancelAnimationFrame(raf);raf=0;}};
+    size();
+    addEventListener('resize',size);
+    document.addEventListener('visibilitychange',()=>document.hidden?stop():start());
+    return {start,stop,set(m){mode=m;},
+      still(m){mode=m;for(let i=0;i<N;i++){const p=P[i];
+        if(m===0)posA(p);else if(m===1)posB(p);else posC(p);p.x=p.tx;p.y=p.ty;}
+        draw();}};
+  })();
+
+  let engineMode=-1;
+  const setEngineMode=index=>{
+    if(index===engineMode)return;
+    engineMode=index;
+    engineSteps.forEach((step,i)=>step.classList.toggle('is-active',i===index));
+    if(engineReadout)engineReadout.classList.toggle('is-on',index===2);
+    if(field)field.set(index);
   };
-  const startModel=()=>{if(modelTimer||reduced)return;modelStep=0;paintModel();modelTimer=setInterval(paintModel,650);};
-  const stopModel=()=>{clearInterval(modelTimer);modelTimer=0;};
-  if(reduced){inputNodes.concat(outputNodes).forEach(node=>node.classList.add('is-live'));}
-  else new IntersectionObserver(([entry])=>entry.isIntersecting?startModel():stopModel(),{threshold:.15}).observe(modelMap);
+  const updateEngineScroll=()=>{
+    if(!engineSection)return;
+    if(innerWidth<=900||reduced){setEngineMode(2);return;}
+    const rect=engineSection.getBoundingClientRect();
+    const span=Math.max(1,engineSection.offsetHeight-innerHeight);
+    const progress=Math.max(0,Math.min(.999,-rect.top/span));
+    const raw=progress*3;
+    const index=Math.min(2,Math.floor(raw));
+    setEngineMode(index);
+    engineSteps.forEach((step,i)=>step.style.setProperty('--progress',i<index?1:i>index?0:raw-index));
+  };
+  let engineRaf=0;
+  addEventListener('scroll',()=>{if(!engineRaf)engineRaf=requestAnimationFrame(()=>{engineRaf=0;updateEngineScroll();});},{passive:true});
+  addEventListener('resize',updateEngineScroll);
+
+  if(field){
+    if(reduced){field.still(2);setEngineMode(2);}
+    else{
+      new IntersectionObserver(([entry])=>entry.isIntersecting?field.start():field.stop(),{threshold:.02})
+        .observe(engineSection);
+      setEngineMode(0);updateEngineScroll();
+    }
+  }
 })();
 </script>
 </body>
