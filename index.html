@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="Atara is a conditional payment protocol. It computes the risk on every payment, decides on evidence whether it settled, and locks a fraction instead of the whole trade.">
+<meta name="description" content="Atara is a conditional payment protocol. It computes the risk on every payment, decides on evidence whether it settled, and takes a fraction up front instead of the whole sum.">
 <meta name="theme-color" content="#2518eb">
 <title>Atara · Conditional payment protocol</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -416,11 +416,11 @@
     <div class="hero-main">
       <div class="hero-copy">
         <h1 id="hero-title"><span class="line"><span>A conditional payment protocol.</span></span><span class="line"><span>Computable risk, minimal cost.</span></span></h1>
-        <p class="hero-lede">Atara is a conditional payment protocol. It computes the risk on every payment, decides on evidence whether it settled, and locks a fraction instead of the whole trade.</p>
+        <p class="hero-lede">Atara is a conditional payment protocol. It computes the risk on every payment, decides on evidence whether it settled, and takes a fraction up front instead of the whole sum.</p>
         <div class="hero-actions"><a class="btn btn-primary" href="#contact">Start</a><a class="btn btn-secondary" href="#contact">Talk to us</a></div>
       </div>
 
-      <figure class="instrument" id="pricingInstrument" aria-label="Illustrative order risk and collateral calculation">
+      <figure class="instrument" id="pricingInstrument" aria-label="Illustrative order: the risk on this counterparty sets how much collateral is posted up front, with the balance falling due on delivery instead of being prepaid">
         <figcaption class="instrument-head">
           <span id="instrumentState" aria-live="polite">Incoming order</span>
         </figcaption>
@@ -443,8 +443,8 @@
         <div class="stage stage-lock" data-stage="2">
           <span class="stage-index">03</span>
           <div class="stage-body">
-            <span class="stage-label">You lock</span>
-            <div class="stage-value lock-value"><strong class="num" id="lockValue">&middot;&middot;&middot;</strong><span class="stage-note">Priced</span></div>
+            <span class="stage-label">You post</span>
+            <div class="stage-value lock-value"><strong class="num" id="lockValue">&middot;&middot;&middot;</strong><span class="stage-note">Held, not paid</span></div>
             <div class="lock-track" aria-hidden="true"><i id="lockFill"></i></div>
             <div class="lock-legend"><span><b class="num" id="lockPercent">&middot;&middot;&middot;</b> of the trade</span><span class="num" id="freeValue">&middot;&middot;&middot;</span></div>
           </div>
@@ -472,9 +472,9 @@
         <article class="protocol-item reveal">
           <span class="protocol-num num">01</span>
           <h3>AI prices the risk on every trade</h3>
-          <p>The model computes this counterparty&rsquo;s probability of default on this trade and sets the collateral from it, instead of locking the full amount whoever you are.</p>
+          <p>The model computes this counterparty&rsquo;s probability of default on this trade and sets the collateral from it, instead of demanding the full amount up front whoever you are.</p>
           <ul class="protocol-checks">
-            <li>Lock a fraction, not the whole trade</li>
+            <li>Post a fraction, pay the balance on delivery</li>
             <li>The more you settle, the less you post</li>
           </ul>
           <figure class="protocol-figure">
@@ -697,7 +697,7 @@
   const stages = [...document.querySelectorAll('.stage')];
 
   const BOOK = [
-    { amount:2000000, risk:1.8, collateral:.13 },
+    { amount:2000000, risk:1.8, collateral:.08 },
     { amount:5400000, risk:.6, collateral:.05 },
     { amount:750000, risk:4.1, collateral:.34 },
     { amount:3100000, risk:2.4, collateral:.17 }
@@ -735,9 +735,9 @@
     riskValue.textContent = c.risk.toFixed(1) + '%';
     lockValue.textContent = money(c.amount*c.collateral);
     lockPercent.textContent = Math.round(c.collateral*100) + '%';
-    freeValue.textContent = money(c.amount*(1-c.collateral)) + ' stays free';
+    freeValue.textContent = money(c.amount*(1-c.collateral)) + ' due on delivery';
     lockFill.style.width = (c.collateral*100) + '%';
-    state.textContent = 'Priced';
+    state.textContent = 'Priced, not prepaid';
     setStage(2);
   }
 
@@ -760,11 +760,11 @@
       roll(riskValue,c.risk,850,v => v.toFixed(1)+'%');
     });
     later(2350,() => {
-      state.textContent = 'Priced';
+      state.textContent = 'Priced, not prepaid';
       setStage(2);
       roll(lockValue,c.amount*c.collateral,900,money);
       lockPercent.textContent = Math.round(c.collateral*100) + '%';
-      freeValue.textContent = money(c.amount*(1-c.collateral)) + ' stays free';
+      freeValue.textContent = money(c.amount*(1-c.collateral)) + ' due on delivery';
       lockFill.style.width = (c.collateral*100) + '%';
     });
     later(6600,() => { bookIndex=(bookIndex+1)%BOOK.length; cycle(); });
