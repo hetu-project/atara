@@ -179,20 +179,69 @@
     background:#fff;box-shadow:var(--ring),var(--lift)}
   .protocol-figure img{display:block;width:100%;height:auto}
 
-  /* ── module 3 · the model ──────────────────────────────────────
+  .engine-section{position:relative;height:340svh;background:#fff;color:var(--white)}
+  .engine-sticky{position:sticky;top:0;height:100svh;display:grid;place-items:center;
+    padding:clamp(.85rem,2vh,1.5rem) clamp(1rem,2.2vw,2rem)}
+  /* the field is a card with edges, not a wash across the whole viewport:
+     a bounded object reads as a made thing, a full bleed reads as a
+     background that happened to be there. White on all four sides, and
+     the same 22px corner as the light card that follows it. */
+  .engine-card{position:relative;width:100%;height:100%;
+    max-height:none;
+    border-radius:22px;overflow:hidden;background:#0d1024;
+    display:flex;align-items:flex-end}
+  .engine-card::before{
+    content:"";position:absolute;inset:0;z-index:1;opacity:.1;pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' seed='29' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.55'/%3E%3C/svg%3E");
+    background-size:15rem 15rem;mix-blend-mode:overlay;
+  }
+  .engine-field{position:absolute;inset:0;z-index:0;width:100%;height:100%;display:block}
+  /* the copy gets a bed from below, not a wall down the middle */
+  .engine-card::after{
+    content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+    background:linear-gradient(0deg,#0d1024 6%,rgba(13,16,36,.92) 26%,rgba(13,16,36,.48) 46%,transparent 66%);
+  }
+  /* centred, not parked against the left edge: the field is symmetrical
+     so the copy has to be too, or the frame reads lopsided */
+  .engine-stage{position:relative;z-index:2;width:100%;max-width:var(--maxw);
+    margin-inline:auto;text-align:center;
+    padding:0 clamp(1.75rem,4vw,3.5rem) clamp(2.25rem,5vh,3.5rem)}
+  .engine-stage h2{margin:0 auto;max-width:20ch;font-size:var(--t-head);font-weight:300;line-height:1.1;letter-spacing:-.032em}
+  /* three across the foot of the card, so the drawing keeps the frame */
+  .engine-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:clamp(1.25rem,3vw,2.5rem);margin-top:clamp(2rem,4vh,3rem);text-align:left}
+  .engine-step{position:relative;padding:0 0 0 1.1rem;opacity:.34;transition:opacity .35s linear}
+  .engine-step.is-active{opacity:1}
+  .engine-step::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:oklch(97% .018 264 / .18)}
+  .engine-step::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--signal);
+    transform:scaleY(var(--progress,0));transform-origin:top;opacity:0;transition:opacity .3s linear}
+  .engine-step.is-active::after{opacity:1}
+  .engine-step b{display:block;margin-top:.5rem;font-size:1rem;font-weight:600;letter-spacing:-.014em;line-height:1.35}
+  .engine-step .body > div{min-height:0}
+  .engine-step p{margin:.45rem 0 0;font-size:.875rem;line-height:1.5;color:oklch(80% .018 267)}
+  .engine-num{display:block;font-size:.75rem;letter-spacing:.14em;color:var(--signal);opacity:.8}
+
+  /* the estimate the third arrangement lands on */
+  .engine-readout{margin-top:clamp(1.6rem,3vh,2.4rem);display:flex;justify-content:center;align-items:baseline;gap:.9rem;
+    opacity:0;transform:translateY(6px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+  .engine-readout.is-on{opacity:1;transform:none}
+  .engine-readout strong{font-size:clamp(2rem,4vw,3rem);font-weight:400;letter-spacing:-.03em;color:var(--signal);line-height:1}
+  .engine-readout span{font-size:.8125rem;letter-spacing:.12em;text-transform:uppercase;color:oklch(78% .02 267)}
+
+  /* ── module 3b · the model, as a map ──────────────────────────────────────
      A neutral card on white — no blue ground, all four corners equal.
      Heading centred at the top, the diagram on white inside it, the
      argument underneath. Evidence in on the left, one estimate in the
      middle, the terms it sets on the right. */
-  .engine-section{background:#fff;padding-block:var(--gap-section)}
-  .engine-card{position:relative;border-radius:22px;
+  .model-section{background:#fff;padding-block:var(--gap-section)}
+  .model-card{position:relative;border-radius:22px;
     background:oklch(96.6% .0015 250);
     box-shadow:0 0 0 1px oklch(20% 0 0 / .07);
     padding:clamp(2.75rem,5.5vw,5rem) clamp(1.35rem,3.5vw,3.5rem) clamp(3rem,5.5vw,4.5rem)}
-  .engine-head{text-align:center}
-  .engine-head h2{margin:0 auto;max-width:22ch;font-size:var(--t-head);font-weight:300;
-    line-height:1.08;letter-spacing:-.032em}
-  .engine-head p{max-width:54ch;margin:clamp(1.1rem,2vw,1.5rem) auto 0;
+  .model-head{text-align:center}
+  .model-head h3{margin:0 auto;max-width:24ch;font-size:clamp(1.5rem,2.4vw,2.05rem);
+    font-weight:400;line-height:1.14;letter-spacing:-.026em}
+  .model-head p{max-width:54ch;margin:clamp(1.1rem,2vw,1.5rem) auto 0;
     font-size:1.0625rem;line-height:1.6;color:oklch(43% .012 267)}
 
   .tm{--tm-cols:clamp(10.5rem,15vw,15rem) minmax(0,1fr) clamp(10.5rem,15vw,15rem);
@@ -277,6 +326,7 @@
     .nav{grid-template-columns:1fr auto}.nav-center{display:none}
     .hero-main{grid-template-columns:1fr;padding-top:7.2rem;padding-bottom:9.5rem;gap:3.2rem}
     .instrument{width:100%;min-height:35rem}
+    .engine-section{height:auto}.engine-sticky{position:relative;height:auto;min-height:0;padding-block:var(--gap-section)}.engine-step{opacity:1}
     .tm{--tm-cols:minmax(0,1fr);--tm-gap:1.75rem;border-radius:12px}
     .tm-wires{display:none}
     .tm-in{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -423,13 +473,46 @@
   </section>
 
   <section class="engine-section" id="engine">
+    <div class="engine-sticky">
+      <div class="engine-card">
+      <canvas class="engine-field" id="engineField" aria-hidden="true"></canvas>
+      <div class="wrap engine-stage">
+        <h2>An AI model prices every payment.</h2>
+
+        <div class="engine-steps">
+          <div class="engine-step is-active" data-engine-step>
+            <span class="engine-num">01</span>
+            <b>It reads what this counterparty has actually done</b>
+            <div class="body"><div><p>Settlement history, dispute outcomes, verification checks, and where the funds came from.</p></div></div>
+          </div>
+          <div class="engine-step" data-engine-step>
+            <span class="engine-num">02</span>
+            <b>It computes one probability of default</b>
+            <div class="body"><div><p>For this counterparty, on this trade. Not a tier set when the account opened.</p></div></div>
+          </div>
+          <div class="engine-step" data-engine-step>
+            <span class="engine-num">03</span>
+            <b>Collateral, fee and recourse follow from that number</b>
+            <div class="body"><div><p>What you post, what you pay, and on what evidence it unwinds.</p></div></div>
+          </div>
+        </div>
+
+        <div class="engine-readout" id="engineReadout">
+          <strong class="num">1.8%</strong>
+          <span>probability of default &middot; illustrative</span>
+        </div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="model-section" id="model">
     <div class="wrap">
-      <div class="engine-card reveal">
-        <div class="engine-head">
-          <h2>An AI model prices every payment.</h2>
-          <p>It reads what this counterparty has actually done and computes the probability
-            of default on this trade. What you post, what you pay, and how it unwinds all
-            follow from that number.</p>
+      <div class="model-card reveal">
+        <div class="model-head">
+          <h3>What it reads, and what it sets.</h3>
+          <p>Four kinds of evidence go in. One probability comes out. Collateral, fee and
+            recourse are all priced off that number.</p>
         </div>
 
         <div class="tm" id="tm" aria-label="Evidence inputs enter an AI model and determine payment terms">
@@ -660,7 +743,206 @@
     revealNodes.forEach(node=>revealObserver.observe(node));
   }
 
-  /* ── module 3 · the model ───────────────────────────────────────
+  /* ── module 3 · the field ────────────────────────────────────────
+     One array of marks, three arrangements, driven by where the pinned
+     section sits. A mark stands for one settlement; the arrangements
+     are the record, the model reading it, and the estimate it lands on.
+     Canvas 2D rather than WebGL: this page has no build step, and a few
+     thousand batched rects hold 60fps without a shader dependency. */
+  const engineField=document.getElementById('engineField');
+  const engineSection=document.getElementById('engine');
+  const engineSteps=[...document.querySelectorAll('[data-engine-step]')];
+  const engineReadout=document.getElementById('engineReadout');
+
+  const field=(()=>{
+    const ctx=engineField&&engineField.getContext&&engineField.getContext('2d');
+    if(!ctx)return null;
+    const N=4800;
+    const rnd=Math.random;
+    const TAU=6.2831853;
+    const P=new Array(N);
+    for(let i=0;i<N;i++){
+      const g=(rnd()+rnd()+rnd()-1.5)/1.5;      /* centre-weighted */
+      /* depth drives size, brightness and drift together. A field where
+         every mark is the same weight reads flat however many there are. */
+      const z=Math.pow(rnd(),1.7);
+      /* the record: a cloud with a dense core and a sparse fringe, not a
+         rectangle. sqrt-biased radius keeps the area evenly filled, the
+         extra power pulls mass inward. */
+      const ang=rnd()*TAU, rad=Math.pow(rnd(),.62);
+      P[i]={x:rnd(),y:rnd(),tx:0,ty:0,
+        k:.04+rnd()*.05+z*.03,
+        ac:Math.cos(ang)*rad, as:Math.sin(ang)*rad,
+        sx:rnd(), g, z,
+        s:.7+z*1.9,                              /* size */
+        a:.10+z*.68,                             /* brightness */
+        ph:rnd()*TAU,                            /* idle drift phase */
+        /* a point on a sphere, evenly distributed: acos keeps the poles
+           from bunching the way a naive uniform angle does */
+        th:rnd()*TAU, ps:Math.acos(2*rnd()-1),
+        link:rnd()<.05,                          /* wired to a neighbour */
+        bad:rnd()<.028,
+        core:rnd()<.014};                        /* the sample that wires up */
+    }
+    let W=0,H=0,dpr=1,mode=0,raf=0,alive=false,t=0;
+    const size=()=>{
+      const r=engineField.getBoundingClientRect();
+      if(!r.width)return;
+      dpr=Math.min(2,devicePixelRatio||1);W=r.width;H=r.height;
+      engineField.width=Math.round(W*dpr);engineField.height=Math.round(H*dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    };
+    const CX=.5,CY=.44;
+    /* the record. Equal radii on both axes would draw an ellipse here
+       for the same reason they would on the sphere, so x is scaled by
+       the inverse aspect. */
+    const posA=p=>{const ar=H?W/H:1.7;p.tx=CX+p.ac*(.46/ar);p.ty=CY+p.as*.46;};
+    /* a sphere of counterparties, wired to one another. Rotating, with
+       depth from the z axis, so it reads as a body rather than a disc. */
+    let spin=0;
+    const sphere=p=>{
+      const th=p.th+spin, sp=Math.sin(p.ps);
+      const x=Math.cos(th)*sp, y=Math.cos(p.ps), z=Math.sin(th)*sp;
+      const k=.62+.38*((z+1)/2);              /* nearer is bigger, brighter */
+      /* the card is wider than it is tall and the coordinates are
+         normalised per axis, so an equal radius on both would draw an
+         ellipse. Scale x by the inverse aspect to keep it round. */
+      const R=.34, ar=H?W/H:1.7;
+      return {x:CX+x*(R/ar)*k, y:CY+y*R*k, k};
+    };
+    const posB=p=>{const s=sphere(p);p.tx=s.x;p.ty=s.y;p.kk=s.k;};
+    /* one estimate: the whole record collapses to a single dense mass.
+       A ring left a hole and read as a doughnut, a column read as a bar
+       chart; a point reads as many things resolving to one value. */
+    const posC=p=>{
+      const ar=H?W/H:1.7, r=Math.pow(p.sx,1.9)*.085;
+      p.tx=CX+Math.cos(p.th)*(r/ar);
+      p.ty=CY+Math.sin(p.th)*r;
+    };
+
+    const draw=()=>{
+      if(!W){raf=alive?requestAnimationFrame(draw):0;return;}
+      t+=.006; spin+=.0028;
+      /* a deep backdrop with a centre, so the field falls away at the edges
+         instead of stopping at a rectangle */
+      const bg=ctx.createRadialGradient(CX*W,CY*H,0,CX*W,CY*H,Math.max(W,H)*.78);
+      bg.addColorStop(0,'#191d42');
+      bg.addColorStop(.55,'#11142c');
+      bg.addColorStop(1,'#0b0e20');
+      ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+      const pale=[],lit=[],bad=[];
+      for(let i=0;i<N;i++){
+        const p=P[i];
+        if(mode===0)posA(p);else if(mode===1)posB(p);else posC(p);
+        /* it breathes at rest, by depth, so nothing is ever frozen */
+        const d=(1-p.z)*.004;
+        p.x+=(p.tx+Math.sin(t+p.ph)*d-p.x)*p.k;
+        p.y+=(p.ty+Math.cos(t*.8+p.ph)*d-p.y)*p.k;
+        (p.bad?bad:(mode>0&&p.core)?lit:pale).push(p);
+      }
+
+      /* Inside the sphere, counterparties are wired to one another: the
+         model reads a population, not a queue. Only near-neighbours are
+         joined, so it stays a mesh rather than a ball of wool. */
+      if(mode===1){
+        ctx.strokeStyle='rgba(214,246,120,.15)';ctx.lineWidth=1;ctx.beginPath();
+        const wired=[];
+        for(let i=0;i<N;i++){if(P[i].link)wired.push(P[i]);}
+        for(let i=0;i<wired.length;i++){
+          const a=wired[i];
+          for(let j=i+1;j<wired.length;j++){
+            const b=wired[j];
+            const dx=(a.x-b.x)*W, dy=(a.y-b.y)*H;
+            const d2=dx*dx+dy*dy;
+            if(d2<9000){ctx.moveTo(a.x*W,a.y*H);ctx.lineTo(b.x*W,b.y*H);}
+          }
+        }
+        ctx.stroke();
+      }
+      /* marks are drawn in brightness bands: one fill per band keeps the
+         count cheap while still giving the field depth */
+      const bands=6;
+      for(let b=0;b<bands;b++){
+        const lo=b/bands,hi=(b+1)/bands;
+        const al=(.10+((lo+hi)/2)*.68).toFixed(3);
+        ctx.fillStyle='rgba(214,224,255,'+al+')';
+        ctx.beginPath();let any=false;
+        for(let i=0;i<pale.length;i++){
+          const p=pale[i];if(p.z<lo||p.z>=hi)continue;any=true;
+          const r=p.s*(mode===1?(p.kk||1):1)/2,cx=p.x*W,cy=p.y*H;
+          ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,TAU);
+        }
+        if(any)ctx.fill();
+      }
+      ctx.fillStyle='rgba(226,250,150,.95)';
+      ctx.beginPath();
+      for(let i=0;i<lit.length;i++){const p=lit[i],r=(p.s+.9)/2,cx=p.x*W,cy=p.y*H;
+        ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,TAU);}
+      ctx.fill();
+      ctx.fillStyle='rgba(240,132,112,.92)';
+      ctx.beginPath();
+      for(let i=0;i<bad.length;i++){const p=bad[i],r=(p.s+.5)/2,cx=p.x*W,cy=p.y*H;
+        ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,TAU);}
+      ctx.fill();
+
+      /* the knot gets a soft bloom, so the third arrangement lands */
+      if(mode===2){
+        const gl=ctx.createRadialGradient(CX*W,CY*H,0,CX*W,CY*H,Math.min(W,H)*.22);
+        gl.addColorStop(0,'rgba(214,246,120,.16)');
+        gl.addColorStop(1,'rgba(214,246,120,0)');
+        ctx.fillStyle=gl;ctx.fillRect(0,0,W,H);
+      }
+      raf=alive?requestAnimationFrame(draw):0;
+    };
+    const start=()=>{if(alive)return;alive=true;if(!raf)raf=requestAnimationFrame(draw);};
+    const stop=()=>{alive=false;if(raf){cancelAnimationFrame(raf);raf=0;}};
+    size();
+    /* the card lays out after this runs, so a one-shot call plus a window
+       listener leaves the backing store at its 300x150 default forever.
+       Watch the element itself. */
+    if('ResizeObserver' in window)new ResizeObserver(size).observe(engineField);
+    else addEventListener('resize',size);
+    document.addEventListener('visibilitychange',()=>document.hidden?stop():start());
+    return {start,stop,set(m){mode=m;},
+      still(m){mode=m;for(let i=0;i<N;i++){const p=P[i];
+        if(m===0)posA(p);else if(m===1)posB(p);else posC(p);p.x=p.tx;p.y=p.ty;}
+        draw();stop();}};
+  })();
+
+  let engineMode=-1;
+  const setEngineMode=index=>{
+    if(index===engineMode)return;
+    engineMode=index;
+    engineSteps.forEach((step,i)=>step.classList.toggle('is-active',i===index));
+    if(engineReadout)engineReadout.classList.toggle('is-on',index===2);
+    if(field)field.set(index);
+  };
+  const updateEngineScroll=()=>{
+    if(!engineSection)return;
+    if(innerWidth<=900||reduced){setEngineMode(2);return;}
+    const rect=engineSection.getBoundingClientRect();
+    const span=Math.max(1,engineSection.offsetHeight-innerHeight);
+    const progress=Math.max(0,Math.min(.999,-rect.top/span));
+    const raw=progress*3;
+    const index=Math.min(2,Math.floor(raw));
+    setEngineMode(index);
+    engineSteps.forEach((step,i)=>step.style.setProperty('--progress',i<index?1:i>index?0:raw-index));
+  };
+  let engineRaf=0;
+  addEventListener('scroll',()=>{if(!engineRaf)engineRaf=requestAnimationFrame(()=>{engineRaf=0;updateEngineScroll();});},{passive:true});
+  addEventListener('resize',updateEngineScroll);
+
+  if(field){
+    if(reduced){field.still(2);setEngineMode(2);}
+    else{
+      new IntersectionObserver(([entry])=>entry.isIntersecting?field.start():field.stop(),{threshold:.02})
+        .observe(engineSection);
+      setEngineMode(0);updateEngineScroll();
+    }
+  }
+
+  /* ── module 3b · the model, as a map ───────────────────────────────────────
      Evidence in, one estimate, terms out. One pass runs on a loop while
      the diagram is on screen: pulses travel the wires, rows light as
      they land, the core computes, then the terms follow. */
