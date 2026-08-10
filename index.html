@@ -68,7 +68,7 @@
   }
 
   .nav{
-    position:absolute;z-index:10;inset:0 0 auto;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+    position:absolute;z-index:10;inset:0 0 auto;display:flex;justify-content:space-between;align-items:center;
     width:min(100%,var(--maxw));margin-inline:auto;padding:1.45rem var(--pad);font-size:.82rem;
   }
   .brand{display:inline-flex;align-items:center;gap:.65rem;width:max-content}
@@ -78,8 +78,7 @@
   .brand-mark i,.brand-mark i::before,.brand-mark i::after{position:absolute;width:3px;height:3px;border-radius:50%;background:currentColor}
   .brand-mark i{left:0;top:calc(50% - 1.5px)}.brand-mark i::before,.brand-mark i::after{content:"";top:0}.brand-mark i::before{left:.5rem}.brand-mark i::after{left:.92rem}
   .wordmark{font-size:1.0625rem;font-weight:600;letter-spacing:-.01em}
-  .nav-center{display:flex;gap:2rem}.nav-center a{opacity:.7;transition:opacity .15s linear}.nav-center a:hover{opacity:1}
-  .nav-start{justify-self:end;display:inline-flex;align-items:center;gap:.55rem;padding:.67rem 1rem;border:1px solid var(--line);border-radius:999px;transition:background .15s linear,color .15s linear}
+  .nav-start{display:inline-flex;align-items:center;gap:.55rem;padding:.67rem 1rem;border:1px solid var(--line);border-radius:999px;transition:background .15s linear,color .15s linear}
   .nav-start:hover{background:var(--white);color:var(--ink)}
 
   .hero-main{
@@ -108,9 +107,7 @@
     border-radius:16px;background:oklch(46% .265 265);
     box-shadow:0 0 0 1px oklch(97% .018 264 / .22),0 24px 48px -24px oklch(10% .1 267 / .55);
   }
-  .instrument-head{position:relative;z-index:3;display:grid;grid-template-columns:1fr auto auto;gap:1.2rem;align-items:center;padding:0 1.25rem;font-size:.61rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-white);border-bottom:1px solid var(--line)}
-  .instrument-head .sample{color:var(--signal)}
-  .instrument-head .illus{opacity:.72}
+  .instrument-head{position:relative;z-index:3;display:flex;align-items:center;padding:0 1.25rem;font-size:.61rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-white);border-bottom:1px solid var(--line)}
   .stage{position:relative;z-index:3;display:grid;grid-template-columns:3.6rem 1fr;min-height:0;transition:opacity .45s linear}
   .stage:not(:last-child){border-bottom:1px solid var(--line)}
   .stage-index{position:relative;display:flex;align-items:flex-start;justify-content:center;padding-top:1.3rem;font-size:.61rem;letter-spacing:.12em;color:var(--muted-white);opacity:.62}
@@ -179,7 +176,8 @@
     background:#fff;box-shadow:var(--ring),var(--lift)}
   .protocol-figure img{display:block;width:100%;height:auto}
 
-  .engine-section{position:relative;height:340svh;background:#fff;color:oklch(97% .004 260)}
+  .engine-section{position:relative;height:340svh;background:#fff;color:oklch(97% .004 260);
+    --acc:oklch(70% .19 260)}
   .engine-sticky{position:sticky;top:0;height:100svh;display:grid;place-items:center;
     padding:clamp(.85rem,2vh,1.5rem) clamp(1rem,2.2vw,2rem)}
   /* the field is a card with edges, not a wash across the whole viewport:
@@ -188,7 +186,7 @@
      the same 22px corner as the light card that follows it. */
   .engine-card{position:relative;width:100%;height:100%;
     max-height:none;
-    border-radius:22px;overflow:hidden;background:#141416;
+    border-radius:22px;overflow:hidden;background:#151517;
     display:flex;align-items:flex-end}
   .engine-card::before{
     content:"";position:absolute;inset:0;z-index:1;opacity:.1;pointer-events:none;
@@ -199,7 +197,7 @@
   /* the copy gets a bed from below, not a wall down the middle */
   .engine-card::after{
     content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-    background:linear-gradient(0deg,#141416 6%,rgba(20,20,22,.92) 26%,rgba(20,20,22,.48) 46%,transparent 66%);
+    background:linear-gradient(0deg,#151517 6%,rgba(21,21,23,.92) 24%,rgba(21,21,23,.5) 42%,transparent 60%);
   }
   /* centred, not parked against the left edge: the field is symmetrical
      so the copy has to be too, or the frame reads lopsided */
@@ -213,19 +211,19 @@
   .engine-step{position:relative;padding:0 0 0 1.1rem;opacity:.34;transition:opacity .35s linear}
   .engine-step.is-active{opacity:1}
   .engine-step::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:oklch(97% .004 260 / .2)}
-  .engine-step::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--signal);
+  .engine-step::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--acc);
     transform:scaleY(var(--progress,0));transform-origin:top;opacity:0;transition:opacity .3s linear}
   .engine-step.is-active::after{opacity:1}
   .engine-step b{display:block;margin-top:.5rem;font-size:1rem;font-weight:600;letter-spacing:-.014em;line-height:1.35}
   .engine-step .body > div{min-height:0}
   .engine-step p{margin:.45rem 0 0;font-size:.875rem;line-height:1.5;color:oklch(79% .005 260)}
-  .engine-num{display:block;font-size:.75rem;letter-spacing:.14em;color:var(--signal);opacity:.8}
+  .engine-num{display:block;font-size:.75rem;letter-spacing:.14em;color:var(--acc);opacity:.8}
 
   /* the estimate the third arrangement lands on */
   .engine-readout{margin-top:clamp(1.6rem,3vh,2.4rem);display:flex;justify-content:center;align-items:baseline;gap:.9rem;
     opacity:0;transform:translateY(6px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
   .engine-readout.is-on{opacity:1;transform:none}
-  .engine-readout strong{font-size:clamp(2rem,4vw,3rem);font-weight:400;letter-spacing:-.03em;color:var(--signal);line-height:1}
+  .engine-readout strong{font-size:clamp(2rem,4vw,3rem);font-weight:400;letter-spacing:-.03em;color:var(--acc);line-height:1}
   .engine-readout span{font-size:.8125rem;letter-spacing:.12em;text-transform:uppercase;color:oklch(77% .005 260)}
 
   /* ── module 3b · the model, as a map ──────────────────────────────────────
@@ -234,7 +232,7 @@
      argument underneath. Evidence in on the left, one estimate in the
      middle, the terms it sets on the right. */
   .model-section{background:#fff;
-    padding:clamp(4rem,8vh,7rem) clamp(1rem,2.2vw,2rem) var(--gap-section)}
+    padding:clamp(6.5rem,14vh,11rem) clamp(1rem,2.2vw,2rem) var(--gap-section)}
   .model-card{position:relative}
   .tm{--tm-cols:clamp(10.5rem,15vw,15rem) minmax(0,1fr) clamp(10.5rem,15vw,15rem);
       --tm-gap:clamp(1rem,3.6vw,4rem);
@@ -315,7 +313,7 @@
   footer{padding-block:3.5rem 2.5rem;border-top:1px solid var(--hairline);background:var(--paper)}.footer-main{display:flex;justify-content:space-between;gap:2rem;flex-wrap:wrap}.footer-main nav{display:flex;gap:2rem;flex-wrap:wrap}.footer-main a{font-size:.9375rem;color:oklch(46% .018 267)}.footer-note{display:flex;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;margin-top:2.5rem;font-size:.8125rem;color:oklch(50% .018 267)}
 
   @media(max-width:900px){
-    .nav{grid-template-columns:1fr auto}.nav-center{display:none}
+    .nav{gap:1rem}
     .hero-main{grid-template-columns:1fr;padding-top:7.2rem;padding-bottom:9.5rem;gap:3.2rem}
     .instrument{width:100%;min-height:35rem}
     .engine-section{height:auto}.engine-sticky{position:relative;height:auto;min-height:0;padding-block:var(--gap-section)}.engine-step{opacity:1}
@@ -333,7 +331,7 @@
     .hero-lede{font-size:1rem}
     .btn{min-height:3.3rem}.btn-primary{gap:1.6rem}
     .instrument{min-height:32rem}
-    .instrument-head{grid-template-columns:1fr auto;padding-left:1.1rem}.instrument-head .illus{display:none}
+    .instrument-head{padding-left:1.1rem}
     .stage{grid-template-columns:3.65rem 1fr}
     .stage-value{align-items:flex-end}.stage-value strong{font-size:clamp(1.45rem,6vw,2.05rem)}
     .risk-copy{max-width:12rem}.stage-note{font-size:.54rem}
@@ -357,7 +355,6 @@
   <section class="hero" id="top" aria-labelledby="hero-title">
     <nav class="nav" aria-label="Primary">
       <a class="brand" href="#top" aria-label="Atara home"><span class="brand-mark" aria-hidden="true"><i></i></span><span class="wordmark">Atara</span></a>
-      <div class="nav-center"><a href="#different">Why this</a><a href="#engine">How it works</a><a href="#conditions">Payment conditions</a></div>
       <a class="nav-start" href="#contact">Start <span aria-hidden="true">&rarr;</span></a>
     </nav>
 
@@ -371,8 +368,6 @@
       <figure class="instrument" id="pricingInstrument" aria-label="Illustrative order risk and collateral calculation">
         <figcaption class="instrument-head">
           <span id="instrumentState" aria-live="polite">Incoming order</span>
-          <span class="sample"><span id="sampleIndex">01 / 04</span></span>
-          <span class="illus">Illustrative</span>
         </figcaption>
         <div class="stage stage-order is-active" data-stage="0">
           <span class="stage-index">01</span>
@@ -602,7 +597,7 @@
       <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i></span><span class="wordmark">Atara</span></a>
       <nav aria-label="Footer"><a href="#different">Why this</a><a href="#engine">How it works</a><a href="#conditions">Payment conditions</a></nav>
     </div>
-    <div class="footer-note"><span>&copy; 2026 Atara</span><span>Atara is not a bank. The credit engine is in development and is not extending credit.</span></div>
+    <div class="footer-note"><span>&copy; 2026 Atara</span><span>Atara is not a bank. The credit engine is in development and is not extending credit. Figures shown are illustrative.</span></div>
   </div>
 </footer>
 
@@ -612,7 +607,6 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const instrument = document.getElementById('pricingInstrument');
   const state = document.getElementById('instrumentState');
-  const sampleIndex = document.getElementById('sampleIndex');
   const orderAmount = document.getElementById('orderAmount');
   const riskValue = document.getElementById('riskValue');
   const lockValue = document.getElementById('lockValue');
@@ -656,7 +650,6 @@
   }
 
   function showStill(c,index=0) {
-    sampleIndex.textContent = String(index+1).padStart(2,'0') + ' / 04';
     orderAmount.textContent = money2(c.amount);
     riskValue.textContent = c.risk.toFixed(1) + '%';
     lockValue.textContent = money(c.amount*c.collateral);
@@ -670,7 +663,6 @@
   function cycle() {
     clearTimers();
     const c = BOOK[bookIndex];
-    sampleIndex.textContent = String(bookIndex+1).padStart(2,'0') + ' / 04';
     orderAmount.textContent = money2(c.amount);
     riskValue.textContent = '\u00b7\u00b7\u00b7';
     lockValue.textContent = '\u00b7\u00b7\u00b7';
@@ -768,6 +760,7 @@
         th:rnd()*TAU, ps:Math.acos(2*rnd()-1),
         link:rnd()<.05,                          /* wired to a neighbour */
         bad:rnd()<.028,
+        arm:i%3,
         core:rnd()<.014};                        /* the sample that wires up */
     }
     let W=0,H=0,dpr=1,mode=0,raf=0,alive=false,t=0;
@@ -797,25 +790,30 @@
       return {x:CX+x*(R/ar)*k, y:CY+y*R*k, k};
     };
     const posB=p=>{const s=sphere(p);p.tx=s.x;p.ty=s.y;p.kk=s.k;};
-    /* one estimate: the whole record collapses to a single dense mass.
-       A ring left a hole and read as a doughnut, a column read as a bar
-       chart; a point reads as many things resolving to one value. */
+    /* what step 03 actually says: three terms follow from that number.
+       Earlier passes drew the number again — a ring, a column, a blob —
+       which is step 02's job, so the third beat said nothing new. The
+       mass leaves one point and blooms into three knots. */
+    const ARM=[-.115,0,.115], FY=.30;
     const posC=p=>{
-      const ar=H?W/H:1.7, r=Math.pow(p.sx,1.9)*.085;
-      p.tx=CX+Math.cos(p.th)*(r/ar);
-      p.ty=CY+Math.sin(p.th)*r;
+      const ar=H?W/H:1.7, u=1.7/ar;
+      /* the dense end is the heavy end, so the origin sits further out
+         than the knots do to keep the whole fan centred */
+      const ox=CX-.20*u, tx=CX+.13*u;
+      const t=Math.pow(p.sx,.5);
+      /* ease y so the arms leave together and separate late */
+      const e=t*t*(3-2*t);
+      const r=.005+.028*t*t;
+      p.tx=ox+(tx-ox)*t+Math.cos(p.th)*(r/ar);
+      p.ty=FY+ARM[p.arm]*e+Math.sin(p.th)*r;
     };
 
     const draw=()=>{
       if(!W){raf=alive?requestAnimationFrame(draw):0;return;}
       t+=.006; spin+=.0028;
-      /* a deep backdrop with a centre, so the field falls away at the edges
-         instead of stopping at a rectangle */
-      const bg=ctx.createRadialGradient(CX*W,CY*H,0,CX*W,CY*H,Math.max(W,H)*.78);
-      bg.addColorStop(0,'#2b2b30');
-      bg.addColorStop(.55,'#1c1c1f');
-      bg.addColorStop(1,'#151517');
-      ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+      /* flat: a radial backdrop put a visible vignette on a card that is
+         supposed to read as one grey */
+      ctx.fillStyle='#151517';ctx.fillRect(0,0,W,H);
 
       const pale=[],lit=[],bad=[];
       for(let i=0;i<N;i++){
@@ -862,7 +860,7 @@
         }
         if(any)ctx.fill();
       }
-      ctx.fillStyle='rgba(226,250,150,.95)';
+      ctx.fillStyle='rgba(110,160,255,.95)';
       ctx.beginPath();
       for(let i=0;i<lit.length;i++){const p=lit[i],r=(p.s+.9)/2,cx=p.x*W,cy=p.y*H;
         ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,TAU);}
@@ -875,9 +873,9 @@
 
       /* the knot gets a soft bloom, so the third arrangement lands */
       if(mode===2){
-        const gl=ctx.createRadialGradient(CX*W,CY*H,0,CX*W,CY*H,Math.min(W,H)*.22);
-        gl.addColorStop(0,'rgba(214,246,120,.16)');
-        gl.addColorStop(1,'rgba(214,246,120,0)');
+        const gl=ctx.createRadialGradient((CX-.16)*W,.30*H,0,(CX-.16)*W,.30*H,Math.min(W,H)*.22);
+        gl.addColorStop(0,'rgba(226,226,234,.10)');
+        gl.addColorStop(1,'rgba(226,226,234,0)');
         ctx.fillStyle=gl;ctx.fillRect(0,0,W,H);
       }
       raf=alive?requestAnimationFrame(draw):0;
