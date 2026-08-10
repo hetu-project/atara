@@ -41,8 +41,8 @@ export default function OverviewPage() {
   return (
     <>
       <DemoPageHeader
-        title="首页"
-        subtitle="你的交易、审核结果与账户状况"
+        title="智能总览"
+        subtitle="AI 审核结果、交易表现与账户状况"
         actions={
           <>
             <HeaderButton>导出 CSV</HeaderButton>

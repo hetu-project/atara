@@ -1,4 +1,5 @@
 import { challengeFromRisk } from './engine/challenge';
+import { ASSETS, FIATS } from './prices';
 import { assessRisk } from './engine/riskEngine';
 import { seededRandom } from './random';
 import type { Challenge, Counterparty, DemoState, PoolOrder, Transaction, TxStatus } from './types';
@@ -21,16 +22,6 @@ const NAMES = [
   'Lumen Exchange',
   'Tessera Desk',
 ];
-
-const ASSETS = [
-  { asset: 'USDT', chain: 'TRON', px: 1 },
-  { asset: 'USDT', chain: 'ETH', px: 1 },
-  { asset: 'USDC', chain: 'POLYGON', px: 1 },
-  { asset: 'BTC', chain: 'BTC', px: 94_200 },
-  { asset: 'ETH', chain: 'ETH', px: 3_180 },
-];
-
-const FIATS = ['USD', 'EUR', 'HKD', 'CNY'];
 
 function makeCounterparty(i: number): Counterparty {
   const r = seededRandom(`cp_${i}`);

@@ -7,6 +7,7 @@ import DeskPage from '@/demo/pages/DeskPage';
 import OrderPoolPage from '@/demo/pages/OrderPoolPage';
 import OverviewPage from '@/demo/pages/OverviewPage';
 import QueuePage from '@/demo/pages/QueuePage';
+import QuickTradePage from '@/demo/pages/QuickTradePage';
 
 // basename 必须保留 '/app'：落地页导航指向 /app/login 和 /app/register，
 // src/__tests__/landingEntry.test.ts 盯着这两个链接。
@@ -22,9 +23,10 @@ const router = createBrowserRouter(
       children: [
         { path: '/', element: <Navigate to="/overview" replace /> },
         { path: '/overview', element: <OverviewPage /> },
+        { path: '/quick', element: <QuickTradePage /> },
         { path: '/pool', element: <OrderPoolPage /> },
-        { path: '/queue', element: <QueuePage /> },
-        { path: '/challenges', element: <ChallengesPage /> },
+        { path: '/trades', element: <QueuePage /> },
+        { path: '/todo', element: <ChallengesPage /> },
         { path: '/desk', element: <DeskPage /> },
         { path: '*', element: <Navigate to="/overview" replace /> },
       ],

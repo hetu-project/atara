@@ -29,8 +29,8 @@ export default function ChallengesPage() {
   return (
     <>
       <DemoPageHeader
-        title="待我处理"
-        subtitle="AI 觉得有疑点的交易，补齐材料后会重新检查"
+        title="待我确认"
+        subtitle="模型发现疑点的交易，补齐材料后会重新推理"
         actions={
           <>
             <HeaderButton>导出 CSV</HeaderButton>

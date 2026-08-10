@@ -229,6 +229,30 @@
   }
 }
 
+/* 卡片鱼贯入场：配合 animationDelay 按序号错开 */
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 弹窗进场 */
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* 检查项逐条弹入 */
 @keyframes popIn {
   from {

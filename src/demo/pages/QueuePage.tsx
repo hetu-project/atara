@@ -90,8 +90,8 @@ export default function QueuePage() {
   return (
     <>
       <DemoPageHeader
-        title="我的交易"
-        subtitle="成交后的每一笔都会在这里经过 AI 安全检查"
+        title="AI 审核记录"
+        subtitle="每一笔交易的模型判定结果都留在这里"
         actions={
           <>
             <HeaderButton>导出 CSV</HeaderButton>

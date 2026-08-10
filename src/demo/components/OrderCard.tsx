@@ -10,10 +10,13 @@ import type { PoolOrder } from '@/demo/types';
 export default function OrderCard({
   order,
   isNew,
+  index = 0,
   onPick,
 }: {
   order: PoolOrder;
   isNew?: boolean;
+  /** 用于鱼贯入场：按序号错开动画起始时间 */
+  index?: number;
   onPick: () => void;
 }) {
   const cp = order.counterparty;
@@ -23,26 +26,27 @@ export default function OrderCard({
   return (
     <button
       onClick={onPick}
-      className={`group bg-surface border-hairline hover:border-brand/50 relative flex flex-col rounded-[var(--radius-panel)] border p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-panel)] ${
-        isNew ? 'animate-[slideIn_.45s_ease-out]' : ''
+      className={`group bg-surface border-hairline hover:border-brand/50 relative flex flex-col rounded-[var(--radius-panel)] border p-5 text-left transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:shadow-[var(--shadow-panel)] ${
+        isNew ? 'animate-[slideIn_.45s_ease-out]' : 'animate-[cardIn_.5s_cubic-bezier(.2,.9,.3,1)_backwards]'
       }`}
       style={
         isNew
           ? {
+              animationDelay: '0ms',
               boxShadow:
                 '0 0 0 1px color-mix(in oklab, var(--color-brand) 34%, transparent), 0 0 24px color-mix(in oklab, var(--color-brand) 14%, transparent)',
             }
-          : undefined
+          : { animationDelay: `${Math.min(index, 14) * 45}ms` }
       }
     >
       {/* 顶行：方向 + 挂出时间 */}
       <div className="mb-4 flex items-center justify-between">
         <span
-          className={`rounded-[var(--radius-pill)] px-2.5 py-1 text-[12px] font-medium ${
+          className={`rounded-[6px] px-2 py-0.5 font-mono text-[11px] font-bold tracking-[0.08em] ${
             order.side === 'sell' ? 'text-ok bg-ok/12' : 'text-info bg-info/12'
           }`}
         >
-          {order.side === 'sell' ? '对方出售' : '对方求购'}
+          {order.side === 'sell' ? 'SELL' : 'BUY'}
         </span>
         <span className="text-muted text-[11px]">{timeAgo(order.postedAt)}</span>
       </div>
@@ -89,7 +93,7 @@ export default function OrderCard({
 
       {/* 悬停时出现的接单条 */}
       <span className="bg-brand text-on-brand absolute inset-x-0 bottom-0 h-0 overflow-hidden rounded-b-[var(--radius-panel)] text-center text-[13px] font-semibold transition-all duration-200 group-hover:h-9 group-hover:leading-9">
-        接这一单 →
+        立即成交 →
       </span>
     </button>
   );

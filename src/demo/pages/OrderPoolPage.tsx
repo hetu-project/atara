@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import KpiTile from '@/demo/components/KpiTile';
-import MatchCeremony from '@/demo/components/MatchCeremony';
-import MatchDrawer from '@/demo/components/MatchDrawer';
+import AiReviewModal from '@/demo/components/AiReviewModal';
 import OrderCard from '@/demo/components/OrderCard';
 import { matchOrder } from '@/demo/engine/matching';
 import DemoPageHeader, { HeaderButton } from '@/demo/layout/DemoPageHeader';
@@ -13,8 +12,8 @@ export default function OrderPoolPage() {
   const [deskKind, setDeskKind] = useState<DeskKind>('buy');
   const [side, setSide] = useState<'all' | DeskKind>('all');
   const [asset, setAsset] = useState('all');
+  // 点卡片直接弹 AI 审核弹窗，不再中间插一层确认抽屉
   const [picked, setPicked] = useState<PoolOrder | null>(null);
-  const [ceremony, setCeremony] = useState<PoolOrder | null>(null);
 
   const desk = state.desks[deskKind];
   const canMatch = matchOrder(desk).ok;
@@ -44,8 +43,8 @@ export default function OrderPoolPage() {
   return (
     <>
       <DemoPageHeader
-        title="交易大厅"
-        subtitle="挑一笔别人挂出的单，点确认就自动成交"
+        title="AI 撮合大厅"
+        subtitle="挑一笔别人挂出的单，AI 审核后即可成交"
         actions={<HeaderButton>文档</HeaderButton>}
       />
 
@@ -76,8 +75,8 @@ export default function OrderPoolPage() {
           onChange={(v) => setSide(v as 'all' | DeskKind)}
           options={[
             { v: 'all', t: '全部' },
-            { v: 'sell', t: '对方出售' },
-            { v: 'buy', t: '对方求购' },
+            { v: 'sell', t: 'SELL（对方出售）' },
+            { v: 'buy', t: 'BUY（对方求购）' },
           ]}
         />
         <Select
@@ -103,10 +102,11 @@ export default function OrderPoolPage() {
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-[18px]">
-          {orders.map((o) => (
+          {orders.map((o, i) => (
             <OrderCard
               key={o.id}
               order={o}
+              index={i}
               isNew={o.id === newId}
               onPick={() => setPicked(o)}
             />
@@ -114,18 +114,13 @@ export default function OrderPoolPage() {
         </div>
       )}
 
-      <MatchDrawer
-        order={picked}
-        desk={desk}
-        onClose={() => setPicked(null)}
-        onConfirm={() => {
-          setCeremony(picked);
-          setPicked(null);
-        }}
-      />
-
-      {ceremony && (
-        <MatchCeremony order={ceremony} desk={desk} onClose={() => setCeremony(null)} />
+      {picked && (
+        <AiReviewModal
+          order={picked}
+          desk={desk}
+          source="你从大厅挑选"
+          onClose={() => setPicked(null)}
+        />
       )}
     </>
   );
