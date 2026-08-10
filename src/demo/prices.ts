@@ -6,8 +6,8 @@ export interface AssetSpec {
 }
 
 /**
- * 资产与参考价。种子数据和快捷兑换共用这一份——两处各写一套价格的话，
- * 大厅里 BTC 报 94,200 而快捷兑换报别的数，一眼就露馅。
+ * 资产与参考价。种子数据和快捷交易共用这一份——两处各写一套价格的话，
+ * 大厅里 BTC 报 94,200 而快捷交易报别的数，一眼就露馅。
  */
 export const ASSETS: AssetSpec[] = [
   { asset: 'USDT', chain: 'TRON', px: 1 },
@@ -19,7 +19,7 @@ export const ASSETS: AssetSpec[] = [
 
 export const FIATS = ['USD', 'EUR', 'HKD', 'CNY'];
 
-/** 快捷兑换里可选的资产，去掉重复的链 */
+/** 快捷交易里可选的资产，去掉重复的链 */
 export const TRADABLE = ['USDT', 'USDC', 'BTC', 'ETH'];
 
 export function priceOf(asset: string): number {

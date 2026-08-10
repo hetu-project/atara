@@ -10,7 +10,7 @@ const NAV = [
     group: '智能交易',
     items: [
       { to: '/pool', label: 'AI 撮合大厅' },
-      { to: '/quick', label: '快捷兑换' },
+      { to: '/quick', label: '快捷交易' },
     ],
   },
   {

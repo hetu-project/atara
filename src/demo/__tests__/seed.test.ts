@@ -4,7 +4,7 @@ import { FIATS, TRADABLE } from '@/demo/prices';
 import { createSeedState } from '@/demo/seed';
 
 describe('种子挂单池', () => {
-  it('覆盖快捷兑换能选出的每一种组合', () => {
+  it('覆盖快捷交易能选出的每一种组合', () => {
     // 少一种组合，用户选中它就撞空态。默认的 BTC/USD 尤其不能空。
     const { pool } = createSeedState();
     for (const asset of TRADABLE) {

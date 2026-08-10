@@ -43,7 +43,7 @@ function makeCounterparty(i: number): Counterparty {
 export function makePoolOrder(
   i: number,
   now = Date.now(),
-  /** 强制指定组合，用于保证种子覆盖到快捷兑换能选出的每一种搭配 */
+  /** 强制指定组合，用于保证种子覆盖到快捷交易能选出的每一种搭配 */
   force?: { asset: string; fiat: string; side: PoolOrder['side'] },
 ): PoolOrder {
   const r = seededRandom(`po_${i}`);
@@ -124,7 +124,7 @@ function seedTransactions(now: number): { transactions: Transaction[]; challenge
 /**
  * 大厅的初始挂单。
  *
- * 前一段是**覆盖网格**：快捷兑换的下拉能选出 4 币种 × 4 结算货币 × 买卖两向共
+ * 前一段是**覆盖网格**：快捷交易的下拉能选出 4 币种 × 4 结算货币 × 买卖两向共
  * 32 种组合，每种都得至少有一笔，否则用户一进页面选中默认的 BTC/USD 就撞空态。
  * 后一段是随机单，让池子看起来自然。
  */

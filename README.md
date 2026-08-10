@@ -20,7 +20,7 @@ npm run dev
 | `http://localhost:5174/` | Atara 落地页（静态） |
 | `http://localhost:5174/app/` | 撮合演示后台（React 应用） |
 
-落地页的 **Start** 按钮（导航、hero、页尾各一个）直接进应用的快捷兑换页；
+落地页的 **Start** 按钮（导航、hero、页尾各一个）直接进应用的快捷交易页；
 **Talk to us** 留在落地页的联系区。
 
 ## Supabase 接入（四步）
@@ -68,17 +68,17 @@ npm run dev
 |---|---|---|
 | `/app/login` · `/app/register` | 登录 / 注册 | 一键进入，任意输入即可 |
 | `/app/pool` | AI 撮合大厅 | 挂单卡片墙，点卡片弹 AI 审核 |
-| `/app/quick` | 快捷兑换 | 填金额，AI 自动挑最优对手方 |
+| `/app/quick` | 快捷交易 | 填金额，AI 自动挑最优对手方 |
 | `/app/overview` | 智能总览 | 审核结果、交易表现、走势 |
 | `/app/trades` | AI 审核记录 | 每笔交易的模型判定结果 |
 | `/app/todo` | 待我确认 | 补齐材料后自动重新推理 |
 | `/app/desk` | 我的账户 | 买入账户与卖出账户 |
 
-侧边栏分两组：**智能交易**（AI 撮合大厅、快捷兑换）和 **账户中心**（智能总览、
+侧边栏分两组：**智能交易**（AI 撮合大厅、快捷交易）和 **账户中心**（智能总览、
 AI 审核记录、待我确认、我的账户）。URL 保留英文（`pool` / `quick` / `trades`），
 界面文案一律用普通用户看得懂的说法，不用「订单池」「队列」「席位」「挡单」这类行话。
 
-种子挂单池前 32 笔是**覆盖网格**（4 币种 × 4 结算货币 × 买卖两向），保证快捷兑换
+种子挂单池前 32 笔是**覆盖网格**（4 币种 × 4 结算货币 × 买卖两向），保证快捷交易
 的下拉能选出的每一种组合都有货。少一种，用户选中它就撞空态——默认的 BTC/USD
 尤其不能空。`src/demo/__tests__/seed.test.ts` 盯着这一点。
 
@@ -91,7 +91,7 @@ AI 审核记录、待我确认、我的账户）。URL 保留英文（`pool` / `
 hex 的后果是浅色主题下那一处会瞎——实底按钮的文字色尤其要用 `text-on-brand`，
 写死深色在浅色主题里就是黑底黑字。
 
-点卡片或点快捷兑换的按钮，都会弹出同一个 **AI 审核弹窗**
+点卡片或点快捷交易的按钮，都会弹出同一个 **AI 审核弹窗**
 （`components/AiReviewModal.tsx`）：提取特征向量 → 八个模型分四组并行推理、
 逐条弹出 → 集成评分与置信度 → 自然语言结论逐字打出。可「跳到结果」，
 `prefers-reduced-motion` 下直接显示终态。
@@ -114,7 +114,7 @@ hex 的后果是浅色主题下那一处会瞎——实底按钮的文字色尤�
 
 | 文件 | 职责 |
 |---|---|
-| `engine/matching.ts` | `matchOrder` 能否成交（**只有一条规则**：账户得先开通）；`pickBestMatch` 快捷兑换的自动选单 |
+| `engine/matching.ts` | `matchOrder` 能否成交（**只有一条规则**：账户得先开通）；`pickBestMatch` 快捷交易的自动选单 |
 | `engine/riskEngine.ts` | 先由种子定分数，再倒推出几条问题项，附置信度与自然语言结论 |
 | `engine/queueMachine.ts` | `queued → validating → passed / challenged / declined` |
 | `engine/challenge.ts` | 由检查结果生成待办，原因点名全部问题项 |

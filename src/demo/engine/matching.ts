@@ -19,7 +19,7 @@ export function matchOrder(myDesk: Desk): MatchResult {
 }
 
 /**
- * 从大厅里挑一笔最优对手单。快捷兑换用它——用户只填金额，对手方由「AI」选。
+ * 从大厅里挑一笔最优对手单。快捷交易用它——用户只填金额，对手方由「AI」选。
  *
  * `want` 是**我**要做的方向：我要买，就得找别人在卖（side === 'sell'）。
  * 这不是把先前删掉的方向规则加回来——matchOrder 依然只管账户是否开通；
