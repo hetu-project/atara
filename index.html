@@ -233,28 +233,26 @@
      Heading centred at the top, the diagram on white inside it, the
      argument underneath. Evidence in on the left, one estimate in the
      middle, the terms it sets on the right. */
-  .model-section{background:#fff;padding-block:var(--gap-section)}
-  .model-card{position:relative;border-radius:22px;
-    background:oklch(96.6% .0015 250);
-    box-shadow:0 0 0 1px oklch(20% 0 0 / .07);
-    padding:clamp(2.75rem,5.5vw,5rem) clamp(1.35rem,3.5vw,3.5rem) clamp(3rem,5.5vw,4.5rem)}
-  .model-head{text-align:center}
-  .model-head h3{margin:0 auto;max-width:24ch;font-size:clamp(1.5rem,2.4vw,2.05rem);
-    font-weight:400;line-height:1.14;letter-spacing:-.026em}
-  .model-head p{max-width:54ch;margin:clamp(1.1rem,2vw,1.5rem) auto 0;
-    font-size:1.0625rem;line-height:1.6;color:oklch(43% .012 267)}
-
+  .model-section{background:#fff;
+    padding:clamp(.85rem,2vh,1.5rem) clamp(1rem,2.2vw,2rem) var(--gap-section)}
+  /* same gutter as the card above it, so the two read as one module */
+  .model-section > .wrap{max-width:none;padding-inline:0}
+  .model-card{position:relative}
   .tm{--tm-cols:clamp(10.5rem,15vw,15rem) minmax(0,1fr) clamp(10.5rem,15vw,15rem);
       --tm-gap:clamp(1rem,3.6vw,4rem);
-    position:relative;margin-top:clamp(2.5rem,5vw,4.25rem);
+    position:relative;
     padding:clamp(1.5rem,3vw,2.75rem);border-radius:16px;
     background:#fff;box-shadow:var(--ring),var(--lift);
     overflow:hidden}
   .tm::after{content:"";position:absolute;left:50%;top:52%;
     width:min(54%,640px);aspect-ratio:1;transform:translate(-50%,-50%);pointer-events:none;
     background:radial-gradient(circle,oklch(50% .004 267 / .05),transparent 64%)}
+  /* the panel runs the full width of the card above it, but the diagram
+     inside it does not: past ~1200px the middle just stretches and the
+     wires go slack */
   .tm-grid{display:grid;grid-template-columns:var(--tm-cols);gap:var(--tm-gap);
-    align-items:center;position:relative;z-index:2}
+    align-items:center;position:relative;z-index:2;
+    max-width:1180px;margin-inline:auto}
   .tm-grid > *{min-width:0}
   .tm-col{display:grid;gap:.75rem;align-content:center}
   .node{position:relative;z-index:2;padding:.45rem 0 .5rem .85rem;
@@ -304,7 +302,8 @@
   .tm-wires .port{fill:oklch(76% .01 267)}
 
   .model-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:clamp(1.5rem,3vw,2.75rem);margin-top:clamp(2.25rem,4vw,3.25rem)}
+    gap:clamp(1.5rem,3vw,2.75rem);margin-top:clamp(2.5rem,4.5vw,3.5rem);
+    padding-inline:clamp(.5rem,2vw,2rem)}
   .model-point{padding-left:1.1rem;border-left:1px solid oklch(87% .008 267)}
   .model-point b{display:block;font-size:.9375rem;font-weight:600;letter-spacing:-.012em}
   .model-point p{margin:.5rem 0 0;font-size:.875rem;line-height:1.5;color:oklch(43% .018 267)}
@@ -509,12 +508,6 @@
   <section class="model-section" id="model">
     <div class="wrap">
       <div class="model-card reveal">
-        <div class="model-head">
-          <h3>What it reads, and what it sets.</h3>
-          <p>Four kinds of evidence go in. One probability comes out. Collateral, fee and
-            recourse are all priced off that number.</p>
-        </div>
-
         <div class="tm" id="tm" aria-label="Evidence inputs enter an AI model and determine payment terms">
           <div class="tm-grid">
             <div class="tm-col tm-in">
