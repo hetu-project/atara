@@ -18,10 +18,10 @@ npm run dev
 | 地址 | 内容 |
 |---|---|
 | `http://localhost:5174/` | Atara 落地页（静态） |
-| `http://localhost:5174/desk.html` | Settlement desk（静态） |
 | `http://localhost:5174/app/` | 撮合演示后台（React 应用） |
 
-落地页导航栏的 **Sign in** / **Get started** 直接进应用。
+落地页的 **Start** / **Talk to us** 会跳到页面内的联系区；演示后台可直接通过
+`/app/` 访问。
 
 ## Supabase 接入（四步）
 
@@ -131,13 +131,11 @@ Supabase 客户端并发网络请求）。要接回来改 `src/routes.tsx` 和 `
 | 文件 | 说明 |
 |---|---|
 | `index.html` | 落地页，HTML / CSS / JS 全部内联 |
-| `desk.html` | Settlement desk 页 |
 | `public/assets/logos/` | 14 个生态 logo |
 
 设计系统、动效约定和改动注意事项见 `docs/landing-page.md`。
 
-改落地页时唯一的硬约束：导航栏里指向 `/app/login` 和 `/app/register` 的两个链接
-不能删也不能改路径。`src/__tests__/landingEntry.test.ts` 会盯着这一点。
+`src/__tests__/landingEntry.test.ts` 会检查主要 CTA 能正确跳到页面内的联系区。
 
 logo 放在 `public/` 而不是项目根的 `assets/`，是因为它们由 JS 拼路径
 （`src="assets/logos/${n}.png"`），Vite 的 HTML 资源管线扫不到模板字符串，
@@ -145,11 +143,10 @@ logo 放在 `public/` 而不是项目根的 `assets/`，是因为它们由 JS �
 
 ## 部署
 
-`npm run build` 产出三个入口：
+`npm run build` 产出两个入口：
 
 ```
 dist/index.html        →  /
-dist/desk.html         →  /desk.html
 dist/app/index.html    →  /app/*
 dist/assets/           →  构建产物 + 14 个 logo
 ```

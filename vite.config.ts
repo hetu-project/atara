@@ -45,10 +45,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        // desk.html 必须显式声明。Vite 不重写 <a href>，也不会把未声明为入口的
-        // 根级 HTML 拷进 dist——漏了它，落地页上指向 desk.html 的链接生产环境 404。
         landing: path.resolve(import.meta.dirname, 'index.html'),
-        desk: path.resolve(import.meta.dirname, 'desk.html'),
         app: path.resolve(import.meta.dirname, 'app/index.html'),
       },
     },
