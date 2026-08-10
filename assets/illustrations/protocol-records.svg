@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" role="img" aria-label="As completed settlements accumulate, the model's estimate tightens and the collateral it asks of a clean counterparty falls from 34 to 8 percent">
+  <style>
+    .cap{fill:#9aa0ad;font:500 12px/1 Inter,system-ui,sans-serif;letter-spacing:.14em}
+    .lbl{fill:#8a8f9e;font:400 13px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+    .val{fill:#14161f;font:400 22px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+    .grid{stroke:#eef0f4;stroke-width:1}
+    .axis{stroke:#d4d7de;stroke-width:1;stroke-linecap:round}
+    .band{fill:url(#bandFade)}
+    .mid{stroke:#16724d;stroke-width:2;fill:none;stroke-linecap:round}
+    .tickmark{fill:#cde94e}.tickmark.bad{fill:#e58272}
+    .pin{stroke:#c4c9d6;stroke-width:1;stroke-dasharray:3 4}
+    .dot{fill:#fff;stroke:#16724d;stroke-width:2}
+    .draw{stroke-dasharray:1400;stroke-dashoffset:1400;animation:draw 6s cubic-bezier(.5,0,.3,1) -4.2s infinite}
+    @keyframes draw{0%,4%{stroke-dashoffset:1400}62%,100%{stroke-dashoffset:0}}
+    .grow{transform-box:fill-box;transform-origin:left center;animation:grow 6s cubic-bezier(.5,0,.3,1) -4.2s infinite}
+    @keyframes grow{0%,4%{transform:scaleX(0)}62%,100%{transform:scaleX(1)}}
+    .p1{animation:pop 6s ease-out -4.2s infinite}
+    .p2{animation:pop 6s ease-out -3.3s infinite}
+    .p3{animation:pop 6s ease-out -2.4s infinite}
+    @keyframes pop{0%,8%{opacity:0}22%,100%{opacity:1}}
+    @media(prefers-reduced-motion:reduce){.draw,.grow,.p1,.p2,.p3{animation:none;opacity:1;transform:none;stroke-dashoffset:0}}
+  </style>
+  <defs>
+    <linearGradient id="bandFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"  stop-color="#16724d" stop-opacity=".04"/>
+      <stop offset=".5" stop-color="#16724d" stop-opacity=".13"/>
+      <stop offset="1"  stop-color="#16724d" stop-opacity=".04"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="900" height="400" fill="#ffffff"/>
+  <g class="grid"><path d="M90 130H830M90 190H830M90 250H830"/></g>
+
+  <g class="grow"><path class="band" d="M90.0 76.0C93.1 78.4 102.3 85.6 108.5 90.1C114.7 94.7 120.8 99.0 127.0 103.2C133.2 107.4 139.3 111.5 145.5 115.4C151.7 119.3 157.8 123.0 164.0 126.6C170.2 130.2 176.3 133.7 182.5 137.0C188.7 140.3 194.8 143.6 201.0 146.6C207.2 149.7 213.3 152.7 219.5 155.6C225.7 158.4 231.8 161.2 238.0 163.9C244.2 166.5 250.3 169.1 256.5 171.5C262.7 174.0 268.8 176.3 275.0 178.6C281.2 180.9 287.3 183.1 293.5 185.2C299.7 187.3 305.8 189.3 312.0 191.3C318.2 193.3 324.3 195.1 330.5 196.9C336.7 198.8 342.8 200.5 349.0 202.2C355.2 203.9 361.3 205.5 367.5 207.0C373.7 208.6 379.8 210.1 386.0 211.5C392.2 212.9 398.3 214.3 404.5 215.7C410.7 217.0 416.8 218.3 423.0 219.5C429.2 220.8 435.3 221.9 441.5 223.1C447.7 224.2 453.8 225.3 460.0 226.4C466.2 227.4 472.3 228.5 478.5 229.5C484.7 230.4 490.8 231.4 497.0 232.3C503.2 233.2 509.3 234.1 515.5 234.9C521.7 235.8 527.8 236.6 534.0 237.3C540.2 238.1 546.3 238.9 552.5 239.6C558.7 240.3 564.8 241.0 571.0 241.7C577.2 242.4 583.3 243.0 589.5 243.6C595.7 244.3 601.8 244.8 608.0 245.4C614.2 246.0 620.3 246.6 626.5 247.1C632.7 247.6 638.8 248.1 645.0 248.6C651.2 249.1 657.3 249.6 663.5 250.0C669.7 250.5 675.8 250.9 682.0 251.4C688.2 251.8 694.3 252.2 700.5 252.6C706.7 253.0 712.8 253.4 719.0 253.7C725.2 254.1 731.3 254.4 737.5 254.8C743.7 255.1 749.8 255.4 756.0 255.7C762.2 256.1 768.3 256.4 774.5 256.7C780.7 256.9 786.8 257.2 793.0 257.5C799.2 257.8 805.3 258.0 811.5 258.3C817.7 258.5 826.9 258.9 830.0 259.0 L830.0 266.4 C826.9 266.4 817.7 266.3 811.5 266.3C805.3 266.2 799.2 266.2 793.0 266.1C786.8 266.0 780.7 266.0 774.5 265.9C768.3 265.9 762.2 265.8 756.0 265.8C749.8 265.7 743.7 265.6 737.5 265.6C731.3 265.5 725.2 265.4 719.0 265.3C712.8 265.3 706.7 265.2 700.5 265.1C694.3 265.0 688.2 265.0 682.0 264.9C675.8 264.8 669.7 264.7 663.5 264.6C657.3 264.5 651.2 264.4 645.0 264.3C638.8 264.2 632.7 264.1 626.5 264.0C620.3 263.9 614.2 263.8 608.0 263.6C601.8 263.5 595.7 263.4 589.5 263.3C583.3 263.1 577.2 263.0 571.0 262.8C564.8 262.7 558.7 262.6 552.5 262.4C546.3 262.2 540.2 262.1 534.0 261.9C527.8 261.7 521.7 261.6 515.5 261.4C509.3 261.2 503.2 261.0 497.0 260.8C490.8 260.6 484.7 260.4 478.5 260.2C472.3 260.0 466.2 259.8 460.0 259.5C453.8 259.3 447.7 259.0 441.5 258.8C435.3 258.5 429.2 258.3 423.0 258.0C416.8 257.7 410.7 257.4 404.5 257.1C398.3 256.8 392.2 256.5 386.0 256.2C379.8 255.9 373.7 255.5 367.5 255.2C361.3 254.8 355.2 254.5 349.0 254.1C342.8 253.7 336.7 253.3 330.5 252.9C324.3 252.5 318.2 252.0 312.0 251.6C305.8 251.1 299.7 250.7 293.5 250.2C287.3 249.7 281.2 249.2 275.0 248.7C268.8 248.1 262.7 247.6 256.5 247.0C250.3 246.4 244.2 245.8 238.0 245.2C231.8 244.6 225.7 243.9 219.5 243.2C213.3 242.6 207.2 241.8 201.0 241.1C194.8 240.4 188.7 239.6 182.5 238.8C176.3 238.0 170.2 237.2 164.0 236.3C157.8 235.4 151.7 234.5 145.5 233.6C139.3 232.7 133.2 231.7 127.0 230.7C120.8 229.6 114.7 228.6 108.5 227.5C102.3 226.4 93.1 224.6 90.0 224.0 Z"/></g>
+  <path class="mid draw" d="M90.0 150.0C93.1 151.5 102.3 156.0 108.5 158.8C114.7 161.6 120.8 164.3 127.0 166.9C133.2 169.6 139.3 172.1 145.5 174.5C151.7 176.9 157.8 179.2 164.0 181.5C170.2 183.7 176.3 185.8 182.5 187.9C188.7 190.0 194.8 192.0 201.0 193.9C207.2 195.8 213.3 197.6 219.5 199.4C225.7 201.2 231.8 202.9 238.0 204.5C244.2 206.2 250.3 207.7 256.5 209.3C262.7 210.8 268.8 212.2 275.0 213.6C281.2 215.0 287.3 216.4 293.5 217.7C299.7 219.0 305.8 220.2 312.0 221.4C318.2 222.6 324.3 223.8 330.5 224.9C336.7 226.0 342.8 227.1 349.0 228.1C355.2 229.2 361.3 230.1 367.5 231.1C373.7 232.1 379.8 233.0 386.0 233.9C392.2 234.7 398.3 235.6 404.5 236.4C410.7 237.2 416.8 238.0 423.0 238.8C429.2 239.5 435.3 240.2 441.5 240.9C447.7 241.6 453.8 242.3 460.0 243.0C466.2 243.6 472.3 244.2 478.5 244.8C484.7 245.4 490.8 246.0 497.0 246.6C503.2 247.1 509.3 247.6 515.5 248.2C521.7 248.7 527.8 249.2 534.0 249.6C540.2 250.1 546.3 250.6 552.5 251.0C558.7 251.4 564.8 251.9 571.0 252.3C577.2 252.7 583.3 253.1 589.5 253.4C595.7 253.8 601.8 254.2 608.0 254.5C614.2 254.9 620.3 255.2 626.5 255.5C632.7 255.9 638.8 256.2 645.0 256.5C651.2 256.8 657.3 257.0 663.5 257.3C669.7 257.6 675.8 257.9 682.0 258.1C688.2 258.4 694.3 258.6 700.5 258.9C706.7 259.1 712.8 259.3 719.0 259.5C725.2 259.8 731.3 260.0 737.5 260.2C743.7 260.4 749.8 260.6 756.0 260.8C762.2 260.9 768.3 261.1 774.5 261.3C780.7 261.5 786.8 261.6 793.0 261.8C799.2 262.0 805.3 262.1 811.5 262.3C817.7 262.4 826.9 262.6 830.0 262.7"/>
+
+  <g class="p1">
+    <path class="pin" d="M90 150V300"/><circle class="dot" cx="90" cy="150" r="7"/>
+    <text class="val" x="90" y="132">34%</text><text class="lbl" x="90" y="324">4 settlements</text>
+  </g>
+  <g class="p2">
+    <path class="pin" d="M460 246V300"/><circle class="dot" cx="460" cy="246" r="7"/>
+    <text class="val" x="460" y="228" text-anchor="middle">13%</text><text class="lbl" x="460" y="324" text-anchor="middle">80 settlements</text>
+  </g>
+  <g class="p3">
+    <path class="pin" d="M830 266V300"/><circle class="dot" cx="830" cy="266" r="7"/>
+    <text class="val" x="830" y="248" text-anchor="end">8%</text><text class="lbl" x="830" y="324" text-anchor="end">1,600 settlements</text>
+  </g>
+
+  <path class="axis" d="M90 300H830"/>
+
+  <g transform="translate(90 344)">
+    <g class="tickmark">
+      <rect width="4" height="13" rx="2"/><rect x="30" width="4" height="13" rx="2"/><rect x="68" width="4" height="13" rx="2"/>
+      <rect x="112" width="4" height="13" rx="2"/><rect x="150" width="4" height="13" rx="2"/><rect x="182" width="4" height="13" rx="2"/>
+      <rect x="222" width="4" height="13" rx="2"/><rect x="244" width="4" height="13" rx="2"/><rect x="270" width="4" height="13" rx="2"/>
+      <rect x="298" width="4" height="13" rx="2"/><rect x="318" width="4" height="13" rx="2"/><rect x="340" width="4" height="13" rx="2"/>
+      <rect x="358" width="4" height="13" rx="2"/><rect x="374" width="4" height="13" rx="2"/><rect x="390" width="4" height="13" rx="2"/>
+      <rect x="406" width="4" height="13" rx="2"/><rect x="420" width="4" height="13" rx="2"/><rect x="434" width="4" height="13" rx="2"/>
+      <rect x="448" width="4" height="13" rx="2"/><rect x="460" width="4" height="13" rx="2"/><rect x="472" width="4" height="13" rx="2"/>
+      <rect x="484" width="4" height="13" rx="2"/><rect x="495" width="4" height="13" rx="2"/><rect x="506" width="4" height="13" rx="2"/>
+      <rect x="516" width="4" height="13" rx="2"/><rect x="526" width="4" height="13" rx="2"/><rect x="536" width="4" height="13" rx="2"/>
+      <rect x="545" width="4" height="13" rx="2"/><rect x="554" width="4" height="13" rx="2"/><rect x="563" width="4" height="13" rx="2"/>
+      <rect x="572" width="4" height="13" rx="2"/><rect x="580" width="4" height="13" rx="2"/><rect x="588" width="4" height="13" rx="2"/>
+      <rect x="596" width="4" height="13" rx="2"/><rect x="604" width="4" height="13" rx="2"/><rect x="612" width="4" height="13" rx="2"/>
+      <rect x="620" width="4" height="13" rx="2"/><rect x="627" width="4" height="13" rx="2"/><rect x="634" width="4" height="13" rx="2"/>
+      <rect x="641" width="4" height="13" rx="2"/><rect x="648" width="4" height="13" rx="2"/><rect x="655" width="4" height="13" rx="2"/>
+      <rect x="662" width="4" height="13" rx="2"/><rect x="669" width="4" height="13" rx="2"/><rect x="676" width="4" height="13" rx="2"/>
+      <rect x="683" width="4" height="13" rx="2"/><rect x="690" width="4" height="13" rx="2"/><rect x="697" width="4" height="13" rx="2"/>
+      <rect x="704" width="4" height="13" rx="2"/><rect x="711" width="4" height="13" rx="2"/><rect x="718" width="4" height="13" rx="2"/>
+      <rect x="725" width="4" height="13" rx="2"/><rect x="732" width="4" height="13" rx="2"/><rect x="739" width="4" height="13" rx="2"/>
+    </g>
+    <g class="tickmark bad">
+      <rect x="96" width="4" height="13" rx="2"/><rect x="284" width="4" height="13" rx="2"/><rect x="528" width="4" height="13" rx="2"/>
+    </g>
+  </g>
+</svg>

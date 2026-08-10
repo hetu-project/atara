@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" role="img" aria-label="One clause reading pay on acceptable quality is rewritten before the trade into three tests, each naming the document that settles it: a lab certificate, an inspection report and a bill of lading">
+  <style>
+    .cap{fill:#9aa0ad;font:500 12px/1 Inter,system-ui,sans-serif;letter-spacing:.14em}
+    .clause{fill:#6b7180;font:400 25px/1 Inter,system-ui,sans-serif;font-style:italic}
+    .ghost{fill:#dcdfe6;font:400 25px/1 Inter,system-ui,sans-serif;font-style:italic}
+    .qm{fill:#c8ccd5;font:300 42px/1 Inter,system-ui,sans-serif}
+    .test{fill:#14161f;font:500 18px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+    /* the source is what makes a test settleable, so it is set as a
+       named document rather than a caption */
+    .src{fill:#16724d;font:500 13px/1 Inter,system-ui,sans-serif}
+    .by{fill:#9aa0ad;font:400 13px/1 Inter,system-ui,sans-serif}
+    .rule{stroke:#e7e8ee;stroke-width:1}
+    .arrow{stroke:#16724d;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .t1{animation:tick 5.4s ease-out -3.6s infinite}
+    .t2{animation:tick 5.4s ease-out -3.05s infinite}
+    .t3{animation:tick 5.4s ease-out -2.5s infinite}
+    @keyframes tick{0%,14%{opacity:0}26%,100%{opacity:1}}
+    @media(prefers-reduced-motion:reduce){.t1,.t2,.t3{animation:none;opacity:1}}
+  </style>
+
+  <rect width="900" height="400" fill="#ffffff"/>
+
+  <!-- the clause as written: two readings of the same words -->
+  <text class="cap" x="60" y="112">WHAT THE CONTRACT SAYS</text>
+  <g class="ghost" transform="translate(5 4)">
+    <text x="60" y="182">&#8220;pay on</text>
+    <text x="60" y="216">acceptable</text>
+    <text x="60" y="250">quality&#8221;</text>
+  </g>
+  <text class="clause" x="60" y="182">&#8220;pay on</text>
+  <text class="clause" x="60" y="216">acceptable</text>
+  <text class="clause" x="60" y="250">quality&#8221;</text>
+  <text class="qm" x="232" y="252">?</text>
+
+  <!-- rewritten before anyone commits -->
+  <path class="arrow" d="M310 206h72M370 196l12 10-12 10"/>
+  <text class="cap" x="300" y="238">BEFORE THE TRADE</text>
+
+  <!-- the same clause, as three tests that each name what settles them -->
+  <text class="cap" x="470" y="112">WHAT THE PROTOCOL SETTLES ON</text>
+
+  <g class="t1">
+    <circle cx="484" cy="168" r="10" fill="#cde94e"/>
+    <path d="M479 168l4 4 7.5-8.5" stroke="#14161f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text class="test" x="512" y="174">moisture &#8804; 12%</text>
+  <text class="by" x="512" y="196">settled by <tspan class="src">the lab certificate</tspan></text>
+  <path class="rule" d="M470 216h370"/>
+
+  <g class="t2">
+    <circle cx="484" cy="250" r="10" fill="#cde94e"/>
+    <path d="M479 250l4 4 7.5-8.5" stroke="#14161f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text class="test" x="512" y="256">count = 400 units</text>
+  <text class="by" x="512" y="278">settled by <tspan class="src">the inspection report</tspan></text>
+  <path class="rule" d="M470 298h370"/>
+
+  <g class="t3">
+    <circle cx="484" cy="332" r="10" fill="#cde94e"/>
+    <path d="M479 332l4 4 7.5-8.5" stroke="#14161f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text class="test" x="512" y="338">landed by 30 Sep</text>
+  <text class="by" x="512" y="360">settled by <tspan class="src">the bill of lading</tspan></text>
+</svg>
