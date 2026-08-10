@@ -148,33 +148,32 @@
   .reveal{opacity:0;transform:translateY(1rem);transition:opacity .75s var(--ease),transform .75s var(--ease)}
   .reveal.in{opacity:1;transform:none}
 
-  .protocol-section{position:relative;height:320svh;padding:0;background:var(--paper)}
-  .protocol-sticky{position:sticky;top:0;display:flex;align-items:center;min-height:100svh;padding-block:clamp(4.5rem,8vh,6.5rem);overflow:hidden}
-  .protocol-demo{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(2.5rem,5vw,5.5rem);align-items:center;margin-top:clamp(2.5rem,4vw,3.5rem)}
-  .protocol-steps{border-top:1px solid var(--hairline)}
-  .protocol-step{position:relative;display:grid;grid-template-columns:2.4rem minmax(0,1fr);gap:1rem;width:100%;padding:1.15rem 0 1.15rem 1.15rem;border:0;border-bottom:1px solid var(--hairline);background:transparent;text-align:left;cursor:pointer;opacity:.34;transition:opacity .3s linear}
-  .protocol-step::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:oklch(14% .025 267 / .12)}
-  .protocol-step::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--blue);transform:scaleY(var(--progress,0));transform-origin:top;transition:transform .12s linear}
-  .protocol-step.is-active{opacity:1}.protocol-step-num{padding-top:.16rem;font-size:.9375rem;font-weight:500;color:var(--blue)}
-  .protocol-step h3{margin:0;font-size:1.25rem;font-weight:500;line-height:1.3;letter-spacing:-.02em}
-  .protocol-step-detail{display:grid;grid-template-rows:0fr;transition:grid-template-rows .5s var(--ease)}.protocol-step.is-active .protocol-step-detail{grid-template-rows:1fr}.protocol-step-detail > div{min-height:0;overflow:hidden}
-  .protocol-step p{margin:.8rem 0 0;font-size:.9375rem;line-height:1.55;color:oklch(45% .018 267)}
-  .protocol-step ul{margin:.8rem 0 0;padding:0;list-style:none}.protocol-step li{position:relative;padding:.3rem 0 .3rem 1rem;font-size:.875rem;color:oklch(34% .018 267)}.protocol-step li::before{content:"";position:absolute;left:0;top:.75rem;width:.3rem;height:.3rem;background:var(--blue)}
-  .protocol-field{position:relative;min-width:0;max-width:40rem;justify-self:end;width:100%;aspect-ratio:4/3;margin:0;overflow:hidden;background:#fff;border-radius:16px;box-shadow:var(--ring),var(--lift);contain:layout paint}
-  .protocol-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;opacity:0;transform:translate3d(0,1rem,0) scale(.985);filter:saturate(.92);transition:opacity .5s linear,transform .85s var(--ease),filter .65s linear;will-change:transform,opacity}
-  .protocol-art.is-active{z-index:1;opacity:1;transform:translate3d(0,0,0) scale(1.015);filter:saturate(1)}
+  /* ── module 2 · the t54 layout ────────────────────────────────
+     The intro pins on the left; each capability is its own block on
+     the right — number, heading, copy, checks, and its figure — and
+     the stack scrolls past at the page's own pace. No mode swapping,
+     no pin height to tune: the browser does all of it. */
+  .protocol-section{background:#fff;padding-block:var(--gap-section)}
+  .protocol-layout{display:grid;grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr);
+    gap:clamp(3rem,6vw,6.5rem);align-items:start}
+  .protocol-intro{position:sticky;top:clamp(5rem,14vh,8rem)}
+  .protocol-list{min-width:0}
+  .protocol-item{padding-block:clamp(2.75rem,5vw,4.25rem);border-top:1px solid var(--hairline)}
+  .protocol-item:first-child{border-top:0;padding-top:0}
+  .protocol-num{display:block;font-size:.9375rem;font-weight:500;letter-spacing:.08em;color:var(--blue)}
+  .protocol-item h3{margin:.9rem 0 0;max-width:24ch;font-size:clamp(1.5rem,2.3vw,2rem);
+    font-weight:500;line-height:1.2;letter-spacing:-.024em}
+  .protocol-item > p{max-width:56ch;margin:1rem 0 0;font-size:clamp(1rem,.3vw+.95rem,1.1rem);
+    line-height:1.6;color:oklch(45% .015 267)}
+  /* the checks run as a row where they fit, t54-style */
+  .protocol-checks{display:flex;flex-wrap:wrap;gap:.6rem 2.2rem;margin:1.4rem 0 0;padding:0;list-style:none}
+  .protocol-checks li{position:relative;padding-left:1.5rem;font-size:.9375rem;color:oklch(30% .02 267)}
+  .protocol-checks li::before{content:"";position:absolute;left:0;top:.42em;width:9px;height:5px;
+    border-left:2px solid var(--blue);border-bottom:2px solid var(--blue);transform:rotate(-45deg)}
+  .protocol-figure{margin:clamp(1.75rem,3vw,2.5rem) 0 0;border-radius:16px;overflow:hidden;
+    background:#fff;box-shadow:var(--ring),var(--lift)}
+  .protocol-figure img{display:block;width:100%;height:auto}
 
-  /* ── module 3 · the field ──────────────────────────────────────
-     Pinned for three viewport-heights, one full-bleed canvas behind
-     the copy. The band is not a panel in the text column any more:
-     the marks are the substance and the words ride on top of them.
-
-     Three arrangements of one field, driven by scroll position:
-       1  the record it reads      a loose book of settlements
-       2  the model reading it     sorted, with weighted lines to a core
-       3  what falls out           collapsed onto one estimate
-     Below 900px nothing pins; the field rests on its last arrangement
-     and the three steps stack. */
   .engine-section{position:relative;height:340svh;background:#0a0c1e;color:var(--white)}
   .engine-sticky{position:sticky;top:0;height:100svh;overflow:hidden;display:flex;align-items:flex-end}
   .engine-sticky::before{
@@ -248,8 +247,8 @@
     .instrument{width:100%;min-height:35rem}
     .model-map{grid-template-columns:1fr;gap:2rem}.model-core{width:min(15rem,70vw);margin-inline:auto}.model-col{grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.model-node:first-child{border-top:0}
     .engine-section{height:auto}.engine-sticky{position:relative;height:auto;min-height:0;padding-block:var(--gap-section)}.engine-step{opacity:1}.engine-step .body{grid-template-rows:1fr}
+    .protocol-layout{grid-template-columns:1fr;gap:2.5rem}.protocol-intro{position:static}
     .model-points{grid-template-columns:1fr;gap:1.5rem}
-    .protocol-section{height:auto}.protocol-sticky{position:relative;min-height:0;padding-block:var(--gap-section);overflow:visible}.protocol-demo{grid-template-columns:1fr;gap:2.5rem}.protocol-step{opacity:.48}.protocol-step.is-active{opacity:1}
     .condition-row{grid-template-columns:2.6rem 1fr}.condition-copy{grid-column:2}
   }
   @media(max-width:560px){
@@ -271,7 +270,7 @@
   @media(hover:none),(pointer:coarse){.btn,.nav-start{min-height:44px}}
   @media(prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
-    .logo-track{animation:none;flex-wrap:wrap;width:auto}.reveal{opacity:1;transform:none}.protocol-section{height:auto}.protocol-sticky{position:relative}.protocol-step{opacity:1}.protocol-step-detail{grid-template-rows:1fr}
+    .logo-track{animation:none;flex-wrap:wrap;width:auto}.reveal{opacity:1;transform:none}
   }
 </style>
 </head>
@@ -334,33 +333,57 @@
   </section>
 
   <section class="protocol-section" id="different">
-    <div class="protocol-sticky">
-      <div class="wrap">
+    <div class="wrap protocol-layout">
+
+      <!-- the intro holds the frame while the capabilities scroll past -->
+      <header class="protocol-intro">
         <h2>An AI-native conditional payment protocol.</h2>
         <p class="section-lede">Pricing needs somebody to decide the condition was met, and both of them need a record of what actually happened.</p>
+      </header>
 
-        <div class="protocol-demo" id="protocolDemo">
-          <div class="protocol-steps">
-            <div class="protocol-step is-active" role="button" tabindex="0" data-protocol-step="0" aria-expanded="true">
-              <span class="protocol-step-num num">01</span>
-              <div><h3>AI prices the risk on every trade</h3><div class="protocol-step-detail"><div><p>The model computes this counterparty&rsquo;s probability of default on this trade and sets the collateral from it, instead of locking the full amount whoever you are.</p><ul><li>Lock a fraction, not the whole trade</li><li>The more you settle, the less you post</li></ul></div></div></div>
-            </div>
-            <div class="protocol-step" role="button" tabindex="0" data-protocol-step="1" aria-expanded="false">
-              <span class="protocol-step-num num">02</span>
-              <div><h3>The condition is judged on evidence</h3><div class="protocol-step-detail"><div><p>Whether the condition was met is decided on what the evidence says, under rules published before the trade.</p><ul><li>No position, no profit in the outcome</li><li>Rules published up front</li><li>Release follows the evidence</li></ul></div></div></div>
-            </div>
-            <div class="protocol-step" role="button" tabindex="0" data-protocol-step="2" aria-expanded="false">
-              <span class="protocol-step-num num">03</span>
-              <div><h3>Real settlement data</h3><div class="protocol-step-detail"><div><p>Every completed trade leaves one record with a real amount attached: who paid on time, who defaulted. It is the only data the pricing model trains on.</p><ul><li>Sharper with every settlement</li><li>Clean records post less and less</li><li>Models can be copied, records cannot</li></ul></div></div></div>
-            </div>
-          </div>
+      <div class="protocol-list">
 
-          <figure class="protocol-field" id="protocolField" aria-label="Three illustrations represent risk pricing, evidence judgement, and accumulated settlement history">
-            <img class="protocol-art is-active" data-protocol-art="0" src="assets/illustrations/protocol-pricing.svg" alt="" decoding="async">
-            <img class="protocol-art" data-protocol-art="1" src="assets/illustrations/protocol-judgement.svg" alt="" loading="lazy" decoding="async">
-            <img class="protocol-art" data-protocol-art="2" src="assets/illustrations/protocol-records.svg" alt="" loading="lazy" decoding="async">
+        <article class="protocol-item reveal">
+          <span class="protocol-num num">01</span>
+          <h3>AI prices the risk on every trade</h3>
+          <p>The model computes this counterparty&rsquo;s probability of default on this trade and sets the collateral from it, instead of locking the full amount whoever you are.</p>
+          <ul class="protocol-checks">
+            <li>Lock a fraction, not the whole trade</li>
+            <li>The more you settle, the less you post</li>
+          </ul>
+          <figure class="protocol-figure">
+            <img src="assets/illustrations/protocol-pricing.svg" alt="An AI model reads a counterparty's record through a weighted network and computes a probability of default for this trade" decoding="async">
           </figure>
-        </div>
+        </article>
+
+        <article class="protocol-item reveal">
+          <span class="protocol-num num">02</span>
+          <h3>The condition is judged on evidence</h3>
+          <p>Whether the condition was met is decided on what the evidence says, under rules published before the trade.</p>
+          <ul class="protocol-checks">
+            <li>No position, no profit in the outcome</li>
+            <li>Rules published up front</li>
+            <li>Release follows the evidence</li>
+          </ul>
+          <figure class="protocol-figure">
+            <img src="assets/illustrations/protocol-judgement.svg" alt="A subjective clause is rewritten before the trade into objective tests, each bound to a named source of evidence" loading="lazy" decoding="async">
+          </figure>
+        </article>
+
+        <article class="protocol-item reveal">
+          <span class="protocol-num num">03</span>
+          <h3>Real settlement data</h3>
+          <p>Every completed trade leaves one record with a real amount attached: who paid on time, who defaulted. It is the only data the pricing model trains on.</p>
+          <ul class="protocol-checks">
+            <li>Sharper with every settlement</li>
+            <li>Clean records post less and less</li>
+            <li>Models can be copied, records cannot</li>
+          </ul>
+          <figure class="protocol-figure">
+            <img src="assets/illustrations/protocol-records.svg" alt="As completed settlements accumulate, the model's estimate tightens" loading="lazy" decoding="async">
+          </figure>
+        </article>
+
       </div>
     </div>
   </section>
@@ -596,39 +619,8 @@
     else if(instrument.getBoundingClientRect().bottom>0){alive=true;cycle();}
   });
 
-  const protocolSection=document.getElementById('different');
-  const protocolSteps=[...document.querySelectorAll('[data-protocol-step]')];
-  const protocolArts=[...document.querySelectorAll('[data-protocol-art]')];
-  let protocolMode=0;
-
-  const setProtocolMode=index=>{
-    protocolMode=index;
-    protocolSteps.forEach((step,i)=>{const active=i===index;step.classList.toggle('is-active',active);step.setAttribute('aria-expanded',String(active));});
-    protocolArts.forEach((art,i)=>art.classList.toggle('is-active',i===index));
-  };
-  const updateProtocolScroll=()=>{
-    if(innerWidth<=900||reduced)return;
-    const rect=protocolSection.getBoundingClientRect();
-    const span=Math.max(1,protocolSection.offsetHeight-innerHeight);
-    const progress=Math.max(0,Math.min(.999,-rect.top/span));
-    const raw=progress*3;
-    const index=Math.min(2,Math.floor(raw));
-    const fraction=raw-index;
-    if(index!==protocolMode)setProtocolMode(index);
-    protocolSteps.forEach((step,i)=>step.style.setProperty('--progress',i<index?1:i>index?0:fraction));
-  };
-  let protocolScrollRaf=0;
-  addEventListener('scroll',()=>{if(!protocolScrollRaf)protocolScrollRaf=requestAnimationFrame(()=>{protocolScrollRaf=0;updateProtocolScroll();});},{passive:true});
-  addEventListener('resize',updateProtocolScroll);
-  protocolSteps.forEach((step,index)=>{
-    const activate=()=>{
-      if(innerWidth>900&&!reduced){const span=protocolSection.offsetHeight-innerHeight;scrollTo({top:scrollY+protocolSection.getBoundingClientRect().top+span*((index+.5)/3),behavior:'smooth'});}
-      else setProtocolMode(index);
-    };
-    step.addEventListener('click',activate);
-    step.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();activate();}});
-  });
-  setProtocolMode(0);updateProtocolScroll();
+  /* module 2 is a plain document flow now: the intro pins via CSS and
+     each capability carries its own figure. Nothing to drive. */
 
   const revealNodes=[...document.querySelectorAll('.reveal')];
   if(reduced){revealNodes.forEach(node=>node.classList.add('in'));}
