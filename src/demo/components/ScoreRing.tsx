@@ -25,25 +25,38 @@ export default function ScoreRing({
   const stroke = size > 90 ? 8 : 6;
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
-  const color = score >= threshold ? '#8ee0ba' : score >= 50 ? '#f1b991' : '#ffb4aa';
+  // 用 CSS 变量而不是 hex：环的颜色要跟着主题走。
+  const color =
+    score >= threshold
+      ? 'var(--color-ok)'
+      : score >= 50
+        ? 'var(--color-warn)'
+        : 'var(--color-bad)';
 
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#2b2d39" strokeWidth={stroke} />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
           fill="none"
-          stroke={color}
+          strokeWidth={stroke}
+          style={{ stroke: 'var(--color-hairline)' }}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - (drawn ? score / 100 : 0))}
           style={{
+            stroke: color,
             transition: reduced ? undefined : 'stroke-dashoffset 1.1s cubic-bezier(0,0,.2,1)',
-            filter: `drop-shadow(0 0 6px ${color}55)`,
+            filter: `drop-shadow(0 0 6px color-mix(in oklab, ${color} 40%, transparent))`,
           }}
         />
       </svg>

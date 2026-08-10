@@ -79,7 +79,7 @@ export default function MatchDrawer({
           {verdict.ok ? (
             <button
               onClick={onConfirm}
-              className="bg-brand hover:bg-brand-dim h-12 w-full rounded-[var(--radius-sm)] text-[15px] font-semibold text-[#0b0d12] transition-colors"
+              className="bg-brand hover:bg-brand-dim h-12 w-full rounded-[var(--radius-sm)] text-[15px] font-semibold text-on-brand transition-colors"
             >
               确认接单，开始 AI 检查
             </button>

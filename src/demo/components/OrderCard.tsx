@@ -23,10 +23,17 @@ export default function OrderCard({
   return (
     <button
       onClick={onPick}
-      className={`group bg-surface border-hairline hover:border-brand/50 relative flex flex-col rounded-[var(--radius-panel)] border p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_#00000055] ${
+      className={`group bg-surface border-hairline hover:border-brand/50 relative flex flex-col rounded-[var(--radius-panel)] border p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-panel)] ${
         isNew ? 'animate-[slideIn_.45s_ease-out]' : ''
       }`}
-      style={isNew ? { boxShadow: '0 0 0 1px #7cd8c455, 0 0 24px #7cd8c422' } : undefined}
+      style={
+        isNew
+          ? {
+              boxShadow:
+                '0 0 0 1px color-mix(in oklab, var(--color-brand) 34%, transparent), 0 0 24px color-mix(in oklab, var(--color-brand) 14%, transparent)',
+            }
+          : undefined
+      }
     >
       {/* 顶行：方向 + 挂出时间 */}
       <div className="mb-4 flex items-center justify-between">
@@ -81,7 +88,7 @@ export default function OrderCard({
       </div>
 
       {/* 悬停时出现的接单条 */}
-      <span className="bg-brand text-[#0b0d12] absolute inset-x-0 bottom-0 h-0 overflow-hidden rounded-b-[var(--radius-panel)] text-center text-[13px] font-semibold transition-all duration-200 group-hover:h-9 group-hover:leading-9">
+      <span className="bg-brand text-on-brand absolute inset-x-0 bottom-0 h-0 overflow-hidden rounded-b-[var(--radius-panel)] text-center text-[13px] font-semibold transition-all duration-200 group-hover:h-9 group-hover:leading-9">
         接这一单 →
       </span>
     </button>

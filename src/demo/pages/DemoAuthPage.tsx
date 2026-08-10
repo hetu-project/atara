@@ -50,7 +50,7 @@ export default function DemoAuthPage({
 
         <button
           onClick={enter}
-          className="bg-brand hover:bg-brand-dim h-11 w-full rounded-[var(--radius-sm)] text-[14px] font-semibold text-[#0b0d12] transition-colors"
+          className="bg-brand hover:bg-brand-dim h-11 w-full rounded-[var(--radius-sm)] text-[14px] font-semibold text-on-brand transition-colors"
         >
           {cta}
         </button>

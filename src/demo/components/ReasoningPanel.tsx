@@ -102,7 +102,7 @@ function RevealedRow({ check }: { check: RiskCheck }) {
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] ${icon.cls}`}
         style={{ background: 'currentColor' }}
       >
-        <span className="text-[#0b0d12]">{icon.glyph}</span>
+        <span className="text-on-brand">{icon.glyph}</span>
       </span>
       <span className="flex-1 text-[13px]">{check.label}</span>
       <span className={`text-right text-[12px] ${icon.cls}`}>{check.detail}</span>

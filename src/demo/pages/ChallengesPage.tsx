@@ -104,7 +104,7 @@ export default function ChallengesPage() {
                     <span
                       className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border text-[10px] ${
                         detail.state === 'resolved'
-                          ? 'border-ok bg-ok text-[#0b0d12]'
+                          ? 'border-ok bg-ok text-on-brand'
                           : 'border-hairline-strong'
                       }`}
                     >
@@ -125,7 +125,7 @@ export default function ChallengesPage() {
                   dispatch({ type: 'resolveChallenge', challengeId: detail.id });
                   setOpenId(null);
                 }}
-                className="bg-brand hover:bg-brand-dim h-11 w-full rounded-[var(--radius-sm)] text-[14px] font-semibold text-[#0b0d12] transition-colors"
+                className="bg-brand hover:bg-brand-dim h-11 w-full rounded-[var(--radius-sm)] text-[14px] font-semibold text-on-brand transition-colors"
               >
                 补充材料并重新提交
               </button>

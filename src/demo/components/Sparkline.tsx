@@ -1,7 +1,7 @@
 /** 内联 SVG 走势图。不引图表库——这点复杂度不值得多一个依赖。 */
 export default function Sparkline({
   points,
-  color = '#8ee6c9',
+  color = 'var(--color-series-1)',
   height = 120,
 }: {
   points: number[];
@@ -22,7 +22,8 @@ export default function Sparkline({
     return `${x.toFixed(2)},${y.toFixed(2)}`;
   });
 
-  const id = `grad-${color.replace('#', '')}`;
+  // 渐变 id 不能含 var(...) 里的括号，用可读的 slug
+  const id = `grad-${color.replace(/[^a-zA-Z0-9]/g, '')}`;
 
   return (
     <svg

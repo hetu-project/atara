@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router';
+import ThemeToggle from '@/demo/components/ThemeToggle';
 import { signOutDemo } from '@/demo/auth/demoSession';
 
 // 导航文案面向普通用户，不用行话。URL 保持英文不变——它们不面向用户，
@@ -45,6 +46,10 @@ export default function DemoSidebar() {
             {e}
           </button>
         ))}
+      </div>
+
+      <div className="mt-2.5 px-5">
+        <ThemeToggle />
       </div>
 
       <div className="mt-7 flex-1 overflow-y-auto">

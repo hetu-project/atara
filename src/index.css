@@ -23,31 +23,34 @@
 
   --shadow-float: 0px 4px 10px rgba(208, 208, 208, 0.4);
 
-  /* ── Trustline 暗色令牌（Demo）──────────────────────────────
-     追加而非替换：上面那批浅色令牌还被未路由的旧组件用着，删掉会让它们
-     失去样式，而它们的测试还在跑。唯一被覆盖的是 --color-surface，
-     它的旧值 rgba(0,0,0,0.02) 在暗色下没有意义。 */
-  --color-bg: #0b0d12;
-  --color-surface: #171821;
-  --color-surface-raised: #1d1f2a;
-  --color-txt: #fbf9ff;
-  --color-muted: #a8a7b6;
-  --color-hairline: #2b2d39;
-  --color-hairline-strong: #444756;
-  --color-brand: #7cd8c4;
-  --color-brand-dim: #1ea98e;
-  --color-ok: #8ee0ba;
-  --color-ok-muted: #123b2b;
-  --color-warn: #f1b991;
-  --color-bad: #ffb4aa;
-  --color-bad-muted: #4a1f1b;
-  --color-info: #9fc5ff;
-  --color-info-muted: #172d4f;
-  --color-series-1: #8ee6c9;
-  --color-series-2: #a8c1ff;
-  --color-series-3: #f1b991;
-  --color-series-4: #ffaaa5;
-  --color-series-5: #cabdff;
+  /* ── Demo 的语义令牌 ────────────────────────────────────────
+     全部指向 --c-* 变量，实际值在下面按主题切换。追加而非替换：上面那批
+     旧令牌还被未路由的旧组件用着，删掉会让它们失去样式，而它们的测试还在跑。
+     唯一被覆盖的是 --color-surface，它的旧值在暗色下没有意义。 */
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-surface-raised: var(--c-surface-raised);
+  --color-txt: var(--c-txt);
+  --color-muted: var(--c-muted);
+  --color-hairline: var(--c-hairline);
+  --color-hairline-strong: var(--c-hairline-strong);
+  --color-brand: var(--c-brand);
+  --color-brand-dim: var(--c-brand-dim);
+  /* 实底品牌按钮上的文字色。浅色主题下按钮是深色底配白字，暗色主题下反过来，
+     所以它必须是个令牌——写死 #0b0d12 在浅色主题里就是黑底黑字。 */
+  --color-on-brand: var(--c-on-brand);
+  --color-ok: var(--c-ok);
+  --color-ok-muted: var(--c-ok-muted);
+  --color-warn: var(--c-warn);
+  --color-bad: var(--c-bad);
+  --color-bad-muted: var(--c-bad-muted);
+  --color-info: var(--c-info);
+  --color-info-muted: var(--c-info-muted);
+  --color-series-1: var(--c-series-1);
+  --color-series-2: var(--c-series-2);
+  --color-series-3: var(--c-series-3);
+  --color-series-4: var(--c-series-4);
+  --color-series-5: var(--c-series-5);
 
   --radius-xs: 8px;
   --radius-sm: 12px;
@@ -55,7 +58,98 @@
   --radius-md: 18px;
   --radius-lg: 26px;
 
-  --shadow-panel: 0 14px 34px #00000057;
+  --shadow-panel: 0 14px 34px var(--c-shadow);
+}
+
+/* ── 主题调色板 ──────────────────────────────────────────────
+   值取自 Trustline 自己的 :root / [data-theme=dark] 两套变量。
+   三态：显式 light、显式 dark、以及不带 data-theme 时跟随系统。 */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --c-bg: #f6f4f6;
+  --c-surface: #ffffff;
+  --c-surface-raised: #f2f0f3;
+  --c-txt: #11121a;
+  --c-muted: #626775;
+  --c-hairline: #e5e7ea;
+  --c-hairline-strong: #d0d4da;
+  /* 浅色下品牌色要能当正文强调色用，#7cd8c4 在白底上对比度不够 */
+  --c-brand: #0f766e;
+  --c-brand-dim: #115e59;
+  --c-on-brand: #ffffff;
+  --c-ok: #047857;
+  --c-ok-muted: #e6faed;
+  --c-warn: #b45309;
+  --c-bad: #b42318;
+  --c-bad-muted: #fee4e2;
+  --c-info: #1d4ed8;
+  --c-info-muted: #e8f0ff;
+  --c-series-1: #28b993;
+  --c-series-2: #9fb4ff;
+  --c-series-3: #e0a17d;
+  --c-series-4: #ff9e98;
+  --c-series-5: #c9b9ff;
+  --c-shadow: #11121a1f;
+  --c-overlay: #f6f4f6f7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --c-bg: #0b0d12;
+    --c-surface: #171821;
+    --c-surface-raised: #1d1f2a;
+    --c-txt: #fbf9ff;
+    --c-muted: #a8a7b6;
+    --c-hairline: #2b2d39;
+    --c-hairline-strong: #444756;
+    --c-brand: #7cd8c4;
+    --c-brand-dim: #5fc4ad;
+    --c-on-brand: #0b0d12;
+    --c-ok: #8ee0ba;
+    --c-ok-muted: #123b2b;
+    --c-warn: #f1b991;
+    --c-bad: #ffb4aa;
+    --c-bad-muted: #4a1f1b;
+    --c-info: #9fc5ff;
+    --c-info-muted: #172d4f;
+    --c-series-1: #8ee6c9;
+    --c-series-2: #a8c1ff;
+    --c-series-3: #f1b991;
+    --c-series-4: #ffaaa5;
+    --c-series-5: #cabdff;
+    --c-shadow: #00000057;
+    --c-overlay: #07080cf7;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --c-bg: #0b0d12;
+  --c-surface: #171821;
+  --c-surface-raised: #1d1f2a;
+  --c-txt: #fbf9ff;
+  --c-muted: #a8a7b6;
+  --c-hairline: #2b2d39;
+  --c-hairline-strong: #444756;
+  --c-brand: #7cd8c4;
+  --c-brand-dim: #5fc4ad;
+  --c-on-brand: #0b0d12;
+  --c-ok: #8ee0ba;
+  --c-ok-muted: #123b2b;
+  --c-warn: #f1b991;
+  --c-bad: #ffb4aa;
+  --c-bad-muted: #4a1f1b;
+  --c-info: #9fc5ff;
+  --c-info-muted: #172d4f;
+  --c-series-1: #8ee6c9;
+  --c-series-2: #a8c1ff;
+  --c-series-3: #f1b991;
+  --c-series-4: #ffaaa5;
+  --c-series-5: #cabdff;
+  --c-shadow: #00000057;
+  --c-overlay: #07080cf7;
 }
 
 @keyframes slideIn {
@@ -120,8 +214,8 @@
   100% {
     transform: translateX(0) scale(1.02);
     opacity: 1;
-    border-color: #7cd8c4;
-    box-shadow: 0 0 34px #7cd8c455;
+    border-color: var(--c-brand);
+    box-shadow: 0 0 34px color-mix(in oklab, var(--c-brand) 34%, transparent);
   }
 }
 

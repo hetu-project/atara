@@ -75,7 +75,7 @@ function DeskCard({ desk }: { desk: Desk }) {
         <button
           onClick={() => dispatch({ type: 'openDesk', kind: desk.kind, name: name.trim() || label })}
           disabled={!name.trim()}
-          className="bg-brand hover:bg-brand-dim h-10 w-full rounded-[var(--radius-sm)] text-[14px] font-semibold text-[#0b0d12] transition-colors disabled:opacity-40"
+          className="bg-brand hover:bg-brand-dim h-10 w-full rounded-[var(--radius-sm)] text-[14px] font-semibold text-on-brand transition-colors disabled:opacity-40"
         >
           立即开通
         </button>
@@ -95,7 +95,7 @@ function DeskCard({ desk }: { desk: Desk }) {
         </div>
         <span
           className="text-ok bg-ok/12 rounded-[var(--radius-pill)] px-2.5 py-1 text-[12px] font-medium"
-          style={{ boxShadow: '0 0 12px #8ee0ba33' }}
+          style={{ boxShadow: '0 0 12px color-mix(in oklab, var(--color-ok) 22%, transparent)' }}
         >
           已验证
         </span>

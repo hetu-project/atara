@@ -59,7 +59,14 @@ export default function DataTable({
                   className={`border-hairline hover:bg-surface-raised border-b transition-colors last:border-b-0 ${
                     onRowClick ? 'cursor-pointer' : ''
                   } ${r.isNew ? 'animate-[slideIn_.45s_ease-out]' : ''}`}
-                  style={r.isNew ? { boxShadow: 'inset 0 0 0 1px #7cd8c455' } : undefined}
+                  style={
+                    r.isNew
+                      ? {
+                          boxShadow:
+                            'inset 0 0 0 1px color-mix(in oklab, var(--color-brand) 34%, transparent)',
+                        }
+                      : undefined
+                  }
                 >
                   {r.cells.map((cell, i) => (
                     <td

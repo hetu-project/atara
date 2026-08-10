@@ -6,7 +6,7 @@ import { assessRisk } from '@/demo/engine/riskEngine';
 import { fmtAmount, fmtFiat } from '@/demo/format';
 import { useReducedMotion } from '@/demo/hooks/useReducedMotion';
 import { useDemo } from '@/demo/state/useDemo';
-import type { CheckStatus, Desk, PoolOrder, Transaction } from '@/demo/types';
+import type { CheckStatus, Desk, PoolOrder, RiskResult, Transaction } from '@/demo/types';
 
 /** 每一幕的起始时刻（毫秒）。改节奏只动这里。 */
 const T = {
@@ -25,22 +25,34 @@ const T = {
   },
 };
 
+// ring 用 CSS 变量而非 hex，才能跟着主题走。
 const ICON: Record<CheckStatus, { glyph: string; cls: string; ring: string }> = {
-  pass: { glyph: '✓', cls: 'text-ok', ring: '#8ee0ba' },
-  warn: { glyph: '!', cls: 'text-warn', ring: '#f1b991' },
-  fail: { glyph: '✕', cls: 'text-bad', ring: '#ffb4aa' },
+  pass: { glyph: '✓', cls: 'text-ok', ring: 'var(--color-ok)' },
+  warn: { glyph: '!', cls: 'text-warn', ring: 'var(--color-warn)' },
+  fail: { glyph: '✕', cls: 'text-bad', ring: 'var(--color-bad)' },
 };
 
 const VERDICT = {
-  pass: { label: '可以放心交易', hint: '这笔交易已通过全部检查', cls: 'text-ok', glow: '#8ee0ba' },
-  challenge: {
-    label: '需要你补充材料',
-    hint: '已放进「待我处理」，补齐后会自动重新检查',
-    cls: 'text-warn',
-    glow: '#f1b991',
-  },
-  decline: { label: '建议不要交易', hint: 'AI 发现了明确的风险信号', cls: 'text-bad', glow: '#ffb4aa' },
+  pass: { label: '可以放心交易', cls: 'text-ok', glow: 'var(--color-ok)' },
+  challenge: { label: '需要你补充材料', cls: 'text-warn', glow: 'var(--color-warn)' },
+  decline: { label: '建议不要交易', cls: 'text-bad', glow: 'var(--color-bad)' },
 } as const;
+
+/**
+ * 结论下面那句话。必须按实际检查结果算，不能写死——放行分数段（70–84）本来就
+ * 允许带一项警告，写死「已通过全部检查」在那时候就是句假话，而屏幕上那条橙色
+ * 警告就在正上方。
+ */
+function hintFor(risk: RiskResult): string {
+  const flaws = risk.checks.filter((c) => c.status !== 'pass').length;
+  if (risk.verdict === 'pass') {
+    return flaws === 0
+      ? `全部 ${risk.checks.length} 项检查都通过了`
+      : `${flaws} 项需要留意，但整体风险可控`;
+  }
+  if (risk.verdict === 'challenge') return '已放进「待我处理」，补齐材料后会自动重新检查';
+  return 'AI 发现了明确的风险信号，建议放弃这一单';
+}
 
 /**
  * 接单后的全屏 AI 审核演出。
@@ -162,15 +174,16 @@ export default function MatchCeremony({
   const v = VERDICT[risk.verdict];
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col items-center overflow-y-auto bg-[#07080c]/97 px-6 py-10 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex flex-col items-center overflow-y-auto px-6 py-10 backdrop-blur-sm"
+      style={{ background: 'var(--c-overlay)' }}>
       {/* 背景光晕 */}
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0"
         style={{
-          background: showVerdict
-            ? `radial-gradient(700px 420px at 50% 42%, ${v.glow}1a, transparent 70%)`
-            : 'radial-gradient(700px 420px at 50% 42%, #7cd8c414, transparent 70%)',
+          background: `radial-gradient(700px 420px at 50% 42%, color-mix(in oklab, ${
+            showVerdict ? v.glow : 'var(--color-brand)'
+          } 12%, transparent), transparent 70%)`,
           transition: 'background 700ms ease',
         }}
       />
@@ -212,7 +225,8 @@ export default function MatchCeremony({
                 aria-hidden
                 className="pointer-events-none absolute inset-x-0 h-16"
                 style={{
-                  background: 'linear-gradient(180deg, transparent, #7cd8c433, transparent)',
+                  background:
+                    'linear-gradient(180deg, transparent, color-mix(in oklab, var(--color-brand) 20%, transparent), transparent)',
                   animation: 'scanBeam 700ms ease-in-out',
                 }}
               />
@@ -251,13 +265,16 @@ export default function MatchCeremony({
                 <li
                   key={c.id}
                   className="bg-surface border-hairline flex animate-[popIn_.32s_cubic-bezier(.2,.9,.3,1)] items-center gap-3 rounded-[var(--radius-sm)] border px-4 py-3"
-                  style={{ boxShadow: `inset 0 0 0 1px ${ic.ring}22` }}
+                  style={{ boxShadow: `inset 0 0 0 1px color-mix(in oklab, ${ic.ring} 14%, transparent)` }}
                 >
                   <span
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] ${ic.cls}`}
-                    style={{ background: 'currentColor', boxShadow: `0 0 10px ${ic.ring}66` }}
+                    style={{
+                      background: 'currentColor',
+                      boxShadow: `0 0 10px color-mix(in oklab, ${ic.ring} 40%, transparent)`,
+                    }}
                   >
-                    <span className="text-[#0b0d12]">{ic.glyph}</span>
+                    <span className="text-on-brand">{ic.glyph}</span>
                   </span>
                   <span className="flex-1 text-[13px]">{c.label}</span>
                   <span className={`text-right text-[12px] ${ic.cls}`}>{c.detail}</span>
@@ -287,7 +304,7 @@ export default function MatchCeremony({
 
         {showVerdict && (
           <p className="text-muted mt-6 animate-[fadeUp_.5s_ease-out] text-center text-[13px]">
-            {v.hint}
+            {hintFor(risk)}
           </p>
         )}
       </div>

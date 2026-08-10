@@ -18,10 +18,10 @@ function series(name: string, n = 24): number[] {
 }
 
 const CHARTS = [
-  { key: 'volume', label: '成交', title: '交易量', sub: '每小时的成交笔数', color: '#8ee6c9' },
-  { key: 'score', label: '评分', title: '安全分走势', sub: '每小时的平均安全分', color: '#a8c1ff' },
-  { key: 'challenge', label: '待办', title: '待补材料', sub: '每小时新增的待办', color: '#f1b991' },
-  { key: 'latency', label: '用时', title: '审核用时', sub: 'AI 完成一笔检查的耗时', color: '#cabdff' },
+  { key: 'volume', label: '成交', title: '交易量', sub: '每小时的成交笔数', color: 'var(--color-series-1)' },
+  { key: 'score', label: '评分', title: '安全分走势', sub: '每小时的平均安全分', color: 'var(--color-series-2)' },
+  { key: 'challenge', label: '待办', title: '待补材料', sub: '每小时新增的待办', color: 'var(--color-series-3)' },
+  { key: 'latency', label: '用时', title: '审核用时', sub: 'AI 完成一笔检查的耗时', color: 'var(--color-series-5)' },
 ];
 
 export default function OverviewPage() {

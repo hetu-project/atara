@@ -76,6 +76,15 @@ npm run dev
 URL 保留英文（`pool` / `queue` / `desk`），界面文案一律用普通用户看得懂的说法，
 不用「订单池」「队列」「席位」「挡单」这类行话。
 
+侧边栏顶部有**浅色 / 深色 / 跟随系统**三态主题切换（`components/ThemeToggle.tsx`），
+选择存在 localStorage，在 React 挂载前套用以避免闪一下。两套调色板都定义在
+`src/index.css` 的 `--c-*` 变量里，Tailwind 的 `--color-*` 令牌全部指向它们。
+
+**组件里不要写死颜色。** 需要在 JS 里用颜色时写 `var(--color-ok)` 这类令牌名，
+需要半透明就用 `color-mix(in oklab, var(--color-brand) 20%, transparent)`。写死
+hex 的后果是浅色主题下那一处会瞎——实底按钮的文字色尤其要用 `text-on-brand`，
+写死深色在浅色主题里就是黑底黑字。
+
 接单后会有一段约 6 秒的**全屏 AI 检查演出**（`components/MatchCeremony.tsx`）：
 双方卡片汇聚 → 扫描光束 → 六项检查逐条弹出 → 评分环绘制 → 给出结论 → 跳转。
 右上角可跳过，`prefers-reduced-motion` 下自动跳过。
