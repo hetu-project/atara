@@ -132,18 +132,18 @@ export function createSeedState(): DemoState {
       buy: {
         kind: 'buy',
         displayId: 'D000001',
-        name: '我的买方席位',
+        name: '我的买入账户',
         verifiedAt: new Date(now - 86400_000 * 96).toISOString(),
         completedTrades: 34,
         disputes: 0,
         avgResponseMin: 4,
       },
       sell: {
-        // 故意留成未开通：这是撮合那条唯一规则的出场机会，也是「我的席位」页
-        // 存在的理由。订单池上方的席位选择器切到卖方就能看到它生效。
+        // 故意留成未开通：这是成交那条唯一规则的出场机会，也是「我的账户」页
+        // 存在的理由。交易大厅上方的账户选择器切到卖出就能看到它生效。
         kind: 'sell',
         displayId: 'D000002',
-        name: '我的卖方席位',
+        name: '我的卖出账户',
         verifiedAt: null,
         completedTrades: 0,
         disputes: 0,

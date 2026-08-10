@@ -11,9 +11,9 @@ const ICON: Record<CheckStatus, { glyph: string; cls: string }> = {
 };
 
 const VERDICT_TEXT = {
-  pass: { label: '放行', cls: 'text-ok' },
-  challenge: { label: '需补充材料', cls: 'text-warn' },
-  decline: { label: '拒绝', cls: 'text-bad' },
+  pass: { label: '可以放心交易', cls: 'text-ok' },
+  challenge: { label: '需要你补充材料', cls: 'text-warn' },
+  decline: { label: '建议不要交易', cls: 'text-bad' },
 } as const;
 
 export default function ReasoningPanel({ tx }: { tx: Transaction }) {
@@ -46,16 +46,16 @@ export default function ReasoningPanel({ tx }: { tx: Transaction }) {
 
       <section>
         <div className="mb-3.5 flex items-center gap-2.5">
-          <span className="text-muted text-[11px] font-semibold tracking-[0.08em]">风控推理</span>
+          <span className="text-muted text-[11px] font-semibold tracking-[0.08em]">AI 安全检查</span>
           {!finished && (
             <span className="text-info flex items-center gap-1.5 text-[12px]">
               <span className="bg-info h-1.5 w-1.5 animate-pulse rounded-full" />
-              分析中
+              正在检查
             </span>
           )}
           {tx.resubmits > 0 && (
             <span className="text-muted ml-auto text-[12px]">
-              第 {tx.resubmits + 1} 次校验 · 材料已补充
+              第 {tx.resubmits + 1} 次检查 · 材料已补充
             </span>
           )}
         </div>
@@ -77,10 +77,10 @@ export default function ReasoningPanel({ tx }: { tx: Transaction }) {
           <div className="flex items-center gap-6">
             <ScoreRing score={risk.score} threshold={risk.threshold} size={116} />
             <div className="min-w-0">
-              <div className="text-muted text-[12px]">综合评分</div>
+              <div className="text-muted text-[12px]">安全评分</div>
               <div className="mt-1.5 text-[15px] leading-relaxed">
                 <span className="tabular-nums">{risk.score}</span>
-                <span className="text-muted"> / 100 · 阈值 </span>
+                <span className="text-muted"> / 100 · 及格线 </span>
                 <span className="tabular-nums">{risk.threshold}</span>
               </div>
               <div className={`mt-2.5 text-[19px] font-semibold ${VERDICT_TEXT[risk.verdict].cls}`}>

@@ -2,18 +2,20 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router';
 import { signOutDemo } from '@/demo/auth/demoSession';
 
+// 导航文案面向普通用户，不用行话。URL 保持英文不变——它们不面向用户，
+// 改了还要连带动 README 和部署说明。
 const NAV = [
   {
-    group: 'DASHBOARD',
-    items: [{ to: '/overview', label: '概览' }],
+    group: '总览',
+    items: [{ to: '/overview', label: '首页' }],
   },
   {
-    group: 'OPERATIONS',
+    group: '交易',
     items: [
-      { to: '/pool', label: '订单池' },
-      { to: '/queue', label: '队列' },
-      { to: '/challenges', label: '风控挡单' },
-      { to: '/desk', label: '我的席位' },
+      { to: '/pool', label: '交易大厅' },
+      { to: '/queue', label: '我的交易' },
+      { to: '/challenges', label: '待我处理' },
+      { to: '/desk', label: '我的账户' },
     ],
   },
 ];

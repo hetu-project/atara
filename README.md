@@ -64,14 +64,21 @@ npm run dev
 
 `/app` 下是订单池撮合的演示，**纯前端，不连数据库**：
 
-| 路由 | 页面 |
-|---|---|
-| `/app/login` · `/app/register` | 一键进入，任意输入即可 |
-| `/app/overview` | 概览 |
-| `/app/pool` | 订单池，从中撮合挂单 |
-| `/app/queue` | 队列，AI 风控推理 |
-| `/app/challenges` | 风控挡单，补材料重提交 |
-| `/app/desk` | 我的买方 / 卖方席位 |
+| 路由 | 页面 | 说明 |
+|---|---|---|
+| `/app/login` · `/app/register` | 登录 / 注册 | 一键进入，任意输入即可 |
+| `/app/overview` | 首页 | 交易总数、通过率、走势 |
+| `/app/pool` | 交易大厅 | 挂单卡片墙，点卡片接单 |
+| `/app/queue` | 我的交易 | 每笔交易的 AI 检查结果 |
+| `/app/challenges` | 待我处理 | 补齐材料后自动重新检查 |
+| `/app/desk` | 我的账户 | 买入账户与卖出账户 |
+
+URL 保留英文（`pool` / `queue` / `desk`），界面文案一律用普通用户看得懂的说法，
+不用「订单池」「队列」「席位」「挡单」这类行话。
+
+接单后会有一段约 6 秒的**全屏 AI 检查演出**（`components/MatchCeremony.tsx`）：
+双方卡片汇聚 → 扫描光束 → 六项检查逐条弹出 → 评分环绘制 → 给出结论 → 跳转。
+右上角可跳过，`prefers-reduced-motion` 下自动跳过。
 
 **风控推理不调用任何 AI 服务，也不发网络请求。** 结论由 `src/demo/engine/riskEngine.ts`
 本地算出，UI 按节奏逐条显示。做成引擎而非写死文案，是为了让不同的单跑出不同的

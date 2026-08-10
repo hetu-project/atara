@@ -9,11 +9,11 @@ import DemoPageHeader, { HeaderButton } from '@/demo/layout/DemoPageHeader';
 import { useDemo } from '@/demo/state/useDemo';
 
 const COLUMNS: Column[] = [
-  { key: 'created', label: '创建时间', width: '15%' },
+  { key: 'created', label: '时间', width: '15%' },
   { key: 'state', label: '状态', width: '12%' },
-  { key: 'reason', label: '原因', width: '36%' },
-  { key: 'required', label: '所需材料', width: '25%' },
-  { key: 'tx', label: '关联交易', width: '12%' },
+  { key: 'reason', label: 'AI 发现的问题', width: '36%' },
+  { key: 'required', label: '需要你提供', width: '25%' },
+  { key: 'tx', label: '交易单号', width: '12%' },
 ];
 
 export default function ChallengesPage() {
@@ -29,8 +29,8 @@ export default function ChallengesPage() {
   return (
     <>
       <DemoPageHeader
-        title="风控挡单"
-        subtitle="评分低于阈值的交易在这里补充材料后重新校验"
+        title="待我处理"
+        subtitle="AI 觉得有疑点的交易，补齐材料后会重新检查"
         actions={
           <>
             <HeaderButton>导出 CSV</HeaderButton>
@@ -40,17 +40,17 @@ export default function ChallengesPage() {
       />
 
       <div className="mb-[18px] grid grid-cols-4 gap-[18px]">
-        <KpiTile label="LOADED" value={challenges.length} sub="当前页" />
-        <KpiTile label="OPEN" value={open} accent="warn" sub="等待补充材料" />
-        <KpiTile label="REASSESSING" value={resolved} sub="已补充并重新校验" />
-        <KpiTile label="EXPIRING SOON" value={0} sub="24 小时内到期" />
+        <KpiTile label="全部" value={challenges.length} sub="需要关注的交易" />
+        <KpiTile label="等你处理" value={open} accent="warn" sub="补齐材料即可继续" />
+        <KpiTile label="重新检查中" value={resolved} sub="材料已提交" />
+        <KpiTile label="即将过期" value={0} sub="24 小时内" />
       </div>
 
-      <FilterBar summary="未应用挡单筛选" loaded={challenges.length} />
+      <FilterBar summary="显示全部" loaded={challenges.length} />
 
       <DataTable
         columns={COLUMNS}
-        empty="没有被挡下的交易。撮合几笔评分较低的单就会出现。"
+        empty="太好了，没有需要你处理的事。"
         onRowClick={setOpenId}
         rows={challenges.map((c) => ({
           id: c.id,
@@ -73,7 +73,7 @@ export default function ChallengesPage() {
         }))}
       />
 
-      <Drawer open={detail !== null} onClose={() => setOpenId(null)} title="挡单详情">
+      <Drawer open={detail !== null} onClose={() => setOpenId(null)} title="需要你补充的材料">
         {detail && (
           <div className="space-y-6">
             {detailTx && (
@@ -92,12 +92,12 @@ export default function ChallengesPage() {
             )}
 
             <section>
-              <Label>挡单原因</Label>
+              <Label>AI 发现的问题</Label>
               <p className="text-warn text-[14px]">{detail.reason}</p>
             </section>
 
             <section>
-              <Label>需补充材料</Label>
+              <Label>需要你提供</Label>
               <ul className="space-y-2.5">
                 {detail.required.map((r) => (
                   <li key={r} className="flex items-center gap-3 text-[13px]">
@@ -131,7 +131,7 @@ export default function ChallengesPage() {
               </button>
             ) : (
               <p className="text-ok text-center text-[13px]">
-                材料已补充，交易已回到队列重新校验
+                材料已提交，AI 正在重新检查这笔交易
               </p>
             )}
           </div>

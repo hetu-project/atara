@@ -6,43 +6,57 @@ export const THRESHOLD = 70;
 /**
  * 六个固定检查项。ok / bad 是文案模板，数字由种子填。
  * 数组顺序即屏幕上的显示顺序。
+ *
+ * bad 的第二个参数 hard 表示这一项是不是本次的致命项（红色 ✕）。文案必须跟着
+ * 严重度走：把「命中制裁名单」配一个橙色「需留意」图标，是屏幕上最刺眼的自相
+ * 矛盾——那种事只可能是致命的。
  */
 const CHECKS = [
   {
     id: 'kyc',
-    label: '核对席位实名状态',
-    ok: () => '已验证 · 证件与地址一致',
-    bad: () => '对手方未完成实名认证',
+    label: '核对对方实名认证',
+    ok: () => '已通过 · 证件与地址一致',
+    bad: (_n: number, hard: boolean) =>
+      hard ? '实名信息与证件不符' : '对方尚未完成实名认证',
   },
   {
     id: 'history',
-    label: '拉取对手方历史成交',
-    ok: (n: number) => `${n} 笔完成 · 0 争议`,
-    bad: (n: number) => `${n} 笔完成 · ${1 + (n % 4)} 争议`,
+    label: '查看对方历史交易',
+    ok: (n: number) => `${n} 笔成功 · 0 次纠纷`,
+    bad: (n: number, hard: boolean) =>
+      hard
+        ? `${n} 笔成功，但有 ${3 + (n % 5)} 次未解决的纠纷`
+        : `${n} 笔成功 · ${1 + (n % 4)} 次纠纷`,
   },
   {
     id: 'sanctions',
-    label: '链上地址制裁名单筛查',
-    ok: () => '无命中（OFAC / UN / EU）',
-    bad: () => '命中 OFAC SDN 关联地址',
+    label: '检查收款地址是否安全',
+    ok: () => '未出现在任何风险名单',
+    bad: (_n: number, hard: boolean) =>
+      hard ? '命中国际制裁名单关联地址' : '该地址近期有异常资金往来',
   },
   {
     id: 'amount',
-    label: '金额异常检测',
-    ok: (n: number) => `与席位均值相当（${(0.8 + (n % 60) / 100).toFixed(1)}×）`,
-    bad: (n: number) => `高于席位均值 ${(2.5 + (n % 45) / 10).toFixed(1)}×`,
+    label: '判断金额是否异常',
+    ok: (n: number) => `与你平时的单量相当（${(0.8 + (n % 60) / 100).toFixed(1)} 倍）`,
+    bad: (n: number, hard: boolean) =>
+      hard
+        ? `是你平时单量的 ${(8 + (n % 30)).toFixed(0)} 倍，明显异常`
+        : `是你平时单量的 ${(2.5 + (n % 45) / 10).toFixed(1)} 倍`,
   },
   {
     id: 'response',
-    label: '对手方响应时效',
-    ok: (n: number) => `中位 ${1 + (n % 9)} 分钟`,
-    bad: (n: number) => `中位 ${45 + (n % 120)} 分钟，偏慢`,
+    label: '评估对方响应速度',
+    ok: (n: number) => `平均 ${1 + (n % 9)} 分钟回复`,
+    bad: (n: number, hard: boolean) =>
+      hard ? '最近多次不回复' : `平均 ${45 + (n % 120)} 分钟才回复，偏慢`,
   },
   {
     id: 'tenure',
-    label: '账户存续时长',
-    ok: (n: number) => `${180 + (n % 600)} 天`,
-    bad: (n: number) => `仅 ${3 + (n % 25)} 天`,
+    label: '核实账户注册时长',
+    ok: (n: number) => `已注册 ${180 + (n % 600)} 天`,
+    bad: (n: number, hard: boolean) =>
+      hard ? `刚注册 ${1 + (n % 3)} 天的新账户` : `仅注册 ${3 + (n % 25)} 天`,
   },
 ] as const;
 
@@ -77,16 +91,13 @@ export function assessRisk(tx: Transaction): RiskResult {
   const checks: RiskCheck[] = CHECKS.map((c, i) => {
     const n = Math.floor(rand() * 200) + 3;
     const isFlawed = flawed.has(i);
-    const status: CheckStatus = isFlawed
-      ? hasFail && i === picked[0]
-        ? 'fail'
-        : 'warn'
-      : 'pass';
+    const isHard = hasFail && i === picked[0];
+    const status: CheckStatus = isFlawed ? (isHard ? 'fail' : 'warn') : 'pass';
     return {
       id: c.id,
       label: c.label,
       status,
-      detail: isFlawed ? c.bad(n) : c.ok(n),
+      detail: isFlawed ? c.bad(n, isHard) : c.ok(n),
     };
   });
 

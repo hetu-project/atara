@@ -18,10 +18,10 @@ function series(name: string, n = 24): number[] {
 }
 
 const CHARTS = [
-  { key: 'volume', label: 'VOLUME', title: '撮合量', sub: '按时间桶统计的提交与成交', color: '#8ee6c9' },
-  { key: 'score', label: 'STATUS', title: '评分分布', sub: '终态与后续状态的构成', color: '#a8c1ff' },
-  { key: 'challenge', label: 'CHALLENGE', title: '挡单趋势', sub: '挡单生命周期状态', color: '#f1b991' },
-  { key: 'latency', label: 'LATENCY', title: '风控耗时', sub: '风控与接口延迟', color: '#cabdff' },
+  { key: 'volume', label: '成交', title: '交易量', sub: '每小时的成交笔数', color: '#8ee6c9' },
+  { key: 'score', label: '评分', title: '安全分走势', sub: '每小时的平均安全分', color: '#a8c1ff' },
+  { key: 'challenge', label: '待办', title: '待补材料', sub: '每小时新增的待办', color: '#f1b991' },
+  { key: 'latency', label: '用时', title: '审核用时', sub: 'AI 完成一笔检查的耗时', color: '#cabdff' },
 ];
 
 export default function OverviewPage() {
@@ -41,8 +41,8 @@ export default function OverviewPage() {
   return (
     <>
       <DemoPageHeader
-        title="概览"
-        subtitle="撮合、风控与席位的整体状况"
+        title="首页"
+        subtitle="你的交易、审核结果与账户状况"
         actions={
           <>
             <HeaderButton>导出 CSV</HeaderButton>
@@ -75,37 +75,37 @@ export default function OverviewPage() {
       </div>
 
       <div className="mb-[18px] grid grid-cols-4 gap-[18px]">
-        <KpiTile label="撮合总量" value={txs.length} accent="brand" sub="全部交易" />
+        <KpiTile label="交易总数" value={txs.length} accent="brand" sub="全部" />
         <KpiTile
           label="通过率"
           value={pct(txs.filter((t) => t.status === 'passed').length)}
-          sub={`${decided.length} 笔已裁决`}
+          sub={`${decided.length} 笔已出结果`}
         />
-        <KpiTile label="挡单率" value={pct(txs.filter((t) => t.status === 'challenged').length)} sub="需补充材料" />
-        <KpiTile label="拒绝率" value={pct(txs.filter((t) => t.status === 'declined').length)} sub="风控否决" />
+        <KpiTile label="待补材料" value={pct(txs.filter((t) => t.status === 'challenged').length)} sub="需要你处理" />
+        <KpiTile label="未通过" value={pct(txs.filter((t) => t.status === 'declined').length)} sub="AI 判定有风险" />
       </div>
 
       <div className="mb-[26px] grid grid-cols-[repeat(4,minmax(0,1fr))_360px] gap-[18px]">
-        <KpiTile label="平均评分" value={avgScore} sub={`${scored.length} 笔已评分`} />
-        <KpiTile label="平均风控耗时" value="4.8s" sub="六项检查串行" />
-        <KpiTile label="池中挂单" value={state.pool.length} sub="可撮合" />
+        <KpiTile label="平均安全分" value={avgScore} sub={`${scored.length} 笔已评分`} />
+        <KpiTile label="平均审核用时" value="4.8s" sub="每笔六项检查" />
+        <KpiTile label="大厅在售" value={state.pool.length} sub="可以接单" />
         <KpiTile
-          label="席位状态"
+          label="我的账户"
           value={`${desksOpen} / 2`}
           accent={desksOpen === 2 ? 'ok' : 'warn'}
-          sub={desksOpen === 2 ? '买方与卖方均已开通' : '有席位尚未开通'}
+          sub={desksOpen === 2 ? '买入与卖出都已开通' : '还有账户没开通'}
         />
 
         {/* 任务积压面板，照抄 Trustline 的 All clear 空态 */}
         <div className="bg-surface border-hairline row-span-1 rounded-[var(--radius-panel)] border p-[22px]">
-          <div className="mb-4 text-[15px] font-semibold">任务积压</div>
+          <div className="mb-4 text-[15px] font-semibold">需要你处理</div>
           {openChallenges.length === 0 ? (
             <div className="flex flex-col items-center py-4 text-center">
               <span className="border-ok text-ok mb-3 flex h-8 w-8 items-center justify-center rounded-full border text-[15px]">
                 ✓
               </span>
-              <div className="text-[14px]">一切正常 —— 暂无紧急任务</div>
-              <p className="text-muted mt-1.5 text-[12px]">新挡单、连续拒绝和指标异常会出现在这里。</p>
+              <div className="text-[14px]">一切正常，没有待办</div>
+              <p className="text-muted mt-1.5 text-[12px]">需要补材料的交易和异常情况会出现在这里。</p>
             </div>
           ) : (
             <ul className="space-y-2.5">
@@ -123,8 +123,8 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      <div className="text-muted mb-1 text-[11px] font-semibold tracking-[0.08em]">TRENDS</div>
-      <h2 className="mb-[18px] text-[21px] font-semibold tracking-tight">风控活动图表</h2>
+      <div className="text-muted mb-1 text-[11px] font-semibold tracking-[0.08em]">趋势</div>
+      <h2 className="mb-[18px] text-[21px] font-semibold tracking-tight">最近动态</h2>
 
       <div className="grid grid-cols-2 gap-[18px]">
         {CHARTS.map((c) => (

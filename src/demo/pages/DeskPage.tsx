@@ -4,10 +4,10 @@ import { useDemo } from '@/demo/state/useDemo';
 import type { Desk } from '@/demo/types';
 
 const LIFECYCLE = [
-  { t: '开通席位', d: '完成实名，获得席位编号。买方席位与卖方席位相互独立。' },
-  { t: '池中撮合', d: '从订单池挑一笔对手方挂单，系统自动成交并生成交易。' },
-  { t: '风控校验', d: '六项检查综合评分，低于阈值的交易会被挡下要求补充材料。' },
-  { t: '结算完成', d: '双方确认后交易归档，计入席位的成交与争议记录。' },
+  { t: '开通账户', d: '完成实名认证，拿到账户编号。买入和卖出是两个独立账户。' },
+  { t: '大厅接单', d: '在交易大厅挑一笔别人挂出的单，点确认就自动成交。' },
+  { t: 'AI 安全检查', d: 'AI 逐项核对对方身份、历史和收款地址，给出一个安全分。' },
+  { t: '完成交易', d: '双方确认后归档，这笔交易会计入你的成交记录。' },
 ];
 
 export default function DeskPage() {
@@ -16,8 +16,8 @@ export default function DeskPage() {
   return (
     <>
       <DemoPageHeader
-        title="我的席位"
-        subtitle="买方席位与卖方席位，各自独立开通"
+        title="我的账户"
+        subtitle="买入账户与卖出账户，各自独立开通"
         actions={<HeaderButton>文档</HeaderButton>}
       />
 
@@ -30,7 +30,7 @@ export default function DeskPage() {
         <div className="text-muted mb-1 text-[11px] font-semibold tracking-[0.08em]">
           它是怎么运转的
         </div>
-        <h2 className="mb-7 text-[21px] font-semibold tracking-tight">从开通席位到结算完成</h2>
+        <h2 className="mb-7 text-[21px] font-semibold tracking-tight">从开通账户到完成交易</h2>
 
         <ol className="grid grid-cols-4 gap-6">
           {LIFECYCLE.map((s, i) => (
@@ -53,7 +53,7 @@ export default function DeskPage() {
 
 function DeskCard({ desk }: { desk: Desk }) {
   const { dispatch } = useDemo();
-  const label = desk.kind === 'buy' ? '买方席位' : '卖方席位';
+  const label = desk.kind === 'buy' ? '买入账户' : '卖出账户';
   const [name, setName] = useState(`我的${label}`);
 
   if (desk.verifiedAt === null) {
@@ -62,14 +62,14 @@ function DeskCard({ desk }: { desk: Desk }) {
         <div className="text-muted mb-1 text-[11px] font-semibold tracking-[0.08em]">
           {label.toUpperCase()}
         </div>
-        <h3 className="mb-1.5 text-[17px] font-medium">尚未开通{label}</h3>
+        <h3 className="mb-1.5 text-[17px] font-medium">还没开通{label}</h3>
         <p className="text-muted mb-5 text-[13px]">
-          开通后即可在订单池中以该席位撮合{desk.kind === 'buy' ? '卖单' : '买单'}。
+          开通后就能在交易大厅用它{desk.kind === 'buy' ? '买入' : '卖出'}。
         </p>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="席位名称"
+          placeholder="给它起个名字"
           className="border-hairline-strong bg-bg text-txt placeholder:text-muted focus:border-brand mb-3 h-10 w-full rounded-[var(--radius-sm)] border px-3.5 text-[14px] outline-none transition-colors"
         />
         <button
@@ -77,7 +77,7 @@ function DeskCard({ desk }: { desk: Desk }) {
           disabled={!name.trim()}
           className="bg-brand hover:bg-brand-dim h-10 w-full rounded-[var(--radius-sm)] text-[14px] font-semibold text-[#0b0d12] transition-colors disabled:opacity-40"
         >
-          开通席位
+          立即开通
         </button>
       </div>
     );
@@ -102,9 +102,9 @@ function DeskCard({ desk }: { desk: Desk }) {
       </div>
 
       <div className="border-hairline grid grid-cols-3 gap-4 border-t pt-4">
-        <Stat label="成交" value={`${desk.completedTrades}`} />
-        <Stat label="争议" value={`${desk.disputes}`} />
-        <Stat label="响应中位" value={`${desk.avgResponseMin} 分`} />
+        <Stat label="成交笔数" value={`${desk.completedTrades}`} />
+        <Stat label="纠纷" value={`${desk.disputes}`} />
+        <Stat label="平均回复" value={`${desk.avgResponseMin} 分钟`} />
       </div>
 
       <div className="text-muted mt-4 text-[12px]">

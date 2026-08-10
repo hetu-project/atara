@@ -15,12 +15,12 @@ import { useDemo } from '@/demo/state/useDemo';
 import type { RiskResult } from '@/demo/types';
 
 const COLUMNS: Column[] = [
-  { key: 'created', label: '创建时间', width: '14%' },
-  { key: 'tx', label: '交易', width: '19%' },
+  { key: 'created', label: '时间', width: '14%' },
+  { key: 'tx', label: '交易单号', width: '19%' },
   { key: 'status', label: '状态', width: '12%' },
-  { key: 'risk', label: '裁决 / 风险', width: '17%' },
+  { key: 'risk', label: '安全评分', width: '17%' },
   { key: 'amount', label: '金额', width: '18%', align: 'right' },
-  { key: 'cp', label: '对手方', width: '20%' },
+  { key: 'cp', label: '交易对方', width: '20%' },
 ];
 
 export default function QueuePage() {
@@ -90,8 +90,8 @@ export default function QueuePage() {
   return (
     <>
       <DemoPageHeader
-        title="队列"
-        subtitle="撮合后的交易在这里逐笔通过风控"
+        title="我的交易"
+        subtitle="成交后的每一笔都会在这里经过 AI 安全检查"
         actions={
           <>
             <HeaderButton>导出 CSV</HeaderButton>
@@ -101,17 +101,17 @@ export default function QueuePage() {
       />
 
       <div className="mb-[18px] grid grid-cols-4 gap-[18px]">
-        <KpiTile label="LIVE TASKS" value={live} accent="brand" sub="进行中的交易" />
-        <KpiTile label="QUEUING" value={count('queued')} sub="等待开始" />
-        <KpiTile label="VALIDATING" value={count('validating')} sub="风控校验中" />
-        <KpiTile label="CHALLENGING" value={count('challenged')} sub="等待补充材料" />
+        <KpiTile label="进行中" value={live} accent="brand" sub="尚未出结果" />
+        <KpiTile label="排队中" value={count('queued')} sub="等待开始检查" />
+        <KpiTile label="AI 审核中" value={count('validating')} sub="正在逐项检查" />
+        <KpiTile label="待补材料" value={count('challenged')} sub="需要你处理" />
       </div>
 
-      <FilterBar summary="未应用交易筛选" loaded={txs.length} />
+      <FilterBar summary="显示全部交易" loaded={txs.length} />
 
       <DataTable
         columns={COLUMNS}
-        empty="队列中还没有交易。去订单池撮合一笔。"
+        empty="还没有交易。去交易大厅接一单试试。"
         onRowClick={setOpenId}
         rows={txs.map((t) => ({
           id: t.id,

@@ -69,6 +69,26 @@ describe('assessRisk', () => {
     }
   });
 
+  it('文案严重度与状态匹配：致命措辞只出现在 fail 项上', () => {
+    // 把「命中国际制裁名单」配一个橙色「需留意」图标，是屏幕上最刺眼的自相矛盾。
+    const FATAL_WORDING = ['命中国际制裁名单', '与证件不符', '未解决的纠纷', '明显异常', '多次不回复'];
+    for (let i = 0; i < 200; i++) {
+      for (const c of assessRisk(tx({ id: `tx_${i}` })).checks) {
+        if (c.status === 'fail') continue;
+        for (const w of FATAL_WORDING) {
+          expect(c.detail).not.toContain(w);
+        }
+      }
+    }
+  });
+
+  it('每次评估最多一个 fail 项', () => {
+    for (let i = 0; i < 200; i++) {
+      const fails = assessRisk(tx({ id: `tx_${i}` })).checks.filter((c) => c.status === 'fail');
+      expect(fails.length).toBeLessThanOrEqual(1);
+    }
+  });
+
   it('补充材料后分数提高', () => {
     const first = assessRisk(tx({ id: 'tx_resub' }));
     const second = assessRisk(tx({ id: 'tx_resub', resubmits: 1 }));
