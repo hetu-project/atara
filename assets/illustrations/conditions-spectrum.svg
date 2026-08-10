@@ -1,4 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 260" role="img" aria-label="A bank receipt sits in the narrow band of conditions a machine can read. Insurance claims, ad conversion, outsourced delivery and service acceptance all fall in the much wider band where somebody has to rule.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 260" role="img" aria-label="A bank receipt sits at the end a machine can read. Insurance claims, ad conversion, outsourced delivery and service acceptance fall along the range where somebody has to rule.">
+  <defs>
+    <!-- solid where the condition is solid, draining as it travels -->
+    <linearGradient id="drain" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0"    stop-color="#2518eb"/>
+      <stop offset=".13"  stop-color="#2518eb"/>
+      <stop offset=".26"  stop-color="#4a40e4"/>
+      <stop offset=".46"  stop-color="#9fa4c2"/>
+      <stop offset=".70"  stop-color="#dcdfe6"/>
+      <stop offset="1"    stop-color="#e8eaf0"/>
+    </linearGradient>
+  </defs>
   <style>
     .lbl{fill:#6b7180;font:400 15px/1 Inter,system-ui,sans-serif}
     .lbl-on{fill:#2518eb;font:500 15px/1 Inter,system-ui,sans-serif}
@@ -9,8 +20,7 @@
 
   <rect width="960" height="260" fill="#ffffff"/>
 
-  <!-- Where each condition falls. The split does the arguing: a hard
-       edge says most of them are on one side, which a gradient cannot. -->
+  <!-- where each condition falls along the range -->
   <g>
     <path class="lead" d="M108 84V140"/>
     <circle class="pin-on" cx="108" cy="84" r="3.5"/>
@@ -33,11 +43,10 @@
     <text class="lbl" x="824" y="68" text-anchor="middle">Service acceptance</text>
   </g>
 
-  <!-- the narrow band a machine can settle, and the wide one it cannot -->
-  <path d="M40 140h136v72H44a4 4 0 0 1-4-4Z" fill="#2518eb"/>
-  <path d="M180 140h736a4 4 0 0 1 4 4v64a4 4 0 0 1-4 4H180Z" fill="#e8eaf0"/>
+  <!-- the range itself, carrying no words of its own -->
+  <rect x="40" y="140" width="880" height="72" rx="4" fill="url(#drain)"/>
 
-  <text class="zone" x="204" y="182" fill="#6b7180">SOMEBODY HAS TO RULE</text>
-  <text class="zone" x="900" y="182" fill="#a2a7b4" text-anchor="end">MOST PAYMENT CONDITIONS</text>
+  <!-- what each end means, set clear of the bar -->
   <text class="zone" x="40" y="240" fill="#2518eb">A MACHINE CAN READ IT</text>
+  <text class="zone" x="920" y="240" fill="#a2a7b4" text-anchor="end">SOMEBODY HAS TO RULE</text>
 </svg>
