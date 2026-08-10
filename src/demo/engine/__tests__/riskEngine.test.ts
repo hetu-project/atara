@@ -30,8 +30,41 @@ function tx(over: Partial<Transaction> = {}): Transaction {
 }
 
 describe('assessRisk', () => {
-  it('总是产出六项检查', () => {
-    expect(assessRisk(tx()).checks).toHaveLength(6);
+  it('总是产出八项检查，覆盖四个模型组', () => {
+    const { checks } = assessRisk(tx());
+    expect(checks).toHaveLength(8);
+    expect(new Set(checks.map((c) => c.group)).size).toBe(4);
+    expect(checks.every((c) => c.model.length > 0)).toBe(true);
+  });
+
+  it('结论文字由实际检查结果拼出，不是写死的台词', () => {
+    const a = assessRisk(tx({ id: 'tx_sum_a' }));
+    const b = assessRisk(tx({ id: 'tx_sum_b' }));
+    expect(a.summary).not.toBe(b.summary);
+    expect(a.summary).toContain(String(a.score));
+    expect(a.summary).toContain(String(a.confidence));
+  });
+
+  it('有问题项时结论必须点名问题项', () => {
+    for (let i = 0; i < 60; i++) {
+      const r = assessRisk(tx({ id: `tx_${i}` }));
+      const flaws = r.checks.filter((c) => c.status !== 'pass');
+      // 结论说「未触发风险信号」而屏幕上挂着橙色警告，是最容易穿帮的自相矛盾
+      if (flaws.length > 0) {
+        expect(r.summary).toContain(flaws[0].label);
+        expect(r.summary).not.toContain('全部维度均未触发');
+      } else {
+        expect(r.summary).toContain('全部维度均未触发');
+      }
+    }
+  });
+
+  it('置信度落在 62..99', () => {
+    for (let i = 0; i < 100; i++) {
+      const { confidence } = assessRisk(tx({ id: `tx_${i}` }));
+      expect(confidence).toBeGreaterThanOrEqual(62);
+      expect(confidence).toBeLessThanOrEqual(99);
+    }
   });
 
   it('同一笔交易反复评估结果一致', () => {
@@ -71,7 +104,16 @@ describe('assessRisk', () => {
 
   it('文案严重度与状态匹配：致命措辞只出现在 fail 项上', () => {
     // 把「命中国际制裁名单」配一个橙色「需留意」图标，是屏幕上最刺眼的自相矛盾。
-    const FATAL_WORDING = ['命中国际制裁名单', '与证件不符', '未解决的纠纷', '明显异常', '多次不回复'];
+    const FATAL_WORDING = [
+      '命中国际制裁名单',
+      '活体检测与证件照不匹配',
+      '高风险司法辖区',
+      '接触过混币服务',
+      '欺诈团伙',
+      '行为突变',
+      '未了结',
+      '明显异常',
+    ];
     for (let i = 0; i < 200; i++) {
       for (const c of assessRisk(tx({ id: `tx_${i}` })).checks) {
         if (c.status === 'fail') continue;

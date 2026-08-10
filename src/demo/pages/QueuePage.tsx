@@ -132,7 +132,9 @@ export default function QueuePage() {
                   <div
                     className="bg-info h-full rounded-full"
                     style={{
-                      animation: `grow ${streamingDurationMs(6)}ms linear forwards`,
+                      // 用这笔单实际的检查项数，不能写死——检查项从 6 项加到 8 项时
+                      // 这里没跟着改，进度条就会比推理先跑完。
+                      animation: `grow ${streamingDurationMs(t.risk?.checks.length ?? 8)}ms linear forwards`,
                     }}
                   />
                 </div>

@@ -125,7 +125,7 @@ export default function OrderPoolPage() {
       />
 
       {ceremony && (
-        <MatchCeremony order={ceremony} desk={desk} onDone={() => setCeremony(null)} />
+        <MatchCeremony order={ceremony} desk={desk} onClose={() => setCeremony(null)} />
       )}
     </>
   );

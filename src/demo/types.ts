@@ -41,7 +41,13 @@ export interface PoolOrder {
 
 export interface RiskCheck {
   id: string;
+  /** 所属模型组，用于在推理界面上分段展示 */
+  group: string;
   label: string;
+  /** 「模型」名。纯展示用，让画面读起来像多模型并行推理。 */
+  model: string;
+  /** 该项的模拟耗时，展示用 */
+  latencyMs: number;
   status: CheckStatus;
   detail: string;
 }
@@ -51,6 +57,12 @@ export interface RiskResult {
   threshold: number;
   verdict: 'pass' | 'challenge' | 'decline';
   checks: RiskCheck[];
+  /** 模型置信度，展示用，不参与判定 */
+  confidence: number;
+  /** 「提取了多少个特征」，展示用 */
+  featureCount: number;
+  /** 由实际检查结果拼出的自然语言结论 */
+  summary: string;
 }
 
 export interface Transaction {
