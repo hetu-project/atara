@@ -83,7 +83,7 @@
 
   .hero-main{
     width:100%;max-width:var(--maxw);min-height:100svh;margin-inline:auto;display:grid;
-    grid-template-columns:minmax(0,1.18fr) minmax(24rem,.82fr);gap:clamp(2.5rem,5vw,4.5rem);
+    grid-template-columns:minmax(0,.92fr) minmax(28rem,1.08fr);gap:clamp(2.5rem,4.2vw,3.8rem);
     align-items:center;padding:clamp(8rem,13vh,10rem) var(--pad) clamp(8.5rem,14vh,10.5rem);
   }
   .hero-copy{position:relative;z-index:2;align-self:center}
@@ -101,35 +101,84 @@
   .btn-primary:hover{background:var(--signal)}.btn-primary:hover::after{transform:rotate(-28deg)}
   .btn-secondary{border:1px solid var(--line)}.btn-secondary:hover{background:oklch(97% .018 264 / .1)}
 
-  .instrument{
-    position:relative;z-index:2;align-self:center;justify-self:end;display:grid;grid-template-rows:3.4rem repeat(3,minmax(0,1fr));
-    width:min(100%,34rem);margin:0;min-height:clamp(29rem,58vh,35rem);overflow:hidden;
-    border-radius:16px;background:oklch(46% .265 265);
-    box-shadow:0 0 0 1px oklch(97% .018 264 / .22),0 24px 48px -24px oklch(10% .1 267 / .55);
+  /* ── hero figure ───────────────────────────────────────────────────
+     The card was six stacked rows of near-equal weight, which is why no
+     amount of resizing helped: a list has no structure to read. Now it
+     is four zones — premise, the pair, the split, the action — and the
+     two numbers that matter sit side by side as equals. */
+  .ticket{
+    position:relative;z-index:2;align-self:center;justify-self:end;margin:0;
+    width:min(100%,24.5rem);padding:1.15rem 0 1.3rem;
+    border-radius:5px;overflow:hidden;
+    background:oklch(98.6% .003 90);color:oklch(20% .022 267);
+    box-shadow:0 28px 52px -24px oklch(8% .1 267 / .62),0 2px 0 0 oklch(8% .1 267 / .1);
+    font-size:.8rem;line-height:1.4;
   }
-  .instrument-head{position:relative;z-index:3;display:flex;align-items:center;padding:0 1.25rem;font-size:.61rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-white);border-bottom:1px solid var(--line)}
-  .stage{position:relative;z-index:3;display:grid;grid-template-columns:3.6rem 1fr;min-height:0;transition:opacity .45s linear}
-  .stage:not(:last-child){border-bottom:1px solid var(--line)}
-  .stage-index{position:relative;display:flex;align-items:flex-start;justify-content:center;padding-top:1.3rem;font-size:.61rem;letter-spacing:.12em;color:var(--muted-white);opacity:.62}
-  .stage-index::after{content:"";position:absolute;left:50%;bottom:1.15rem;width:.35rem;height:.35rem;background:var(--white);opacity:0;transform:translateX(-50%) scale(.4);transition:opacity .25s linear,transform .45s var(--ease),background .25s linear}
-  .stage-body{display:flex;flex-direction:column;justify-content:center;min-width:0;padding:1.1rem 1.15rem 1.15rem 1.25rem}
-  .stage-label{font-size:.72rem;color:var(--muted-white)}
-  .stage-value{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-top:.45rem}
-  .stage-value strong{font-family:var(--sans);font-size:clamp(1.45rem,2.2vw,2.05rem);font-weight:500;line-height:1;letter-spacing:-.032em}
-  .stage-note{font-size:.65rem;text-transform:uppercase;letter-spacing:.11em;color:var(--signal);opacity:0;transform:translateY(.3rem);transition:opacity .35s linear,transform .45s var(--ease)}
-  .stage.is-active .stage-index::after{opacity:1;transform:translateX(-50%) scale(1);background:var(--signal)}
-  .stage.is-done .stage-index::after{opacity:.42;transform:translateX(-50%) scale(.65)}
-  .stage.is-active .stage-note,.stage.is-done .stage-note{opacity:1;transform:none}
-  .stage:not(.is-active):not(.is-done){opacity:.58}
-  .risk-copy{max-width:17rem}
-  .lock-value strong{color:var(--signal)}
-  .lock-track{height:.35rem;margin-top:1.35rem;background:oklch(97% .018 264 / .14);overflow:hidden}
-  .lock-track i{display:block;width:0;height:100%;background:var(--signal);transform-origin:left;transition:width 1s var(--ease)}
-  .lock-legend{display:flex;justify-content:space-between;gap:1rem;margin-top:.65rem;color:var(--muted-white);font-size:.68rem}
-  .lock-legend b{font-weight:400;color:var(--white)}
-  .sample-dots{display:flex;gap:.38rem;align-items:center}
-  .sample-dots i{width:.3rem;height:.3rem;border-radius:50%;background:var(--white);opacity:.25;transition:opacity .25s linear,transform .25s var(--ease),background .25s linear}
-  .sample-dots i.is-active{opacity:1;background:var(--signal);transform:scale(1.45)}
+  .tk-mini{font-size:.585rem;text-transform:uppercase;letter-spacing:.115em;
+    color:oklch(54% .02 267)}
+  .tk-order{display:flex;align-items:baseline;justify-content:space-between;
+    gap:1rem;padding:.1rem 1.15rem .85rem;
+    border-bottom:1px dashed oklch(80% .015 267)}
+  .tk-order b{font-size:1.02rem;font-weight:500;letter-spacing:-.014em;white-space:nowrap}
+
+  .checks{list-style:none;margin:0;padding:.85rem 1.15rem .95rem;
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.44rem .8rem}
+  .checks li{display:flex;align-items:center;gap:.45rem;font-size:.685rem;
+    color:oklch(64% .02 267);transition:color .35s linear}
+  .checks li.is-done{color:oklch(34% .022 267)}
+  .ck{flex:none;width:.88rem;height:.88rem;border-radius:50%;display:grid;place-items:center;
+    border:1px solid oklch(87% .012 267);transition:border-color .3s linear,background .3s linear}
+  .ck svg{width:.6rem;height:.6rem;display:block}
+  .ck path{fill:none;stroke:oklch(32% .1 130);stroke-width:2.2;stroke-linecap:round;
+    stroke-linejoin:round;stroke-dasharray:14;stroke-dashoffset:14;
+    transition:stroke-dashoffset .32s var(--ease)}
+  .checks li.is-done .ck{background:var(--signal);border-color:var(--signal)}
+  .checks li.is-done .ck path{stroke-dashoffset:0}
+
+  /* the comparison. Three columns — what it is, ours, theirs — so the
+     contrast is structural: our column always resolves to a number, the
+     other column never does. Ours carries the brand blue (7.58:1 on this
+     paper), theirs is grey and unemphasised. */
+  .tk-vs{border-top:1px solid oklch(91% .01 267);border-bottom:1px solid oklch(91% .01 267);
+    padding:.75rem 1.15rem .85rem}
+  .tk-vs-head,.tk-vs-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.92fr) minmax(0,.92fr);
+    gap:.7rem;align-items:baseline}
+  .tk-vs-head{padding-bottom:.5rem;border-bottom:1px solid oklch(93% .008 267)}
+  .tk-vs-row{padding:.7rem 0 .55rem}
+  .tk-vs-row + .tk-vs-row{border-top:1px solid oklch(94% .006 267)}
+  .tk-vs-label{font-size:.685rem;line-height:1.25;color:oklch(50% .02 267)}
+  .tk-ours{color:var(--blue)}
+  .tk-vs-row strong{font-size:clamp(1.55rem,2.3vw,1.95rem);font-weight:600;
+    line-height:1;letter-spacing:-.032em;
+    /* the leading digits ink ~.05em right of origin at this weight */
+    margin-left:-.05em}
+  .tk-vs-theirs{font-size:.9rem;font-weight:500;color:oklch(64% .015 267)}
+
+  .tk-act{display:flex;align-items:center;gap:.75rem;padding:.35rem 1.15rem 0}
+  .rev-btn{display:inline-flex;align-items:center;gap:.45rem;
+    padding:.55rem .9rem;border:1px solid oklch(84% .015 267);border-radius:999px;
+    background:none;color:oklch(26% .022 267);font:inherit;font-size:.735rem;cursor:pointer;
+    transition:background .16s linear,color .16s linear,border-color .16s linear}
+  .rev-btn:hover,.rev-btn.is-pressed{background:oklch(20% .022 267);
+    color:oklch(98.6% .003 90);border-color:oklch(20% .022 267)}
+  .rev-btn:disabled{cursor:default}
+  .rev-mark{font-size:.9rem;line-height:1}
+
+  .out{opacity:0;transform:translateY(.35rem);
+    transition:opacity .4s linear,transform .5s var(--ease)}
+  .out.is-in{opacity:1;transform:none}
+
+  .ticket.is-void .tk-order b{text-decoration:line-through;
+    text-decoration-color:oklch(58% .17 25);color:oklch(52% .02 267)}
+  .ticket.is-void .tk-vs-row strong{color:oklch(64% .015 267)}
+  .tk-returned{color:oklch(45% .16 145)}
+
+  @media(max-width:900px){
+    .ticket{width:100%;max-width:24.5rem;justify-self:start}
+  }
+  @media(max-width:400px){
+    .checks{grid-template-columns:minmax(0,1fr)}
+  }
 
   .ecosystem{position:absolute;z-index:3;left:50%;bottom:1.2rem;width:min(calc(100% - 2 * var(--pad)),var(--maxw));transform:translateX(-50%);display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2.4rem;border-top:1px solid var(--line);padding-top:1rem}
   .ecosystem-label{font-size:.64rem;text-transform:uppercase;letter-spacing:.13em;color:var(--muted-white);white-space:nowrap}
@@ -365,7 +414,6 @@
   @media(max-width:900px){
     .nav{gap:1rem}
     .hero-main{grid-template-columns:1fr;padding-top:7.2rem;padding-bottom:9.5rem;gap:3.2rem}
-    .instrument{width:100%;min-height:35rem}
     .engine-section{height:auto}.engine-sticky{position:relative;height:auto;min-height:0;padding-block:var(--gap-section)}.engine-step{opacity:1}
     .tm{--tm-cols:minmax(0,1fr);--tm-gap:1.75rem;border-radius:12px}
     .tm-wires{display:none}
@@ -380,8 +428,6 @@
     h1{font-size:clamp(2.15rem,9.2vw,2.85rem);line-height:1.08}
     .hero-lede{font-size:1rem}
     .btn{min-height:3.3rem}.btn-primary{gap:1.6rem}
-    .instrument{min-height:32rem}
-    .instrument-head{padding-left:1.1rem}
     .stage{grid-template-columns:3.65rem 1fr}
     .stage-value{align-items:flex-end}.stage-value strong{font-size:clamp(1.45rem,6vw,2.05rem)}
     .risk-copy{max-width:12rem}.stage-note{font-size:.54rem}
@@ -391,7 +437,7 @@
     .cta .wrap{gap:3.5rem;min-height:clamp(26rem,66svh,34rem)}
     .cta-foot{align-self:stretch;align-items:flex-start;text-align:left}
   }
-  @media(hover:none),(pointer:coarse){.btn,.nav-start{min-height:44px}}
+  @media(hover:none),(pointer:coarse){.btn,.nav-start,.rev-btn{min-height:44px}}
   @media(prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
     .model-wires .s{animation:none}
@@ -415,39 +461,62 @@
 
     <div class="hero-main">
       <div class="hero-copy">
-        <h1 id="hero-title"><span class="line"><span>A conditional payment protocol.</span></span><span class="line"><span>Computable risk, minimal cost.</span></span></h1>
+        <h1 id="hero-title"><span class="line"><span>The agentic payment model for conditional settlement.</span></span><span class="line"><span>Computable risk, minimal cost.</span></span></h1>
         <p class="hero-lede">Atara is a conditional payment protocol. It computes the risk on every payment, decides on evidence whether it settled, and takes a fraction up front instead of the whole sum.</p>
         <div class="hero-actions"><a class="btn btn-primary" href="#contact">Start</a><a class="btn btn-secondary" href="#contact">Talk to us</a></div>
       </div>
 
-      <figure class="instrument" id="pricingInstrument" aria-label="Illustrative order: the risk on this counterparty sets how much collateral is posted up front, with the balance falling due on delivery instead of being prepaid">
-        <figcaption class="instrument-head">
-          <span id="instrumentState" aria-live="polite">Incoming order</span>
-        </figcaption>
-        <div class="stage stage-order is-active" data-stage="0">
-          <span class="stage-index">01</span>
-          <div class="stage-body">
-            <span class="stage-label">Order</span>
-            <div class="stage-value"><strong class="num" id="orderAmount">$2,000,000.00</strong><span class="stage-note">Received</span></div>
+      <figure class="ticket" id="pricingInstrument" aria-label="Illustrative: an order arrives, four checks run against this counterparty and clear, and from them the model computes a probability of default. The fee and the fraction locked follow from that number, and until the trade settles it can be reversed and the locked amount returned.">
+        <!-- one document. The order prints, the checks clear, the model's
+             answer lands in the inverted band, the terms follow from it. -->
+        <div class="tk-order">
+          <span class="tk-mini">Order</span>
+          <b class="num" id="orderAmount">$2,000,000.00</b>
+        </div>
+
+        <!-- the four checks are the premise, not the point: one row of
+             small type across the top of the paper -->
+        <ul class="checks" id="checks">
+          <li data-check="0"><span class="ck" aria-hidden="true"><svg viewBox="0 0 14 14"><path d="M3 7.4l2.6 2.6L11 4.2"/></svg></span>Wallet provenance</li>
+          <li data-check="1"><span class="ck" aria-hidden="true"><svg viewBox="0 0 14 14"><path d="M3 7.4l2.6 2.6L11 4.2"/></svg></span>Settlement history</li>
+          <li data-check="2"><span class="ck" aria-hidden="true"><svg viewBox="0 0 14 14"><path d="M3 7.4l2.6 2.6L11 4.2"/></svg></span>Dispute outcomes</li>
+          <li data-check="3"><span class="ck" aria-hidden="true"><svg viewBox="0 0 14 14"><path d="M3 7.4l2.6 2.6L11 4.2"/></svg></span>Verification checks</li>
+        </ul>
+
+        <!-- the comparison. Two rows, our column against theirs.
+             The risk row is evidence-backed: across the seven agent-payment
+             sites checked on 2026-08-05 none price probability of default,
+             and t54's own API docs carry no premium, collateral or price
+             field. The fee row's right cell is an ILLUSTRATIVE stand-in
+             at Ellie's instruction (2026-08-11): we have no sourced fee for
+             the alternatives, so it is authored to sit 2.5-5x ours and to
+             rise with the risk. It is not a researched figure. -->
+        <div class="tk-vs">
+          <div class="tk-vs-head">
+            <span></span>
+            <span class="tk-mini tk-ours">Atara</span>
+            <span class="tk-mini">Others</span>
+          </div>
+
+          <div class="out tk-vs-row" data-out="0">
+            <span class="tk-vs-label">AI-computed<br>risk of default</span>
+            <strong class="num tk-ours" id="riskValue">&middot;&middot;&middot;</strong>
+            <span class="tk-vs-theirs">None</span>
+          </div>
+
+          <div class="out tk-vs-row" data-out="1">
+            <span class="tk-vs-label">Fee on<br>this order</span>
+            <strong class="num tk-ours" id="feeRate">&middot;&middot;&middot;</strong>
+            <span class="tk-vs-theirs num" id="feeOther">&mdash;</span>
           </div>
         </div>
 
-        <div class="stage stage-risk" data-stage="1">
-          <span class="stage-index">02</span>
-          <div class="stage-body">
-            <span class="stage-label risk-copy">Risk of default, this counterparty</span>
-            <div class="stage-value"><strong class="num" id="riskValue">&middot;&middot;&middot;</strong><span class="stage-note">Computed per trade</span></div>
-          </div>
-        </div>
-
-        <div class="stage stage-lock" data-stage="2">
-          <span class="stage-index">03</span>
-          <div class="stage-body">
-            <span class="stage-label">You post</span>
-            <div class="stage-value lock-value"><strong class="num" id="lockValue">&middot;&middot;&middot;</strong><span class="stage-note">Held, not paid</span></div>
-            <div class="lock-track" aria-hidden="true"><i id="lockFill"></i></div>
-            <div class="lock-legend"><span><b class="num" id="lockPercent">&middot;&middot;&middot;</b> of the trade</span><span class="num" id="freeValue">&middot;&middot;&middot;</span></div>
-          </div>
+        <div class="out tk-act" data-out="2">
+          <button type="button" class="rev-btn" id="revBtn">
+            <span class="rev-mark" aria-hidden="true">&#8634;</span>
+            <span id="revBtnText">Reverse this trade</span>
+          </button>
+          <span class="tk-mini tk-returned" id="revNote"></span>
         </div>
       </figure>
     </div>
@@ -687,92 +756,113 @@
   'use strict';
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const instrument = document.getElementById('pricingInstrument');
-  const state = document.getElementById('instrumentState');
-  const orderAmount = document.getElementById('orderAmount');
-  const riskValue = document.getElementById('riskValue');
-  const lockValue = document.getElementById('lockValue');
-  const lockFill = document.getElementById('lockFill');
-  const lockPercent = document.getElementById('lockPercent');
-  const freeValue = document.getElementById('freeValue');
-  const stages = [...document.querySelectorAll('.stage')];
+  const checks = [...document.querySelectorAll('.checks li')];
+  const outs = [...document.querySelectorAll('.out')];
+  const el = id => document.getElementById(id);
+  const orderAmount = el('orderAmount'), riskValue = el('riskValue');
+  const feeRate = el('feeRate'), feeOther = el('feeOther');
+  const revBtn = el('revBtn'), revBtnText = el('revBtnText'), revNote = el('revNote');
 
   const BOOK = [
-    { amount:2000000, risk:1.8, collateral:.08 },
-    { amount:5400000, risk:.6, collateral:.05 },
-    { amount:750000, risk:4.1, collateral:.34 },
-    { amount:3100000, risk:2.4, collateral:.17 }
+    { amount:2000000, risk:1.8, collateral:.08, fee:.0008, other:.0030 },
+    { amount:5400000, risk:.6,  collateral:.05, fee:.0004, other:.0020 },
+    { amount:750000,  risk:4.1, collateral:.34, fee:.0020, other:.0050 },
+    { amount:3100000, risk:2.4, collateral:.17, fee:.0012, other:.0040 }
   ];
   let bookIndex = 0;
   let alive = true;
   let timers = [];
+  let current = BOOK[0];
+  let voided = false;
 
   const money = n => '$' + Math.round(n).toLocaleString('en-US');
   const money2 = n => '$' + n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const rate = v => (v*100).toFixed(2) + '%';
   const later = (ms,fn) => timers.push(setTimeout(fn,ms));
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+  const DOTS = '\u00b7\u00b7\u00b7';
 
-  function setStage(index) {
-    stages.forEach((el,i) => {
-      el.classList.toggle('is-active',i === index);
-      el.classList.toggle('is-done',i < index);
-    });
-  }
-
+  /* the risk number counts up, so it reads as computed rather than printed */
   function roll(node,to,duration,format) {
     const start = performance.now();
     const frame = now => {
       const t = Math.min(1,(now-start)/duration);
-      const e = 1-Math.pow(1-t,3);
-      node.textContent = format(to*e);
+      node.textContent = format(to*(1-Math.pow(1-t,3)));
       if(t<1 && alive) requestAnimationFrame(frame);
       else node.textContent = format(to);
     };
     requestAnimationFrame(frame);
   }
 
-  function showStill(c,index=0) {
-    orderAmount.textContent = money2(c.amount);
-    riskValue.textContent = c.risk.toFixed(1) + '%';
-    lockValue.textContent = money(c.amount*c.collateral);
-    lockPercent.textContent = Math.round(c.collateral*100) + '%';
-    freeValue.textContent = money(c.amount*(1-c.collateral)) + ' due on delivery';
-    lockFill.style.width = (c.collateral*100) + '%';
-    state.textContent = 'Priced, not prepaid';
-    setStage(2);
+
+  /* pressing it pulls the trade back: nothing is charged and the locked
+     amount returns. One counterparty in the book presses it for you. */
+  function reverse() {
+    if(voided) return;
+    voided = true;
+    instrument.classList.add('is-void');
+    revBtn.disabled = true;
+    revBtn.classList.add('is-pressed');
+    revBtnText.textContent = 'Reversed';
+    revNote.textContent = money(current.amount*current.collateral) + ' returned';
+  }
+  revBtn.addEventListener('click',reverse);
+
+  function reset() {
+    voided = false;
+    instrument.classList.remove('is-void');
+    revBtn.disabled = false;
+    revBtn.classList.remove('is-pressed');
+    revBtnText.textContent = 'Reverse this trade';
+    revNote.textContent = '';
+    checks.forEach(n => n.classList.remove('is-done'));
+    outs.forEach(n => n.classList.remove('is-in'));
+    [riskValue,feeRate].forEach(n => n.textContent = DOTS);
+    feeOther.textContent = '\u2014';
   }
 
+  /* the reduced-motion path: everything cleared and answered at once */
+  function showStill(c) {
+    current = c;
+    orderAmount.textContent = money2(c.amount);
+    checks.forEach(n => n.classList.add('is-done'));
+    riskValue.textContent = c.risk.toFixed(1) + '%';
+    feeRate.textContent = rate(c.fee);
+    feeOther.textContent = rate(c.other);
+    outs.forEach(n => n.classList.add('is-in'));
+  }
+
+  const CK_STEP = 480;                       /* one check clears at a time */
   function cycle() {
     clearTimers();
-    const c = BOOK[bookIndex];
+    current = BOOK[bookIndex];
+    const c = current;
+    reset();
     orderAmount.textContent = money2(c.amount);
-    riskValue.textContent = '\u00b7\u00b7\u00b7';
-    lockValue.textContent = '\u00b7\u00b7\u00b7';
-    lockPercent.textContent = '\u00b7\u00b7\u00b7';
-    freeValue.textContent = '\u00b7\u00b7\u00b7';
-    lockFill.style.width = '0%';
-    state.textContent = 'Incoming order';
-    setStage(0);
-    instrument.animate([{opacity:.82,transform:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}],{duration:560,easing:'cubic-bezier(.16,1,.3,1)'});
 
-    later(900,() => {
-      state.textContent = 'Computing risk';
-      setStage(1);
-      roll(riskValue,c.risk,850,v => v.toFixed(1)+'%');
+    checks.forEach((n,i) => later(600 + i*CK_STEP,() => n.classList.add('is-done')));
+    const cleared = 600 + checks.length*CK_STEP;
+
+    /* nothing about the answer shows until every check has cleared */
+    later(cleared + 220,() => {
+      outs[0].classList.add('is-in');
+      roll(riskValue,c.risk,900,v => v.toFixed(1)+'%');
     });
-    later(2350,() => {
-      state.textContent = 'Priced, not prepaid';
-      setStage(2);
-      roll(lockValue,c.amount*c.collateral,900,money);
-      lockPercent.textContent = Math.round(c.collateral*100) + '%';
-      freeValue.textContent = money(c.amount*(1-c.collateral)) + ' due on delivery';
-      lockFill.style.width = (c.collateral*100) + '%';
+    /* the fee follows the risk closely enough to read as derived from it */
+    later(cleared + 520,() => {
+      outs[1].classList.add('is-in');
+      roll(feeRate,c.fee*100,800,v => v.toFixed(2)+'%');
+      feeOther.textContent = rate(c.other);
     });
-    later(6600,() => { bookIndex=(bookIndex+1)%BOOK.length; cycle(); });
+    later(cleared + 1000,() => outs[2].classList.add('is-in'));
+
+    /* the third counterparty is the one that does not settle */
+    if(bookIndex === 2){
+      later(cleared + 2800,() => revBtn.classList.add('is-pressed'));
+      later(cleared + 3050,reverse);
+    }
+    later(cleared + 5200,() => { bookIndex = (bookIndex+1)%BOOK.length; cycle(); });
   }
-
-  const logos=['ethereum-foundation','g42','cyberport','hkstp','a-star','ai-singapore','vana','pr-spera','intelligent-internet','desci-world','bio','hetu','researchhub','open-targets'];
-  const logoTrack=document.getElementById('logoTrack');
-  logoTrack.innerHTML=logos.concat(logos).map(name=>`<img src="assets/logos/${name}.png" alt="" loading="lazy" decoding="async">`).join('');
 
   if(reduced){alive=false;showStill(BOOK[0]);}
   else cycle();
@@ -787,6 +877,11 @@
     if(document.hidden){alive=false;clearTimers();}
     else if(instrument.getBoundingClientRect().bottom>0){alive=true;cycle();}
   });
+
+  const logos=['ethereum-foundation','g42','cyberport','hkstp','a-star','ai-singapore','vana','pr-spera','intelligent-internet','desci-world','bio','hetu','researchhub','open-targets'];
+  const logoTrack=document.getElementById('logoTrack');
+  logoTrack.innerHTML=logos.concat(logos).map(name=>`<img src="assets/logos/${name}.png" alt="" loading="lazy" decoding="async">`).join('');
+
 
   /* module 2 is a plain document flow now: the intro pins via CSS and
      each capability carries its own figure. Nothing to drive. */
