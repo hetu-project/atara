@@ -9,6 +9,10 @@ METHOD.md
 # Product plan: pricing intent, competitive weaknesses, buyer scoring,
 # and the interview guide. Internal only.
 PRODUCT.md
+BUSINESS.md
+PRD.md
+AIUSD.md
+RESEARCH-CHATBANK.md
 # Alignment checklist: quotes named colleagues from internal meeting
 # minutes, including positioning that is deliberately not public.
 ALIGNMENT.md
@@ -43,4 +47,14 @@ cond-*.png
 
 # 条件支付知识库：含内部战略推演、竞品定性与未决事项。内部只读。
 KNOWLEDGE.md
+# 各国支付需求调研：内部工作文档。
+RESEARCH-PAYMENTS.md
+# 老板下发的三份权威文档（AIUSD 定位 / LokaCash v2 / 定价模型）。
+# 含全部内部代号与商业模型，绝不入公开仓库。
+docs-boss/
 .playwright-mcp/
+
+# Internal working notes for the app front-end. Not published.
+LOKACASH_TODO.md
+# Full-page screenshot used for internal review.
+atara-full.png
