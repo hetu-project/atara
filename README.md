@@ -1,9 +1,14 @@
 # Atara
 
-Atara is an AI-native conditional payment protocol. A credit model prices each
-counterparty before funds move — how much collateral to post, what fee to charge,
-and how the payment unwinds if the deal fails. Funds become final when the agreed
-condition is verified, not merely when they arrive.
+**An AI payment model that prices settlement risk.**
+
+Two models decide before funds move: one prices the counterparty — how much
+collateral to post, what fee to charge, how the payment unwinds if the deal
+fails — and one rules on whether the agreed condition actually holds. Funds
+become final when the condition is verified, not merely when they arrive.
+
+*Computable risk. Efficient capital.* Settlement risk becomes computable, so
+transactions can move with less trust, less collateral and less cost.
 
 This repository contains the public landing page and research references.
 
@@ -33,4 +38,7 @@ Then open `http://localhost:4173`. Or deploy the folder to any static host
 ## Notes
 
 - All rates, amounts and model outputs shown on the page are illustrative.
-- Atara is not a bank. The credit engine is in development and is not extending credit.
+- Atara is not a bank. The AI credit model is in development and is not
+  extending credit.
+- The current phase operates as escrow for a service fee and does not
+  underwrite losses. Fiat moves through licensed partners, never through Atara.

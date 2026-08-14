@@ -13,6 +13,8 @@ BUSINESS.md
 PRD.md
 AIUSD.md
 RESEARCH-CHATBANK.md
+DECK.md
+DECK-中文版.md
 # Alignment checklist: quotes named colleagues from internal meeting
 # minutes, including positioning that is deliberately not public.
 ALIGNMENT.md
@@ -58,3 +60,21 @@ docs-boss/
 LOKACASH_TODO.md
 # Full-page screenshot used for internal review.
 atara-full.png
+# Deck 及导出，对外材料另行分发，不入公开仓库。
+deck.html
+Atara-Deck*.pdf
+# 对话式控制台原型（演示，未上线），暂不入公开仓库。
+console.html
+# OTC 需求文档与流程设计：含内部功能规划与竞品对照。内部只读。
+PRD-OTC.md
+PRD-OTC-FLOW.md
+# 周报与汇报材料：含内部未决事项与人员分工。内部只读。
+WEEKLY-*.md
+# 换皮前的旧版，仅供对比，不入公开仓库。
+console-old.html
+# 控制台设计规范：内部只读。
+DESIGN.md
+# 组件系统规格：内部只读。
+COMPONENTS.md
+# 组件实验室（由 console.html 样式生成）：内部工具。
+lab.html
