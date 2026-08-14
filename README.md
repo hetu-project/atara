@@ -2,12 +2,15 @@
 
 <div align="center">
 
-**An AI-Native Conditional Payment Protocol**
+**An AI payment model that prices settlement risk**
 
 ![Status](https://img.shields.io/badge/status-in%20development-orange)
 ![Phase](https://img.shields.io/badge/phase-escrow-blue)
 
-*Funds become final when the agreed condition is verified — not merely when they arrive.*
+*Computable risk. Efficient capital.*
+
+Atara makes settlement risk computable — so transactions can move with less
+trust, less collateral and less cost.
 
 [Overview](#overview) • [Architecture](#system-architecture) • [Payment Flow](#conditional-payment-flow) • [Conditions](#what-a-condition-can-be) • [Applications](#where-this-applies) • [Status](#status) • [Repository](#this-repository)
 
@@ -22,13 +25,12 @@ pays first — and stays exposed until the other side delivers. Payment systems
 guarantee that money *arrives*. None of them answer whether it *should have*:
 was the condition met, who decides, and what happens when it wasn't.
 
-Atara closes that gap with two capabilities:
+Atara closes that gap with two AI models:
 
-- **Adjudication** — deciding whether a condition was met, under rules
-  published before anyone commits.
-- **Credit pricing** — an AI model that turns a counterparty's track record
-  into numbers before funds move: how much collateral, what fee, which
-  unwind path.
+- **The adjudication model** — decides whether a condition was met, under
+  rules published before anyone commits.
+- **The credit model** — turns a counterparty's track record into numbers
+  before funds move: how much collateral, what fee, which unwind path.
 
 Adjudication comes first: a default probability means nothing until someone
 neutral can rule on what counts as default.
@@ -55,9 +57,9 @@ neutral can rule on what counts as default.
 └──────────────────────────────┬──────────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────────┐
-│                        Atara Protocol                            │
+│                          AI Models                               │
 │  ┌────────────────────────┐   ┌─────────────────────────────┐   │
-│  │      Adjudication      │   │       Credit Pricing        │   │
+│  │   Adjudication model   │   │        Credit model         │   │
 │  │  • Rules published     │   │  • Default probability      │   │
 │  │    before commitment   │   │    per counterparty         │   │
 │  │  • Evidence levels     │   │  • Collateral & fee         │   │
@@ -135,6 +137,8 @@ Ordered by how hard they are to verify:
 
 ## Where This Applies
 
+- **Settlement hubs** — a multi-currency corridor onboards local counterparties
+  without diligencing each one for weeks or pre-funding it in full.
 - **Exchange settlement** — after a large trade matches, the two legs swap
   through escrow instead of on trust.
 - **Trade prepayment** — an importer's deposit releases against shipping
@@ -146,16 +150,52 @@ Ordered by how hard they are to verify:
 
 ---
 
+## What Limits a Corridor
+
+Moving money across a border no longer requires a chain of correspondent banks.
+A payment can settle as two domestic transfers with a token transfer between
+them — minutes instead of days, verifiable instead of opaque.
+
+```
+Today      Payer → Bank A → Correspondent → Correspondent → Bank B → Payee
+           a fee at every hop · 2–5 days · no visibility in transit
+
+Token      Payer → local exchange → token transfer → local exchange → Payee
+route              (licensed partner)   minutes    (licensed partner)
+                   └──── Atara prices each counterparty and releases
+                         funds only on verified conditions ────┘
+```
+
+No fiat passes through Atara. What the protocol removes is the reason a corridor
+stays small: today each local counterparty must be diligenced for weeks and
+fully pre-funded before it can be used. Priced risk replaces both.
+
+### Where the fee sits
+
+| Instrument | Rate | What it carries |
+|-----------|------|-----------------|
+| Letter of credit | 75–150 bp | Counterparty default |
+| Escrow services | 25–100 bp | Delivery disputes |
+| **Atara** | **12–35 bp** | **Errors in condition adjudication** |
+| Card network fee | 10–15 bp | No funding risk carried |
+
+Charged on the amount settled, not per call — the fee scales with the risk
+priced, not with compute. Rates are illustrative and subject to the phase noted
+below.
+
+---
+
 ## Status
 
 In development.
 
 - **Current phase — escrow.** Funds release only when conditions verify; the
   protocol charges a service fee and does not underwrite losses.
-- The credit engine is in development and is not extending credit.
+- The AI credit model is in development and is not extending credit.
 - Rates, amounts and model outputs shown in any product surface are
   illustrative.
-- Atara is not a bank.
+- Atara is not a bank. Fiat moves through licensed partners, never
+  through Atara.
 
 ---
 
