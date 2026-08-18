@@ -498,8 +498,61 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 #v-chat:has(#empty) #empty{margin:0 auto;padding:0 20px}
 #empty h3{font-family:var(--serif);font-size:28px;font-weight:500;color:var(--ink);letter-spacing:-.01em;margin-bottom:6px}
 /* 三个快捷入口:与输入框同宽,均分横排;仅空态显示 */
-#quickcards{display:none;gap:10px;width:100%;max-width:820px;align-self:center;margin-top:14px}
-#v-chat:has(#empty) #quickcards{display:flex}
+/* ── 动作行 ──────────────────────────────────────────────
+   AIUSD 把这几个动作藏在 + 里，我们平铺出来常驻。藏起来的代价是：
+   一旦开始对话就想不起来还能做什么——我们原来那三张快捷卡就是这个毛病，
+   只在空态出现，打第一个字就没了。 */
+#actions{display:flex;gap:8px;flex-wrap:wrap;width:100%;max-width:820px;
+  align-self:center;margin:0 0 10px;padding:0 2px}
+.act{display:inline-flex;align-items:center;gap:7px;padding:7px 13px 7px 10px;
+  border-radius:999px;border:1px solid var(--hairline);background:var(--paper);
+  font-size:13px;font-weight:500;color:var(--mute);cursor:pointer;
+  transition:border-color var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease),
+             background var(--dur-fast) var(--ease)}
+.act:hover{border-color:var(--line-strong);color:var(--ink)}
+.act.on{background:var(--blue-wash);border-color:var(--blue);color:var(--accent)}
+.acti{display:flex;color:var(--faint)}
+.act:hover .acti,.act.on .acti{color:currentColor}
+
+/* ── chip 句子条 ────────────────────────────────────────
+   点了动作，句子直接长在输入框里，而不是把一串示例文本塞进 textarea
+   再让人回车等解析——那样用户要先读懂自己没写过的句子。 */
+#abar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+  width:100%;padding:2px 0 12px;margin-bottom:10px;
+  border-bottom:1px solid var(--hairline)}
+#abar[hidden]{display:none}
+.averb{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+.aword{font-size:13px;color:var(--faint)}
+.achip{display:inline-flex;align-items:center;gap:6px;
+  padding:6px 11px;border-radius:999px;border:1px solid var(--line-strong);
+  background:var(--canvas);color:var(--ink);
+  font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;
+  transition:border-color var(--dur-fast) var(--ease)}
+.achip:hover{border-color:var(--blue)}
+.achip.empty{color:var(--placeholder);border-style:dashed}
+.achip i{font-style:normal;font-size:11px;color:var(--faint)}
+.achip input{width:5.5em;border:0;background:transparent;color:var(--ink);
+  font:inherit;font-weight:500;outline:none}
+.achip.add{border-style:dashed;color:var(--mute)}
+/* 证明方是 X 的子槽，不得提升为同级槽（银行设计文档 §4.2），所以是小字不是 chip */
+.asub{font-size:11px;color:var(--faint);letter-spacing:.01em}
+.ax{margin-left:auto;flex:none;width:26px;height:26px;display:grid;place-items:center;
+  border-radius:999px;border:0;background:transparent;color:var(--faint);cursor:pointer}
+.ax:hover{background:var(--card);color:var(--ink)}
+
+/* 小菜单：选币种 / 选链 —— 与动作菜单同一族 */
+.amenu{position:absolute;z-index:70;min-width:190px;padding:6px;
+  border-radius:var(--r-card);background:var(--paper);
+  box-shadow:var(--sh-overlay);display:flex;flex-direction:column;gap:2px}
+.amenu button{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;
+  padding:8px 10px;border-radius:var(--r-control);background:transparent;border:0;
+  color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+.amenu button:hover:not(:disabled){background:var(--canvas)}
+/* 不可用的项写清为什么，不是单纯置灰让人猜 —— 抄 AIUSD 这条 */
+.amenu button:disabled{cursor:default;color:var(--faint-2)}
+.amenu em{display:block;font-style:normal;font-size:11px;color:var(--faint);margin-top:2px}
+.amenu button:disabled em{color:var(--faint-2)}
+
 .qk{flex:1;display:flex;align-items:center;gap:12px;text-align:left;padding:14px 16px;
   border-radius:var(--r-card);border:1px solid var(--hairline);background:var(--surface);
   transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
@@ -1103,6 +1156,7 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 </style>
 </head>
 <body>
+<div id="ftoast" role="status" aria-live="polite"></div>
 <div id="gate" role="dialog" aria-modal="true" aria-labelledby="gatetitle">
   <div class="gatebox">
     <span class="gatemark"><i aria-hidden="true"></i>Atara</span>
@@ -1190,27 +1244,20 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
     <div id="say">
       <div id="atpanel" role="listbox" aria-label="Counterparty"><div class="atlist" id="atlist"></div>
         <div class="atsearch"><input id="atq" placeholder="Search counterparties and agents"></div></div>
+      <div id="actions" role="group" aria-label="Actions">
+        <button class="act" data-act="buy"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v8M4.5 7.5 8 11l3.5-3.5"/><path d="M3 13.5h10"/></svg></span>Buy</button>
+        <button class="act" data-act="sell"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V5M4.5 8.5 8 5l3.5 3.5"/><path d="M3 2.5h10"/></svg></span>Sell</button>
+        <button class="act" data-act="xfer"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 5.5h9M9 3l2.5 2.5L9 8"/><path d="M13.5 10.5h-9M7 8 4.5 10.5 7 13"/></svg></span>Transfer</button>
+        <button class="act" data-act="cond"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 1.5 3 9h4l-.5 5.5L13 7H9l-.5-5.5Z"/></svg></span>Conditional order</button>
+      </div>
       <div class="sayrow">
+        <div id="abar" hidden></div>
         <textarea id="free" rows="1" aria-label="Describe a payment" placeholder="Describe a payment — try “Buy 400,000 CNY of USDT” or “Pay Huachuang 3,000 on delivery”"></textarea>
         <div class="saytools">
         <button class="sayic" id="plusbtn" title="Attach" aria-label="Attach"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12.2 7.2-4.6 4.6a2.6 2.6 0 0 1-3.7-3.7l4.9-4.9a1.8 1.8 0 0 1 2.5 2.5L6.6 10.4a.9.9 0 0 1-1.3-1.3l4.3-4.3"/></svg></button>
         <button class="sayic" id="micbtn" title="Voice" aria-label="Voice" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="4" height="7" rx="2"/><path d="M3.5 8a4.5 4.5 0 0 0 9 0M8 12.5v1.5"/></svg></button>
         <button id="send" title="Compose (Enter)" aria-label="Compose" disabled><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12.5v-9M4.5 7 8 3.5 11.5 7"/></svg></button>
         </div>
-      </div>
-      <div id="quickcards" aria-label="Quick actions">
-        <button class="qk" data-ex="Buy 400,000 CNY of USDT">
-          <span class="qki"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v8M4.5 7.5 8 11l3.5-3.5"/><path d="M3 13.5h10"/></svg></span>
-          <span class="qkt"><b>Buy USDT with fiat</b></span>
-        </button>
-        <button class="qk" data-ex="Sell 30,000 USDT for CNY">
-          <span class="qki"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V5M4.5 8.5 8 5l3.5 3.5"/><path d="M3 2.5h10"/></svg></span>
-          <span class="qkt"><b>Sell USDT for fiat</b></span>
-        </button>
-        <button class="qk" data-ex="Pay Huachuang 3,000 on delivery">
-          <span class="qki"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 2.5 7 9M13.5 2.5l-4 11-2.5-5.5L1.5 5.5l12-3Z"/></svg></span>
-          <span class="qkt"><b>Pay a counterparty</b></span>
-        </button>
       </div>
     </div>
    </div>
@@ -1438,6 +1485,9 @@ const POOL=[
 ];
 const relText=s=>s<60?s+'s':Math.floor(s/60)+'m'+(s%60?' '+(s%60)+'s':'');
 let mkFilter='All', mkSide='buy', mkFiat='', pickedOrder=null;   /* mkFiat 空 = 不限 */
+/* 动作行的状态。必须声明在这里而不是下面的动作模块里：syncSend() 初始化时
+   就会读它，而 let 的暂时性死区连 typeof 都会抛，挡不住。 */
+let ACT=null;
 
 /* ───── 左栏 ───── */
 /* 会话线程与 CPS（对手方名册）是两回事：CPS 还在给右栏事项、句子解析、
@@ -1459,7 +1509,7 @@ function renderStrip(){
   if(!selected){s.classList.remove('show');return}
   const c=CPS.find(x=>x.id===selected);
   s.innerHTML=`<span>Net <b class="num">${c.net>=0?'+':'−'}¥${Math.abs(c.net).toLocaleString()}</b></span>
-    <span>Fill rate <b class="num">${c.ifr}%</b></span>
+    <span>Fulfilment <b class="num">${c.ifr}%</b></span>
     <span><b class="num">${c.deals}</b> trades</span>
     <span style="margin-left:auto;color:var(--faint)">Demo data</span>`;
   s.classList.add('show');
@@ -1491,12 +1541,13 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',e=>{
 /* 余额区已改平铺，不再整块可点——跳转入口在「In escrow」的 View 和左下账户行 */
 /* ───── Prompt Bar 交互：@ 引用对手方 · 条件选择 · 发送 ───── */
 const $free=document.getElementById('free'), $at=document.getElementById('atpanel');
-const fire=()=>{if(PARSING)return;$free.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))};
+const fire=()=>{if(PARSING)return; if(ACT)return runAct();
+  $free.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))};
 document.getElementById('send').onclick=fire;
 
 const $send=document.getElementById('send');
 function syncSend(){
-  const has=$free.value.trim().length>0 && !PARSING;
+  const has=(ACT || $free.value.trim().length>0) && !PARSING;
   $send.disabled=!has; $send.classList.toggle('ready',has);
 }
 /* 自适应高度：1 行起，最多 6 行（max-height 156 后转滚动） */
@@ -1504,9 +1555,6 @@ const autogrow=()=>{$free.style.height='auto';$free.style.height=$free.scrollHei
 $free.addEventListener('input',syncSend); $free.addEventListener('input',autogrow); syncSend(); autogrow();
 /* 宽度变化不触发 input，换行数会变——窗口 resize 时必须重算，否则高度停在旧值 */
 addEventListener('resize',autogrow);
-document.querySelectorAll('#quickcards .qk').forEach(b=>b.onclick=()=>{
-  $free.value=b.dataset.ex;syncSend();autogrow();$free.focus();
-});
 
 /* @ 面板键盘导航：↑↓ 移动、Enter 选中、Esc 关闭 */
 let atIdx=-1;
@@ -1527,7 +1575,7 @@ function renderAt(q=''){
     `<button class="atrow" role="option" data-cp="${c.id}">
        <span class="atav">${c.type==='agent'?'⚙':c.name.slice(0,1)}</span>
        <span><span class="atname">${c.name}</span>
-         <span class="atdesc"> · Fill rate ${c.ifr} · ${c.deals} trades</span></span>
+         <span class="atdesc"> · Fulfilment ${c.ifr} · ${c.deals} trades</span></span>
        <span class="atmeta num">${c.net?(c.net>0?'+':'−')+'¥'+Math.abs(c.net).toLocaleString():'—'}</span>
      </button>`).join('')||'<div class="atdesc" style="padding:10px">No match</div>';
   document.querySelectorAll('.atrow').forEach(b=>b.onclick=()=>{
@@ -1693,7 +1741,7 @@ function cardHTML(c){
     <div class="chead">
       <span class="cn">${c.name}</span>
       <span class="ctag ${c.kind}">${c.kind==='person'?'Me':'AGENT'}</span>
-      ${c.ifr!=null?`<span class="cifr num" title="Fill rate">Fill rate ${c.ifr}</span>`:''}
+      ${c.ifr!=null?`<span class="cifr num" title="Share of commitments fulfilled as declared">Fulfilment ${c.ifr}</span>`:''}
       ${c.on?'':'<span class="cifr">Off</span>'}
     </div>
     <div class="cquota">
@@ -1910,7 +1958,7 @@ function openWithdraw(){
       if(a.coin===FUNDS.coin){FUNDS.avail=a.avail; renderBalance()}
       const ref=WD.addr.ref, amt=WD.amt, coin=asset.coin;
       closeModal(); renderRules();
-      toast(`Withdrawal submitted: ${amt} ${coin} → ${ref}，— broadcasting after review`);
+      toast(`Withdrawal submitted: ${amt} ${coin} → ${ref} — broadcasting after review`);
     };
   };
   openModal('Withdraw',' ',draw);
@@ -2357,11 +2405,17 @@ const WINS=[{workdayOnly:true,winFrom:9,winTo:21},{workdayOnly:true,winFrom:9,wi
             {workdayOnly:false,winFrom:0,winTo:24}];
 
 /* ───── 三档授权：歧义分 × 风险分，任一高 → 强确认（§7） ───── */
+/* 兑现率回写授权档位（PRD §10.6）。这里用的是对手方的兑现率而不是本人的：
+   本人这张卡的 ifr 为 null（自己给自己发的卡没有对照对象），而收款方
+   按声明兑现得越稳，这笔越不需要人工确认。范围而非阈值——档位是连续放宽的。 */
+const ifrWiden=r => r==null ? 1 : r>=95 ? 2 : r>=90 ? 1.5 : r>=80 ? 1 : .5;
 function tier(){
-  const newish=S.cp.deals<8, big=S.amt>RULES.perDeal, vague=S.guessed.cp||S.guessed.why;
+  const lim=Math.round(RULES.perDeal*ifrWiden(S.cp.ifr));
+  const newish=S.cp.deals<8, big=S.amt>lim, vague=S.guessed.cp||S.guessed.why;
   if(vague)  return {level:'strong',why:'Ambiguous reference — part of this was inferred, please check'};
   if(newish) return {level:'strong',why:'New counterparty — little history, verify identity first'};
-  if(big)    return {level:'strong',why:`Above your per-payment limit (¥${RULES.perDeal.toLocaleString()})`};
+  if(big)    return {level:'strong',why:`Above the limit for this counterparty (¥${lim.toLocaleString()}${
+    lim!==RULES.perDeal?` — ${lim>RULES.perDeal?'widened':'tightened'} by their ${S.cp.ifr}% fulfilment`:''})`};
   if(!inWindow()) return {level:'summary',why:'Outside your window'};
   if(S.amt>2000||S.cond!=='Immediately') return {level:'summary',why:'One click to confirm'};
   return {level:'auto',why:'Within your rules'};
@@ -2380,6 +2434,7 @@ document.getElementById('free').addEventListener('keydown',e=>{
   if(e.shiftKey)return;              /* Shift+Enter 换行，Enter 发送 */
   e.preventDefault();
   if(PARSING)return;
+  if(ACT){runAct();return}
   const q=e.target.value;if(!q.trim())return;
   /* 会话里输入框是发给对手方的，不是喂给解析器的 */
   if(THREAD){say('me',q.replace(/[<>]/g,''));merchantReply(q);
@@ -2572,7 +2627,9 @@ function tryOTC(q){
 function openDeal(side,fiat,o){
   if(D&&D.iv)clearInterval(D.iv);
   D={side,fiat,step:'match',ref:'ATR-7K2M',secs:0,open:true,
-     u:   o? o.qty  : +(fiat/RATE).toFixed(2),
+     /* 数量跟着金额走，不是照搬挂单整笔——用户填了 25 万就该买 25 万的量。
+        池子里点整条挂单时传的是 qty*px，除回来仍是 qty，两条路都对。 */
+     u:   o? +(fiat/o.px).toFixed(o.px>1000?4:2) : +(fiat/RATE).toFixed(2),
      coin:o? o.coin : 'USDT',
      px:  o? o.px   : RATE,
      peer:o? o.peer : 'D137037',
@@ -2609,6 +2666,178 @@ function showOrder(o){
   t.el.querySelector('.thlabel').textContent='Assessing counterparty';
   setTimeout(()=>{const l=t.el.querySelector('.thlabel'); if(l)l.textContent='Assessed'}, t.total);
 }
+
+/* toast 有样式、有三处调用，但一直没有定义过——提现、法币筛选、
+   添加银行账户三条路径点下去都是 ReferenceError。补上。 */
+let toastT=null;
+function toast(msg){
+  const el=document.getElementById('ftoast'); if(!el)return;
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),2600);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   动作行 · 借鉴 AIUSD 的 chip 句子，但动作不藏在 + 里
+   点一个动作，句子就长在输入框里，每个空位是可点的 chip。
+   与「把示例文本塞进 textarea 再让人回车」的差别：那样用户得先读懂
+   一句自己没写过的话，再猜哪几个词能改。chip 自己说明哪里能改。
+   ═══════════════════════════════════════════════════════════════ */
+const ACT_DEF={
+  buy: {verb:'buy',      unit:'fiat', mid:'with'},
+  sell:{verb:'sell',     unit:'coin', mid:'for'},
+  xfer:{verb:'transfer', unit:'coin', mid:'to'},
+};
+/* Y·意图：半受控短语库。文档 §4.4——高频沉淀成库，低频允许自由书写。
+   全自由输入毁掉可聚合性，全枚举逼用户说谎。 */
+const INTENTS=['Treasury rebalance','Supplier balance','Payroll','Inventory purchase',
+               'Delivery acceptance','Service subscription','Market making'];
+const poolCoins=()=>[...new Set(POOL.map(o=>o.coin))];
+const poolFiats=()=>[...new Set(POOL.map(o=>o.fiat))];
+/* 托管里持有的币种——Sell / Transfer 只能动这些 */
+const heldCoins=()=>ASSETS.filter(a=>a.avail+a.escrow>0).map(a=>a.coin);
+
+function openAct(k){
+  if(k==='cond'){                       /* 条件支付本来就有一整套句子构造器 */
+    closeAct();
+    document.querySelectorAll('#actions .act').forEach(b=>b.classList.remove('on'));
+    renderSentence();
+    document.getElementById('composer').classList.add('show');
+    document.getElementById('composer').scrollIntoView({behavior:'smooth',block:'nearest'});
+    return;
+  }
+  document.getElementById('composer').classList.remove('show');
+  const d=ACT_DEF[k];
+  ACT={k, amt:k==='buy'?400000:30000, coin:'USDT',
+       fiat:'CNY', peer:CPS[0]?.name||'',
+       /* X 与 Y 不是可选项。X 默认「立即」保证句子永不为空；
+          Y 是 IFR 的唯一判据锚点，缺了就判不出这笔算不算兑现了承诺。 */
+       cond:'Immediately', why:k==='xfer'?'Supplier balance':'Treasury rebalance'};
+  if(d.unit==='coin'&&!heldCoins().includes(ACT.coin)) ACT.coin=heldCoins()[0]||'USDT';
+  document.querySelectorAll('#actions .act').forEach(b=>b.classList.toggle('on',b.dataset.act===k));
+  paintAct();
+}
+function closeAct(){
+  ACT=null;
+  const bar=document.getElementById('abar'); bar.hidden=true; bar.innerHTML='';
+  document.querySelectorAll('#actions .act').forEach(b=>b.classList.remove('on'));
+  syncSend();
+}
+function paintAct(){
+  const bar=document.getElementById('abar');
+  if(!ACT){bar.hidden=true;return}
+  const d=ACT_DEF[ACT.k];
+  const amtTxt = d.unit==='fiat'
+    ? `${FIAT_SYM(ACT.fiat)}${ACT.amt.toLocaleString()}`
+    : ACT.amt.toLocaleString();
+  const word=w=>`<span class="aword">${w}</span>`;
+  bar.hidden=false;
+  /* 句式与银行设计文档 §4.1 一致：在 X 下，A 向 B 转 N，用于 Y。
+     A（付款方）默认是「我」，整段隐藏。 */
+  bar.innerHTML=
+    `<span class="aword">Under</span>`
+  + `<button class="achip" data-f="cond">${ACT.cond}<i>⌄</i></button>`
+  + (ACT.cond!=='Immediately'
+      ? `<span class="asub" title="Who proves the condition">via ${PROOFS[ACT.cond]}</span>` : '')
+  + `<span class="averb">${d.verb}</span>`
+  + `<button class="achip" data-f="amt">${amtTxt}<i>✎</i></button>`
+  + (d.unit==='coin'
+      ? `<button class="achip" data-f="coin">${ACT.coin}<i>⌄</i></button>`
+      : `${word('of')}<button class="achip" data-f="coin">${ACT.coin}<i>⌄</i></button>`)
+  + word(d.mid)
+  + (ACT.k==='xfer'
+      ? `<button class="achip" data-f="peer">${ACT.peer||'Choose'}<i>⌄</i></button>`
+      : `<button class="achip" data-f="fiat"><span class="flg">${flag(ACT.fiat)}</span>${ACT.fiat}<i>⌄</i></button>`)
+  + word('for')
+  + `<button class="achip" data-f="why">${ACT.why}<i>⌄</i></button>`
+  + `<button class="ax" data-f="close" aria-label="Cancel">✕</button>`;
+
+  bar.querySelectorAll('[data-f]').forEach(b=>b.onclick=ev=>{
+    ev.preventDefault(); ev.stopPropagation();
+    const f=b.dataset.f;
+    if(f==='close') return closeAct();
+    if(f==='amt')   return editAmt(b);
+    if(f==='coin')  return pickMenu(b, coinOptions(), v=>{ACT.coin=v;paintAct()});
+    if(f==='fiat')  return pickMenu(b, poolFiats().map(x=>({v:x,n:`${flag(x)} ${x}`,d:FIAT_NAME(x)})), v=>{ACT.fiat=v;paintAct()});
+    if(f==='peer')  return pickMenu(b, CPS.map(c=>({v:c.name,n:c.name,d:c.type==='agent'?'Agent':'Registered counterparty'})), v=>{ACT.peer=v;paintAct()});
+    /* X 仅限模板，不允许自由文本（文档 §4.2） */
+    if(f==='cond')  return pickMenu(b, CONDS.map(c=>({v:c,n:c,d:'Proved by '+PROOFS[c]})), v=>{ACT.cond=v;paintAct()});
+    if(f==='why')   return pickMenu(b, INTENTS.map(x=>({v:x,n:x,d:'Counts toward intent fulfilment'})), v=>{ACT.why=v;paintAct()});
+  });
+  syncSend();
+}
+/* 不可用的项写清为什么 —— 单纯置灰会让人反复去点 */
+function coinOptions(){
+  const held=heldCoins(), d=ACT_DEF[ACT.k];
+  return poolCoins().map(c=>{
+    const ok = d.unit==='fiat' ? POOL.some(o=>o.coin===c) : held.includes(c);
+    return {v:c, n:c, d: ok ? (d.unit==='fiat'?'Available in the pool':'In your escrow balance')
+                            : 'You hold none of this', off:!ok};
+  });
+}
+function editAmt(chip){
+  const cur=ACT.amt;
+  chip.innerHTML=`<input inputmode="numeric" value="${cur}">`;
+  const inp=chip.querySelector('input'); inp.focus(); inp.select();
+  const done=()=>{const v=parseFloat(String(inp.value).replace(/[^\d.]/g,''));
+    if(v>0)ACT.amt=Math.round(v); paintAct()};
+  inp.onblur=done;
+  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();done()}
+                    if(e.key==='Escape'){e.preventDefault();paintAct()}};
+}
+function pickMenu(anchorEl, items, pick){
+  document.querySelector('.amenu')?.remove();
+  const m=document.createElement('div'); m.className='amenu';
+  m.innerHTML=items.map(o=>
+    `<button ${o.off?'disabled':''} data-v="${o.v}"><span>${o.n}<em>${o.d}</em></span></button>`).join('');
+  document.body.appendChild(m);
+  const r=anchorEl.getBoundingClientRect(), h=m.getBoundingClientRect().height;
+  m.style.left=Math.min(r.left, innerWidth-m.offsetWidth-12)+'px';
+  m.style.top =(r.top-h-8>8 ? r.top-h-8 : r.bottom+8)+'px';
+  m.querySelectorAll('button:not([disabled])').forEach(b=>b.onclick=()=>{m.remove();pick(b.dataset.v)});
+  const away=ev=>{if(!m.contains(ev.target)){m.remove();removeEventListener('mousedown',away)}};
+  setTimeout(()=>addEventListener('mousedown',away),0);
+}
+/* 提交：买卖走已经验证过的撮合链路，转账是托管内部划转 */
+function runAct(){
+  if(!ACT)return;
+  const a={...ACT}; const d=ACT_DEF[a.k];
+  closeAct();
+  if(a.k==='xfer'){
+    newSession();
+    const t=thinking([{k:'Condition',v:a.cond},{k:'Evidence',v:PROOFS[a.cond]},
+              {k:'Amount',v:a.amt.toLocaleString()+' '+a.coin},
+              {k:'Recipient',v:a.peer},{k:'Intent',v:a.why}],[],
+      ()=>{const el=document.createElement('div'); el.className='tcard';
+        el.innerHTML=`<span class="st ok">${a.cond==='Immediately'?'Sent':'Scheduled'}</span>
+          <span>${a.amt.toLocaleString()} ${a.coin} to <span class="who">${a.peer}</span> · for ${a.why}${
+            a.cond==='Immediately'?' · inside escrow, no chain fee':` · releases ${a.cond.toLowerCase()}`}</span>`;
+        document.getElementById('log').prepend(el);});
+    t.el.querySelector('.thlabel').textContent='Transferring';
+    setTimeout(()=>{const l=t.el.querySelector('.thlabel'); if(l)l.textContent='Transferred'}, t.total);
+    return;
+  }
+  const want=a.k==='buy'?'sell':'buy';
+  const same=POOL.filter(x=>x.side===want&&x.coin===a.coin&&x.fiat===a.fiat);
+  if(!same.length){toast(`No ${a.coin}/${a.fiat} counterparty in the pool right now`);return}
+  /* 限额吃得下这笔的才算候选，否则卡上会出一个跟用户要求对不上的数 */
+  const need=d.unit==='fiat' ? a.amt : a.amt*same[0].px;
+  const fits=same.filter(x=>need>=x.min && need<=Math.round(x.qty*x.px));
+  if(!fits.length){
+    const top=same.sort((x,y)=>y.sc-x.sc)[0];
+    toast(`${fmtMoney(need,a.fiat)} is outside the limits on offer — try ${
+      fmtMoney(top.min,a.fiat)} to ${fmtMoney(top.qty*top.px,a.fiat)}`);
+    return;
+  }
+  const o=fits.sort((x,y)=>y.sc-x.sc)[0];
+  const fiatAmt = d.unit==='fiat' ? a.amt : Math.round(a.amt*o.px);
+  newSession();
+  thinking([{k:'Condition',v:a.cond},{k:'Amount',v:fmtMoney(fiatAmt,a.fiat)},
+            {k:'Intent',v:a.why},{k:'Matching',v:'Blind matching'},{k:'Checks',v:'8 passed'}],
+    [{n:'kyc-v4'},{n:'kyt-trace'},{n:'graph-cluster'},{n:'watchlist'}],
+    ()=>{openDeal(a.k, fiatAmt, o); openThread(o, D);
+         D.el.scrollIntoView({behavior:'smooth',block:'nearest'})});
+}
+document.querySelectorAll('#actions .act').forEach(b=>b.onclick=()=>openAct(b.dataset.act));
 
 /* ───── 邀请码：比对摘要而不是明文，见样式表里那段说明 ───── */
 const GATE_SHA='71298716e654dd5291d9d8a322c9195e551a68b5bd214c5716d9a66cfef3439e';
