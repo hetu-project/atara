@@ -470,16 +470,10 @@
     transition:transform .38s var(--ease)}
   #gate.is-in .gate-card{transform:none}
 
-  .gate-eyebrow{display:flex;align-items:center;gap:.5rem;
-    font-size:.7rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;
-    color:oklch(52% .05 267)}
-  .gate-eyebrow i{width:.35rem;height:.35rem;border-radius:1px;background:var(--blue);flex:none}
-  .gate-card h2{margin:.85rem 0 0;font-size:1.4rem;font-weight:500;
+  .gate-card h2{margin:0;font-size:1.4rem;font-weight:500;
     line-height:1.2;letter-spacing:-.022em;color:oklch(18% .03 267)}
-  .gate-card p{margin:.6rem 0 0;font-size:.9375rem;line-height:1.55;
-    letter-spacing:-.008em;color:oklch(46% .028 267)}
 
-  .gate-form{display:flex;flex-direction:column;gap:1.35rem;margin-top:1.9rem}
+  .gate-form{display:flex;flex-direction:column;gap:1.35rem;margin-top:1.7rem}
   .gate-field{display:flex;flex-direction:column;gap:.5rem}
   .gate-field label{font-size:.7rem;font-weight:600;letter-spacing:.14em;
     text-transform:uppercase;color:oklch(58% .04 267)}
@@ -1457,17 +1451,15 @@
     document.addEventListener('DOMContentLoaded',bootGate);
   else bootGate();
 </script>
-<div id="gate" role="dialog" aria-modal="true" aria-labelledby="gate-h" aria-describedby="gate-p">
+<div id="gate" role="dialog" aria-modal="true" aria-labelledby="gate-h">
   <div class="gate-card">
     <button class="gate-x" type="button" id="gate-x" aria-label="Close">
       <svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l8 8M11.5 3.5l-8 8"/></svg>
     </button>
-    <span class="gate-eyebrow"><i aria-hidden="true"></i>Private preview</span>
-    <h2 id="gate-h">The console is not open yet.</h2>
-    <p id="gate-p">It runs on illustrative data and changes daily. Enter the code you were given — it will remember you for this visit.</p>
+    <h2 id="gate-h">Invite only</h2>
     <form class="gate-form" id="gate-form" novalidate>
       <span class="gate-field">
-        <label for="gate-key">Invite code</label>
+        <label for="gate-key">Code</label>
         <input id="gate-key" type="text" autocomplete="off" autocapitalize="off"
                spellcheck="false" placeholder="- - - - -">
       </span>
