@@ -23,23 +23,29 @@
    但拦不住肯动手的人。真要控制访问得在服务端做（Cloudflare Access / Basic Auth）。
    它挡的是顺着落地页点进来的人和搜索引擎。 */
 :root[data-locked] body>*:not(#gate){display:none!important}
-#gate{display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);
-  align-items:center;justify-content:center;padding:24px}
+#gate{display:none;position:fixed;inset:0;z-index:9999;padding:24px;
+  align-items:center;justify-content:center;
+  background:var(--bg);                       /* 台面被藏起来了，底下没东西可透 */
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 :root[data-locked] #gate{display:flex}
-.gatebox{width:100%;max-width:376px;display:flex;flex-direction:column;gap:16px}
-.gatemark{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:600;
+/* 与通用模态同一套语言：居中卡片、r-panel、overlay 阴影 */
+.gatebox{width:100%;max-width:352px;display:flex;flex-direction:column;gap:14px;
+  padding:26px 26px 22px;background:var(--paper);
+  border-radius:var(--r-panel);box-shadow:var(--sh-overlay)}
+.gatemark{display:flex;align-items:center;gap:7px;font-size:16px;font-weight:600;
   letter-spacing:-.02em;color:var(--ink)}
-.gatemark i{width:9px;height:9px;border-radius:2px;background:var(--blue);display:block}
-.gatebox h1{font-size:24px;font-weight:400;letter-spacing:-.01em;color:var(--ink);margin:8px 0 0;
+.gatemark i{width:8px;height:8px;border-radius:2px;background:var(--blue);display:block}
+.gatebox h1{font-size:20px;font-weight:400;letter-spacing:-.01em;color:var(--ink);margin:2px 0 0;
   font-family:Newsreader,Georgia,serif}
 .gatebox p{font-size:13px;line-height:1.6;color:var(--mute);margin:0}
 .gateform{display:flex;gap:8px}
-#gatekey{flex:1;min-width:0;height:40px;padding:0 12px;border-radius:var(--r-control);
+#gatekey{flex:1;min-width:0;height:38px;padding:0 12px;border-radius:var(--r-control);
   border:1px solid var(--line-strong);background:var(--paper);color:var(--ink);
   font:inherit;font-size:14px;letter-spacing:.02em}
 #gatekey::placeholder{color:var(--placeholder)}
 #gatekey:focus{outline:2px solid var(--accent);outline-offset:1px}
-.gateerr{color:var(--warn);min-height:18px}
+.gateerr{color:var(--warn);min-height:0}
+.gateerr:empty{display:none}
 .gatefoot{font-size:12px;color:var(--faint)}
 :root{
   /* ── 与主题无关 ── */
@@ -2605,7 +2611,7 @@ function showOrder(o){
 }
 
 /* ───── 邀请码：比对摘要而不是明文，见样式表里那段说明 ───── */
-const GATE_SHA='9b1cb6f4fd9299ea1a671ff8e35f4063237102a6ebec40f4a37a3a1660a4bd22';
+const GATE_SHA='71298716e654dd5291d9d8a322c9195e551a68b5bd214c5716d9a66cfef3439e';
 (function(){
   const form=document.getElementById('gateform'); if(!form) return;
   const key=document.getElementById('gatekey'), err=document.getElementById('gateerr');
