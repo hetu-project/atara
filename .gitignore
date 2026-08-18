@@ -63,8 +63,8 @@ atara-full.png
 # Deck 及导出，对外材料另行分发，不入公开仓库。
 deck.html
 Atara-Deck*.pdf
-# 对话式控制台原型（演示，未上线），暂不入公开仓库。
-console.html
+# console.html 现在发布：落地页的 Start 指向它，页面自带邀请码帘子。
+# DESIGN.md / COMPONENTS.md 仍然不发——那两份含内部评审与未决事项。
 # OTC 需求文档与流程设计：含内部功能规划与竞品对照。内部只读。
 PRD-OTC.md
 PRD-OTC-FLOW.md
