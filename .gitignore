@@ -78,3 +78,7 @@ DESIGN.md
 COMPONENTS.md
 # 组件实验室（由 console.html 样式生成）：内部工具。
 lab.html
+
+# 中文版 deck（deck-cn.html + Atara-Deck-CN.pdf），与英文版同源，内部只读。
+deck-cn.html
+Atara-Deck-CN.pdf
