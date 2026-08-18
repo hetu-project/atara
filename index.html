@@ -447,6 +447,75 @@
     .spectrum .bar{clip-path:none}.spectrum .lead{transform:none}.spectrum .pin,.spectrum .lbl,.spectrum .zone{opacity:1}
     .condition-shot span{transform:none}.condition-shot img{transform:none}
   }
+  /* ── Invite gate ─────────────────────────────────────────────
+     Built out of the card this page already owns: the hero ticket sits on
+     the same blue field with a warm off-white face, blue-tinted ink, a 5px
+     radius and one deep directional shadow. Reusing that treatment means
+     the dialog belongs to this page rather than arriving from a component
+     library. The field behind stays blue and readable — the card carries
+     the contrast, so the scrim only has to take the edge off. */
+  #gate{position:fixed;inset:0;z-index:200;display:none;
+    padding:var(--pad);place-items:center;
+    background:oklch(19% .10 268 / .58);
+    opacity:0;transition:opacity .2s linear}
+  #gate.is-open{display:grid}
+  #gate.is-in{opacity:1}
+  .gate-card{position:relative;width:min(100%,27.5rem);
+    padding:clamp(1.9rem,3.4vw,2.4rem) clamp(1.6rem,3vw,2.2rem) clamp(1.6rem,2.8vw,1.9rem);
+    border-radius:5px;
+    background:oklch(98.6% .003 90);color:oklch(20% .022 267);
+    box-shadow:0 28px 52px -24px oklch(8% .1 267 / .62),
+               0 2px 0 0 oklch(8% .1 267 / .1);
+    transform:translateY(12px) scale(.985);
+    transition:transform .38s var(--ease)}
+  #gate.is-in .gate-card{transform:none}
+
+  .gate-eyebrow{display:flex;align-items:center;gap:.5rem;
+    font-size:.7rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;
+    color:oklch(52% .05 267)}
+  .gate-eyebrow i{width:.35rem;height:.35rem;border-radius:1px;background:var(--blue);flex:none}
+  .gate-card h2{margin:.85rem 0 0;font-size:1.4rem;font-weight:500;
+    line-height:1.2;letter-spacing:-.022em;color:oklch(18% .03 267)}
+  .gate-card p{margin:.6rem 0 0;font-size:.9375rem;line-height:1.55;
+    letter-spacing:-.008em;color:oklch(46% .028 267)}
+
+  .gate-form{display:flex;flex-direction:column;gap:1.35rem;margin-top:1.9rem}
+  .gate-field{display:flex;flex-direction:column;gap:.5rem}
+  .gate-field label{font-size:.7rem;font-weight:600;letter-spacing:.14em;
+    text-transform:uppercase;color:oklch(58% .04 267)}
+  /* the code is what they came here to type — it outweighs the heading */
+  #gate-key{width:100%;padding:.1rem 0 .5rem;border:0;border-radius:0;
+    border-bottom:2px solid oklch(88% .012 267);background:transparent;
+    color:oklch(18% .03 267);caret-color:var(--blue);
+    font-family:var(--sans);font-size:clamp(1.9rem,5vw,2.35rem);font-weight:400;
+    line-height:1.15;letter-spacing:.18em;text-transform:uppercase;
+    transition:border-color .18s linear}
+  #gate-key::placeholder{color:oklch(88% .012 267);letter-spacing:.18em}
+  #gate-key:focus{outline:none;border-bottom-color:var(--blue)}
+  #gate.is-bad #gate-key{border-bottom-color:oklch(58% .17 25)}
+  #gate.is-ok  #gate-key{border-bottom-color:oklch(55% .17 148)}
+  /* on this card the primary has to invert: the page's white capsule
+     would vanish into the card face */
+  .gate-go{width:100%;min-height:3rem;border:0;border-radius:999px;cursor:pointer;
+    background:var(--blue);color:var(--white);
+    font-family:var(--sans);font-size:.9375rem;font-weight:500;letter-spacing:-.005em;
+    transition:background .15s linear}
+  .gate-go:hover{background:var(--blue-deep)}
+
+  .gate-note{margin:1.15rem 0 0;font-size:.8125rem;line-height:1.5;
+    color:oklch(56% .03 267)}
+  .gate-note a{color:var(--blue);text-decoration:underline;text-underline-offset:.16em}
+  #gate.is-bad .gate-note{color:oklch(52% .17 25)}
+  #gate.is-ok  .gate-note{color:oklch(45% .15 148)}
+
+  .gate-x{position:absolute;top:.7rem;right:.7rem;
+    width:2rem;height:2rem;display:grid;place-items:center;border-radius:999px;
+    border:0;background:transparent;color:oklch(62% .03 267);
+    cursor:pointer;transition:background .15s linear,color .15s linear}
+  .gate-x:hover{background:oklch(92% .012 267);color:oklch(25% .03 267)}
+  @media (prefers-reduced-motion: reduce){
+    .gate-card{transition:none;transform:none}
+  }
 </style>
 </head>
 <body>
@@ -1300,6 +1369,112 @@
     document.addEventListener('visibilitychange',()=>document.hidden?stop():start());
   })();
 })();
+  /* ── Invite gate ─────────────────────────────────────────────
+     Start opens it here rather than sending anyone to a second page to be
+     turned away. The pass is kept in sessionStorage under the key the
+     console's own head script reads, so clearing it there is one gate,
+     not two, and a visitor is never asked twice.
+
+     What this is worth, stated plainly: the page ships whatever it
+     compares against, so the digest below raises reading the source to
+     running a dictionary and nothing more. It keeps the console out of
+     search results and off the path of someone clicking Start. Real
+     access control belongs at the edge. */
+  const GATE_KEY='atara-gate';
+  const GATE_SHA='71298716e654dd5291d9d8a322c9195e551a68b5bd214c5716d9a66cfef3439e';
+  const passed=()=>{try{return sessionStorage.getItem(GATE_KEY)==='1'}catch(e){return false}};
+  /* the page's script tag sits mid-document; the gate's markup is at the end
+     of the body, so at parse time it does not exist yet. Wait for the DOM. */
+  function bootGate(){
+    const gate=document.getElementById('gate');
+    if(!gate)return;
+    const form=document.getElementById('gate-form'),
+          key=document.getElementById('gate-key'),
+          note=document.getElementById('gate-note'),
+          shut=document.getElementById('gate-x');
+    const RESTING=note.innerHTML;
+    let opener=null;
+
+    const digest=async t=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',
+      new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,'0')).join('');
+
+    function open(from){
+      opener=from||null;
+      gate.classList.remove('is-bad','is-ok');
+      note.innerHTML=RESTING; key.value=''; key.removeAttribute('aria-invalid');
+      gate.classList.add('is-open');
+      requestAnimationFrame(()=>gate.classList.add('is-in'));
+      document.documentElement.style.overflow='hidden';
+      setTimeout(()=>key.focus(),80);
+    }
+    function close(){
+      gate.classList.remove('is-open','is-in');
+      document.documentElement.style.overflow='';
+      opener&&opener.focus(); opener=null;
+    }
+
+    document.querySelectorAll('a[href="console.html"]').forEach(a=>{
+      a.addEventListener('click',ev=>{
+        if(passed())return;               /* already in this visit — let it through */
+        ev.preventDefault(); open(a);
+      });
+    });
+
+    shut.addEventListener('click',close);
+    gate.addEventListener('mousedown',ev=>{if(ev.target===gate)close()});
+    document.addEventListener('keydown',ev=>{
+      if(ev.key==='Escape'&&gate.classList.contains('is-open'))close();
+    });
+    key.addEventListener('input',()=>{
+      if(gate.classList.contains('is-bad')){
+        gate.classList.remove('is-bad'); note.innerHTML=RESTING; key.removeAttribute('aria-invalid');
+      }
+    });
+
+    form.addEventListener('submit',async ev=>{
+      ev.preventDefault();
+      const v=key.value.trim().toLowerCase();
+      if(!v)return;
+      /* crypto.subtle only exists in a secure context. Say so rather than
+         waving anyone through — waving them through is having no gate. */
+      if(!crypto.subtle){
+        gate.classList.add('is-bad');
+        note.textContent='This page has to be served over HTTPS to check the code.';
+        return;
+      }
+      if(await digest(v)!==GATE_SHA){
+        gate.classList.add('is-bad'); key.setAttribute('aria-invalid','true');
+        note.textContent='That code is not valid.'; key.select();
+        return;
+      }
+      try{sessionStorage.setItem(GATE_KEY,'1')}catch(e){}
+      gate.classList.remove('is-bad'); gate.classList.add('is-ok');
+      note.textContent='Opening the console…';
+      setTimeout(()=>{location.href='console.html'},420);
+    });
+  }
+  if(document.readyState==='loading')
+    document.addEventListener('DOMContentLoaded',bootGate);
+  else bootGate();
 </script>
+<div id="gate" role="dialog" aria-modal="true" aria-labelledby="gate-h" aria-describedby="gate-p">
+  <div class="gate-card">
+    <button class="gate-x" type="button" id="gate-x" aria-label="Close">
+      <svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l8 8M11.5 3.5l-8 8"/></svg>
+    </button>
+    <span class="gate-eyebrow"><i aria-hidden="true"></i>Private preview</span>
+    <h2 id="gate-h">The console is not open yet.</h2>
+    <p id="gate-p">It runs on illustrative data and changes daily. Enter the code you were given — it will remember you for this visit.</p>
+    <form class="gate-form" id="gate-form" novalidate>
+      <span class="gate-field">
+        <label for="gate-key">Invite code</label>
+        <input id="gate-key" type="text" autocomplete="off" autocapitalize="off"
+               spellcheck="false" placeholder="- - - - -">
+      </span>
+      <button class="gate-go" type="submit">Continue</button>
+    </form>
+    <p class="gate-note" id="gate-note" role="status" aria-live="polite">No code? Write to <a href="mailto:hello@loka.cash">hello@loka.cash</a>.</p>
+  </div>
+</div>
 </body>
 </html>
