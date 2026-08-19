@@ -82,3 +82,7 @@ lab.html
 # 中文版 deck（deck-cn.html + Atara-Deck-CN.pdf），与英文版同源，内部只读。
 deck-cn.html
 Atara-Deck-CN.pdf
+
+# 做商业与做产品的思路 + 每日调研记录：内部工作文档。
+APPROACH.md
+RESEARCH-LOG.md
