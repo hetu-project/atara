@@ -50,6 +50,9 @@
 :root{
   /* ── 与主题无关 ── */
   --r-chip: 6px; --r-control: 8px; --r-card: 10px; --r-panel: 16px;
+  /* 间距刻度：同组紧、跨组松。之前账户页用的是 26/20/15/13/9/7/5 这类随手值，
+     没有刻度就没有节奏——新写的间距一律从这里取 */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:40px;
   --dur-instant: 80ms; --dur-fast: 140ms; --dur-normal: 220ms;
   --ease: cubic-bezier(.23,1,.32,1);
   --ease-exit: cubic-bezier(.4,0,1,1);
@@ -190,7 +193,7 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 
 /* 左栏底部 · 用户区即账户入口（惯例位置，不与导航重复设第二个入口） */
 /* 左下角固定入口：账户行 + 侧栏开关。收起后这里是唯一的展开入口 */
-.luserrow{flex:none;display:flex;align-items:center;gap:4px;padding:8px 12px 12px 0;
+.luserrow{position:relative;flex:none;display:flex;align-items:center;gap:4px;padding:8px 12px 12px 0;
   border-top:1px solid var(--hairline)}
 .luser{flex:1;min-width:0;display:flex;align-items:center;gap:8px;text-align:left;
        padding:6px 8px 6px 16px;border-radius:var(--r-control)}
@@ -440,6 +443,8 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 .od-f{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:4px}
 .od-disp{font-size:11px;color:var(--mute)}
 .od-disp.ok{color:var(--faint)}
+/* 自己的单：一圈强调边把它从别人的单里拎出来 */
+.od.odmine{box-shadow:var(--ring),0 0 0 2px var(--blue-wash) inset;border-color:var(--accent)}
 .od-cta{margin-left:auto;height:28px;padding:0 14px;border-radius:var(--r-chip);
   display:inline-flex;align-items:center;font-size:12px;font-weight:500;
   background:var(--blue);color:#fff;
@@ -448,7 +453,7 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 
 /* 支付规则页 / 记录页 */
 .rsec{margin-bottom:26px}
-.rsec h3{font-size:11px;font-weight:500;letter-spacing:.14em;color:var(--faint);margin-bottom:10px}
+.rsec h3{font-size:12.5px;font-weight:600;letter-spacing:.01em;color:var(--mute);margin-bottom:10px}
 .rsec .rnote{font-size:12px;color:var(--faint);margin-top:9px;line-height:1.5}
 .rcard{background:var(--paper);border-radius:var(--r-card);box-shadow:var(--ring);overflow:hidden}
 .rrow{display:grid;grid-template-columns:170px 1fr auto;align-items:center;gap:16px;padding:12px 16px;font-size:14px}
@@ -465,46 +470,254 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 .rsec h3 .h3r{margin-left:auto;letter-spacing:0;font-weight:500}
 
 
-/* 总账户 */
-.acct{background:var(--paper);border-radius:var(--r-card);box-shadow:var(--ring);padding:20px 24px}
-.acct .al{display:block;font-size:11px;font-weight:500;letter-spacing:.14em;color:var(--faint);margin-bottom:5px}
-.atot{padding-bottom:15px;border-bottom:1px solid var(--hairline)}
-.atot .av{font-size:28px;font-weight:600;letter-spacing:-.025em;color:var(--ink)}
-.atot .ad{font-size:13px;color:var(--mute);margin-left:9px}
-.asplit{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:15px 0}
-.asplit b{font-size:20px;font-weight:600;color:var(--ink)}
-.asplit .ad{display:block;font-size:12px;color:var(--faint);margin-top:3px;line-height:1.45}
-.aacts{display:flex;gap:8px;padding-top:13px;border-top:1px solid var(--hairline)}
-.aacts .rbtn{padding:8px 16px;border:1px solid var(--hairline);border-radius:999px;background:var(--canvas)}
+/* 账户页的两段节奏：组内 16、跨组 40。四个小节其实是两个话题——
+   「钱现在在哪」（余额+资产）和「钱怎么自己走」（授权卡+定期），间距要说出这件事 */
+.rgroup{margin-bottom:var(--sp-7)}
+.rgroup:last-child{margin-bottom:0}
+.rgroup .rsec{margin-bottom:var(--sp-4)}
+.rgroup .rsec:last-child{margin-bottom:0}
+#v-rules .vbody{padding-top:var(--sp-5)}
+/* 小标题带一条延伸到右侧的细线：编辑感来自这条线，不来自更多装饰 */
+.rgroup .rsec h3{gap:var(--sp-3)}
+.rgroup .rsec h3::after{content:'';flex:1;height:1px;background:var(--hairline);order:0}
+.rgroup .rsec h3 .h3r{order:1;margin-left:0}
+
+/* ── 账户页是一块仪表盘：四个异质模块并排，而不是五段单列长条。
+   模块级容器回来了（非卡片布局的适用边界写着：异质挂件的仪表盘首页该用卡片），
+   但只有一层——内容本身已经是对象的模块（授权卡）保持平铺，不做卡中卡。
+   圆角分级：模块 16、里面的对象 10 */
+#v-rules .vbody{container-type:inline-size}
+.pgrid{display:grid;gap:var(--sp-4);grid-template-columns:minmax(0,1fr);margin-bottom:var(--sp-4)}
+@container (min-width:700px){
+  .pgrid.pg-a{grid-template-columns:minmax(0,1.12fr) minmax(0,1fr)}
+  .pgrid.pg-b{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  /* 授权卡走同一条两列轴：三列会剩一个孤儿，而且和上下模块的边对不齐 */
+  #rulesbody .cards{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+}
+.pmod{display:flex;flex-direction:column;gap:var(--sp-4);min-width:0;
+  padding:var(--sp-5);background:var(--paper);border-radius:var(--r-panel);box-shadow:var(--ring)}
+.pmh{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-3)}
+.pmh h4{font-size:12.5px;font-weight:600;letter-spacing:.01em;color:var(--mute)}
+.pmod .rnote{margin-top:0}
+.pmod .arow2:first-child{border-top:0}
+.pmod .rcard.flat .rrow:first-child{border-top:0}
+/* 模块里的资产行：右栏那套行式布局，加一条占比条 */
+.alist2{display:flex;flex-direction:column}
+.arow3{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) 0;
+  border-top:1px solid var(--hairline)}
+.arow3:first-child{border-top:0}
+.arow3 .aright{margin-left:auto;text-align:right;min-width:0}
+.arow3 .aright b{display:block;font-size:13px;font-weight:600;color:var(--ink)}
+.arow3 .aright em{font-style:normal;font-size:11px;color:var(--faint)}
+.arow3 .ashare{width:56px;margin-top:5px}
+
+/* ── 身份头部：这页先回答「这是谁的账户」，再回答「里面有什么」。
+   注意 .pav 已被收款人面板占用，这里用 .pfav（同名类会被后声明的那条盖掉） ── */
+.pid{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;
+  padding-bottom:var(--sp-5);border-bottom:1px solid var(--hairline)}
+.pfav{position:relative;width:56px;height:56px;flex:none;border-radius:999px;border:0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  font-size:20px;font-weight:600;color:var(--on-inverse);background:hsl(var(--pc,221) 55% 48%);
+  background-size:cover;background-position:center}
+.pfav::after{content:'';position:absolute;inset:0;background:#000;opacity:0;
+  transition:opacity var(--dur-fast) var(--ease)}
+.pfav:hover::after{opacity:.28}
+.pfav .pcam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  opacity:0;z-index:1;transition:opacity var(--dur-fast) var(--ease)}
+.pfav:hover .pcam{opacity:1}
+.pidmain{min-width:0;flex:1}
+.pnrow{display:flex;align-items:center;gap:var(--sp-2)}
+.pname{font-family:var(--serif);font-size:24px;font-weight:500;letter-spacing:-.01em;color:var(--ink);line-height:1.15}
+.pname input{font:inherit;color:var(--ink);background:var(--canvas);border:1px solid var(--blue);
+  border-radius:var(--r-chip);padding:0 6px;width:11ch;outline:none}
+.pedit,.pcopy{border:0;background:none;cursor:pointer;color:var(--faint-2);padding:4px;
+  border-radius:var(--r-chip);display:inline-flex;transition:color var(--dur-fast) var(--ease)}
+.pedit:hover,.pcopy:hover{color:var(--ink);background:var(--canvas)}
+.pmeta{display:flex;align-items:center;gap:6px;margin-top:2px;font-size:12.5px;color:var(--faint)}
+.pmeta .pidno{letter-spacing:.04em}
+.pstat{display:flex;flex-direction:column;gap:3px;text-align:right;font-size:12px;color:var(--faint)}
+.pstat b{font-size:12px;font-weight:600;color:var(--mute)}
+.pok{display:inline-flex;align-items:center;gap:5px;color:var(--green)}
+/* 头像编辑：6 个色相 + 本地选图（只在浏览器内读，不上传） */
+.pavpop{position:absolute;z-index:80;display:flex;flex-direction:column;gap:var(--sp-2);
+  padding:10px;background:var(--paper);border-radius:var(--r-card);box-shadow:var(--sh-overlay)}
+.pavrow{display:flex;gap:6px}
+.pavsw{width:24px;height:24px;border-radius:999px;border:0;cursor:pointer}
+.pavsw.on{box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--accent)}
+.pavup{font-size:12px;color:var(--accent);cursor:pointer;text-align:center;padding:4px}
+.pavup input{display:none}
+
+/* 余额落回页面基底：它是这页的开场陈述，不是一个挂件。
+   一个盒子换成一条收口线——盒子越少，主次才越清楚（Surface Inflation）。
+   数字用衬线，全页只此一处：唯一的焦点靠字面而不是靠容器 */
+.acct{padding-bottom:var(--sp-5);border-bottom:1px solid var(--hairline)}
+.acct .al,.pmod .al{display:block;font-size:11.5px;font-weight:500;letter-spacing:.01em;color:var(--faint);margin-bottom:var(--sp-1)}
+.ahead{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap}
+.atot .av{font-family:var(--serif);font-size:46px;font-weight:500;letter-spacing:-.02em;
+  color:var(--ink);line-height:1}
+/* 配比条：Available 与 In escrow 是一个整体的两段，先看关系再看数字 */
+.aalloc{display:flex;gap:2px;height:5px;margin-top:var(--sp-5);
+  background:var(--cream);border-radius:999px;overflow:hidden}
+.aalloc i{display:block;height:100%}
+.aalloc .aa-av{background:var(--blue)}
+.aalloc .aa-es{background:var(--warn)}
+.asplit .al{display:inline-flex;align-items:center;gap:6px}
+.asplit .al::before{content:'';width:6px;height:6px;border-radius:999px;background:var(--blue)}
+.asplit>div:last-child .al::before{background:var(--warn)}
+.atot .ad{font-size:13px;color:var(--mute);margin-left:var(--sp-2)}
+/* 明细是 Total 的下一级，靠留白归组，不再加第二条线 */
+/* min() 兜底：容器比下限还窄时，minmax 会把列撑出容器造成裁切 */
+.asplit{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:var(--sp-4) var(--sp-5);padding-top:var(--sp-4)}
+.asplit b{font-size:17px;font-weight:600;color:var(--ink)}
+.asplit .ad{display:block;font-size:12px;color:var(--faint);margin-top:var(--sp-1);line-height:1.45}
+.aacts{display:flex;gap:var(--sp-2);flex-wrap:wrap}
+.aacts .rbtn{padding:var(--sp-2) var(--sp-4);border:1px solid var(--hairline);border-radius:999px;background:var(--canvas)}
 .aacts .rbtn:hover{border-color:var(--accent);background:var(--blue-wash)}
 
-/* 授权卡：一张卡一个对象，不做拟物银行卡 */
-.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.card{background:var(--paper);border-radius:var(--r-card);box-shadow:var(--ring);padding:20px 20px 16px;display:flex;flex-direction:column;gap:8px}
-.card.off{background:var(--canvas);box-shadow:none;border:1px dashed var(--hairline)}
+/* 断点由内容决定：卡片挤到 260 以下就换单列，不写死两列 */
+/* 卡片模块：顶部一张立体卡面（条件写在卡上），下面一排缩略卡切换。
+   .card 是容器，事件绑定仍靠它定位 */
+.card{--ch:221;display:flex;flex-direction:column;gap:var(--sp-4)}
+.card.kagent{--ch:190}
+.cdeck{perspective:1000px;display:flex;justify-content:center;padding:var(--sp-2) 0 var(--sp-1)}
+/* 会转的卡，两层各管一件事：
+   外层 .ccsway 自己缓慢摆动（悬停时冻结在当前角度，方便看清），
+   内层 .ccard 只负责翻面。两层都 preserve-3d，角度自然叠加 */
+.ccsway{transform-style:preserve-3d;
+  animation:ccsway 11s ease-in-out infinite alternate}
+.cdeck:hover .ccsway{animation-play-state:paused}
+@keyframes ccsway{
+  from{transform:rotateY(-17deg) rotateX(6deg)}
+  to  {transform:rotateY(11deg)  rotateX(-3deg)}
+}
+.ccard{--flip:0deg;
+  position:relative;width:290px;height:198px;flex:none;
+  transform-style:preserve-3d;transform:rotateY(var(--flip));
+  transition:transform 620ms cubic-bezier(.22,1,.28,1)}
+.ccard.flip{--flip:180deg}
+@media (prefers-reduced-motion:reduce){
+  .ccsway{animation:none;transform:rotateY(-13deg) rotateX(5deg)}
+}
+/* 两个面：背面预旋 180°，各自隐藏自己的背侧 */
+.ccface{position:absolute;inset:0;border-radius:14px;
+  display:flex;flex-direction:column;padding:18px 20px;color:#fff;
+  background:hsl(var(--ch) 44% 26%);
+  -webkit-backface-visibility:hidden;backface-visibility:hidden;
+  box-shadow:-10px 14px 28px #00000038, 0 0 0 1px #ffffff14 inset}
+.ccface.back{transform:rotateY(180deg);background:hsl(var(--ch) 40% 21%)}
+.card.off .ccface{background:var(--card);color:var(--mute)}
+/* 背面：条件列表 */
+.ccb{display:flex;flex-direction:column;gap:9px;font-size:11.5px;line-height:1.5;color:#ffffffc4}
+.ccb .ccbrow{display:flex;gap:8px}
+.ccb .ccbk{flex:none;width:74px;color:#ffffff8a}
+.ccb b{font-weight:600;color:#fff}
+@media (prefers-reduced-motion:reduce){
+  .ccard{transition:none}
+}
+/* 缩略卡：一排小卡面，点一下换到上面 */
+.cthumbs{display:flex;justify-content:center;gap:var(--sp-2);flex-wrap:wrap}
+.cthumb{--ch:221;position:relative;width:66px;height:42px;border-radius:7px;border:0;cursor:pointer;padding:0;
+  display:flex;align-items:flex-end;justify-content:flex-start;
+  background:hsl(var(--ch) 40% 24%);opacity:.62;
+  transition:opacity var(--dur-fast) var(--ease),transform var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+.cthumb:hover{opacity:.9;transform:translateY(-2px)}
+.cthumb.on{opacity:1;box-shadow:0 0 0 2px var(--paper),0 0 0 4px hsl(var(--ch) 45% 52%)}
+.cthumb.off{background:var(--card)}
+.cthumb i{position:absolute;left:7px;top:6px;width:13px;height:9px;border-radius:2px;background:#ffffff5c}
+.cthumb span{font-size:9.5px;font-weight:600;color:#fff;padding:0 6px 5px;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cthumb.off span,.cthumb.off i{color:var(--faint);background:none}
+.cthumb.off i{background:var(--faint-2)}
+/* 账户页的分栏：资产 / 自动扣款 / 交易动态 */
+.atabs{display:flex;gap:0;border-bottom:1px solid var(--hairline);margin-bottom:var(--sp-4)}
+.atab{padding:9px 2px;margin:0 20px -1px 0;border:0;background:none;cursor:pointer;
+  font-size:13px;color:var(--faint);border-bottom:2px solid transparent;white-space:nowrap;
+  transition:color var(--dur-fast) var(--ease)}
+.atab:hover{color:var(--mute)}
+.atab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+.cctop{display:flex;align-items:center;gap:8px}
+.cchip2{opacity:.85}
+.cchip2 svg{width:28px;height:20px}
+.cctag{margin-left:auto;font-size:10.5px;font-weight:600;letter-spacing:.1em;color:#fff;opacity:.7}
+.ccnum{margin-top:14px;display:flex;align-items:baseline;gap:7px}
+.ccnum .cq{font-size:26px;font-weight:600;letter-spacing:-.02em;color:#fff}
+.ccnum .cq input{font:inherit;font-size:20px;color:#fff;background:#0003;border:1px solid #fff6;
+  border-radius:var(--r-chip);padding:1px 6px;width:7ch;outline:none}
+.ccnum .cqt{font-size:12px;color:#fff;opacity:.7}
+/* flex:none 是必须的：卡面内容顶满时，3px 的条会是唯一可压缩项，被压成 0 */
+.ccbar{flex:none;height:3px;margin-top:9px;background:#ffffff2e;border-radius:999px;overflow:hidden}
+.ccbar i{display:block;height:100%;background:#fff;opacity:.85;border-radius:999px}
+/* 条件写在卡面上：三行短句，行距略松才不像密密麻麻的条款 */
+.cccond{margin-top:11px;display:flex;flex-direction:column;gap:2px;font-size:11px;line-height:1.5;
+  color:#ffffffad}
+.cccond b{font-weight:600;color:#fff}
+.cccond b.dim{color:#ffffff8a}
+.ccfoot{display:flex;align-items:baseline;gap:8px;margin-top:auto;padding-top:10px;font-size:12px;
+  border-top:1px solid #ffffff1f}
+.ccfoot .ccn{font-weight:600;color:#fff}
+.ccfoot .ccy{margin-left:auto;color:#fff;opacity:.7;font-size:11px;
+  max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cinfo{display:flex;flex-direction:column;gap:var(--sp-2)}
+.cfoot{display:flex;justify-content:flex-end}
+.card.off .cinfo{opacity:.7}
+.cchip{flex:none}
+/* 三行 dl 压成一行摘要：行式布局里标签列会把行撑得比内容还高 */
+.cmeta2{font-size:11.5px;line-height:1.55;color:var(--faint);margin-top:2px}
+.cmeta2 b{font-weight:500;color:var(--mute)}
+.cmeta2 b.dim{color:var(--faint-2)}
+/* 额度仪表：条 + 数字，一眼知道烧了多少 */
+.cmeter{display:flex;align-items:center;gap:10px}
+.cmeter .cbar{flex:1}
+.cpct{font-size:11px;font-weight:500;color:var(--faint);min-width:4ch;text-align:right}
+.cacts .btn{display:inline-flex;align-items:center;gap:6px}
+.cacts .btn svg{opacity:.75}
+/* 列表落回基底：盒子 + 五个大写胶囊是纯粹的容器通胀，行间一条淡线就够 */
+.rcard.flat{background:none;box-shadow:none;border-radius:0}
+.rcard.flat .rrow{padding-inline:0}
+.stag{font-size:12px;color:var(--faint)}
+/* 交易动态：状态点 + 摘要 + 金额，整行可点，落到 History */
+.arow2{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--sp-3);
+  width:100%;padding:var(--sp-3) 0;text-align:left;border:0;background:none;cursor:pointer;
+  border-top:1px solid var(--hairline);transition:background var(--dur-fast) var(--ease)}
+.arow2:first-child{border-top:0}
+.arow2:hover{background:var(--canvas)}
+.adot{width:6px;height:6px;border-radius:999px;background:var(--green)}
+.adot.ref{background:var(--warn)}
+.adot.dis{background:var(--neg)}
+.atx{min-width:0}
+.atx b{display:block;font-size:13px;font-weight:500;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.atx em{font-style:normal;font-size:11.5px;color:var(--faint)}
+.aamt{text-align:right}
+.aamt b{display:block;font-size:13px;font-weight:600;color:var(--ink)}
+.aamt em{font-style:normal;font-size:11px;color:var(--faint)}
+.h3go{display:inline-flex;align-items:center;gap:5px;border:0;background:none;cursor:pointer;
+  font-size:12px;font-weight:500;color:var(--accent);padding:0}
+.h3go:hover{text-decoration:underline}
+.rrow .btn{display:inline-flex;align-items:center;gap:6px}
+.rrow .btn svg{opacity:.7}
 .card.off .cq,.card.off .cn{color:var(--faint)}
 .chead{display:flex;align-items:center;gap:8px}
 .chead .cn{font-size:14px;font-weight:600;color:var(--ink)}
-.ctag{font-size:11px;font-weight:700;letter-spacing:.1em;padding:4px 8px;border-radius:999px}
-.ctag.person{background:var(--blue-wash);color:var(--accent)}
-.ctag.agent{background:var(--card);color:var(--mute)}
+/* 身份标签一律素字：四张卡上四个实底胶囊，静息态就没有余量给交互态了 */
+.ctag{font-size:11px;font-weight:600;letter-spacing:.1em;padding:0;color:var(--faint);background:none}
 .cifr{margin-left:auto;font-size:11px;color:var(--faint)}
 .cquota{display:flex;align-items:baseline;gap:8px}
 .cq{font-size:20px;font-weight:600;letter-spacing:-.02em;color:var(--ink)}
 .cq input{font:inherit;font-size:16px;font-weight:600;color:var(--ink);background:var(--canvas);border:1px solid var(--blue);border-radius:var(--r-chip);padding:2px 8px;width:7ch;outline:none}
 .cqt{font-size:12px;color:var(--faint)}
-.cbar{height:4px;background:var(--cream);border-radius:999px;overflow:hidden}
-.cbar i{display:block;height:100%;background:var(--blue);border-radius:999px}
+.cbar{height:3px;background:var(--cream);border-radius:999px;overflow:hidden}
+/* 仪表取卡片自己的色相：全页的色彩只剩这一处和顶边那条线（10% 用色） */
+.cbar i{display:block;height:100%;background:hsl(var(--ch,221) 45% 50%);border-radius:999px}
 .card.off .cbar i{background:var(--faint-2)}
 .cmeta{display:grid;grid-template-columns:74px 1fr;gap:4px 12px;font-size:12px}
 .cmeta dt{color:var(--faint)}
 .cmeta dd{color:var(--ink)}
 .cmeta dd.dim{color:var(--faint)}
 .cmeta dd input{font:inherit;font-size:12px;color:var(--ink);background:var(--canvas);border:1px solid var(--blue);border-radius:var(--r-chip);padding:2px 4px;width:8ch;outline:none}
-.cfoot{display:flex;align-items:flex-end;gap:12px;margin-top:auto;padding-top:10px;border-top:1px solid var(--hairline)}
-.cnote{font-size:11px;line-height:1.45;color:var(--faint)}
-.cacts{margin-left:auto;display:flex;gap:12px;flex:none}
-.cacts{margin-left:auto;display:flex;gap:2px;flex:none}
+.cnote{font-size:11.5px;line-height:1.5;color:var(--faint);margin-top:3px}
+.cnote:empty{display:none}
+.cacts{display:flex;gap:2px}
 .cp{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:44px;padding:8px 16px;text-align:left;border-left:2px solid transparent;color:var(--ink)}
 .cp:hover{background:var(--canvas)}
 .cp.on{background:var(--card);border-left-color:var(--accent)}
@@ -554,11 +767,14 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 /* ── chip 句子条 ────────────────────────────────────────
    点了动作，句子直接长在输入框里，而不是把一串示例文本塞进 textarea
    再让人回车等解析——那样用户要先读懂自己没写过的句子。 */
-#abar{position:relative;display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+#abar{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:9px;
   width:100%;padding:2px 0 12px;margin-bottom:10px;
   border-bottom:1px solid var(--hairline)}
 #abar[hidden]{display:none}
 .averb{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+.aline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-right:34px}
+.alead{min-width:46px}
+#abar .ax{position:absolute;top:-2px;right:0;margin-left:0}
 .aword{font-size:13px;color:var(--faint)}
 .achip{display:inline-flex;align-items:center;gap:6px;
   padding:6px 11px;border-radius:999px;border:1px solid var(--line-strong);
@@ -584,6 +800,21 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 .asopt em{font-style:normal;font-size:11px;color:var(--faint);max-width:230px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .asopt:disabled{opacity:.55;cursor:default}
+/* 左下角账户菜单：头部（头像/昵称/邮箱）+ 图标菜单项，对照 Claude 的账户弹层 */
+.umenu{min-width:232px;padding:6px}
+.umhead{display:flex;align-items:center;gap:10px;padding:8px 10px 11px;
+  border-bottom:1px solid var(--hairline);margin-bottom:5px}
+.umav{width:32px;height:32px;border-radius:50%;flex:none;display:flex;align-items:center;
+  justify-content:center;background:var(--accent);color:var(--paper);font-size:13px;font-weight:600}
+.umhead b{display:block;font-size:13px;font-weight:600;color:var(--ink);line-height:1.3}
+.umhead em{display:block;font-style:normal;font-size:11.5px;color:var(--faint)}
+.umitem{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;text-align:left;
+  border:0;border-radius:var(--r-control);background:transparent;cursor:pointer;
+  font-size:12.5px;font-weight:500;color:var(--ink);
+  transition:background var(--dur-fast) var(--ease)}
+.umitem:hover{background:var(--canvas)}
+.umitem svg{color:var(--faint);flex:none}
+.umsep{height:1px;background:var(--hairline);margin:5px 4px}
 #revcard{display:flex;flex-direction:column;gap:12px;width:100%;
   margin-bottom:10px;padding:16px 18px 14px;
   background:var(--paper);border-radius:var(--r-card);box-shadow:var(--ring),var(--lift-lo)}
@@ -645,8 +876,9 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 .bmr b{color:var(--ink);font-weight:600}
 .bmi{font-style:normal;width:22px;height:22px;border-radius:999px;background:var(--card);
   display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:var(--accent)}
-.rttl{flex:none;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:500;
-  letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:16px 24px 8px}
+/* 标题一律句首大写：全大写在小字号上读得慢，而且一屏出现七八处就成了噪音 */
+.rttl{flex:none;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;
+  letter-spacing:.01em;color:var(--mute);padding:16px 24px 8px}
 #alist{flex:none;display:flex;flex-direction:column;gap:2px;padding:0 16px}
 .arow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:var(--r-control)}
 .arow:hover{background:var(--canvas)}
@@ -691,6 +923,19 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 .msg.sys{align-self:center;align-items:center;max-width:100%}
 .msg.sys .bub{background:transparent;padding:4px 12px;font-size:12px;color:var(--faint);text-align:center}
 .msg.typing .bub{color:var(--faint);font-style:italic}
+/* 消息里的提交记录：默认收起，点开核对 */
+.rcpt{margin-top:8px;min-width:min(300px,70vw)}
+.rcpt summary{cursor:pointer;font-size:12px;font-weight:500;opacity:.85;list-style:none}
+.rcpt summary::before{content:'▸ '}
+.rcpt[open] summary::before{content:'▾ '}
+.rcpt .sfsum{margin-top:6px}
+.rcpt .rgrp{margin-top:10px}
+.rcpt .rgrp>em{display:block;font-style:normal;font-size:11px;font-weight:600;
+  letter-spacing:.02em;color:var(--faint);margin-bottom:2px}
+.msg.me .rcpt .sfsum div{border-color:#ffffff2e}
+.msg.me .rcpt .sfsum dt{color:#ffffffb0}
+.msg.me .rcpt .sfsum dd{color:#fff}
+.msg .rgo{display:block;margin-top:10px}
 /* 托管卡 v2：状态行 + 执行轨道 + 撤销脚注 */
 .esc2{flex-direction:column;align-items:stretch;gap:10px}
 .erow{display:flex;align-items:center;gap:10px}
@@ -704,6 +949,8 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 .es.now i{background:var(--blue);box-shadow:0 0 0 3px var(--blue-wash);animation:px 1.25s var(--ease) infinite}
 .efoot{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--faint)}
 .ecancel{margin-left:auto;color:var(--warn)}
+.efoot .ebtn{margin-left:auto;padding:6px 14px;font-size:12.5px}
+.efoot .ebtn~.ecancel{margin-left:0}
 
 /* 任务播报流：与聊天分离的窗口，只有系统事件 */
 .tfeed{display:flex;flex-direction:column;gap:6px;width:100%}
@@ -966,8 +1213,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .qcard.mine:hover{border-color:var(--accent)}
 
 .qtop{display:flex;align-items:center;gap:8px}
-.qtag{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;
-  letter-spacing:.09em;text-transform:uppercase;color:var(--mute)}
+.qtag{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;
+  letter-spacing:.01em;color:var(--mute)}
 .qtag svg{width:12px;height:12px;flex:none}
 .qcard.mine .qtag{color:var(--accent)}
 .qwhen{margin-left:auto;flex:none;font-size:11px;color:var(--faint)}
@@ -1141,6 +1388,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .atsearch input::placeholder{color:var(--faint)}
 
 /* ══ 成为卖家 · 对话流活卡里的字段样式 ══ */
+.sfrailg{margin-top:8px}
+.sfrailg>em{display:block;font-style:normal;font-size:11px;color:var(--faint);margin-bottom:5px}
 
 
 .sellm-lead{font-size:12px;color:var(--faint);line-height:1.6;margin-bottom:14px}
@@ -1236,11 +1485,28 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .fsum b{font-size:20px;font-weight:600;letter-spacing:-.02em;color:var(--ink)}
 .fsum>div:first-child b{font-size:24px}
 
-.ftab{width:100%;border-collapse:collapse;background:var(--paper);
-  border-radius:var(--r-card);box-shadow:var(--ring);overflow:hidden}
+/* 资产表是参照数据，不是可操作对象——抬起来的卡片留给余额卡和授权卡，
+   这里落回底色只留行线，页面才分得出「看的」和「点的」 */
+.ftab{width:100%;border-collapse:collapse}
 .ftab th{font-size:11px;font-weight:500;color:var(--faint);text-align:left;
-  padding:10px 16px;border-bottom:1px solid var(--hairline)}
-.ftab td{font-size:13px;color:var(--ink);padding:11px 16px;border-bottom:1px solid var(--hairline)}
+  padding:0 var(--sp-3) var(--sp-2);border-bottom:1px solid var(--hairline)}
+.ftab td{font-size:13px;color:var(--ink);padding:var(--sp-3);border-bottom:1px solid var(--hairline)}
+/* 落地成平表之后，首末列要与小标题同一条左右边——卡片的内缩不适用了 */
+.ftab th:first-child,.ftab td:first-child{padding-left:0}
+.ftab th:last-child,.ftab td:last-child{padding-right:0}
+/* 窄中栏里放不下就在自己的容器里横滚，正文不跟着滚 */
+.ftabwrap{overflow-x:auto}
+.ftabwrap .ftab{min-width:400px}
+/* 资产身份：徽标沿用右栏那一套（同一个 COIN_HUE），不另发明一套记号 */
+.acell{display:flex;align-items:center;gap:10px}
+.acell .acoin{width:30px;height:30px;font-size:11px}
+.acell .anm b{font-size:13.5px}
+/* 占比条：让「这四样各占多少」看得见，表格才成为一个组合视图 */
+.ashare{display:block;width:76px;height:3px;margin:6px 0 0 auto;
+  background:var(--cream);border-radius:999px;overflow:hidden}
+.ashare i{display:block;height:100%;border-radius:999px}
+.ausd{font-size:13px;font-weight:600;color:var(--ink)}
+.ftab td{vertical-align:middle}
 .ftab tr:last-child td{border-bottom:0}
 .ftab .r{text-align:right}
 .ftab .dim{color:var(--faint)}
@@ -1365,7 +1631,7 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
       </div>
     </div>
     <div class="luserrow">
-      <button class="luser nav" data-v="rules">
+      <button class="luser" id="luserbtn" aria-haspopup="menu" aria-expanded="false">
         <span class="lav">D</span>
         <span class="lutxt">
           <em class="lun">demo@atara.example</em>
@@ -1422,7 +1688,6 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
       <div id="actions" role="group" aria-label="Actions">
         <button class="act" data-act="buy"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v8M4.5 7.5 8 11l3.5-3.5"/><path d="M3 13.5h10"/></svg></span>Buy</button>
         <button class="act" data-act="sell"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V5M4.5 8.5 8 5l3.5 3.5"/><path d="M3 2.5h10"/></svg></span>Sell</button>
-        <button class="act" data-act="xfer"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 5.5h9M9 3l2.5 2.5L9 8"/><path d="M13.5 10.5h-9M7 8 4.5 10.5 7 13"/></svg></span>Transfer</button>
         <button class="act" data-act="cond"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 1.5 3 9h4l-.5 5.5L13 7H9l-.5-5.5Z"/></svg></span>Conditional order</button>
       </div>
       <div class="sayrow">
@@ -1457,10 +1722,6 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
    </div>
 
    <div class="view" id="v-rules">
-     <div class="vhead">
-       <h2>Account</h2>
-       <p>The account holds digital assets only. Fiat never enters it.</p>
-     </div>
      <div class="vbody" id="rulesbody"></div>
    </div>
 
@@ -1538,11 +1799,14 @@ let ITEMS=[
  {g:'sched',who:'Kenji M.',   what:'Subscription · 20th monthly', desc:'Monthly retainer, reversible in window', amt:4000, when:'in 1mo', cp:'kj'},
 ];
 /* 条件模板（§4.6，克制在十个以内）与证明方子槽 */
-const CONDS=['Immediately','On delivery','On my approval','Recurring','At price','Atomic swap','7-day auto-release'];
-const PROOFS={'Immediately':'None','On delivery':'Logistics API','On my approval':'Your approval','Recurring':'Calendar',
-              'At price':'Price feed','Atomic swap':'Atomic swap','7-day auto-release':'Timeout'};
+/* 条件库只放 V1 真能裁决的三种依据：你的确认（L0 双方确认）、
+   对方证据 + 不异议窗口、时钟。物流 API / 价格源是二期的 L1 数据源，
+   接上之前不许出现在条件里——条件必须可判定，不是愿望清单。 */
+const CONDS=['Immediately','When I confirm','Proof + window','On a date'];
+const PROOFS={'Immediately':'None','When I confirm':'Your confirmation in-app',
+              'Proof + window':'Their upload + your silence window','On a date':'Clock'};
 
-let S={cond:'On delivery', cp:CPS[0], amt:3000, why:'Q1 component balance', guessed:{cp:false,amt:false,why:false}};
+let S={cond:'When I confirm', cp:CPS[0], amt:3000, why:'Q1 component balance', guessed:{cp:false,amt:false,why:false}};
 let used=8400, budget=25000, selected=null, escrow=null;
 
 /* 授权规则：右栏下半区。规则不是展示，它直接决定三档授权（§7） */
@@ -1562,6 +1826,10 @@ let ASSETS=[
  {coin:'BTC',  net:'BTC',     avail:0.42,   escrow:0,    fx:93600},
  {coin:'ETH',  net:'ETH',     avail:3.6,    escrow:0,    fx:3130},
 ];
+/* 转账金额是币的数量；账面与分档阈值一律 USD——非稳定币按 fx 折算 */
+const fxOf=c=>ASSETS.find(x=>x.coin===c)?.fx||1;
+const usdOf=(n,c)=>Math.round(n*fxOf(c||'USDT'));
+const escAmtTxt=(n,c)=>(!c||fxOf(c)===1)?'$'+n.toLocaleString():n.toLocaleString()+' '+c;
 const NETS_OF={USDT:['TRON','ETH'],USDC:['POLYGON','ETH'],BTC:['BTC'],ETH:['ETH']};
 /* 法币目录:按走廊分组。OTC 的法币腿点对点走银行,能接哪种币取决于对手方的银行账户 */
 const FIATS=[
@@ -1727,7 +1995,7 @@ function renderLeft(){
     const sess=SESSIONS.find(x=>x.id===c.id);
     const un=sess?.unread||0;
     return `<button class="cp ${selected===c.id?'on':''}" data-id="${c.id}" aria-selected="${selected===c.id}">
-      <span class="n"><em>${c.name}</em>${c.type==='agent'?'<span class="tag">AGENT</span>':''}</span>
+      <span class="n"><em>${c.name}</em>${c.type==='agent'?'<span class="tag">Agent</span>':''}</span>
       ${un?`<span class="v dot unread num">${un}</span>`:''}
     </button>`}).join('');
   el.querySelectorAll('#cplist .cp').forEach(b=>b.onclick=()=>{
@@ -1749,10 +2017,53 @@ function renderStrip(){
 function switchView(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
   document.querySelectorAll('.nav[data-v]').forEach(x=>x.classList.toggle('on',x.dataset.v===v));
+  document.querySelector('.luser')?.classList.toggle('on',v==='rules');
+  window.railForView?.(v);
   if(v==='rules')renderRules();
   if(v==='recs')renderRecs();
 }
 document.querySelectorAll('.nav[data-v]').forEach(b=>b.onclick=()=>switchView(b.dataset.v));
+
+/* ── 左下角账户入口：二级菜单，Profile（资金）/ Settings（安全） ── */
+let ACCT_MODE='profile';
+const ACCT_HEAD={
+  profile:['Profile','The account holds digital assets only. Fiat never enters it.'],
+  settings:['Settings','Security and verification for every payment on this account.']};
+function openAcct(m){ACCT_MODE=m;switchView('rules')}
+(()=>{
+  const lu=document.getElementById('luserbtn'), row=document.querySelector('.luserrow');
+  lu.onclick=()=>{
+    const ex=document.getElementById('umenu');
+    if(ex){ex.remove();lu.setAttribute('aria-expanded','false');return}
+    const m=document.createElement('div'); m.id='umenu'; m.className='ddmenu umenu'; m.setAttribute('role','menu');
+    m.style.left='8px'; m.style.bottom='calc(100% - 6px)';
+    const ico={
+      user:'<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="5" r="2.6"/><path d="M2.8 13.5a5.2 5.2 0 0 1 10.4 0"/></svg>',
+      /* 齿轮要有齿廓——纯射线画出来是太阳，和顶部主题切换撞脸 */
+      gear:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
+      out:'<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.5H4.5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1H10"/><path d="M7 8h7M11.5 5.5 14 8l-2.5 2.5"/></svg>'};
+    const ini=(PROFILE.name.trim()[0]||'D').toUpperCase();
+    const avst=PROFILE.img?`style="background-image:url(${PROFILE.img});background-size:cover;background-position:center"`:'';
+    m.innerHTML=
+      `<div class="umhead"><span class="umav" ${avst}>${PROFILE.img?'':ini}</span>`
+     +`<span><b>${PROFILE.name}</b><em>${PROFILE.email}</em></span></div>`
+     +`<button class="umitem" role="menuitem" data-m="profile">${ico.user}Profile</button>`
+     +`<button class="umitem" role="menuitem" data-m="settings">${ico.gear}Settings</button>`
+     +`<div class="umsep"></div>`
+     +`<button class="umitem" role="menuitem" data-m="logout">${ico.out}Log out</button>`;
+    row.appendChild(m); lu.setAttribute('aria-expanded','true');
+    m.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{
+      m.remove();lu.setAttribute('aria-expanded','false');
+      if(b.dataset.m==='logout'){   /* 退出 = 交还邀请门票，回落地页 */
+        try{sessionStorage.removeItem('atara-gate')}catch(_){}
+        location.href='index.html'; return;
+      }
+      openAcct(b.dataset.m)});
+    const away=ev=>{if(!m.contains(ev.target)&&!lu.contains(ev.target)){
+      m.remove();lu.setAttribute('aria-expanded','false');removeEventListener('mousedown',away)}};
+    setTimeout(()=>addEventListener('mousedown',away),0);
+  };
+})();
 /* ───── 主题切换：跟随系统，选择后记住 ───── */
 const SUN='<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3.2"/><path d="M8 1.5v1.6M8 12.9v1.6M14.5 8h-1.6M3.1 8H1.5M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1M12.6 12.6l-1.1-1.1M4.5 4.5 3.4 3.4"/></svg>';
 const MOON='<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 9.6A5.9 5.9 0 0 1 6.4 2.5a5.9 5.9 0 1 0 7.1 7.1Z"/></svg>';
@@ -1869,9 +2180,12 @@ const DISCOVER=[
 let dk='otc';
 function renderTypes(){
   document.getElementById('dtypes').innerHTML=DISCOVER.map(t=>
-    `<button class="dt ${dk===t.k?'on':''} ${t.on?'':'soon'}" data-k="${t.k}" aria-selected="${dk===t.k}">${t.n}</button>`).join('')+`<button class="dt-cta" id="bemaker">Become a seller →</button>`;
+    `<button class="dt ${dk===t.k?'on':''} ${t.on?'':'soon'}" data-k="${t.k}" aria-selected="${dk===t.k}">${t.n}</button>`).join('')+`<button class="dt-cta" id="bemaker">${
+    SELLER.approved?'Post an offer →':
+    (SELLER.kycDone&&!SELLER.kycOk)||(SELLER.done&&!SELLER.approved)?'Under review…':
+    SELLER.kycOk?'Set up listing →':'Become a seller →'}</button>`;
   document.querySelectorAll('.dt').forEach(b=>b.onclick=()=>{dk=b.dataset.k;renderTypes();paintDiscover()});
-  document.getElementById('bemaker').onclick=openSeller;   /* tab 行重绘会换元素,绑定必须跟着重挂 */
+  document.getElementById('bemaker').onclick=openSeller;   /* openSeller 内部按状态分流;tab 行重绘会换元素,绑定必须跟着重挂 */
   paintDiscover();
 }
 function paintDiscover(){
@@ -1895,13 +2209,13 @@ function renderPool(){
   const list=POOL.filter(o=>o.side===want)
     .filter(o=>mkFilter==='All'||o.coin===mkFilter)
     .filter(o=>!mkFiat||o.fiat===mkFiat)
-    .sort((a,b)=>b.sc-a.sc);   /* AI 分从高到低——分数既然是主排序轴,排序要与视觉重心一致 */
+    .sort((a,b)=>(b.mine?1:0)-(a.mine?1:0)||b.sc-a.sc);   /* 自己的单置顶(挂完得马上看见),其余按 AI 分从高到低 */
   document.getElementById('pool').innerHTML=list.map(o=>{
     const fiat=Math.round(o.qty*o.px);
     const sym=FIAT_SYM(o.fiat);
-    return `<button class="od" data-o="${o.id}">
+    return `<button class="od${o.mine?' odmine':''}" data-o="${o.id}">
       <div class="od-h">
-        <span class="od-peer">${o.name}<i class="od-id num">${o.peer}</i>${o.known?'<i class="od-known">Traded before</i>':''}</span>
+        <span class="od-peer">${o.name}<i class="od-id num">${o.peer}</i>${o.mine?'<i class="od-known">Your offer</i>':o.known?'<i class="od-known">Traded before</i>':''}</span>
         <span class="od-ai ${o.sc>=85?'hi':o.sc<70?'lo':''}" style="--p:${o.sc}" title="AI risk score — priced from settlement history, fund provenance and dispute record">
           <span class="od-ring">
             <svg viewBox="0 0 44 44" aria-hidden="true">
@@ -1913,10 +2227,11 @@ function renderPool(){
           <em>AI score</em>
         </span>
       </div>
-      <div class="od-trust">
-        <span><b class="num">${o.deals}</b>  trades</span>
+      <div class="od-trust">${o.mine
+        ? `<span>New merchant — history builds as trades settle</span>`
+        : `<span><b class="num">${o.deals}</b>  trades</span>
         <em>·</em><span><b class="num">${o.rate}%</b>  completion</span>
-        <em>·</em><span>Avg release <b class="num">${relText(o.rel)}</b></span>
+        <em>·</em><span>Avg release <b class="num">${relText(o.rel)}</b></span>`}
       </div>
       <div class="od-px"><b class="num">${sym}${o.px.toLocaleString()}</b><span>per ${o.coin} · settles in ${flag(o.fiat)} ${o.fiat}</span></div>
       <dl class="od-kv">
@@ -1936,14 +2251,16 @@ function renderPool(){
       </dl>
       <div class="od-f">
         ${o.disp?`<span class="od-disp">${o.disp} disputes</span>`:'<span class="od-disp ok">No disputes</span>'}
-        <span class="od-cta">${mkSide==='buy'?'Buy':'Sell'}</span>
+        <span class="od-cta">${o.mine?'Unlist':mkSide==='buy'?'Buy':'Sell'}</span>
       </div>
     </button>`}).join('');
   if(!list.length) document.getElementById('pool').innerHTML=
     `<div class="mkempty">No offers match</div>`;
   document.querySelectorAll('.od').forEach(b=>b.onclick=()=>{
+    const o=POOL.find(x=>x.id===b.dataset.o);
+    if(o.mine){unlistOffer(o.id);return}   /* 自己的单不进购买流程，点了就是下架 */
     switchView('chat');
-    showOrder(POOL.find(o=>o.id===b.dataset.o));
+    showOrder(o);
   });
 }
 function renderFilter(){
@@ -1968,6 +2285,39 @@ function renderFilter(){
 }
 
 /* ───── 账户页：总账户 · 授权卡 · 定时付款 ───── */
+/* 芯片纹样：让「卡」这个说法在视觉上落地。操作按钮配图标——
+   一排纯文字 ghost 按钮谁也不会去点 */
+const CHIP='<svg class="cchip" width="21" height="15" viewBox="0 0 22 16" fill="none" stroke="currentColor" stroke-width="1.1" aria-hidden="true">'
+ +'<rect x=".6" y=".6" width="20.8" height="14.8" rx="2.8"/>'
+ +'<path d="M7 .8v2.6a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V.8M7 15.2v-2.6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2.6M.8 8h6.2M15 8h6.2"/></svg>';
+const I_PEN='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.2 2.3a1.4 1.4 0 0 1 2 2L5.6 11.9l-2.9.7.7-2.9 7.8-7.4Z"/></svg>';
+const I_CLK='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></svg>';
+const I_PWR='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4.6"/><path d="M4.6 4.5a5 5 0 1 0 6.8 0"/></svg>';
+const I_FLIP='<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 6.5A5 5 0 0 0 3.4 5.2"/><path d="M3 3v2.4h2.4"/><path d="M3 9.5a5 5 0 0 0 9.6 1.3"/><path d="M13 13v-2.4h-2.4"/></svg>';
+const I_PAUSE='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 3.5v9M10 3.5v9"/></svg>';
+const I_COPY='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.2A1.7 1.7 0 0 0 8.8 2.5H4.2a1.7 1.7 0 0 0-1.7 1.7v4.6c0 .7.4 1.3 1 1.6"/></svg>';
+const I_CAM='<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 6.8h2.4l1.1-1.7h6.6l1.1 1.7h2.4a1 1 0 0 1 1 1v7.4a1 1 0 0 1-1 1H2.8a1 1 0 0 1-1-1V7.8a1 1 0 0 1 1-1Z"/><circle cx="10" cy="11.4" r="2.7"/></svg>';
+const I_GO='<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5"/></svg>';
+const I_CHECK='<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5 6.2 11.7 13 4.9"/></svg>';
+/* 卡组当前摊开的是哪一张 · 账户页当前在哪个分栏 */
+let CARD_ACTIVE=null, ACCT_TAB='assets', CARD_FLIP=false;
+/* 身份：昵称与头像可改，ID 只读（它是对手方与单据里引用的那个号） */
+let PROFILE={name:'Demo', id:'ATR-8F42C1', email:'demo@atara.example', hue:221, img:null};
+const PAV_HUES=[221,190,266,152,36,320];
+function avatarStyle(){return PROFILE.img
+  ? `background-image:url(${PROFILE.img})`
+  : `--pc:${PROFILE.hue}`}
+/* 左下角入口与账户菜单跟着一起变——同一个人不该在两处叫不同名字 */
+function paintIdentity(){
+  const ini=(PROFILE.name.trim()[0]||'D').toUpperCase();
+  const lav=document.querySelector('.luser .lav');
+  if(lav){lav.textContent=PROFILE.img?'':ini;
+    lav.style.cssText=PROFILE.img?`background-image:url(${PROFILE.img});background-size:cover;background-position:center`:'';}
+  const um=document.querySelector('#umenu .umav');
+  if(um){um.textContent=PROFILE.img?'':ini;
+    um.style.cssText=PROFILE.img?`background-image:url(${PROFILE.img});background-size:cover;background-position:center`:'';}
+  const ub=document.querySelector('#umenu .umhead b'); if(ub)ub.textContent=PROFILE.name;
+}
 function cardHTML(c){
   const q  = c.me ? budget : c.quota;
   const u  = c.me ? used   : c.used;
@@ -1976,44 +2326,67 @@ function cardHTML(c){
   const suf= c.me ? '' : ' '+FUNDS.coin;
   const pct= Math.min(100, q? u/q*100 : 0);
   const win= c.me ? `${RULES.workdayOnly?'Weekdays':'daily'} ${RULES.winFrom}:00–${RULES.winTo}:00` : null;
-  return `<div class="card ${c.on?'':'off'}" data-c="${c.id}">
-    <div class="chead">
-      <span class="cn">${c.name}</span>
-      <span class="ctag ${c.kind}">${c.kind==='person'?'Me':'AGENT'}</span>
-      ${c.ifr!=null?`<span class="cifr num" title="Share of commitments fulfilled as declared">Fulfilment ${c.ifr}</span>`:''}
-      ${c.on?'':'<span class="cifr">Off</span>'}
+  /* 条件写在卡面上——这张卡能付给谁、按什么条件付，本来就是它的「面额」 */
+  return `<div class="card ${c.on?'':'off'} ${c.kind==='agent'?'kagent':''}" data-c="${c.id}">
+    <div class="cdeck">
+      <div class="ccsway"><div class="ccard ${CARD_FLIP?'flip':''}">
+        <div class="ccface front">
+          <div class="cctop"><span class="cchip2">${CHIP}</span>
+            ${c.kind==='person'?'':'<span class="cctag">Agent</span>'}
+            ${c.on?'':'<span class="cctag">Off</span>'}</div>
+          <div class="ccnum"><b class="cq num">${cur}${u.toLocaleString()}</b>
+            <span class="cqt num">/ ${cur}${q.toLocaleString()}${suf} · ${c.cycle}</span></div>
+          <div class="ccbar"><i style="width:${pct}%"></i></div>
+          <div class="cccond">
+            <span>Up to <b class="num cper">${per?cur+per.toLocaleString()+suf:'any amount'}</b> per payment</span>
+            <span>To <b>${c.wl}</b></span>
+          </div>
+          <div class="ccfoot"><span class="ccn">${c.name}</span>
+            ${c.ifr!=null?`<span class="ccy num" title="Share of commitments fulfilled as declared">Fulfilment ${c.ifr}</span>`:`<span class="ccy num">${Math.round(pct)}% used</span>`}</div>
+        </div>
+        <div class="ccface back">
+          <div class="cctop"><span class="cctag" style="margin-left:0">Conditions</span></div>
+          <div class="ccb">
+            <div class="ccbrow"><span class="ccbk">Release</span><b>${c.tpl}</b></div>
+            <div class="ccbrow"><span class="ccbk">Recipients</span><b>${c.wl}</b></div>
+            ${win?`<div class="ccbrow"><span class="ccbk">Window</span><b class="${inWindow()?'':'dim'}">${win}</b></div>`:''}
+            <div class="ccbrow"><span class="ccbk">Per payment</span><b class="num">${per?cur+per.toLocaleString()+suf:'Any amount'}</b></div>
+          </div>
+          <div class="ccfoot"><span class="ccn">${c.name}</span>
+            <span class="ccy">${c.note}</span></div>
+        </div>
+      </div></div>
     </div>
-    <div class="cquota">
-      <span class="cq num">${cur}${u.toLocaleString()}</span>
-      <span class="cqt num">/ ${cur}${q.toLocaleString()}${suf} · ${c.cycle}</span>
+    <div class="cthumbs">
+      ${CARDS.map(r=>`<button class="cthumb ${r===c?'on':''} ${r.on?'':'off'}"
+        style="--ch:${r.kind==='agent'?190:221}" data-p="pick:${r.id}"
+        title="${r.name}" aria-label="Show ${r.name}" aria-pressed="${r===c}">
+        <i></i><span>${r.name}</span></button>`).join('')}
     </div>
-    <div class="cbar"><i style="width:${pct}%"></i></div>
-    <dl class="cmeta">
-      <dt>Per payment</dt><dd class="num">${per?cur+per.toLocaleString()+suf:'Any'}</dd>
-      <dt>Can pay</dt><dd>${c.wl}</dd>
-      <dt>Conditions</dt><dd>${c.tpl}</dd>
-      ${win?`<dt>Window</dt><dd class="${inWindow()?'':'dim'}">${win}</dd>`:''}
-    </dl>
-    <div class="cfoot">
-      <span class="cnote">${c.note}</span>
-      <span class="cacts">${c.me
-        ? '<button class="btn btn-ghost btn-sm" data-p="per">Edit limit</button><button class="btn btn-ghost btn-sm" data-p="win">Edit window</button>'
-        : `<button class="btn btn-ghost btn-sm" data-p="cq:${c.id}">Edit limit</button><button class="btn btn-${c.on?'danger':'ghost'} btn-sm" data-p="tg:${c.id}">${c.on?'Disable':'Enable'}</button>`}</span>
+    <div class="cinfo">
+      <div class="cnote">${c.note}</div>
+      <div class="cfoot">
+        <span class="cacts"><button class="btn btn-ghost btn-sm" data-p="flip">${I_FLIP}<span class="fliplbl">${CARD_FLIP?'Front':'Conditions'}</span></button>${c.me
+          ? `<button class="btn btn-ghost btn-sm" data-p="per">${I_PEN}Edit limit</button><button class="btn btn-ghost btn-sm" data-p="win">${I_CLK}Edit window</button>`
+          : `<button class="btn btn-ghost btn-sm" data-p="cq:${c.id}">${I_PEN}Edit limit</button><button class="btn btn-${c.on?'danger':'ghost'} btn-sm" data-p="tg:${c.id}">${I_PWR}${c.on?'Disable':'Enable'}</button>`}</span>
+      </div>
     </div>
   </div>`;
 }
 function assetsHtml(){
-  return `<div class="rsec"><h3>Assets</h3>
-    <table class="ftab"><thead><tr>
-      <th>Asset</th><th>Network</th><th class="r">Available</th><th class="r">In escrow</th><th class="r">In CNY</th>
-    </tr></thead><tbody>
-    ${ASSETS.map(a=>`<tr>
-      <td><b>${a.coin}</b></td><td class="dim">${a.net}</td>
-      <td class="r num">${fmtAmt(a.avail)}</td>
-      <td class="r num ${a.escrow?'':'dim'}">${a.escrow?fmtAmt(a.escrow):'—'}</td>
-      <td class="r num">$${Math.round((a.avail+a.escrow)*a.fx).toLocaleString()}</td>
-    </tr>`).join('')}
-    </tbody></table></div>`;
+  /* 五列宽表换成行式：模块只有一半页宽，行里放得下身份 + 金额 + 占比，表放不下 */
+  const tot=ASSETS.reduce((s,x)=>s+(x.avail+x.escrow)*x.fx,0)||1;
+  return `<div class="alist2">
+    ${ASSETS.map(a=>{
+      const usd=(a.avail+a.escrow)*a.fx, pct=usd/tot*100, hue=COIN_HUE[a.coin]??200;
+      return `<div class="arow3">
+        <span class="acoin" style="background:hsl(${hue} 45% 40%)">${a.coin.slice(0,1)}</span>
+        <span class="anm"><b>${a.coin}</b><em>${a.net}${a.escrow?` · ${fmtAmt(a.escrow)} locked`:''}</em></span>
+        <span class="aright"><b class="num">$${Math.round(usd).toLocaleString()}</b>
+          <em class="num">${fmtAmt(a.avail)} available</em>
+          <span class="ashare" title="${pct<1?'<1':Math.round(pct)}% of the account"><i style="width:${Math.max(2,pct).toFixed(1)}%;background:hsl(${hue} 50% 48%)"></i></span></span>
+      </div>`}).join('')}
+  </div>`;
 }
 function renderRules(){
   document.getElementById('rulesbody').innerHTML=
@@ -2393,26 +2766,52 @@ function renderRulesPage(){
   const cnyAvail=ASSETS.reduce((a,x)=>a+x.avail*x.fx,0);
   const cnyEsc=ASSETS.reduce((a,x)=>a+x.escrow*x.fx,0);
   const escN=ASSETS.filter(x=>x.escrow>0).length;
-  return `
-    <div class="rsec"><h3>Account</h3>
-      <div class="acct">
-        <div class="atot">
-          <span class="al">Total</span>
-          <b class="av num">$${Math.round(cnyAvail+cnyEsc).toLocaleString()}</b>
-          <span class="ad num">${ASSETS.length}  assets · in CNY</span>
+  /* Profile = 资金全貌（余额/资产/卡/定期）；Settings = 安全与验证。
+     同一个视图两种模式，入口在左下角的二级菜单里 */
+  const ini=(PROFILE.name.trim()[0]||'D').toUpperCase();
+  const secIdentity=`
+    <div class="rsec">
+      <div class="pid">
+        <button class="pfav" data-p="avatar" style="${avatarStyle()}" title="Change avatar"
+          aria-label="Change avatar">${PROFILE.img?'':ini}<span class="pcam">${I_CAM}</span></button>
+        <div class="pidmain">
+          <div class="pnrow"><span class="pname">${PROFILE.name}</span>
+            <button class="pedit" data-p="rename" title="Rename" aria-label="Edit nickname">${I_PEN}</button></div>
+          <div class="pmeta"><span>${PROFILE.email}</span>·<span class="pidno num">${PROFILE.id}</span>
+            <button class="pcopy" data-p="copyid" title="Copy ID" aria-label="Copy account ID">${I_COPY}</button></div>
+        </div>
+        <div class="pstat">
+          <b>Personal account</b>
+          <span class="pok">${I_CHECK} Individual KYC verified</span>
+        </div>
+      </div>
+    </div>`;
+  /* 主模块（余额）配伴随模块（资产构成）——参考里那三张仪表盘都是这个配对 */
+  const secProfile=`
+    <div class="pgrid pg-a">
+      <section class="pmod">
+        <div class="pmh"><h4>Balance</h4>
+          <span class="ad num">${ASSETS.length} assets · in USD</span></div>
+        <div class="atot"><b class="av num">$${Math.round(cnyAvail+cnyEsc).toLocaleString()}</b></div>
+        <div class="aalloc" title="Available vs in escrow">
+          <i class="aa-av" style="width:${(cnyAvail/(cnyAvail+cnyEsc||1)*100).toFixed(1)}%"></i>
+          <i class="aa-es" style="width:${(cnyEsc/(cnyAvail+cnyEsc||1)*100).toFixed(1)}%"></i>
         </div>
         <div class="asplit">
           <div><span class="al">Available</span><b class="num">$${Math.round(cnyAvail).toLocaleString()}</b>
-            <span class="ad">Spendable now，${live}  cards share it</span></div>
+            <span class="ad">${live} cards share it</span></div>
           <div><span class="al">In escrow</span><b class="num">$${Math.round(cnyEsc).toLocaleString()}</b>
-            <span class="ad">${FUNDS.escrowN}  trades locked until conditions clear · <a href="#" class="lnk" data-p="goto-recs">View ›</a></span></div>
+            <span class="ad">${FUNDS.escrowN} trades locked · <a href="#" class="lnk" data-p="goto-recs">View ›</a></span></div>
         </div>
         <div class="aacts"><button class="btn btn-secondary" data-p="godep">Deposit</button><button class="btn btn-secondary" data-p="gowd">Withdraw</button><button class="btn btn-secondary" data-p="gopay">Recipients</button></div>
-      </div>
-      <p class="rnote">Digital assets only — <b>fiat never enters the account</b>.<i class="info" tabindex="0" data-tip="The fiat leg of an OTC trade settles bank-to-bank between the two parties. We verify the receipt but never hold the funds. Every card below spends this same balance — there is no second wallet.">i</i></p>
-    </div>
-    <!--ASSETS-->
-
+      </section>
+      <section class="pmod">
+        <div class="pmh"><h4>Cards · ${CARDS.length}</h4>
+          <button class="btn btn-ghost btn-sm" data-p="newcard">+ New card</button></div>
+        ${cardHTML(CARDS.find(c=>c.id===CARD_ACTIVE)||CARDS[0])}
+      </section>
+    </div>`;
+  const secSettings=`
     <div class="rsec"><h3>Security</h3>
       <div class="seclist">
         <div class="secrow">
@@ -2436,20 +2835,80 @@ function renderRulesPage(){
           <span class="secfix">48 h</span>
         </div>
       </div>
-    </div>
-
-    <div class="rsec">
-      <h3>Cards · ${CARDS.length}<span class="h3r"><button class="btn btn-ghost btn-sm" data-p="newcard">+ New card</button></span></h3>
-      <div class="cards">${CARDS.map(cardHTML).join('')}</div>
-      <p class="rnote">A limit is a ceiling, not a reservation.<i class="info" tabindex="0" data-tip="Funds are not locked — you can still spend them, but an agent payment fails and returns to you if the balance runs short. Cards also restrict which conditions may be used (allow “on delivery”, block “immediate”), which is the part an ordinary card has no equivalent for. Limits are denominated in AIUSD (1 AIUSD ≈ 1 USD).">i</i></p>
-    </div>
-
-    <div class="rsec"><h3>Scheduled</h3>
-      <div class="rcard">${sched.map(i=>
-        `<div class="rrow"><span class="rk">${i.who}</span>
-          <span class="rd">${i.what}</span><button class="btn btn-ghost btn-sm">Pause</button></div>`).join('')}</div>
-      <p class="rnote">Runs on schedule, reversible during the escrow window.</p>
     </div>`;
+  /* 资产 / 自动扣款 / 交易动态改成三个分栏：三段内容各自都不多，
+     并排会把页面拉长，叠着又都长一个样——分栏是这里唯一说得通的收纳 */
+  const dotOf=s=>s==='Released'?'':s==='Refunded'?' ref':' dis';
+  const TABS=[['assets','Assets'],['auto',`Auto payment · ${sched.length}`],['act','Activity']];
+  const tab=TABS.some(t=>t[0]===ACCT_TAB)?ACCT_TAB:'assets';
+  const paneAssets=`
+    <div class="pmh"><h4>Assets · ${ASSETS.length}</h4>
+      <button class="h3go" data-p="goto-recs">Statement ${I_GO}</button></div>
+    <!--ASSETS-->
+    <p class="rnote">Digital assets only — <b>fiat never enters the account</b>.<i class="info" tabindex="0" data-tip="The fiat leg of an OTC trade settles bank-to-bank between the two parties. We verify the receipt but never hold the funds. Every card spends this same balance — there is no second wallet.">i</i></p>`;
+  const paneAuto=`
+    <div class="rcard flat">${sched.map(i=>
+      `<div class="rrow"><span class="rk">${i.who}</span>
+        <span class="rd"><span class="stag">${i.what}</span></span>
+        <button class="btn btn-ghost btn-sm">${I_PAUSE}Pause</button></div>`).join('')}</div>
+    <p class="rnote">Runs on schedule, reversible during the escrow window.</p>`;
+  const paneAct=`
+    <div class="pmh"><h4>Recent</h4>
+      <button class="h3go" data-p="goto-recs">View all ${I_GO}</button></div>
+    <div>${RECS.slice(0,6).map(r=>
+      `<button class="arow2" data-p="goto-recs">
+        <span class="adot${dotOf(r.s)}"></span>
+        <span class="atx"><b>${r.t}</b><em>${r.w} · ${r.s}</em></span>
+        <span class="aamt"><b class="num">${r.a}</b><em class="num">${r.d}</em></span>
+      </button>`).join('')}</div>`;
+  const secTabs=`
+    <div class="rsec">
+      <div class="atabs" role="tablist">${TABS.map(([k,n])=>
+        `<button class="atab ${k===tab?'on':''}" role="tab" aria-selected="${k===tab}"
+          data-p="tab:${k}">${n}</button>`).join('')}</div>
+      <section class="pmod">${tab==='assets'?paneAssets:tab==='auto'?paneAuto:paneAct}</section>
+    </div>`;
+  return ACCT_MODE==='settings'
+    ? `<div class="rgroup">${secSettings}</div>`
+    : secIdentity+secProfile+secTabs;
+}
+
+/* ── 身份编辑：昵称就地改，头像换色相或选本地图片 ── */
+function renameProfile(){
+  const host=document.querySelector('.pname'); if(!host)return;
+  host.innerHTML=`<input value="${PROFILE.name.replace(/"/g,'&quot;')}" maxlength="24" aria-label="Nickname">`;
+  const inp=host.querySelector('input'); inp.focus(); inp.select();
+  let done=false;
+  const commit=()=>{if(done)return; done=true;
+    const v=inp.value.trim().replace(/[<>]/g,'');
+    if(v)PROFILE.name=v;
+    renderRules(); paintIdentity(); toast('Nickname updated');};
+  inp.onblur=commit;
+  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit()}
+                    if(e.key==='Escape'){done=true;renderRules()}};
+}
+function openAvatar(btn){
+  document.getElementById('pavpop')?.remove();
+  const pop=document.createElement('div'); pop.id='pavpop'; pop.className='pavpop';
+  pop.innerHTML=`<div class="pavrow">${PAV_HUES.map(h=>
+      `<button class="pavsw${!PROFILE.img&&h===PROFILE.hue?' on':''}" data-h="${h}"
+        style="background:hsl(${h} 55% 48%)" aria-label="Colour ${h}"></button>`).join('')}</div>
+    <label class="pavup">Choose an image…<input type="file" accept="image/*"></label>`;
+  const pid=btn.closest('.pid'); pid.style.position='relative'; pid.appendChild(pop);
+  pop.style.left=btn.offsetLeft+'px';
+  pop.style.top=(btn.offsetTop+btn.offsetHeight+8)+'px';
+  pop.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{
+    PROFILE.hue=+b.dataset.h; PROFILE.img=null; pop.remove(); renderRules(); paintIdentity()});
+  /* 只在浏览器里读成 data URL，不上传任何地方 */
+  pop.querySelector('input').onchange=ev=>{
+    const f=ev.target.files&&ev.target.files[0]; if(!f)return;
+    if(f.size>2_000_000){toast('Image must be under 2 MB');return}
+    const fr=new FileReader();
+    fr.onload=()=>{PROFILE.img=fr.result; pop.remove(); renderRules(); paintIdentity(); toast('Avatar updated')};
+    fr.readAsDataURL(f);
+  };
+  const away=ev=>{if(!pop.contains(ev.target)&&ev.target!==btn){pop.remove();removeEventListener('mousedown',away)}};
+  setTimeout(()=>addEventListener('mousedown',away),0);
 }
 
 /* 概览的事件绑定单独一份——渲染函数现在只负责产出 HTML */
@@ -2490,6 +2949,22 @@ function bindRulesPage(){
     ev.preventDefault();
     const p=b.dataset.p;
     if(p==='goto-recs'){switchView('recs');return}
+    if(p.startsWith('pick:')){CARD_ACTIVE=p.slice(5);renderRules();return}
+    if(p.startsWith('tab:')){ACCT_TAB=p.slice(4);renderRules();return}
+    if(p==='flip'){
+      CARD_FLIP=!CARD_FLIP;
+      document.querySelector('.ccard')?.classList.toggle('flip',CARD_FLIP);
+      const l=b.querySelector('.fliplbl'); if(l)l.textContent=CARD_FLIP?'Front':'Conditions';
+      return;
+    }
+    if(p==='rename'){renameProfile();return}
+    if(p==='avatar'){openAvatar(b);return}
+    if(p==='copyid'){
+      const ok=()=>toast('Account ID copied');
+      try{navigator.clipboard?.writeText(PROFILE.id).then(ok,()=>toast(PROFILE.id))}
+      catch(_){toast(PROFILE.id)}
+      return;
+    }
     if(p==='godep'){openDeposit();return}
     if(p==='gowd'){openWithdraw();return}
     if(p==='gopay'){openPayees();return}
@@ -2519,9 +2994,11 @@ function bindRulesPage(){
       const i=WINS.findIndex(w=>w.winFrom===RULES.winFrom&&w.winTo===RULES.winTo&&w.workdayOnly===RULES.workdayOnly);
       Object.assign(RULES,WINS[(i+1)%WINS.length]);renderRules();renderBalance();renderTier();return;
     }
-    /* 本人卡：改单笔上限（第一个 dd）或周额度 */
+    /* 本人卡：改单笔上限（第一个 dd）或周额度。
+       兜底分支只对卡片内的按钮成立——安全设置里的 chip 有自己的处理器，别栽进来 */
     const card=b.closest('.card');
-    const host=p==='per' ? card.querySelector('.cmeta dd') : card.querySelector('.cq');
+    if(!card)return;
+    const host=p==='per' ? card.querySelector('.cper') : card.querySelector('.cq');
     const cur=p==='per'?RULES.perDeal:budget;
     host.innerHTML=`<input value="${cur}">`;
     const inp=host.querySelector('input');inp.focus();inp.select();
@@ -2602,6 +3079,16 @@ function renderRight(){
   paint(init);
   on.onclick=()=>paint(!M.classList.contains('rout'));
   off.onclick=()=>paint(true);
+  /* 账户页自己就是一块仪表盘，右栏在那儿说的是同一件事（总额/资产/定期）。
+     进这一页临时收起右栏，把宽度让给模块网格；离开时还原用户自己的偏好。
+     临时收起不写 localStorage——它不是用户的选择 */
+  window.railForView=v=>{
+    const acct=v==='rules';
+    if(acct){M.classList.add('rout');on.classList.add('off');on.setAttribute('aria-expanded','false')}
+    else{let pref=false;try{pref=localStorage.getItem(KEY)==='1'}catch(e){}
+      M.classList.toggle('rout',pref);on.classList.toggle('off',pref);
+      on.setAttribute('aria-expanded',String(!pref))}
+  };
 })();
 
 /* 余额卡 3D 倾斜 + 光泽（转译自 21st.dev be-ui-tilt-card，去掉 React/motion 依赖）。
@@ -2647,7 +3134,7 @@ function slotHTML(k,val,guess){return `<span class="slot ${guess?'guess':''} ${k
 function renderSentence(){
   const g=S.guessed;
   document.getElementById('sent').innerHTML=
-    `${slotHTML('cond',S.cond)}, pay ${slotHTML('cp',S.cp.name,g.cp)} ${slotHTML('amt','$'+S.amt.toLocaleString(),g.amt)} for ${slotHTML('why',S.why,g.why)}.`;
+    `${slotHTML('cond',S.cond)}, transfer ${slotHTML('amt',escAmtTxt(S.amt,S.coin),g.amt)} to ${slotHTML('cp',S.cp.name,g.cp)} for ${slotHTML('why',S.why,g.why)}.`;
   document.getElementById('proof').textContent=PROOFS[S.cond];
   bindSlots();renderTier();
 }
@@ -2698,13 +3185,13 @@ const WINS=[{workdayOnly:true,winFrom:9,winTo:21},{workdayOnly:true,winFrom:9,wi
 const ifrWiden=r => r==null ? 1 : r>=95 ? 2 : r>=90 ? 1.5 : r>=80 ? 1 : .5;
 function tier(){
   const lim=Math.round(RULES.perDeal*ifrWiden(S.cp.ifr));
-  const newish=S.cp.deals<8, big=S.amt>lim, vague=S.guessed.cp||S.guessed.why;
+  const newish=S.cp.deals<8, big=usdOf(S.amt,S.coin)>lim, vague=S.guessed.cp||S.guessed.why;
   if(vague)  return {level:'strong',why:'Ambiguous reference — part of this was inferred, please check'};
   if(newish) return {level:'strong',why:'New counterparty — little history, verify identity first'};
   if(big)    return {level:'strong',why:`Above the limit for this counterparty ($${lim.toLocaleString()}${
     lim!==RULES.perDeal?` — ${lim>RULES.perDeal?'widened':'tightened'} by their ${S.cp.ifr}% fulfilment`:''})`};
   if(!inWindow()) return {level:'summary',why:'Outside your window'};
-  if(S.amt>2000||S.cond!=='Immediately') return {level:'summary',why:'One click to confirm'};
+  if(usdOf(S.amt,S.coin)>2000||S.cond!=='Immediately') return {level:'summary',why:'One click to confirm'};
   return {level:'auto',why:'Within your rules'};
 }
 function renderTier(){
@@ -2729,15 +3216,16 @@ document.getElementById('free').addEventListener('keydown',e=>{
   if(tryOTC(q)){e.target.value='';autogrow();return}
   const m=q.match(/(\d[\d,]*(?:\.\d+)?)\s*(万|k|K|m|M)?/);
   if(m){let v=parseFloat(m[1].replace(/,/g,''));const u2=(m[2]||'').toLowerCase();if(m[2]==='万')v*=10000;if(u2==='k')v*=1000;if(u2==='m')v*=1000000;S.amt=Math.round(v);S.guessed.amt=false;}
+  S.coin=null;   /* 这条老路径按 USD 记，防止上一笔的币种残留 */
   const ql=q.toLowerCase();
   const cp=CPS.find(c=>ql.includes(c.name.toLowerCase())||q.includes(c.name)||(c.id==='hc'&&q.includes('Huachuang'))||(c.id==='kj'&&ql.includes('kenji'))||(c.id==='ar'&&ql.includes('aria'))||(c.id==='pa'&&q.includes('Procurement')));
   if(cp){S.cp=cp;S.guessed.cp=false}else S.guessed.cp=true;
   const f=q.match(/用于(.+?)(?:。|$)/)||q.match(/\bfor\s+(.+?)\s*$/i);
   if(f){S.why=f[1].trim();S.guessed.why=false}
   else{const t=q.match(/[，,]\s*(.+?)(?:。|$)/);if(t&&t[1].length<16){S.why=t[1].trim();S.guessed.why=false}else S.guessed.why=true}
-  S.cond = /发货|收货|on\s+deliver|delivered|shipp?/i.test(q)?'On delivery' : /验收|approv|accept/i.test(q)?'On my approval'
-        : /每月|照旧|monthly|recurring|every month/i.test(q)?'Recurring' : /价格|跌到|涨到|at price|price hits/i.test(q)?'At price'
-        : /互换|对方也|atomic|swap/i.test(q)?'Atomic swap' : /无异议|no dispute|auto-?release/i.test(q)?'7-day auto-release' : 'Immediately';
+  S.cond = /发货|收货|on\s+deliver|delivered|shipp?|凭证|proof/i.test(q)?'Proof + window'
+        : /验收|approv|accept|确认/i.test(q)?'When I confirm'
+        : /每月|monthly|recurring|日放/i.test(q)?'On a date' : 'Immediately';
   e.target.value='';syncSend();autogrow();
   /* 解析：推理轨迹逐条点亮 → 成句弹卡（生命周期阶段 1 → 2） */
   thinking(
@@ -2757,7 +3245,7 @@ document.getElementById('go').onclick=()=>{
   const t=tier();
   if(t.level==='strong'){
     requireVerify(t.why,
-      `<b>${S.cond}</b>, pay <b>${S.cp.name}</b> <b class="num">$${S.amt.toLocaleString()}</b> for <b>${S.why}</b>. Evidence: ${PROOFS[S.cond]}.`,
+      `<b>${S.cond}</b>, transfer <b class="num">${escAmtTxt(S.amt,S.coin)}</b> to <b>${S.cp.name}</b> for <b>${S.why}</b>. Evidence: ${PROOFS[S.cond]}.`,
       startEscrow);
     return;
   }
@@ -2799,9 +3287,11 @@ function startEscrow(){
   newSession();
   document.getElementById('empty')?.remove();
   const condText=S.condText||(CTPL[S.cond]?CTPL[S.cond].text(CTPL[S.cond].defs):S.cond);
-  const snap={cp:S.cp,amt:S.amt,why:S.why,cond:S.cond,condText,secs:30,phase:'undo'};
+  const snap={cp:S.cp,amt:S.amt,coin:S.coin,why:S.why,cond:S.cond,condText,secs:30,phase:'undo',
+              p:S.cpar||(CTPL[S.cond]?{...CTPL[S.cond].defs}:{}), t:0};
+  S.cpar=null;
   escrow=snap;
-  used=Math.min(budget,used+snap.amt);renderBalance();
+  used=Math.min(budget,used+usdOf(snap.amt,snap.coin));renderBalance();
 
   /* 执行轨道：黑箱问题的答案——钱在哪一站、下一站什么时候，写在卡上 */
   const card=document.createElement('div');
@@ -2809,7 +3299,7 @@ function startEscrow(){
   card.innerHTML=`
     <div class="erow"><span class="st">Escrowed</span>
       <span class="etxt">${snap.condText} · <span class="who">${snap.cp.name}</span> · ${snap.why}</span>
-      <b class="amt num">$${snap.amt.toLocaleString()}</b></div>
+      <b class="amt num">${escAmtTxt(snap.amt,snap.coin)}</b></div>
     <div class="erail">
       <span class="es done"><i></i>Verified</span>
       <span class="es done"><i></i>Funds reserved</span>
@@ -2818,11 +3308,15 @@ function startEscrow(){
     </div>
     <div class="efoot">
       <span class="ecd num" data-ecd>Reversible for 30 s — no reason needed</span>
+      <button class="btn btn-primary ebtn" data-eok hidden>Confirm &amp; release</button>
+      <a href="#" class="lnk ecancel" data-edispute hidden>Dispute</a>
       <a href="#" class="lnk ecancel" data-ecancel>Cancel order</a>
     </div>`;
   document.getElementById('log').prepend(card);
   snap.card=card;
   card.querySelector('[data-ecancel]').onclick=ev=>{ev.preventDefault();cancelEscrow()};
+  card.querySelector('[data-eok]').onclick=ev=>{ev.preventDefault();releaseEscrow()};
+  card.querySelector('[data-edispute]').onclick=ev=>{ev.preventDefault();disputeEscrow()};
 
   /* 注册成工单：会话 + 左栏 Tasks 行 + 播报流，与交易任务同构 */
   ESCN++; const sid='esc-'+ESCN, cp=S.cp;
@@ -2832,15 +3326,15 @@ function startEscrow(){
     mk:{peer:cp.name, name:cp.name, side:'pay', u:snap.amt, coin:'USD', fiat:'USD', ccy:'USD',
         sc:cp.ifr, deals:cp.deals, rate:cp.ifr},
     headHTML:`${avSpan(cp.name,'thav')}
-      <span class="thwho"><b>Pay ${cp.name} · $${snap.amt.toLocaleString()}</b><span>Task · ${condText}</span></span>
+      <span class="thwho"><b>Transfer ${escAmtTxt(snap.amt,snap.coin)} to ${cp.name}</b><span>Task · ${condText}</span></span>
       <button class="thgo" data-chatfor="${cp.id}">${avSpan(cp.name)}Message ${cp.name} ›</button>`};
   SESSIONS.push(sess); ACTIVE=sess; THREAD=null; setHead(sess);
   snap.sess=sid; snap.tk=sess;
-  taskUpsert(sid,{title:`Pay ${cp.name} · $${snap.amt.toLocaleString()}`, st:'run', sess:sid});
+  taskUpsert(sid,{title:`Transfer ${escAmtTxt(snap.amt,snap.coin)} to ${cp.name}`, st:'run', sess:sid});
   renderLeft(); setLTab('ai'); setPlaceholder();
   tpost(sess,`Order created · ${condText} · reversible for 30 s`);
 
-  document.getElementById('uamt').textContent='$'+snap.amt.toLocaleString();
+  document.getElementById('uamt').textContent=escAmtTxt(snap.amt,snap.coin);
   document.getElementById('uwho').textContent=snap.cp.name;
   document.getElementById('ucd').textContent='30s';
   document.getElementById('undobar').classList.add('show');
@@ -2855,14 +3349,37 @@ function startEscrow(){
         document.getElementById('undobar').classList.remove('show');
         card.querySelector('.st').textContent='Waiting';
         card.querySelector('[data-es="wait"]').classList.add('now');
+        const ecd=card.querySelector('[data-ecd]');
         if(snap.cond==='Immediately'){releaseEscrow();return}
-        snap.wsecs=20;   /* demo 压缩；真实节奏见 CETA */
-        card.querySelector('[data-ecd]').textContent=
-          `Waiting on the condition · ${CETA[snap.cond]} (demo 20 s) — cancellable until release`;
+        if(snap.cond==='On a date'){snap.wsecs=12;
+          ecd.textContent=`Releases on ${snap.p.date||'the 1st'} · clock-verified (demo 12 s)`;}
+        else if(snap.cond==='When I confirm')
+          ecd.textContent='Waiting on their delivery — nothing releases without you';
+        else ecd.textContent=`Waiting on their ${String(snap.p.proof||'proof').toLowerCase()} — your ${snap.p.win||'3 days'} window starts when it lands`;
       }
     }else if(snap.phase==='wait'){
-      snap.wsecs--;
-      if(snap.wsecs<=0)releaseEscrow();
+      snap.t++;
+      const ecd=card.querySelector('[data-ecd]');
+      if(snap.cond==='On a date'){
+        if(--snap.wsecs<=0)releaseEscrow();
+      }else if(snap.cond==='When I confirm'){
+        /* 流程：对方交付并附证据 → 你确认放款；一直不动，到期升级审查 */
+        if(snap.t===5){
+          tpost(snap.tk,`${snap.cp.name} marked it delivered · evidence attached to the record`);
+          ecd.textContent=`Their delivery is in — confirm to release · silent past ${snap.p.within||'14 days'} goes to review`;
+          card.querySelector('[data-eok]').hidden=false;
+        }
+      }else{ /* Proof + window */
+        if(snap.t===4){
+          tpost(snap.tk,`${snap.cp.name} uploaded the ${String(snap.p.proof||'proof').toLowerCase()} · your window is open`);
+          snap.wsecs=15;
+          card.querySelector('[data-edispute]').hidden=false;
+        }
+        if(snap.wsecs!=null){
+          ecd.textContent=`Releases in ${snap.wsecs}s unless you dispute (demo — real window ${snap.p.win||'3 days'})`;
+          if(--snap.wsecs<0)releaseEscrow();
+        }
+      }
     }
   },1000);
 }
@@ -2876,9 +3393,22 @@ function cancelEscrow(){
   c.querySelector('.st').className='st done'; c.querySelector('.st').textContent='Refunded';
   c.querySelector('.efoot').innerHTML='<span class="ecd">Cancelled — funds returned to your balance</span>';
   c.querySelector('[data-es="wait"]')?.classList.remove('now');
-  used=Math.max(0,used-escrow.amt);renderBalance();
+  used=Math.max(0,used-usdOf(escrow.amt,escrow.coin));renderBalance();
   if(escrow.sess){taskUpsert(escrow.sess,{st:'done'});
     tpost(escrow.tk,'Cancelled — funds returned to your balance. No default recorded.')}
+  escrow=null;
+}
+/* 异议：窗口内提出 → 升级审查（L2），资金保持锁定。不是撤销也不是违约 */
+function disputeEscrow(){
+  if(!escrow)return;
+  clearInterval(escrow.iv);
+  document.getElementById('undobar').classList.remove('show');
+  const c=escrow.card;
+  c.querySelector('.st').className='st'; c.querySelector('.st').textContent='Disputed';
+  c.querySelector('[data-es="wait"]')?.classList.remove('now');
+  c.querySelector('.efoot').innerHTML='<span class="ecd">Escalated to review — funds stay locked until it resolves</span>';
+  tpost(escrow.tk,'You disputed within the window — escalated to review. Funds stay locked; the uploaded evidence and this record go with it.');
+  if(escrow.sess)taskUpsert(escrow.sess,{st:'you'});
   escrow=null;
 }
 function releaseEscrow(){
@@ -2891,7 +3421,7 @@ function releaseEscrow(){
   c.querySelector('.efoot').innerHTML=
     '<span class="ecd">Settled · performance written back</span><a href="#" class="pkg lnk">Evidence ›</a>';
   c.classList.add('celebrate');
-  RECS.unshift({d:'today',w:escrow.cp.name,t:escrow.condText,a:'$'+escrow.amt.toLocaleString(),s:'Released'});
+  RECS.unshift({d:'today',w:escrow.cp.name,t:escrow.condText,a:escAmtTxt(escrow.amt,escrow.coin),s:'Released'});
   if(escrow.sess){taskUpsert(escrow.sess,{st:'done'});
     tpost(escrow.tk,'Released — evidence pack recorded, performance written back.')}
   escrow=null;
@@ -2900,7 +3430,7 @@ function addLine(cls,label,snap){
   const d=document.createElement('div');d.className='tcard';
   d.innerHTML=`<span class="st ${cls}">${label}</span>
     <span>${snap.cond} · <span class="who">${snap.cp.name}</span> · ${snap.why}</span>
-    <span class="amt num">$${snap.amt.toLocaleString()}</span>`;
+    <span class="amt num">${escAmtTxt(snap.amt,snap.coin)}</span>`;
   log.prepend(d);return d;
 }
 
@@ -3077,8 +3607,10 @@ const ACT_DEF={
   /* 数量位只填数字（币的数量）——货币符号不进数量位，支付法币在 with 槽 */
   buy: {verb:'buy',      unit:'coin', mid:'with'},
   sell:{verb:'sell',     unit:'coin', mid:'for'},
-  xfer:{verb:'transfer', unit:'coin', mid:'to'},
-  cond:{verb:'pay',      unit:'usd',  mid:'to'},   /* 条件支付与其余动作同一套 chip 句子 */
+  /* Transfer 与 Conditional order 是同一个动词的两档（When 为空/非空），
+     只留一个入口：Conditional order，动词 transfer，When 默认 Immediately。
+     Buy/Sell 的条件由协议写死（回执+确认窗口），不进这个槽。 */
+  cond:{verb:'transfer', unit:'coin', mid:'to'},
 };
 /* Y·用途：半受控短语库（银行文档 §4.4：高频沉淀成库，低频自由书写后归一化）。
    口径修正（PRD §10.6）：Y 不再是 IFR 判据——信用信号走授权卡那层。
@@ -3087,22 +3619,18 @@ const ACT_DEF={
 /* 条件 = 模板类型（锁死，保证可判定）+ 参数（用户自己改）。
    银行文档 §4.2「仅限模板」限的是类型；AIUSD 的模板句证明参数必须可编辑。 */
 const CTPL={
- 'Immediately':       {fields:[], defs:{}, text:()=>'immediately'},
- 'On delivery':       {fields:[{w:'by',k:'src',opts:['Logistics API','Bill of lading','Signed receipt']},
-                               {w:'within',k:'within'}],
-                       defs:{src:'Logistics API',within:'7 days'},
-                       text:p=>`delivery confirmed by ${p.src} within ${p.within}`},
- 'On my approval':    {fields:[{w:'within',k:'within'}], defs:{within:'14 days'},
-                       text:p=>`you approve within ${p.within}`},
- 'At price':          {fields:[{k:'asset',opts:['BTC','ETH','SOL','USDT/CNY']},
-                               {k:'op',opts:['≥','≤']},{k:'px'}],
-                       defs:{asset:'BTC',op:'≥',px:'$95,000'},
-                       text:p=>`${p.asset} ${p.op} ${p.px}`},
- '7-day auto-release':{fields:[{w:'after',k:'after'}], defs:{after:'7 days'},
-                       text:p=>`no dispute for ${p.after}`},
+ 'Immediately':   {fields:[], defs:{}, text:()=>'immediately'},
+ 'When I confirm':{fields:[{w:'within',k:'within'}], defs:{within:'14 days'},
+                   text:p=>`you confirm receipt · unresolved after ${p.within} goes to review`},
+ 'Proof + window':{fields:[{w:'of',k:'proof',opts:['Bank receipt','Delivery record','Work delivered']},
+                           {w:'window',k:'win'}],
+                   defs:{proof:'Delivery record',win:'3 days'},
+                   text:p=>`they upload ${p.proof.toLowerCase()} · released unless you dispute within ${p.win}`},
+ 'On a date':     {fields:[{w:'on',k:'date'}], defs:{date:'the 1st'},
+                   text:p=>`released on ${p.date}`},
 };
-const CETA={'Immediately':'instant','On delivery':'usually ~2 h','On my approval':'when you approve',
-            'At price':'when it triggers','7-day auto-release':'after the window'};
+const CETA={'Immediately':'instant','When I confirm':'when you confirm',
+            'Proof + window':'their proof, then your window','On a date':'on schedule'};
 
 const INTENTS=['Supplier balance','Delivery acceptance','Rent','Payroll',
                'Service subscription','API usage'];
@@ -3117,8 +3645,7 @@ function liveParse(q){
   const ql=q.toLowerCase();
   const k = /\b(buy|purchase)|买/.test(ql)?'buy'
           : /\bsell\b|卖|出\s*u/.test(ql)?'sell'
-          : /\b(transfer|send)\b|转/.test(ql)?'xfer'
-          : /\bpay\b|付/.test(ql)?'cond' : null;
+          : /\b(transfer|send|pay)\b|转|付/.test(ql)?'cond' : null;
   if(!k) return null;
   const r={k, src:{}};
   /* 「100 usdt」= 100 个币，不是 ¥100 的预算——数字紧跟币种按数量解析 */
@@ -3140,11 +3667,11 @@ function liveParse(q){
   if(fitok){r.fiat=FMAP[fitok==='人民币'?'rmb':fitok]; r.src.fiat=1}
   const cp=CPS.find(c=>ql.includes(c.name.toLowerCase())||ql.includes(c.name.split(' ')[0].toLowerCase()));
   if(cp){r.peer=cp.name; r.src.peer=1}
-  if(/on\s*deliver|delivered|发货|收货/.test(ql))      r.cond='On delivery';
-  else if(/approv|验收/.test(ql))                      r.cond='On my approval';
-  else if(/no\s*dispute|auto.?release/.test(ql))      r.cond='7-day auto-release';
-  else if(/at\s*price|hits|drops?\s*to|涨到|跌到/.test(ql)) r.cond='At price';
-  else if(/immediat|right\s*now|立即/.test(ql))        r.cond='Immediately';
+  /* 交付类字眼 → 证据+窗口（V1 验不了物流，验的是对方凭证 + 你的异议窗） */
+  if(/on\s*deliver|delivered|proof|发货|收货|凭证/.test(ql)) r.cond='Proof + window';
+  else if(/approv|confirm|验收|确认/.test(ql))               r.cond='When I confirm';
+  else if(/on\s*the\s*\d|monthly|每月|日放/.test(ql))       r.cond='On a date';
+  else if(/immediat|right\s*now|立即/.test(ql))              r.cond='Immediately';
   if(r.cond)r.src.cond=1;
   const fy=q.match(/\bfor\s+([^,.;]+?)\s*$/i);
   if(fy && !/^(usdt|usdc|btc|eth|cny|hkd|sgd|jpy|eur|aed|gbp|usd)$/i.test(fy[1].trim())){
@@ -3159,7 +3686,7 @@ function applyParse(r){
   if(r.amt){ACT.amt=r.amt; ACT.amtKind=r.amtCoin?'coin':null;}
   if(r.coin)ACT.coin=r.coin;
   if(r.fiat&&(ACT.k==='buy'||ACT.k==='sell'))ACT.fiat=r.fiat;
-  if(r.peer&&(ACT.k==='xfer'||ACT.k==='cond'))ACT.peer=r.peer;
+  if(r.peer&&ACT.k==='cond')ACT.peer=r.peer;
   if(r.cond&&ACT.k==='cond'){if(ACT.cond!==r.cond){ACT.cond=r.cond;ACT.cp={...CTPL[r.cond].defs}}}
   if(r.why&&ACT.why!==undefined&&ACT.why!==null)ACT.why=r.why;
   paintAct();
@@ -3168,11 +3695,11 @@ function applyParse(r){
 function openAct(k){
   document.getElementById('composer').classList.remove('show');
   const d=ACT_DEF[k];
-  ACT={k, amt:k==='buy'?5000:k==='cond'?3000:30000, coin:'USDT',
-       fiat:'CNY', peer:((k==='xfer'||k==='cond')&&THREAD)?THREAD.name:(CPS[0]?.name||''),
-       /* X 默认：普通动作「立即」；条件支付的意义就是条件，默认「等收货」 */
-       cond:k==='cond'?'On delivery':'Immediately', cp:{...(CTPL[k==='cond'?'On delivery':'Immediately'].defs)},
-       why:(k==='xfer'||k==='cond')?(k==='cond'?'Delivery acceptance':'Supplier balance'):null};
+  ACT={k, amt:k==='buy'?5000:3000, coin:'USDT',
+       fiat:'CNY', peer:(k==='cond'&&THREAD)?THREAD.name:(CPS[0]?.name||''),
+       /* When 默认 Immediately——普通转账就是条件槽为空的退化情形，想要保障改这一行 */
+       cond:'Immediately', cp:{...CTPL['Immediately'].defs},
+       why:k==='cond'?'Supplier balance':null};
   if(d.unit==='coin'&&!heldCoins().includes(ACT.coin)) ACT.coin=heldCoins()[0]||'USDT';
   document.querySelectorAll('#actions .act').forEach(b=>b.classList.toggle('on',b.dataset.act===k));
   paintAct();
@@ -3190,31 +3717,36 @@ function paintAct(){
   const d=ACT_DEF[ACT.k];
   const unit = (ACT.amtKind==='coin'&&d.unit==='fiat') ? 'coin' : d.unit;
   const amtTxt = unit==='fiat' ? `${FIAT_SYM(ACT.fiat)}${ACT.amt.toLocaleString()}`
-    : unit==='usd' ? `$${ACT.amt.toLocaleString()}`
     : ACT.amt.toLocaleString();
   const word=w=>`<span class="aword">${w}</span>`;
   /* 灰色虚线 = 系统的合理猜测（§4.3），说到的才是实心 */
   const g=f=>(ACT.auto && !(ACT.parseSrc&&ACT.parseSrc[f]))?' guess':'';
   bar.hidden=false;
-  /* 句式与银行设计文档 §4.1 一致：在 X 下，A 向 B 转 N，用于 Y。
-     A（付款方）默认是「我」，整段隐藏。 */
+  /* 银行文档 §4.1 的句子本来就是三个分句：「在 X 下 / A 向 B 转 N / 用于 Y」。
+     一行一个分句（IFTTT 系的触发/动作分块同理），连接词做成左列对齐。 */
+  const lead=w=>`<span class="aword alead">${w}</span>`;
+  /* Buy/Sell 的条件由协议写死（托管放币 · 回执+确认窗口）——跟陌生人交易，
+     条件不标准化就没法双盲撮合。只读展示，不给编辑入口。 */
   bar.innerHTML=
-    `<span class="aword">When</span>`
-  + `<button class="achip${g('cond')}" data-f="cond">${ACT.cond}<i>⌄</i></button>`
-  + (CTPL[ACT.cond]?.fields||[]).map(f=>
-      `${f.w?word(f.w):''}<button class="achip${g('cond')} ${f.opts?'':'free'}" data-f="p:${f.k}">${ACT.cp[f.k]}<i>${f.opts?'⌄':'✎'}</i></button>`).join('')
-  + `<span class="averb">${d.verb}</span>`
-  + `<button class="achip${g('amt')}" data-f="amt">${amtTxt}<i>✎</i></button>`
-  + (unit==='usd' ? ''
-     : unit==='coin'
-      ? `<button class="achip${g('coin')}" data-f="coin">${ACT.coin}<i>⌄</i></button>`
-      : `${word('of')}<button class="achip${g('coin')}" data-f="coin">${ACT.coin}<i>⌄</i></button>`)
-  + word(d.mid)
-  + ((ACT.k==='xfer'||ACT.k==='cond')
-      ? `<button class="achip${g('peer')}" data-f="peer">${ACT.peer||'Choose'}<i>⌄</i></button>`
-      : `<button class="achip${g('fiat')}" data-f="fiat"><span class="flg">${flag(ACT.fiat)}</span>${ACT.fiat}<i>⌄</i></button>`)
+    (ACT.k==='cond'
+      ? `<div class="aline">${lead('When')}`
+      +   `<button class="achip${g('cond')}" data-f="cond">${ACT.cond}<i>⌄</i></button>`
+      +   (CTPL[ACT.cond]?.fields||[]).map(f=>
+            `${f.w?word(f.w):''}<button class="achip${g('cond')} ${f.opts?'':'free'}" data-f="p:${f.k}">${ACT.cp[f.k]}<i>${f.opts?'⌄':'✎'}</i></button>`).join('')
+      + `</div>`
+      : `<div class="aline">${lead('When')}${word('escrowed · released on payment receipt + confirm window · set by protocol')}</div>`)
+  + `<div class="aline"><span class="averb alead">${d.verb}</span>`
+  +   `<button class="achip${g('amt')}" data-f="amt">${amtTxt}<i>✎</i></button>`
+  +   (unit==='coin'
+        ? `<button class="achip${g('coin')}" data-f="coin">${ACT.coin}<i>⌄</i></button>`
+        : `${word('of')}<button class="achip${g('coin')}" data-f="coin">${ACT.coin}<i>⌄</i></button>`)
+  +   word(d.mid)
+  +   (ACT.k==='cond'
+        ? `<button class="achip${g('peer')}" data-f="peer">${ACT.peer||'Choose'}<i>⌄</i></button>`
+        : `<button class="achip${g('fiat')}" data-f="fiat"><span class="flg">${flag(ACT.fiat)}</span>${ACT.fiat}<i>⌄</i></button>`)
+  + `</div>`
   + (ACT.why!==null
-      ? word('for')+`<button class="achip${g('why')}" data-f="why">${ACT.why}<i>⌄</i></button>` : '')
+      ? `<div class="aline">${lead('for')}<button class="achip${g('why')}" data-f="why">${ACT.why}<i>⌄</i></button></div>` : '')
   + `<button class="ax" data-f="close" aria-label="Cancel">✕</button>`;
 
   bar.querySelectorAll('[data-f]').forEach(b=>b.onclick=ev=>{
@@ -3390,29 +3922,17 @@ function runAct(force){
   const a={...ACT}; const d=ACT_DEF[a.k];
   const finish=()=>{closeAct();
     const _f=document.getElementById('free'); _f.value=''; syncSend(); autogrow();};
-  if(a.k==='cond'||a.k==='xfer') finish();
   if(a.k==='cond'){
-    /* 与句子解析殊途同归：填 S，走同一条分档确认 → 托管链路 */
+    finish();
+    /* 与句子解析殊途同归：填 S，走同一条分档确认 → 托管链路。
+       Immediately 也走托管（30 s 可撤 → 即时放款），不再有绕开轨道的旁路 */
     const cp=CPS.find(c=>c.name===a.peer)||CPS[0];
-    S.cond=a.cond; S.cp=cp; S.amt=a.amt; S.why=a.why;
+    S.cond=a.cond; S.cp=cp; S.amt=a.amt; S.coin=a.coin; S.why=a.why;
     S.condText=CTPL[a.cond]?CTPL[a.cond].text(a.cp):a.cond;
+    S.cpar={...a.cp};
     S.guessed={cp:false,amt:false,why:false};
     document.getElementById('empty')?.remove();
     document.getElementById('go').onclick ? document.getElementById('go').click() : startEscrow();
-    return;
-  }
-  if(a.k==='xfer'){
-    newSession();
-    const t=thinking([{k:'Condition',v:a.cond},{k:'Evidence',v:PROOFS[a.cond]},
-              {k:'Amount',v:a.amt.toLocaleString()+' '+a.coin},
-              {k:'Recipient',v:a.peer},{k:'Intent',v:a.why}],[],
-      ()=>{const el=document.createElement('div'); el.className='tcard';
-        el.innerHTML=`<span class="st ok">${a.cond==='Immediately'?'Sent':'Scheduled'}</span>
-          <span>${a.amt.toLocaleString()} ${a.coin} to <span class="who">${a.peer}</span> · for ${a.why}${
-            a.cond==='Immediately'?' · inside escrow, no chain fee':` · releases ${a.cond.toLowerCase()}`}</span>`;
-        document.getElementById('log').prepend(el);});
-    t.el.querySelector('.thlabel').textContent='Transferring';
-    setTimeout(()=>{const l=t.el.querySelector('.thlabel'); if(l)l.textContent='Transferred'}, t.total);
     return;
   }
   const want=a.k==='buy'?'sell':'buy';
@@ -3931,9 +4451,11 @@ function advance(to){
 
 const SELLER={
   phase:'kyc',            /* kyc → listing */
-  step:0, done:false, el:null, warn:'', badId:'',
-  kycDone:false,
-  d:{kind:'Individual', k:{}, dir:'', coins:[], lo:'', hi:'', nets:[], fiat:'', agree:false}
+  step:0, el:null, warn:'', badId:'',
+  /* 提交与审核是两个状态：kycDone=身份已提交, kycOk=身份审过;
+     done=挂单配置已提交, approved=配置审过（此后才能挂单） */
+  kycDone:false, kycOk:false, done:false, approved:false, _timer:null,
+  d:{kind:'Individual', k:{}, dir:'', coins:[], lo:'', hi:'', nets:[], rails:[], pricing:'Float', spread:'0.8', agree:false}
 };
 
 /* 字段类型：text 文本 / date 日期 / pick 单选 chips / multi 多选 chips / sign 签名确认 / upload 上传占位 */
@@ -4058,7 +4580,15 @@ function sellerBind(){
   });
   /* 挂单配置 */
   body.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{d.dir=b.dataset.dir;SELLER.badId='';paintMaker()});
-  body.querySelectorAll('[data-fiat]').forEach(b=>b.onclick=()=>{d.fiat=b.dataset.fiat;SELLER.badId='';paintMaker()});
+  body.querySelectorAll('[data-rail]').forEach(b=>b.onclick=()=>{
+    const v=b.dataset.rail, i=d.rails.indexOf(v); i<0?d.rails.push(v):d.rails.splice(i,1);
+    SELLER.badId=''; paintMaker();});
+  body.querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>{
+    d.spread=body.querySelector('#s-spread')?.value.trim()??d.spread;
+    d.pricing=b.dataset.pr==='Fixed rate'?'Fixed':'Float'; SELLER.badId=''; paintMaker();});
+  /* oninput 即时提交——chip 点击会整卡重渲染,change 等失焦就来不及了 */
+  const sp=body.querySelector('#s-spread');
+  if(sp) sp.oninput=e=>{d.spread=e.target.value.trim()};
   body.querySelectorAll('[data-coin]').forEach(b=>b.onclick=()=>{
     const v=b.dataset.coin, i=d.coins.indexOf(v); i<0?d.coins.push(v):d.coins.splice(i,1); SELLER.badId=''; paintMaker();});
   body.querySelectorAll('[data-net]').forEach(b=>b.onclick=()=>{
@@ -4091,7 +4621,12 @@ function sellerValid(){
     if(!Number.isFinite(lo)||!Number.isFinite(hi)||lo<=0||hi<=0||lo>hi) return bad('sf-limit');
     d.lo=lo; d.hi=hi;
     if(!d.nets.length) return bad('sf-nets');
-    if(!d.fiat) return bad('sf-fiat');
+    if(d.pricing==='Float'){
+      const sp=parseFloat(String(d.spread).replace(/[%\s]/g,''));
+      if(!Number.isFinite(sp)||sp<-5||sp>5) return bad('sf-pricing');
+      d.spread=sp;
+    }
+    if(!d.rails.length) return bad('sf-rails');
   }
   if(S.step===1 && !d.agree) return bad('sf-agree');
   S.badId=''; return true;
@@ -4112,13 +4647,6 @@ function sellerSteps(){
 function paintMaker(){
   const S=SELLER, d=S.d, el=S.el;
   if(!el) return;
-
-  if(S.done){
-    el.className='deal done';
-    el.innerHTML=`<div class="row1"><span class="st">Under review</span>
-      <span>Submitted — usually cleared within one business day</span></div>`;
-    S.el=null; return;
-  }
 
   const steps = S.phase==='kyc' ? kycSteps() : LISTING_STEPS;
   const cur = steps[S.step];
@@ -4157,9 +4685,21 @@ function paintMaker(){
       <div class="sf" id="sf-nets"><span class="sfl">Networks</span>
         <div class="sfchips">${chips(['TRON','ETH','POLYGON'],d.nets,'net')}</div>
         <span class="err">Select at least one network</span></div>
-      <div class="sf" id="sf-fiat"><span class="sfl">Fiat rail</span>
-        <div class="sfchips">${chips(['Mainland bank','HK bank','Both'],[d.fiat],'fiat')}</div>
-        <span class="err">Select a fiat rail</span></div>`;
+      <div class="sf" id="sf-pricing"><span class="sfl">Pricing</span>
+        <div class="sfchips">${chips(['Float vs index','Fixed rate'],[d.pricing==='Float'?'Float vs index':'Fixed rate'],'pr')}</div>
+        ${d.pricing==='Float'
+          ? `<div class="sfrow" style="margin-top:8px">
+              <input type="text" id="s-spread" value="${d.spread}" inputmode="decimal" placeholder="0.8" style="max-width:110px">
+              <span style="font-size:12px;color:var(--faint)">% over index — e.g. USDT/CNY index ${FX_IDX.CNY} → you quote ${(FX_IDX.CNY*(1+(parseFloat(d.spread)||0)/100)).toFixed(2)}</span></div>`
+          : `<span style="display:block;margin-top:8px;font-size:12px;color:var(--faint)">You set the exact rate on each offer you post.</span>`}
+        <span class="err">Enter a spread between −5 and 5</span></div>
+      <div class="sf" id="sf-rails"><span class="sfl">Payment rails — where counterparties send fiat</span>
+        ${FIAT_RAILS.map(gr=>`
+          <div class="sfrailg"><em>${gr.g}</em>
+            <div class="sfchips">${gr.list.map(x=>
+              `<button type="button" class="sfchip${d.rails.includes(x)?' on':''}" data-rail="${x}">${x}</button>`).join('')}</div>
+          </div>`).join('')}
+        <span class="err">Select at least one payment rail</span></div>`;
     if(S.step===1) form=`
       <dl class="sfsum">
         <div><dt>Entity</dt><dd>${d.kind}${d.k.surname?' · '+d.k.surname+d.k.firstname:(d.k.company?' · '+d.k.company:'')}</dd></div>
@@ -4167,7 +4707,8 @@ function paintMaker(){
         <div><dt>Assets</dt><dd>${d.coins.join(' · ')}</dd></div>
         <div><dt>Limits</dt><dd class="num">${Number(d.lo).toLocaleString()} – ${Number(d.hi).toLocaleString()} CNY</dd></div>
         <div><dt>Networks</dt><dd>${d.nets.join(' · ')}</dd></div>
-        <div><dt>Fiat</dt><dd>${d.fiat}</dd></div>
+        <div><dt>Pricing</dt><dd>${d.pricing==='Float'?`Index ${d.spread>=0?'+':''}${d.spread}%`:'Fixed per offer'}</dd></div>
+        <div><dt>Rails</dt><dd>${d.rails.join(' · ')}</dd></div>
       </dl>
       <div class="sf" id="sf-agree" style="margin-top:14px">
         <label class="sfagree"><input type="checkbox" id="s-agree" ${d.agree?'checked':''}>
@@ -4188,6 +4729,7 @@ function paintMaker(){
        ${form}
        <div class="dfoot">
          ${S.warn?`<span class="dnote">${S.warn}</span>`:''}
+         <button class="btn btn-ghost btn-sm" data-a="fill" title="Fill every step with sample data">Demo fill</button>
          ${(S.step>0||S.phase==='listing')?'<button class="btn btn-icon backbtn" data-a="prev" title="Back" aria-label="Back"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>':''}
          <button class="btn btn-primary" data-a="next">${
            S.phase==='kyc'&&S.step===steps.length-1 ? 'Submit' :
@@ -4197,6 +4739,7 @@ function paintMaker(){
   S.warn='';
   if(S.badId) el.querySelector('#'+S.badId)?.classList.add('bad');
   sellerBind();
+  el.querySelector('[data-a="fill"]')?.addEventListener('click',demoFill);
   el.querySelector('[data-a="prev"]')?.addEventListener('click',()=>{
     S.badId='';
     if(S.step>0){S.step--}
@@ -4207,30 +4750,242 @@ function paintMaker(){
     if(!sellerValid()){paintMaker();return}
     S.badId='';
     if(S.phase==='kyc'){
-      if(S.step<steps.length-1){S.step++}
-      else {S.kycDone=true; S.phase='listing'; S.step=0}   /* 核验完接挂单配置 */
-    } else {
-      if(S.step<LISTING_STEPS.length-1){S.step++} else {S.done=true}
+      if(S.step<steps.length-1){S.step++; paintMaker(); return}
+      /* 提交 ≠ 进入下一表单。先给回执（提交了什么、什么状态），审核过了再开挂单配置的入口 */
+      S.kycDone=true; receiptCard('kyc'); return;
     }
-    paintMaker();
+    if(S.step<LISTING_STEPS.length-1){S.step++; paintMaker(); return}
+    S.done=true; receiptCard('cfg'); return;
   };
 }
 
-const sellerBlank=()=>({kind:'Individual',k:{},dir:'',coins:[],lo:'',hi:'',nets:[],fiat:'',agree:false});
+/* ══ 挂单（单笔级）══
+   与 Listing setup 的边界：setup 是「我能卖什么」（能力级，审核一次），
+   这里是「这一单卖多少、什么价」（每次挂单都走）。选项范围由能力配置圈定。
+   卖单挂出即锁币——买家看到的 Size 必须是真的锁在托管里的量。 */
+/* 收款渠道：按走廊分组的常用银行/轨道。渠道决定结算币种——
+   选了哪些渠道，挂单时就能用哪些法币计价 */
+const FIAT_RAILS=[
+ {g:'Mainland China · CNY', ccy:'CNY', list:['ICBC','China Merchants Bank','Bank of China','CCB','Agricultural Bank','Alipay','WeChat Pay']},
+ {g:'Hong Kong · HKD',      ccy:'HKD', list:['HSBC','Bank of China (HK)','Hang Seng','ZA Bank','FPS']},
+ {g:'Singapore · SGD',      ccy:'SGD', list:['DBS','OCBC','UOB','PayNow']},
+ {g:'UAE · AED',            ccy:'AED', list:['Emirates NBD','FAB','Mashreq']},
+ {g:'Europe · EUR',         ccy:'EUR', list:['SEPA transfer','Wise','Revolut']},
+];
+const railCcy=name=>FIAT_RAILS.find(x=>x.list.includes(name))?.ccy;
+/* 参考指数（demo 静态）：法币 / USD。挂单时按 币种 fx × 指数 × 点差 预填价格 */
+const FX_IDX={CNY:7.28,HKD:7.80,SGD:1.34,AED:3.67,EUR:0.86};
+let OFFN=0;
+const OFF={side:'',coin:'',net:'',fiat:'',px:'',qty:'',min:''};
+function openOffer(){
+  const d=SELLER.d;
+  const sides=d.dir==='Both'?['Sell crypto','Buy crypto']:[d.dir];
+  OFF.side=OFF.side||sides[0];
+  OFF.coin=d.coins.includes(OFF.coin)?OFF.coin:d.coins[0];
+  const nets=d.nets.filter(n=>(NETS_OF[OFF.coin]||[]).includes(n));
+  OFF.net=nets.includes(OFF.net)?OFF.net:(nets[0]||d.nets[0]);
+  /* 能结算哪些法币，由配置里选过的收款渠道决定 */
+  const fiats=[...new Set(d.rails.map(railCcy).filter(Boolean))];
+  OFF.fiat=fiats.includes(OFF.fiat)?OFF.fiat:fiats[0];
+  /* 参考价 = 币种美元价 × 法币指数;浮动定价按点差预填,固定价自己写 */
+  const idxOf=f=>+( (fxOf(OFF.coin)*(FX_IDX[f]||1)).toFixed(fxOf(OFF.coin)>10?0:2) );
+  const quoteOf=f=>+( idxOf(f)*(1+(d.pricing==='Float'?(parseFloat(d.spread)||0):0)/100) )
+    .toFixed(fxOf(OFF.coin)>10?0:2);
+  const availOf=c=>ASSETS.find(a=>a.coin===c)?.avail||0;
+  const draw=()=>{
+    const sell=OFF.side==='Sell crypto';
+    const chips=(list,sel,k)=>list.map(x=>
+      `<button type="button" class="sfchip${sel===x?' on':''}" data-ok="${k}" data-ov="${x}">${x}</button>`).join('');
+    openModal('Post an offer',`
+      <div class="sf"><span class="sfl">Side</span><div class="sfchips">${chips(sides,OFF.side,'side')}</div></div>
+      <div class="sf"><span class="sfl">Asset</span><div class="sfchips">${chips(d.coins,OFF.coin,'coin')}</div>
+        ${sell?`<span class="ad num" style="font-size:11.5px;color:var(--faint)">${availOf(OFF.coin).toLocaleString()} ${OFF.coin} available — locks into escrow while listed</span>`:''}</div>
+      <div class="sf"><span class="sfl">Network</span><div class="sfchips">${chips(nets,OFF.net,'net')}</div></div>
+      <div class="sf"><span class="sfl">Settles in</span><div class="sfchips">${chips(fiats,OFF.fiat,'fiat')}</div></div>
+      <div class="sf" id="of-px"><span class="sfl">Your rate · ${FIAT_SYM(OFF.fiat)} per ${OFF.coin}</span>
+        <input type="text" id="ofpx" inputmode="decimal" value="${OFF.px||quoteOf(OFF.fiat)}" placeholder="${quoteOf(OFF.fiat)}">
+        <span style="display:block;margin-top:5px;font-size:11.5px;color:var(--faint)" class="num">Index ${idxOf(OFF.fiat).toLocaleString()}${
+          d.pricing==='Float'?` · your float ${d.spread>=0?'+':''}${d.spread}% → ${quoteOf(OFF.fiat).toLocaleString()}`:' · fixed pricing — quote your own rate'}</span>
+        <span class="err">Enter a rate</span></div>
+      <div class="sf" id="of-qty"><span class="sfl">Size · ${OFF.coin}</span>
+        <input type="text" id="ofqty" inputmode="decimal" value="${OFF.qty}" placeholder="Quantity"><span class="err">${sell?'More than you hold':'Enter a quantity'}</span></div>
+      <div class="sf" id="of-min"><span class="sfl">Minimum per trade · ${OFF.fiat}</span>
+        <input type="text" id="ofmin" inputmode="numeric" value="${OFF.min}" placeholder="Min lot"><span class="err">Must be below the offer total</span></div>
+      <div class="dfoot" style="margin-top:14px">
+        <button class="btn btn-primary" id="ofgo">Review &amp; post</button>
+      </div>`,()=>{
+      const M=document.getElementById('mbody');
+      M.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>{
+        const k=b.dataset.ok;
+        ['px','qty','min'].forEach(f=>OFF[f]=M.querySelector('#of'+f)?.value.trim()||OFF[f]);
+        OFF[k]=b.dataset.ov;
+        if(k==='fiat'||k==='coin')OFF.px='';   /* 换了计价基准,旧价作废,按新指数重新预填 */
+        draw()});
+      M.querySelector('#ofgo').onclick=()=>{
+        const px=parseFloat(M.querySelector('#ofpx').value.replace(/,/g,''));
+        const qty=parseFloat(M.querySelector('#ofqty').value.replace(/,/g,''));
+        const min=parseInt(String(M.querySelector('#ofmin').value).replace(/[^\d]/g,''),10);
+        const bad=id=>{const f=M.querySelector(id);f.classList.add('bad');f.querySelector('input').focus()};
+        M.querySelectorAll('.sf').forEach(f=>f.classList.remove('bad'));
+        if(!(px>0))return bad('#of-px');
+        if(!(qty>0)||(sell&&qty>availOf(OFF.coin)))return bad('#of-qty');
+        if(!(min>0)||min>qty*px)return bad('#of-min');
+        OFF.px=px;OFF.qty=qty;OFF.min=min;
+        closeModal();
+        /* 卖单锁币 = 资金动作，走同一个 Passkey 强确认；买单只是承诺，一句摘要即可 */
+        requireVerify(sell?'Posting locks funds into escrow':'Posting a public offer',
+          `List <b class="num">${qty.toLocaleString()} ${OFF.coin}</b> ${sell?'for sale':'wanted'} at `+
+          `<b class="num">${FIAT_SYM(OFF.fiat)}${px.toLocaleString()}</b> · min lot `+
+          `<b class="num">${FIAT_SYM(OFF.fiat)}${min.toLocaleString()}</b>${sell?'. Funds stay locked until filled or unlisted.':'.'}`,
+          postOffer);
+      };
+    });
+  };
+  draw();
+}
+function postOffer(){
+  const d=SELLER.d, sell=OFF.side==='Sell crypto';
+  if(sell){
+    const a=ASSETS.find(x=>x.coin===OFF.coin);
+    if(!a||a.avail<OFF.qty){toast('Not enough '+OFF.coin+' available');return}
+    a.avail=+(a.avail-OFF.qty).toFixed(6); a.escrow=+(a.escrow+OFF.qty).toFixed(6);
+    if(a.coin===FUNDS.coin){FUNDS.avail=a.avail;FUNDS.escrowed=a.escrow}
+    renderBalance();renderAssets();
+  }
+  OFFN++;
+  POOL.unshift({id:'my'+OFFN, mine:true,
+    side:sell?'sell':'buy', coin:OFF.coin, net:OFF.net, nets:[OFF.net],
+    docs:{kyc:1,pof:0,stm:0,poa:d.kind==='Corporate'?1:0,sow:0,chain:1},
+    qty:OFF.qty, px:OFF.px, name:PROFILE.name, peer:PROFILE.id, fiat:OFF.fiat,
+    sc:62, deals:0, disp:0, rate:null, rel:null, min:OFF.min, known:false});
+  /* 看自己的单：切到与之对应的那一侧（买家视角） */
+  mkSide=sell?'buy':'sell'; mkFilter='All'; mkFiat='';
+  switchView('market'); renderFilter(); renderPool();
+  toast(sell?`Listed — ${OFF.qty.toLocaleString()} ${OFF.coin} locked in escrow`:'Offer posted');
+}
+function unlistOffer(id){
+  const i=POOL.findIndex(o=>o.id===id); if(i<0)return;
+  const o=POOL[i];
+  if(o.side==='sell'){
+    const a=ASSETS.find(x=>x.coin===o.coin);
+    if(a){a.avail=+(a.avail+o.qty).toFixed(6); a.escrow=Math.max(0,+(a.escrow-o.qty).toFixed(6));
+      if(a.coin===FUNDS.coin){FUNDS.avail=a.avail;FUNDS.escrowed=a.escrow}}
+    renderBalance();renderAssets();
+  }
+  POOL.splice(i,1); renderPool();
+  toast(o.side==='sell'?`Unlisted — ${o.qty.toLocaleString()} ${o.coin} unlocked`:'Offer removed');
+}
+
+/* 提交回执 · 对话式：这是个对话产品，提交不是「表单变成状态卡」，
+   而是一轮对话——你发出申请（可展开看提交了什么），平台回执，审核过了再回一条带下一步的消息。
+   demo 压缩审核为秒级并在文案里标注；真实节奏是一个工作日 */
+function sellerMsg(who,html){
+  const el=document.createElement('div');
+  el.className='msg '+who;
+  el.innerHTML=`<span class="bub">${html}</span>`;
+  document.getElementById('log').appendChild(el);
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  return el;
+}
+function receiptCard(kind){
+  const S=SELLER, d=S.d;
+  const kyc=kind==='kyc';
+  /* 记录要全：KYC 按步骤分组展开全部字段，不是三行摘要 */
+  const val=v=>Array.isArray(v)?v.join(' · '):v;
+  const groups = kyc
+    ? kycSteps().filter(st=>st.fields.length).map(st=>
+        [st.t, st.fields.map(f=>[f.l,val(d.k[f.k])||'—'])])
+    : [['Listing configuration',[
+        ['Side',d.dir],['Assets',d.coins.join(' · ')],
+        ['Limits',Number(d.lo).toLocaleString()+' – '+Number(d.hi).toLocaleString()+' CNY'],
+        ['Networks',d.nets.join(' · ')],
+        ['Pricing',d.pricing==='Float'?`Index ${d.spread>=0?'+':''}${d.spread}%`:'Fixed per offer'],
+        ['Payment rails',d.rails.join(' · ')]]]];
+  const nf = groups.reduce((a,[,rows])=>a+rows.length,0);
+  const detail =
+    `<details class="rcpt"><summary>View submission · ${nf} fields</summary>
+       ${groups.map(([t,rows])=>
+         `<div class="rgrp"><em>${t}</em>
+          <dl class="sfsum">${rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl></div>`).join('')}
+     </details>`;
+  /* ① 我方只留一句确认（表单是我填的，回执是平台开的——记录挂在回执上） */
+  S.el?.remove(); S.el=null;
+  sellerMsg('me',`Submitted ${kyc?'identity verification':'listing configuration'}`);
+  renderTypes();   /* CTA 立即进「审核中」态 */
+  /* ② 平台回执：确认收到 + 可展开的完整提交记录 */
+  const t=sellerMsg('them typing','typing…');
+  setTimeout(()=>{
+    t.className='msg them';
+    t.innerHTML=`<span class="bub">Received — your ${kyc?'identity application':'listing configuration'} is under review. Usually cleared within one business day <em style="font-style:normal;color:var(--faint)">(demo: seconds)</em>.${detail}</span>`;
+  },1200);
+  /* ③ 审核通过：平台再来一条，带下一步入口 */
+  setTimeout(()=>{
+    if(kyc){S.kycOk=true}else{S.approved=true}
+    const m=sellerMsg('them',
+      kyc?`✓ Identity verified. Next: configure what you sell — assets, limits, pricing and payment rails.
+           <span class="rgo"><button class="btn btn-primary btn-sm" data-rgo="cfg">Set up listing →</button></span>`
+         :`✓ Listing approved. You can post offers from the Trade page whenever you're ready.
+           <span class="rgo"><button class="btn btn-primary btn-sm" data-rgo="offer">Post an offer →</button></span>`);
+    m.querySelector('[data-rgo]').onclick=ev=>{
+      ev.currentTarget.dataset.rgo==='cfg'?openSeller():openOffer()};
+    setTimeout(()=>m.scrollIntoView({behavior:'smooth',block:'end'}),80);  /* 按钮要整个滚进可视区 */
+    renderTypes();
+    toast(kyc?'Identity approved':'Listing approved — you can post offers now');
+  },6000);
+}
+
+/* 演示一键填充：验收时不必逐字段手填。只灌数据，不动校验——
+   校验逻辑本身也是验收对象，开后门就测不到它了 */
+const DEMO_TXT={surname:'Liu',firstname:'Ellie',idno:'H12345678',phone:'+852 6123 4567',
+  email:'demo@atara.example',addr:'12 Harbour Rd, Wan Chai, HK',tin:'HK-98765432',
+  industry:'Cross-border trade',employer:'Self-employed',
+  company:'Huachuang Trading Ltd',regno:'CR-2019-88123',street:'12 Harbour Rd',city:'Hong Kong',
+  province:'HK',zip:'999077',bizindustry:'Electronics export',bizscope:'Component sourcing',
+  mainrev:'Component resale',repname:'Ellie Liu',reptitle:'Director',repid:'H12345678',
+  repphone:'+852 6123 4567',dirname:'Ellie Liu',dirid:'H12345678',
+  ubo:'Ellie Liu',uboshare:'100',uboid:'H12345678'};
+const DEMO_DATE={idissue:'2019-06-01',iddue:'2031-06-01',birthday:'1992-04-16',estdate:'2019-03-12'};
+function demoFill(){
+  const S=SELLER, d=S.d;
+  if(S.phase==='kyc'){
+    kycSteps().forEach(st=>st.fields.forEach(f=>{
+      if(d.k[f.k]) return;                       /* 已填的不覆盖 */
+      if(f.type==='pick')   d.k[f.k]=f.opts[0];
+      else if(f.type==='multi') d.k[f.k]=[f.opts[0]];
+      else if(f.type==='date')  d.k[f.k]=DEMO_DATE[f.k]||'2020-01-01';
+      else if(f.type==='sign')  d.k[f.k]='Signed';
+      else if(f.type==='upload')d.k[f.k]='Uploaded';
+      else d.k[f.k]=DEMO_TXT[f.k]||'Demo';
+    }));
+  }else{
+    if(!d.dir)d.dir='Both';
+    if(!d.coins.length)d.coins=['USDT','BTC'];
+    if(!d.lo)d.lo='1000'; if(!d.hi)d.hi='50000';
+    if(!d.nets.length)d.nets=['TRON','ETH'];
+    if(!d.rails.length)d.rails=['ICBC','China Merchants Bank','HSBC','DBS'];
+    d.agree=true;
+  }
+  S.badId=''; paintMaker();
+  toast('Sample data filled — keep clicking Next');
+}
+
+const sellerBlank=()=>({kind:'Individual',k:{},dir:'',coins:[],lo:'',hi:'',nets:[],rails:[],pricing:'Float',spread:'0.8',agree:false});
 function openSeller(){
   switchView('chat');
   document.getElementById('composer').classList.remove('show');
   document.getElementById('empty')?.remove();
   if(SELLER.el&&SELLER.el.isConnected){SELLER.el.scrollIntoView({block:'center',behavior:'smooth'});return}
   SELLER.el=null;  /* 已经开着就别再开一张 */
-  if(SELLER.done){  /* 已提交、审核中——不允许重复提交，定位到那张卡即可 */
-    const card=document.querySelector('#log .deal.done');
-    if(card){card.scrollIntoView({block:'center',behavior:'smooth'})}
-    else toast('Your seller application is under review');
+  /* 审核中不允许重复提交——定位到对话里最后那条回执 */
+  if((SELLER.kycDone&&!SELLER.kycOk)||(SELLER.done&&!SELLER.approved)){
+    const msgs=document.querySelectorAll('#log .msg');
+    if(msgs.length){msgs[msgs.length-1].scrollIntoView({block:'center',behavior:'smooth'})}
+    else toast('Your application is under review');
     return;
   }
-  /* 核验做过就直接进挂单配置——KYC 是账户级的，不该每次挂单都重做一遍 */
-  const phase=SELLER.kycDone?'listing':'kyc';
+  if(SELLER.approved){openOffer();return}   /* 全部审过 = 该挂单了 */
+  /* 身份审过才进挂单配置——KYC 是账户级的，不该每次挂单都重做一遍 */
+  const phase=SELLER.kycOk?'listing':'kyc';
   /* 中途去看了别的对话再回来，接着填而不是从头再来。
      换了阶段（核验完进挂单配置）才归零。 */
   if(SELLER.phase!==phase) SELLER.step=0;
