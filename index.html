@@ -106,78 +106,111 @@
      amount of resizing helped: a list has no structure to read. Now it
      is four zones — premise, the pair, the split, the action — and the
      two numbers that matter sit side by side as equals. */
+  /* 照搬对标稿的 hero 卡：外框 rounded-3xl(24px) + p-1(4px) + bg-white/5 +
+     backdrop-blur + 1px 白边；内层 rounded-[22px] + bg-white/95 + p-8/p-10。
+     同心圆角在对标稿里就是 24 = 22 + 2，这里按 4px 边距取 26/22。 */
   .ticket{
     position:relative;z-index:2;align-self:center;justify-self:end;margin:0;
-    width:min(100%,24.5rem);padding:1.15rem 0 1.3rem;
-    border-radius:5px;overflow:hidden;
-    background:oklch(98.6% .003 90);color:oklch(20% .022 267);
-    box-shadow:0 28px 52px -24px oklch(8% .1 267 / .62),0 2px 0 0 oklch(8% .1 267 / .1);
-    font-size:.8rem;line-height:1.4;
+    animation:tkrise .9s var(--ease) .24s both;
+    width:min(100%,30rem);padding:4px;
+    border-radius:26px;border:1px solid oklch(100% 0 0 / .12);
+    background:oklch(100% 0 0 / .06);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    box-shadow:0 25px 50px -12px oklch(8% .1 267 / .5);
+    color:oklch(20% .022 267);font-size:.8rem;line-height:1.4;
   }
-  .tk-mini{font-size:.585rem;text-transform:uppercase;letter-spacing:.115em;
-    color:oklch(54% .02 267)}
-  .tk-order{display:flex;align-items:baseline;justify-content:space-between;
-    gap:1rem;padding:.1rem 1.15rem .85rem;
-    border-bottom:1px dashed oklch(80% .015 267)}
-  .tk-order b{font-size:1.02rem;font-weight:500;letter-spacing:-.014em;white-space:nowrap}
 
-  .checks{list-style:none;margin:0;padding:.85rem 1.15rem .95rem;
-    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.44rem .8rem}
-  .checks li{display:flex;align-items:center;gap:.45rem;font-size:.685rem;
-    color:oklch(64% .02 267);transition:color .35s linear}
-  .checks li.is-done{color:oklch(34% .022 267)}
-  .ck{flex:none;width:.88rem;height:.88rem;border-radius:50%;display:grid;place-items:center;
-    border:1px solid oklch(87% .012 267);transition:border-color .3s linear,background .3s linear}
-  .ck svg{width:.6rem;height:.6rem;display:block}
-  .ck path{fill:none;stroke:oklch(32% .1 130);stroke-width:2.2;stroke-linecap:round;
-    stroke-linejoin:round;stroke-dasharray:14;stroke-dashoffset:14;
-    transition:stroke-dashoffset .32s var(--ease)}
-  .checks li.is-done .ck{background:var(--signal);border-color:var(--signal)}
-  .checks li.is-done .ck path{stroke-dashoffset:0}
+  /* 表格照搬对标稿：三列、行距 space-y-6(24px)、表头下一条 border-gray-100、
+     数值 text-2xl(24px)/500、% text-lg(18px)、标签 text-sm(14px)、
+     内层 bg-white/95 + rounded-[22px] + p-8(md:p-10)。 */
+  .cmp{position:relative;display:grid;
+    grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);
+    align-items:center;row-gap:24px;
+    border-radius:22px;background:oklch(100% 0 0 / .96);
+    padding:clamp(2rem,2.6vw,2.5rem)}
+  .cmp > *{position:relative;z-index:1}
+  .cmp-panel{display:none}
 
-  /* the comparison. Three columns — what it is, ours, theirs — so the
-     contrast is structural: our column always resolves to a number, the
-     other column never does. Ours carries the brand blue (7.58:1 on this
-     paper), theirs is grey and unemphasised. */
-  .tk-vs{border-top:1px solid oklch(91% .01 267);border-bottom:1px solid oklch(91% .01 267);
-    padding:.75rem 1.15rem .85rem}
-  .tk-vs-head,.tk-vs-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.92fr) minmax(0,.92fr);
-    gap:.7rem;align-items:baseline}
-  .tk-vs-head{padding-bottom:.5rem;border-bottom:1px solid oklch(93% .008 267)}
-  .tk-vs-row{padding:.7rem 0 .55rem}
-  .tk-vs-row + .tk-vs-row{border-top:1px solid oklch(94% .006 267)}
-  .tk-vs-label{font-size:.685rem;line-height:1.25;color:oklch(50% .02 267)}
-  .tk-ours{color:var(--blue)}
-  .tk-vs-row strong{font-size:clamp(1.55rem,2.3vw,1.95rem);font-weight:600;
-    line-height:1;letter-spacing:-.032em;
-    /* the leading digits ink ~.05em right of origin at this weight */
-    margin-left:-.05em}
-  .tk-vs-theirs{font-size:.9rem;font-weight:500;color:oklch(64% .015 267)}
+  .cmp-hd{grid-row:1;font-size:.75rem;font-weight:500;letter-spacing:.025em;padding-bottom:16px}
+  .cmp-hd:not(.cmp-us):not(.cmp-them){grid-column:1}
+  .cmp-lbl{grid-column:1}
+  .cmp-v{grid-column:2}
+  .cmp-t{grid-column:3}
+  .cmp-us{grid-column:2}
+  .cmp-them{grid-column:3}
+  .out[data-out="0"]{grid-row:2}
+  .out[data-out="1"]{grid-row:3}
+  .out[data-out="2"]{grid-row:4}
+  .out[data-out="3"]{grid-row:5}
+  .sep{box-shadow:none}
 
-  .tk-act{display:flex;align-items:center;gap:.75rem;padding:.35rem 1.15rem 0}
-  .rev-btn{display:inline-flex;align-items:center;gap:.45rem;
-    padding:.55rem .9rem;border:1px solid oklch(84% .015 267);border-radius:999px;
-    background:none;color:oklch(26% .022 267);font:inherit;font-size:.735rem;cursor:pointer;
-    transition:background .16s linear,color .16s linear,border-color .16s linear}
-  .rev-btn:hover,.rev-btn.is-pressed{background:oklch(20% .022 267);
-    color:oklch(98.6% .003 90);border-color:oklch(20% .022 267)}
-  .rev-btn:disabled{cursor:default}
-  .rev-mark{font-size:.9rem;line-height:1}
+  /* 表头下的分隔线。挂在格子上会断成三段（两格是居中收缩的），用跨全宽的伪元素 */
+  .cmp::before{content:"";grid-column:1/-1;grid-row:1;align-self:end;
+    height:1px;background:oklch(94% .004 264)}
+
+  .cmp-us{justify-self:center;padding:.25rem .75rem;border-radius:999px;
+    text-transform:uppercase;
+    background:oklch(94% .035 258);color:var(--blue);font-weight:600}
+  .cmp-them{justify-self:center;text-transform:uppercase;color:oklch(52% .018 264)}
+
+  .cmp-lbl{font-size:.875rem;line-height:1.35;color:oklch(48% .015 264)}
+  .cmp-v{display:flex;flex-direction:column;align-items:center;color:var(--blue)}
+  .cmp-t{display:flex;flex-direction:column;align-items:center;
+    font-size:.875rem;font-weight:500;color:oklch(52% .018 264)}
+
+  /* 数值 24px/500，% 18px。对标稿的 % 用 text-blue-400（白底约 2.5:1，不达 AA），
+     这里换成品牌蓝浅一档 */
+  .nv{font-size:1.5rem;font-weight:500;line-height:1.15;letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums}
+  .nu{font-style:normal;font-size:1.125rem;font-weight:400;margin-left:.06em;
+    color:oklch(50% .17 266)}
+  .cmp-t .nv{font-weight:300;color:oklch(52% .018 264)}
+  .cmp-t .nu{color:oklch(52% .018 264)}
+
+  .bar{display:none}   /* 对标稿没有对比条。删掉这行即恢复 */
+
+  /* 风险档位：三格条 + 颜色。填几格是第一重信号，颜色是第二重——
+     只靠颜色区分对色觉障碍不成立。档位在 .ticket 上，值随对手方变。 */
+  .ticket{--risk:var(--blue)}
+  .ticket.risk-mid{--risk:oklch(53% .15 62)}
+  .ticket.risk-hi{--risk:oklch(50% .21 27)}
+  .vline{display:inline-flex;align-items:baseline;gap:.34rem}
+  .cmp-v[data-out="0"]{color:var(--risk)}
+  .cmp-v[data-out="0"] .nu{color:var(--risk);opacity:.72}
+  /* 风险仪表：弧长 + 指针角度 + 颜色三重信号。半圆弧长 = π×8 ≈ 25.1 */
+  .rgauge{align-self:center;width:28px;height:19px;overflow:visible;color:var(--risk)}
+  .rgauge path{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
+  .rg-track{opacity:.2}
+  .rg-fill{stroke-dasharray:25.1;stroke-dashoffset:25.1;
+    transition:stroke-dashoffset .55s var(--ease)}
+  .rg-needle{stroke-width:1.5;transform-origin:10px 11.5px;transform:rotate(-62deg);
+    transition:transform .55s var(--ease)}
+  .rg-hub{fill:currentColor;stroke:none}
+  .risk-lo  .rg-fill{stroke-dashoffset:16.7}
+  .risk-mid .rg-fill{stroke-dashoffset:8.4}
+  .risk-hi  .rg-fill{stroke-dashoffset:0}
+  .risk-lo  .rg-needle{transform:rotate(-62deg)}
+  .risk-mid .rg-needle{transform:rotate(0deg)}
+  .risk-hi  .rg-needle{transform:rotate(62deg)}
+
+  /* 末行：text-sm font-medium bg-blue-50/50 py-2 px-3 rounded-lg leading-snug */
+  .vword{padding:.5rem .75rem;border-radius:8px;background:oklch(94% .035 258 / .75);
+    font-size:.875rem;font-weight:500;line-height:1.375;text-align:center}
 
   .out{opacity:0;transform:translateY(.35rem);
     transition:opacity .4s linear,transform .5s var(--ease)}
   .out.is-in{opacity:1;transform:none}
 
-  .ticket.is-void .tk-order b{text-decoration:line-through;
-    text-decoration-color:oklch(58% .17 25);color:oklch(52% .02 267)}
-  .ticket.is-void .tk-vs-row strong{color:oklch(64% .015 267)}
-  .tk-returned{color:oklch(45% .16 145)}
-
   @media(max-width:900px){
-    .ticket{width:100%;max-width:24.5rem;justify-self:start}
+    .ticket{width:100%;max-width:30rem;justify-self:start}
   }
-  @media(max-width:400px){
-    .checks{grid-template-columns:minmax(0,1fr)}
+  @media(max-width:600px){
+    .cmp{padding:1.5rem 1.15rem;row-gap:18px;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)}
+    .cmp-lbl{font-size:.8rem}
+    .nv{font-size:1.3rem}.nu{font-size:1rem}
+    .cmp-t{font-size:.8rem}
+    .vword{font-size:.8rem;padding:.45rem .5rem}
   }
 
   .ecosystem{position:absolute;z-index:3;left:50%;bottom:1.2rem;width:min(calc(100% - 2 * var(--pad)),var(--maxw));transform:translateX(-50%);display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2.4rem;border-top:1px solid var(--line);padding-top:1rem}
@@ -200,30 +233,145 @@
      the stack scrolls past at the page's own pace. No mode swapping,
      no pin height to tune: the browser does all of it. */
   .protocol-section{background:#fff;padding-block:var(--gap-section)}
-  .protocol-layout{display:grid;grid-template-columns:minmax(0,.68fr) minmax(0,1.32fr);
-    gap:clamp(3rem,6vw,6.5rem);align-items:start}
-  /* the heading wants two or three lines, not five: give it the room
-     and let it balance rather than ragging down the column */
+  /* 卡片保留，但不用 SaaS 那套：小圆角、无阴影、无渐变，靠一条发丝线立边界 */
+  /* 这一段比别处宽：三张宽卡需要横向空间。左栏 314px 时标题排四行，加宽到约 420 才三行 */
+  .protocol-section .wrap{max-width:1320px}
+  .protocol-layout{display:grid;grid-template-columns:minmax(0,.74fr) minmax(0,1.26fr);
+    gap:clamp(2.25rem,4vw,4rem);align-items:start}
   .protocol-intro{position:sticky;top:clamp(5rem,14vh,8rem)}
-  .protocol-intro h2{margin:0;max-width:none;font-size:clamp(1.75rem,2.7vw,2.4rem);font-weight:300;
-    line-height:1.14;letter-spacing:-.03em;text-wrap:balance}
-  .protocol-intro .section-lede{max-width:32ch;margin-top:1.3rem;font-size:clamp(.95rem,.2vw + .9rem,1.05rem);line-height:1.6;color:oklch(52% .012 267)}
-  .protocol-list{min-width:0}
-  .protocol-item{padding-block:clamp(2.75rem,5vw,4.25rem);border-top:1px solid var(--hairline)}
-  .protocol-item:first-child{border-top:0;padding-top:0}
-  .protocol-num{display:block;font-size:.875rem;font-weight:500;letter-spacing:.1em;color:oklch(46% .11 160)}
-  .protocol-item h3{margin:.85rem 0 0;max-width:26ch;font-size:clamp(1.25rem,1.7vw,1.5rem);
-    font-weight:600;line-height:1.3;letter-spacing:-.018em}
-  .protocol-item > p{max-width:58ch;margin:.9rem 0 0;font-size:.9688rem;
-    line-height:1.65;color:oklch(45% .015 267)}
-  /* the checks run as a row where they fit, t54-style */
-  .protocol-checks{display:flex;flex-wrap:wrap;gap:.6rem 2.2rem;margin:1.4rem 0 0;padding:0;list-style:none}
-  .protocol-checks li{position:relative;padding-left:1.5rem;font-size:.9375rem;color:oklch(30% .02 267)}
-  .protocol-checks li::before{content:"";position:absolute;left:0;top:.42em;width:9px;height:5px;
-    border-left:2px solid oklch(46% .11 160);border-bottom:2px solid oklch(46% .11 160);transform:rotate(-45deg)}
-  .protocol-figure{margin:clamp(1.75rem,3vw,2.5rem) 0 0;border-radius:14px;overflow:hidden;
-    background:#fff;box-shadow:var(--ring),var(--lift)}
-  .protocol-figure img{display:block;width:100%;height:auto}
+  .protocol-intro h2{margin:0;max-width:none;font-size:clamp(1.75rem,2.9vw,2.6rem);font-weight:300;
+    line-height:1.1;letter-spacing:-.03em;text-wrap:balance}
+  .protocol-intro .section-lede{max-width:30ch;margin-top:1.4rem;
+    font-size:clamp(1rem,.25vw + .95rem,1.125rem);line-height:1.65;color:oklch(52% .012 267)}
+
+  /* 卡片：rounded-[2rem] + shadow-[0_8px_40px_rgb(0,0,0,.06)] + hairline，卡间用 gap 不用分隔线 */
+  .protocol-list{min-width:0;display:flex;flex-direction:column;gap:clamp(1.5rem,2.5vw,2.25rem)}
+  .protocol-item{position:relative;padding:clamp(1.75rem,2.8vw,3rem);
+    border-radius:4px;background:#fff;border:1px solid var(--hairline)}
+  .protocol-item > *{position:relative;z-index:1}
+
+  .protocol-item h3{margin:0;max-width:26ch;font-size:clamp(1.35rem,1.9vw,1.75rem);
+    font-weight:500;line-height:1.25;letter-spacing:-.022em}
+  .protocol-item > p{max-width:52ch;margin:1rem 0 0;font-size:1rem;
+    line-height:1.65;color:oklch(52% .012 267)}
+
+  /* 要点：两列网格，无标记——对号去掉（Ellie 2026-08-20） */
+  .protocol-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    align-items:start;gap:1rem 1.5rem;margin:2rem 0 0;padding:0;list-style:none}
+  .protocol-checks li{font-size:.875rem;line-height:1.4;color:oklch(42% .015 267)}
+
+  /* 插图不再自带边框——卡已经有一条了，框里套框最难看。靠留白与卡分开 */
+  .protocol-figure{margin:clamp(1.75rem,3vw,2.5rem) 0 0;overflow:hidden;background:none}
+  .protocol-figure .pfig{display:block;width:100%;height:auto}
+  /* 图里的动画默认暂停，等这一条滚进视口（.reveal 打上 .in）才播，且只播一次 */
+  .protocol-item.in .pfig *{animation-play-state:running}
+  @media(max-width:560px){.protocol-checks{grid-template-columns:1fr}}
+  @media(prefers-reduced-motion:reduce){
+    .protocol-item .pfig *{animation:none}
+  }
+
+  /* ── stack panorama：四层一张全景，回流线是论点 ── */
+  .stack-section{background:#fff;padding-block:var(--gap-section)}
+  .stack-section h2{margin:0;max-width:26ch;font-size:clamp(1.75rem,2.7vw,2.4rem);
+    font-weight:300;line-height:1.14;letter-spacing:-.03em;text-wrap:balance}
+  .stack-figure{margin:clamp(2rem,4vw,3rem) 0 0;border-radius:4px;overflow:hidden;
+    background:#fff;border:1px solid var(--hairline);padding:clamp(1rem,2.2vw,2rem)}
+  .stack-figure svg{display:block;width:100%;height:auto}
+  .pfs-flow{stroke-dasharray:70;stroke-dashoffset:70;
+    animation:pfs-draw .6s var(--ease) both;animation-play-state:paused}
+  .pfs-loop{stroke-dasharray:1000;stroke-dashoffset:1000;
+    animation:pfs-draw 1.2s var(--ease) 1.05s both;animation-play-state:paused}
+  .pfs-flow2{stroke-dasharray:260;stroke-dashoffset:260;
+    animation:pfs-draw .9s var(--ease) both;animation-play-state:paused}
+  .stack-figure.in .pfs-flow,.stack-figure.in .pfs-loop,
+  .stack-figure.in .pfs-flow2{animation-play-state:running}
+  @keyframes pfs-draw{to{stroke-dashoffset:0}}
+  /* ── 交易编排：每 7 秒执行一笔完整交易 ──
+     0-4% 订单脉冲 → 2-14% 条款/资金两包分头出发 → 16-30% 三个模型依次点火 →
+     30-36% verdict 落章（31-45% 扩散环）→ 36-46% ruling 包 → 50% 托管徽标
+     holding→released → 52-62% outcome 包 → 64-74% 三条记录依次写入 →
+     72-96% 历史包沿回流线爬回。所有演员共用 7s 周期，滚动进入才开演。 */
+  .pfs-act{animation-duration:7s;animation-timing-function:linear;
+    animation-iteration-count:infinite;animation-play-state:paused}
+  .stack-figure.in .pfs-act{animation-play-state:running}
+
+  .pfs-order{transform-box:fill-box;transform-origin:center;animation-name:pfs-order}
+  @keyframes pfs-order{0%,4%,100%{transform:scale(1)}1.5%{transform:scale(1.05)}}
+
+  .pfs-m1,.pfs-m2,.pfs-m3{transform-box:fill-box;transform-origin:center}
+  .pfs-m1{animation-name:pfs-m1}.pfs-m2{animation-name:pfs-m2}.pfs-m3{animation-name:pfs-m3}
+  @keyframes pfs-m1{0%,16%,21%,100%{transform:scale(1);fill:#eef1f9}18.5%{transform:scale(1.25);fill:#d7defb}}
+  @keyframes pfs-m2{0%,20.5%,25.5%,100%{transform:scale(1);fill:#eef1f9}23%{transform:scale(1.25);fill:#d7defb}}
+  @keyframes pfs-m3{0%,25%,30%,100%{transform:scale(1);fill:#eef1f9}27.5%{transform:scale(1.25);fill:#d7defb}}
+
+  .pfs-verdict{transform-box:fill-box;transform-origin:center;animation-name:pfs-verdict}
+  @keyframes pfs-verdict{0%,29.5%,100%{transform:scale(1)}31%{transform:scale(.8)}33.5%{transform:scale(1.14)}36%{transform:scale(1)}}
+  .pfs-vpulse{transform-box:fill-box;transform-origin:center;animation-name:pfs-vpulse}
+  @keyframes pfs-vpulse{0%,30%{transform:scale(1);opacity:0}32%{opacity:.5}45%,100%{transform:scale(1.9);opacity:0}}
+
+  .pfs-badge{animation-name:pfs-badge}
+  @keyframes pfs-badge{0%,13%{opacity:0}15%,88%{opacity:1}92%,100%{opacity:0}}
+  .pfs-bh{animation-name:pfs-bh}
+  @keyframes pfs-bh{0%,49%{opacity:1}51%,100%{opacity:0}}
+  .pfs-br{animation-name:pfs-br}
+  @keyframes pfs-br{0%,51%{opacity:0}53%,100%{opacity:1}}
+
+  .pfs-rc1{animation-name:pfs-rc1}.pfs-rc2{animation-name:pfs-rc2}.pfs-rc3{animation-name:pfs-rc3}
+  @keyframes pfs-rc1{0%,63%,69%,100%{fill:#f5f7fc}65.5%{fill:#dfe5fb}}
+  @keyframes pfs-rc2{0%,66%,72%,100%{fill:#f5f7fc}68.5%{fill:#dfe5fb}}
+  @keyframes pfs-rc3{0%,69%,75%,100%{fill:#f5f7fc}71.5%{fill:#dfe5fb}}
+
+  /* 数据包：offset-path 不支持的浏览器会堆在原点，先藏后开 */
+  .pfs-pk{visibility:hidden}
+  @supports (offset-path:path('M0 0H10')){
+    .pfs-pk{visibility:visible;opacity:0}
+    .pfs-pkt{animation-name:pfs-pkt}.pfs-pkf{animation-name:pfs-pkf}
+    .pfs-pkr{animation-name:pfs-pkr}.pfs-pko{animation-name:pfs-pko}
+    .pfs-pkl{animation-name:pfs-pkl}
+  }
+  @keyframes pfs-pkt{0%,2%{offset-distance:0%;opacity:0}3.5%{opacity:.95}12.5%{opacity:.95}14%,100%{offset-distance:100%;opacity:0}}
+  @keyframes pfs-pkf{0%,2%{offset-distance:0%;opacity:0}3.5%{opacity:.95}12.5%{opacity:.95}14%,100%{offset-distance:100%;opacity:0}}
+  @keyframes pfs-pkr{0%,36%{offset-distance:0%;opacity:0}37.5%{opacity:.95}44.5%{opacity:.95}46%,100%{offset-distance:100%;opacity:0}}
+  @keyframes pfs-pko{0%,52%{offset-distance:0%;opacity:0}53.5%{opacity:.95}60.5%{opacity:.95}62%,100%{offset-distance:100%;opacity:0}}
+  @keyframes pfs-pkl{0%,72%{offset-distance:0%;opacity:0}74%{opacity:.95}94%{opacity:.95}96%,100%{offset-distance:100%;opacity:0}}
+
+  /* ── 滚动装配（Firefox 无 view()：回落到现有 reveal + 一次性画线）── */
+  @supports (animation-timeline: view()){
+    .stack-section h2.reveal,.stack-notes.reveal{
+      opacity:1;transform:none;transition:none;
+      animation:pfs-rise both;animation-timeline:view();animation-range:entry 0% entry 90%}
+    .stack-figure.reveal{opacity:1;transform:none;transition:none;
+      view-timeline:--stackv;
+      animation:pfs-rise both;animation-timeline:view();animation-range:entry 0% entry 65%}
+    .pfs-flow2{animation-timeline:--stackv;animation-delay:0s;
+      animation-range:entry 30% cover 34%;animation-play-state:running}
+    .pfs-flow{animation-timeline:--stackv;animation-delay:0s;
+      animation-range:entry 55% cover 42%;animation-play-state:running}
+    .pfs-loop{animation-timeline:--stackv;animation-delay:0s;
+      animation-range:cover 22% cover 52%;animation-play-state:running}
+  }
+  @keyframes pfs-rise{from{opacity:0;transform:translateY(34px)}}
+  /* 成对纪律：图里是技术事实，图下四格是各层对用户意味着什么 */
+  .stack-notes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:clamp(1.25rem,2.5vw,2.5rem);margin-top:clamp(1.75rem,3vw,2.5rem)}
+  .stack-notes div{font-size:.9375rem;line-height:1.55;color:oklch(38% .02 267)}
+  .stack-notes b{display:block;margin-bottom:.4rem;font-size:.72rem;font-weight:600;
+    letter-spacing:.02em;color:oklch(38% .02 267)}
+  @media(max-width:900px){.stack-notes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  /* 窄屏：1180 宽的图缩进 350px 里字号只剩 4px。改为图内横向滚动，
+     svg 保住最小宽度，右缘自然露出下一段当滚动线索 */
+  @media(max-width:700px){
+    .stack-figure{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .stack-figure svg{min-width:880px}
+  }
+  @media(max-width:520px){.stack-notes{grid-template-columns:1fr}}
+  @media(prefers-reduced-motion:reduce){
+    .pfs-flow,.pfs-loop,.pfs-flow2{animation:none;stroke-dashoffset:0}
+    .pfs-pk,.pfs-vpulse{animation:none;visibility:hidden;opacity:0}
+    .pfs-act{animation:none}
+    .pfs-badge,.pfs-br{opacity:0}
+    .stack-section h2.reveal,.stack-notes.reveal,.stack-figure.reveal{animation:none;opacity:1;transform:none}
+  }
 
   .engine-section{position:relative;height:340svh;background:#fff;color:oklch(97% .004 260);
     --acc:oklch(70% .19 260)}
@@ -437,7 +585,7 @@
     .cta .wrap{gap:3.5rem;min-height:clamp(26rem,66svh,34rem)}
     .cta-foot{align-self:stretch;align-items:flex-start;text-align:left}
   }
-  @media(hover:none),(pointer:coarse){.btn,.nav-start,.rev-btn{min-height:44px}}
+  @media(hover:none),(pointer:coarse){.btn,.nav-start{min-height:44px}}
   @media(prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
     .model-wires .s{animation:none}
@@ -527,62 +675,58 @@
     <div class="hero-main">
       <div class="hero-copy">
         <h1 id="hero-title"><span class="line"><span>The agentic payment model for conditional settlement.</span></span><span class="line"><span>Computable risk, minimal cost.</span></span></h1>
-        <p class="hero-lede">Atara is a conditional payment protocol. It computes the risk on every payment, decides on evidence whether it settled, and takes a fraction up front instead of the whole sum.</p>
+        <p class="hero-lede">Atara is a conditional payment protocol. It computes the risk on every payment and takes a fraction up front instead of the whole sum.</p>
         <div class="hero-actions"><a class="btn btn-primary" href="console.html">Start</a><a class="btn btn-secondary" href="#contact">Talk to us</a></div>
       </div>
 
-      <figure class="ticket" id="pricingInstrument" aria-label="Illustrative: an order arrives, four checks run against this counterparty and clear, and from them the model computes a probability of default. The fee and the fraction locked follow from that number, and until the trade settles it can be reversed and the locked amount returned.">
-        <!-- one document. The order prints, the checks clear, the model's
-             answer lands in the inverted band, the terms follow from it. -->
-        <div class="tk-order">
-          <span class="tk-mini">Order</span>
-          <b class="num" id="orderAmount">$2,000,000.00</b>
+      <figure class="ticket" id="pricingInstrument" aria-label="Illustrative: one order compared across five dimensions. With Atara, the model computes the collateral, the risk of default and the fee for this counterparty; the payment condition is written into the protocol. Without it: full collateral, no risk priced, a higher flat fee, and a condition left to judgement.">
+        <!-- 一张表就是整张卡：三列扁平网格。我们那列由一块跨全行的面板托底，
+             上探出表头、下探出末行。中列随对手方逐笔变化，右列永远不动——
+             那个差别就是论点。
+             费率：两侧都是示意值，页脚已标 illustrative；真实费率等访谈
+             （LANDING-SPEC 未决 #6）。 -->
+        <div class="cmp">
+          <span class="cmp-panel" aria-hidden="true"></span>
+
+          <span class="cmp-hd"></span>
+          <span class="cmp-hd cmp-us">Atara</span>
+          <span class="cmp-hd cmp-them">Others</span>
+
+          <span class="cmp-lbl out" data-out="0">AI-computed risk of default</span>
+          <strong class="cmp-v out" data-out="0">
+            <span class="vline">
+              <svg class="rgauge" viewBox="0 0 20 13.5" aria-hidden="true">
+                <path class="rg-track" d="M2 11.5a8 8 0 0 1 16 0"/>
+                <path class="rg-fill" d="M2 11.5a8 8 0 0 1 16 0"/>
+                <path class="rg-needle" d="M10 11.5V4.4"/>
+                <circle class="rg-hub" cx="10" cy="11.5" r="1.7"/>
+              </svg>
+              <span class="nv" id="riskValue">&middot;&middot;&middot;</span><i class="nu">%</i>
+            </span>
+          </strong>
+          <span class="cmp-t out" data-out="0">None</span>
+
+          <span class="cmp-lbl out" data-out="1">Fee on this order</span>
+          <strong class="cmp-v out" data-out="1">
+            <span class="vline"><span class="nv" id="feeRate">&middot;&middot;&middot;</span><i class="nu">%</i></span>
+          </strong>
+          <span class="cmp-t out" data-out="1">
+            <span class="vline"><span class="nv">0.30</span><i class="nu">%</i></span>
+          </span>
+
+          <span class="cmp-lbl out" data-out="2">Collateral</span>
+          <strong class="cmp-v out" data-out="2">
+            <span class="vline"><span class="nv" id="collVal">&middot;&middot;&middot;</span><i class="nu">%</i></span>
+          </strong>
+          <span class="cmp-t out" data-out="2">
+            <span class="vline"><span class="nv">100</span><i class="nu">%</i></span>
+          </span>
+
+          <span class="cmp-lbl out" data-out="3">Payment condition</span>
+          <strong class="cmp-v out" data-out="3"><span class="vword">Written into<br>the protocol</span></strong>
+          <span class="cmp-t out" data-out="3">Subjective</span>
         </div>
 
-        <!-- the four checks are the premise, not the point: one row of
-             small type across the top of the paper -->
-        <ul class="checks" id="checks">
-          <li data-check="0"><span class="ck" aria-hidden="true"><svg viewBox="0 0 14 14"><path d="M3 7.4l2.6 2.6L11 4.2"/></svg></span>Wallet provenance</li>
-          <li data-check="1"><span class="ck" aria-hidden="true"><svg viewBox="0 0 14 14"><path d="M3 7.4l2.6 2.6L11 4.2"/></svg></span>Settlement history</li>
-          <li data-check="2"><span class="ck" aria-hidden="true"><svg viewBox="0 0 14 14"><path d="M3 7.4l2.6 2.6L11 4.2"/></svg></span>Dispute outcomes</li>
-          <li data-check="3"><span class="ck" aria-hidden="true"><svg viewBox="0 0 14 14"><path d="M3 7.4l2.6 2.6L11 4.2"/></svg></span>Verification checks</li>
-        </ul>
-
-        <!-- the comparison. Two rows, our column against theirs.
-             The risk row is evidence-backed: across the seven agent-payment
-             sites checked on 2026-08-05 none price probability of default,
-             and t54's own API docs carry no premium, collateral or price
-             field. The fee row's right cell is an ILLUSTRATIVE stand-in
-             at Ellie's instruction (2026-08-11): we have no sourced fee for
-             the alternatives, so it is authored to sit 2.5-5x ours and to
-             rise with the risk. It is not a researched figure. -->
-        <div class="tk-vs">
-          <div class="tk-vs-head">
-            <span></span>
-            <span class="tk-mini tk-ours">Atara</span>
-            <span class="tk-mini">Others</span>
-          </div>
-
-          <div class="out tk-vs-row" data-out="0">
-            <span class="tk-vs-label">AI-computed<br>risk of default</span>
-            <strong class="num tk-ours" id="riskValue">&middot;&middot;&middot;</strong>
-            <span class="tk-vs-theirs">None</span>
-          </div>
-
-          <div class="out tk-vs-row" data-out="1">
-            <span class="tk-vs-label">Fee on<br>this order</span>
-            <strong class="num tk-ours" id="feeRate">&middot;&middot;&middot;</strong>
-            <span class="tk-vs-theirs num" id="feeOther">&mdash;</span>
-          </div>
-        </div>
-
-        <div class="out tk-act" data-out="2">
-          <button type="button" class="rev-btn" id="revBtn">
-            <span class="rev-mark" aria-hidden="true">&#8634;</span>
-            <span id="revBtnText">Reverse this trade</span>
-          </button>
-          <span class="tk-mini tk-returned" id="revNote"></span>
-        </div>
       </figure>
     </div>
 
@@ -604,46 +748,376 @@
       <div class="protocol-list">
 
         <article class="protocol-item reveal">
-          <span class="protocol-num num">01</span>
           <h3>AI prices the risk on every trade</h3>
-          <p>The model computes this counterparty&rsquo;s probability of default on this trade and sets the collateral from it, instead of demanding the full amount up front whoever you are.</p>
+          <p>The model computes this counterparty&rsquo;s probability of default on this trade and sets the collateral from it.</p>
           <ul class="protocol-checks">
             <li>Post a fraction, pay the balance on delivery</li>
             <li>The more you settle, the less you post</li>
           </ul>
-          <figure class="protocol-figure">
-            <img src="assets/illustrations/protocol-pricing.svg" alt="An AI model reads a counterparty's record through a weighted network and computes a probability of default for this trade" decoding="async">
+          <figure class="protocol-figure" role="img" aria-label="An AI model reads a counterparty's record through a weighted network and computes a probability of default for this trade">
+            <svg class="pfig" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="40 92 790 240" aria-label="An AI model reads a counterparty's record of 142 settlements and 3 defaults through a weighted network and computes a probability of default of 1.8 percent for this trade">
+              <style>
+                .pfp-cap{fill:#9aa0ad;font:500 12px/1 Inter,system-ui,sans-serif;letter-spacing:.14em}
+                .pfp-lbl{fill:#6b7180;font:400 15px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+                .pfp-out{fill:#14161f;font:300 66px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+                .pfp-for{fill:#8a90a6;font:600 12px/1 Inter,system-ui,sans-serif;letter-spacing:.14em}
+                .pfp-rule{stroke:#e7e8ee;stroke-width:1}
+                .pfp-dot{fill:#b9c4f0}.pfp-miss{fill:#e58272}
+                .pfp-e{stroke:#e2e4eb;stroke-width:1;fill:none}
+                .pfp-ew{stroke:#1505eb;fill:none}
+                .pfp-n{fill:#fff;stroke:#b6bedd;stroke-width:1.3}
+                .pfp-core{transform-box:fill-box;transform-origin:center;
+                  animation:pfpricing-land 1.1s cubic-bezier(.16,1,.3,1) both .5s;animation-play-state:paused}
+                @keyframes pfpricing-land{0%{transform:scale(.2);opacity:0}60%,100%{transform:scale(1);opacity:1}}
+                .pfp-pulse{transform-box:fill-box;transform-origin:center;
+                  animation:pfpricing-pulse 2.6s ease-out .7s infinite;animation-play-state:paused}
+                @keyframes pfpricing-pulse{0%{transform:scale(.55);opacity:.34}70%,100%{transform:scale(1.55);opacity:0}}
+                .pfp-orbit-dot{transform-box:view-box;transform-origin:408px 220px;
+                  animation:pfpricing-orbit 5.2s linear both .3s;animation-play-state:paused}
+                @keyframes pfpricing-orbit{to{transform:rotate(360deg)}}
+                .pfp-dot1,.pfp-dot2{visibility:hidden}
+                @supports (offset-path:path('M0 0H10')){
+                  .pfp-dot1,.pfp-dot2{visibility:visible;opacity:0;
+                    animation:pfpricing-pk 3.2s linear infinite;animation-play-state:paused}
+                  .pfp-dot1{offset-path:path('M210 220H372')}
+                  .pfp-dot2{offset-path:path('M444 220H612');animation-delay:1.15s}
+                }
+                @keyframes pfpricing-pk{0%{offset-distance:0%;opacity:0}
+                  10%{opacity:.9}62%{opacity:.9}72%,100%{offset-distance:100%;opacity:0}}
+                .pfp-flow{stroke:#1505eb;stroke-width:1.5;fill:none;stroke-linecap:round;
+                  stroke-dasharray:175;animation:pfpricing-flow 4.6s ease-in-out both}
+                @keyframes pfpricing-flow{0%,6%{stroke-dashoffset:175}26%,100%{stroke-dashoffset:0}}
+                .pfp-flow-2{animation-delay:.55s}
+                @media(prefers-reduced-motion:reduce){
+                  .pfp-core,.pfp-pulse,.pfp-orbit-dot,.pfp-dot1,.pfp-dot2{animation:none}.pfp-pulse,.pfp-dot1,.pfp-dot2{opacity:0}
+                  .pfp-flow{animation:none;stroke-dashoffset:0}
+                }
+              </style>
+            
+              <!-- the record: what this counterparty has actually done -->
+              <text class="pfp-cap" x="60" y="118">THIS COUNTERPARTY</text>
+              <g class="pfp-dot">
+                <circle cx="66" cy="160" r="5"/><circle cx="92" cy="160" r="5"/><circle cx="118" cy="160" r="5"/><circle cx="144" cy="160" r="5"/><circle cx="170" cy="160" r="5"/>
+                <circle cx="66" cy="186" r="5"/><circle cx="92" cy="186" r="5"/><circle cx="144" cy="186" r="5"/><circle cx="170" cy="186" r="5"/>
+                <circle cx="66" cy="212" r="5"/><circle cx="92" cy="212" r="5"/><circle cx="118" cy="212" r="5"/><circle cx="144" cy="212" r="5"/><circle cx="170" cy="212" r="5"/>
+                <circle cx="66" cy="238" r="5"/><circle cx="118" cy="238" r="5"/><circle cx="144" cy="238" r="5"/></g>
+              <g class="pfp-miss">
+                <circle cx="118" cy="186" r="5"/><circle cx="92" cy="238" r="5"/><circle cx="170" cy="238" r="5"/>
+              </g>
+              <path class="pfp-rule" d="M60 268h130"/>
+              <text class="pfp-lbl" x="60" y="294">142 settlements</text>
+              <text class="pfp-lbl" x="60" y="318">3 defaults</text>
+            
+              <!-- the model reading it: hairline network, weight where it matters -->
+              <text class="pfp-cap" x="408" y="118" text-anchor="middle">AI MODEL</text>
+              <!-- 参考对标稿：一个脉冲节点，而不是三层细线。同样的意思，
+                   在 657px 宽下读得出来；细线网络在这个尺寸只剩一团灰。 -->
+              <g class="pfp-node">
+                <circle class="pfp-pulse" cx="408" cy="220" r="20" fill="#1505eb" opacity=".16"/>
+                <circle cx="408" cy="220" r="28" fill="none" stroke="#cfd4de" stroke-width="1" stroke-dasharray="3 5"/>
+                <circle class="pfp-orbit-dot" cx="408" cy="192" r="3" fill="#1505eb" opacity=".55"/>
+                <circle cx="408" cy="220" r="20" fill="#fff" stroke="#1505eb" stroke-width="1.4"/>
+                <circle class="pfp-core" cx="408" cy="220" r="7.5" fill="#1505eb"/>
+              </g>
+
+              <!-- the record goes in, the estimate comes out -->
+              <path class="pfp-flow" d="M210 220H372"/>
+              <path class="pfp-flow pfp-flow-2" d="M444 220H612"/>
+              <g fill="#1505eb">
+                <circle class="pfp-dot1" r="4"/>
+                <circle class="pfp-dot2" r="4"/>
+              </g>
+            
+              <!-- the number it lands on -->
+              <text class="pfp-cap" x="809" y="170" text-anchor="end">PROBABILITY OF DEFAULT</text>
+              <text class="pfp-out" x="809" y="242" text-anchor="end">1.8%</text>
+              <text class="pfp-for" x="809" y="274" text-anchor="end">FOR THIS TRADE</text>
+            </svg>
           </figure>
         </article>
 
         <article class="protocol-item reveal">
-          <span class="protocol-num num">02</span>
           <h3>The condition is judged on evidence</h3>
-          <p>Whether the condition was met is decided on what the evidence says, under rules published before the trade.</p>
+          <p>Whether the condition was met is decided on what the evidence says.</p>
           <ul class="protocol-checks">
             <li>No position, no profit in the outcome</li>
             <li>Rules published up front</li>
             <li>Release follows the evidence</li>
           </ul>
-          <figure class="protocol-figure">
-            <img src="assets/illustrations/protocol-judgement.svg" alt="A subjective clause is rewritten before the trade into objective tests, each bound to a named source of evidence" loading="lazy" decoding="async">
+          <figure class="protocol-figure" role="img" aria-label="A subjective clause is rewritten before the trade into objective tests, each bound to a named source of evidence">
+            <svg class="pfig" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="40 92 810 300" aria-label="One clause reading pay on acceptable quality is rewritten before the trade into three tests, each naming the document that settles it: a lab certificate, an inspection report and a bill of lading">
+              <style>
+                .pfj-cap{fill:#9aa0ad;font:500 12px/1 Inter,system-ui,sans-serif;letter-spacing:.14em}
+                .pfj-clause{fill:#3c4356;font:400 25px/1 Inter,system-ui,sans-serif;font-style:italic}
+                .pfj-box{fill:#fff;stroke:#e8ebf3;stroke-width:1}
+                .pfj-test{fill:#14161f;font:500 18px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+                /* the source is what makes a test settleable, so it is set as a
+                   named document rather than a caption */
+                .pfj-src{fill:#2b3040;font:600 13px/1 Inter,system-ui,sans-serif}
+                .pfj-by{fill:#9aa0ad;font:400 13px/1 Inter,system-ui,sans-serif}
+                .pfj-rule{stroke:#e7e8ee;stroke-width:1}
+                .pfj-card{fill:#fff;stroke:#e8ebf3;stroke-width:1}
+                .pfj-arrow{stroke:#1505eb;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+                .pfj-t1{animation:pfjudgement-tick 5.4s ease-out both .1s;animation-play-state:paused}
+                .pfj-t2{animation:pfjudgement-tick 5.4s ease-out both .45s;animation-play-state:paused}
+                .pfj-t3{animation:pfjudgement-tick 5.4s ease-out both .8s;animation-play-state:paused}
+                @keyframes pfjudgement-tick{0%,14%{opacity:0}26%,100%{opacity:1}}
+                .pfj-t1 circle,.pfj-t2 circle,.pfj-t3 circle{transform-box:fill-box;transform-origin:center;
+                  animation:pfjudgement-beat 4.2s ease-in-out infinite;animation-play-state:paused}
+                .pfj-t2 circle{animation-delay:.5s}.pfj-t3 circle{animation-delay:1s}
+                @keyframes pfjudgement-beat{0%,22%,100%{transform:scale(1)}9%{transform:scale(1.18)}}
+                @media(prefers-reduced-motion:reduce){.pfj-t1,.pfj-t2,.pfj-t3{animation:none;opacity:1}.pfj-t1 circle,.pfj-t2 circle,.pfj-t3 circle{animation:none}}
+              </style>
+            
+              <!-- 左栏：框按内容定尺寸，与右侧三张卡的整体中线对齐（y=254），不再拉高去凑上下边 -->
+              <text class="pfj-cap" x="60" y="112">WHAT THE CONTRACT SAYS</text>
+              <rect class="pfj-box" x="60" y="178" width="256" height="152" rx="12"/>
+              <text class="pfj-clause" x="86" y="222">&#8220;pay on</text>
+              <text class="pfj-clause" x="86" y="256">acceptable</text>
+              <text class="pfj-clause" x="86" y="290">quality&#8221;</text>
+              <text class="pfj-cap" x="188" y="356" text-anchor="middle">BEFORE THE TRADE</text>
+
+              <path class="pfj-arrow" d="M352 254h56M398 245l10 9-10 9"/>
+
+              <text class="pfj-cap" x="470" y="112">WHAT THE PROTOCOL SETTLES ON</text>
+            
+              <rect class="pfj-card" x="470" y="140" width="370" height="64" rx="10"/>
+              <g class="pfj-t1">
+                <circle cx="484" cy="168" r="10" fill="#1aa35c"/>
+                <path d="M479 168l4 4 7.5-8.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
+              <text class="pfj-test" x="512" y="174">moisture &#8804; 12%</text>
+              <text class="pfj-by" x="512" y="196">settled by <tspan class="pfj-src">the lab certificate</tspan></text>
+            
+              <rect class="pfj-card" x="470" y="222" width="370" height="64" rx="10"/>
+              <g class="pfj-t2">
+                <circle cx="484" cy="250" r="10" fill="#1aa35c"/>
+                <path d="M479 250l4 4 7.5-8.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
+              <text class="pfj-test" x="512" y="256">count = 400 units</text>
+              <text class="pfj-by" x="512" y="278">settled by <tspan class="pfj-src">the inspection report</tspan></text>
+            
+              <rect class="pfj-card" x="470" y="304" width="370" height="64" rx="10"/>
+              <g class="pfj-t3">
+                <circle cx="484" cy="332" r="10" fill="#1aa35c"/>
+                <path d="M479 332l4 4 7.5-8.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
+              <text class="pfj-test" x="512" y="338">landed by 30 Sep</text>
+              <text class="pfj-by" x="512" y="360">settled by <tspan class="pfj-src">the bill of lading</tspan></text>
+            </svg>
           </figure>
         </article>
 
         <article class="protocol-item reveal">
-          <span class="protocol-num num">03</span>
           <h3>Real settlement data</h3>
-          <p>Every completed trade leaves one record with a real amount attached: who paid on time, who defaulted. It is the only data the pricing model trains on.</p>
+          <p>Every completed trade leaves one record with a real amount attached: who paid on time, who defaulted.</p>
           <ul class="protocol-checks">
             <li>Sharper with every settlement</li>
             <li>Clean records post less and less</li>
             <li>Models can be copied, records cannot</li>
           </ul>
-          <figure class="protocol-figure">
-            <img src="assets/illustrations/protocol-records.svg" alt="As completed settlements accumulate, the model's estimate tightens" loading="lazy" decoding="async">
+          <figure class="protocol-figure" role="img" aria-label="As completed settlements accumulate, the model's estimate tightens">
+            <svg class="pfig" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="61 54 798 325" aria-label="As completed settlements accumulate, the model's estimate tightens and the collateral it asks of a clean counterparty falls from 34 to 8 percent">
+              <style>
+                .pfr-cap{fill:#9aa0ad;font:500 12px/1 Inter,system-ui,sans-serif;letter-spacing:.14em}
+                .pfr-lbl{fill:#8a90a6;font:600 12px/1 Inter,system-ui,sans-serif;letter-spacing:.12em;font-variant-numeric:tabular-nums}
+                .pfr-val{fill:#14161f;font:400 22px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+                .pfr-grid{stroke:#eef0f4;stroke-width:1}
+                .pfr-axis{stroke:#ccd1e4;stroke-width:1;stroke-linecap:round}
+                .pfr-band{fill:url(#bandFade)}
+                .pfr-mid{stroke:#1505eb;stroke-width:2;fill:none;stroke-linecap:round}
+                .pfr-tickmark{fill:#9db4f5}.pfr-tickmark.bad{fill:#e58272}
+                .pfr-pin{stroke:#c0c7e0;stroke-width:1;stroke-dasharray:3 4}
+                .pfr-dot{fill:#fff;stroke:#1505eb;stroke-width:2}
+                .pfr-draw{stroke-dasharray:1400;stroke-dashoffset:1400;animation:pfrecords-draw 6s cubic-bezier(.5,0,.3,1) both .1s;animation-play-state:paused}
+                @keyframes pfrecords-draw{0%,4%{stroke-dashoffset:1400}62%,100%{stroke-dashoffset:0}}
+                .pfr-grow{transform-box:fill-box;transform-origin:left center;animation:pfrecords-grow 6s cubic-bezier(.5,0,.3,1) both .1s;animation-play-state:paused}
+                @keyframes pfrecords-grow{0%,4%{transform:scaleX(0)}62%,100%{transform:scaleX(1)}}
+                .pfr-p1{animation:pfrecords-pop 6s ease-out both 1.1s;animation-play-state:paused}
+                .pfr-p2{animation:pfrecords-pop 6s ease-out both 1.5s;animation-play-state:paused}
+                .pfr-p3{animation:pfrecords-pop 6s ease-out both 1.9s;animation-play-state:paused}
+                @keyframes pfrecords-pop{0%,8%{opacity:0}22%,100%{opacity:1}}
+                @media(prefers-reduced-motion:reduce){.pfr-draw,.pfr-grow,.pfr-p1,.pfr-p2,.pfr-p3{animation:none;opacity:1;transform:none;stroke-dashoffset:0}}
+              </style>
+              <defs>
+                <linearGradient id="bandFade" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0"  stop-color="#1505eb" stop-opacity=".04"/>
+                  <stop offset=".5" stop-color="#1505eb" stop-opacity=".13"/>
+                  <stop offset="1"  stop-color="#1505eb" stop-opacity=".04"/>
+                </linearGradient>
+              </defs>
+              <g class="pfr-grid"><path d="M90 130H830M90 190H830M90 250H830"/></g>
+            
+              <g class="pfr-grow"><path class="pfr-band" d="M90.0 76.0C93.1 78.4 102.3 85.6 108.5 90.1C114.7 94.7 120.8 99.0 127.0 103.2C133.2 107.4 139.3 111.5 145.5 115.4C151.7 119.3 157.8 123.0 164.0 126.6C170.2 130.2 176.3 133.7 182.5 137.0C188.7 140.3 194.8 143.6 201.0 146.6C207.2 149.7 213.3 152.7 219.5 155.6C225.7 158.4 231.8 161.2 238.0 163.9C244.2 166.5 250.3 169.1 256.5 171.5C262.7 174.0 268.8 176.3 275.0 178.6C281.2 180.9 287.3 183.1 293.5 185.2C299.7 187.3 305.8 189.3 312.0 191.3C318.2 193.3 324.3 195.1 330.5 196.9C336.7 198.8 342.8 200.5 349.0 202.2C355.2 203.9 361.3 205.5 367.5 207.0C373.7 208.6 379.8 210.1 386.0 211.5C392.2 212.9 398.3 214.3 404.5 215.7C410.7 217.0 416.8 218.3 423.0 219.5C429.2 220.8 435.3 221.9 441.5 223.1C447.7 224.2 453.8 225.3 460.0 226.4C466.2 227.4 472.3 228.5 478.5 229.5C484.7 230.4 490.8 231.4 497.0 232.3C503.2 233.2 509.3 234.1 515.5 234.9C521.7 235.8 527.8 236.6 534.0 237.3C540.2 238.1 546.3 238.9 552.5 239.6C558.7 240.3 564.8 241.0 571.0 241.7C577.2 242.4 583.3 243.0 589.5 243.6C595.7 244.3 601.8 244.8 608.0 245.4C614.2 246.0 620.3 246.6 626.5 247.1C632.7 247.6 638.8 248.1 645.0 248.6C651.2 249.1 657.3 249.6 663.5 250.0C669.7 250.5 675.8 250.9 682.0 251.4C688.2 251.8 694.3 252.2 700.5 252.6C706.7 253.0 712.8 253.4 719.0 253.7C725.2 254.1 731.3 254.4 737.5 254.8C743.7 255.1 749.8 255.4 756.0 255.7C762.2 256.1 768.3 256.4 774.5 256.7C780.7 256.9 786.8 257.2 793.0 257.5C799.2 257.8 805.3 258.0 811.5 258.3C817.7 258.5 826.9 258.9 830.0 259.0 L830.0 266.4 C826.9 266.4 817.7 266.3 811.5 266.3C805.3 266.2 799.2 266.2 793.0 266.1C786.8 266.0 780.7 266.0 774.5 265.9C768.3 265.9 762.2 265.8 756.0 265.8C749.8 265.7 743.7 265.6 737.5 265.6C731.3 265.5 725.2 265.4 719.0 265.3C712.8 265.3 706.7 265.2 700.5 265.1C694.3 265.0 688.2 265.0 682.0 264.9C675.8 264.8 669.7 264.7 663.5 264.6C657.3 264.5 651.2 264.4 645.0 264.3C638.8 264.2 632.7 264.1 626.5 264.0C620.3 263.9 614.2 263.8 608.0 263.6C601.8 263.5 595.7 263.4 589.5 263.3C583.3 263.1 577.2 263.0 571.0 262.8C564.8 262.7 558.7 262.6 552.5 262.4C546.3 262.2 540.2 262.1 534.0 261.9C527.8 261.7 521.7 261.6 515.5 261.4C509.3 261.2 503.2 261.0 497.0 260.8C490.8 260.6 484.7 260.4 478.5 260.2C472.3 260.0 466.2 259.8 460.0 259.5C453.8 259.3 447.7 259.0 441.5 258.8C435.3 258.5 429.2 258.3 423.0 258.0C416.8 257.7 410.7 257.4 404.5 257.1C398.3 256.8 392.2 256.5 386.0 256.2C379.8 255.9 373.7 255.5 367.5 255.2C361.3 254.8 355.2 254.5 349.0 254.1C342.8 253.7 336.7 253.3 330.5 252.9C324.3 252.5 318.2 252.0 312.0 251.6C305.8 251.1 299.7 250.7 293.5 250.2C287.3 249.7 281.2 249.2 275.0 248.7C268.8 248.1 262.7 247.6 256.5 247.0C250.3 246.4 244.2 245.8 238.0 245.2C231.8 244.6 225.7 243.9 219.5 243.2C213.3 242.6 207.2 241.8 201.0 241.1C194.8 240.4 188.7 239.6 182.5 238.8C176.3 238.0 170.2 237.2 164.0 236.3C157.8 235.4 151.7 234.5 145.5 233.6C139.3 232.7 133.2 231.7 127.0 230.7C120.8 229.6 114.7 228.6 108.5 227.5C102.3 226.4 93.1 224.6 90.0 224.0 Z"/></g>
+              <path class="pfr-mid pfr-draw" d="M90.0 150.0C93.1 151.5 102.3 156.0 108.5 158.8C114.7 161.6 120.8 164.3 127.0 166.9C133.2 169.6 139.3 172.1 145.5 174.5C151.7 176.9 157.8 179.2 164.0 181.5C170.2 183.7 176.3 185.8 182.5 187.9C188.7 190.0 194.8 192.0 201.0 193.9C207.2 195.8 213.3 197.6 219.5 199.4C225.7 201.2 231.8 202.9 238.0 204.5C244.2 206.2 250.3 207.7 256.5 209.3C262.7 210.8 268.8 212.2 275.0 213.6C281.2 215.0 287.3 216.4 293.5 217.7C299.7 219.0 305.8 220.2 312.0 221.4C318.2 222.6 324.3 223.8 330.5 224.9C336.7 226.0 342.8 227.1 349.0 228.1C355.2 229.2 361.3 230.1 367.5 231.1C373.7 232.1 379.8 233.0 386.0 233.9C392.2 234.7 398.3 235.6 404.5 236.4C410.7 237.2 416.8 238.0 423.0 238.8C429.2 239.5 435.3 240.2 441.5 240.9C447.7 241.6 453.8 242.3 460.0 243.0C466.2 243.6 472.3 244.2 478.5 244.8C484.7 245.4 490.8 246.0 497.0 246.6C503.2 247.1 509.3 247.6 515.5 248.2C521.7 248.7 527.8 249.2 534.0 249.6C540.2 250.1 546.3 250.6 552.5 251.0C558.7 251.4 564.8 251.9 571.0 252.3C577.2 252.7 583.3 253.1 589.5 253.4C595.7 253.8 601.8 254.2 608.0 254.5C614.2 254.9 620.3 255.2 626.5 255.5C632.7 255.9 638.8 256.2 645.0 256.5C651.2 256.8 657.3 257.0 663.5 257.3C669.7 257.6 675.8 257.9 682.0 258.1C688.2 258.4 694.3 258.6 700.5 258.9C706.7 259.1 712.8 259.3 719.0 259.5C725.2 259.8 731.3 260.0 737.5 260.2C743.7 260.4 749.8 260.6 756.0 260.8C762.2 260.9 768.3 261.1 774.5 261.3C780.7 261.5 786.8 261.6 793.0 261.8C799.2 262.0 805.3 262.1 811.5 262.3C817.7 262.4 826.9 262.6 830.0 262.7"/>
+            
+              <g class="pfr-p1">
+                <path class="pfr-pin" d="M90 150V300"/><circle class="pfr-dot" cx="90" cy="150" r="7"/>
+                <text class="pfr-val" x="90" y="132">34%</text><text class="pfr-lbl" x="90" y="324">4 SETTLEMENTS</text>
+              </g>
+              <g class="pfr-p2">
+                <path class="pfr-pin" d="M460 246V300"/><circle class="pfr-dot" cx="460" cy="246" r="7"/>
+                <text class="pfr-val" x="460" y="228" text-anchor="middle">13%</text><text class="pfr-lbl" x="460" y="324" text-anchor="middle">80 SETTLEMENTS</text>
+              </g>
+              <g class="pfr-p3">
+                <path class="pfr-pin" d="M830 266V300"/><circle class="pfr-dot" cx="830" cy="266" r="7"/>
+                <text class="pfr-val" x="830" y="248" text-anchor="end">8%</text><text class="pfr-lbl" x="830" y="324" text-anchor="end">1,600 SETTLEMENTS</text>
+              </g>
+            
+              <path class="pfr-axis" d="M90 300H830"/>
+            
+              <g transform="translate(90 344)">
+                <g class="pfr-tickmark">
+                  <rect width="4" height="13" rx="2"/><rect x="30" width="4" height="13" rx="2"/><rect x="68" width="4" height="13" rx="2"/>
+                  <rect x="112" width="4" height="13" rx="2"/><rect x="150" width="4" height="13" rx="2"/><rect x="182" width="4" height="13" rx="2"/>
+                  <rect x="222" width="4" height="13" rx="2"/><rect x="244" width="4" height="13" rx="2"/><rect x="270" width="4" height="13" rx="2"/>
+                  <rect x="298" width="4" height="13" rx="2"/><rect x="318" width="4" height="13" rx="2"/><rect x="340" width="4" height="13" rx="2"/>
+                  <rect x="358" width="4" height="13" rx="2"/><rect x="374" width="4" height="13" rx="2"/><rect x="390" width="4" height="13" rx="2"/>
+                  <rect x="406" width="4" height="13" rx="2"/><rect x="420" width="4" height="13" rx="2"/><rect x="434" width="4" height="13" rx="2"/>
+                  <rect x="448" width="4" height="13" rx="2"/><rect x="460" width="4" height="13" rx="2"/><rect x="472" width="4" height="13" rx="2"/>
+                  <rect x="484" width="4" height="13" rx="2"/><rect x="495" width="4" height="13" rx="2"/><rect x="506" width="4" height="13" rx="2"/>
+                  <rect x="516" width="4" height="13" rx="2"/><rect x="526" width="4" height="13" rx="2"/><rect x="536" width="4" height="13" rx="2"/>
+                  <rect x="545" width="4" height="13" rx="2"/><rect x="554" width="4" height="13" rx="2"/><rect x="563" width="4" height="13" rx="2"/>
+                  <rect x="572" width="4" height="13" rx="2"/><rect x="580" width="4" height="13" rx="2"/><rect x="588" width="4" height="13" rx="2"/>
+                  <rect x="596" width="4" height="13" rx="2"/><rect x="604" width="4" height="13" rx="2"/><rect x="612" width="4" height="13" rx="2"/>
+                  <rect x="620" width="4" height="13" rx="2"/><rect x="627" width="4" height="13" rx="2"/><rect x="634" width="4" height="13" rx="2"/>
+                  <rect x="641" width="4" height="13" rx="2"/><rect x="648" width="4" height="13" rx="2"/><rect x="655" width="4" height="13" rx="2"/>
+                  <rect x="662" width="4" height="13" rx="2"/><rect x="669" width="4" height="13" rx="2"/><rect x="676" width="4" height="13" rx="2"/>
+                  <rect x="683" width="4" height="13" rx="2"/><rect x="690" width="4" height="13" rx="2"/><rect x="697" width="4" height="13" rx="2"/>
+                  <rect x="704" width="4" height="13" rx="2"/><rect x="711" width="4" height="13" rx="2"/><rect x="718" width="4" height="13" rx="2"/>
+                  <rect x="725" width="4" height="13" rx="2"/><rect x="732" width="4" height="13" rx="2"/><rect x="739" width="4" height="13" rx="2"/>
+                </g>
+                <g class="pfr-tickmark pfr-bad">
+                  <rect x="96" width="4" height="13" rx="2"/><rect x="284" width="4" height="13" rx="2"/><rect x="528" width="4" height="13" rx="2"/>
+                </g>
+              </g>
+            </svg>
           </figure>
         </article>
 
+      </div>
+    </div>
+  </section>
+
+  <section class="stack-section" id="stack">
+    <div class="wrap">
+      <h2 class="reveal">A stack with no single point of trust.</h2>
+
+      <!-- 全景架构图：Order → 多模型裁决 → 结算两条腿 → C2 记录，
+           回流线（记录喂回下一次裁决）是整张图的论点。
+           不出现内部代号；可具名的只有 Loka Chain 与 C2 network；TEE 不出现。 -->
+      <figure class="stack-figure reveal" role="img" aria-label="One order splits two ways: its terms and evidence go to adjudication, where independent AI models vote and sign a ruling M-of-N, while the funds go straight into settlement — an escrow contract on Loka Chain enforced by block time, or peer-to-peer payment channels for high frequency. The ruling controls the release. Every outcome is written to the Setu network as a record linked to its cause, and that history feeds the next ruling.">
+        <svg viewBox="0 0 1180 540" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <marker id="pfs-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0 0L10 5 0 10z" fill="#9aa4c2"/></marker>
+            <marker id="pfs-ahb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0 0L10 5 0 10z" fill="#1505eb"/></marker>
+            <marker id="pfs-ahc" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto"><path d="M0 0L10 5 0 10z" fill="#b6bedd"/></marker>
+          </defs>
+
+          <!-- 入口：一笔订单分两路——条款与证据进裁决，资金直接进结算。
+               这是真实拓扑：钱不经过模型。 -->
+          <g class="pfs-order pfs-act">
+            <rect x="333" y="14" width="144" height="34" rx="17" fill="#1505eb"/>
+            <text x="405" y="36" text-anchor="middle" font-size="12" font-weight="600" letter-spacing=".01em" fill="#fff">One order</text>
+          </g>
+          <path class="pfs-flow2" d="M405 48V66H190V84" stroke="#9aa4c2" stroke-width="1.5" fill="none" marker-end="url(#pfs-ah)"/>
+          <path class="pfs-flow2" style="animation-delay:.15s" d="M405 48V66H620V84" stroke="#9aa4c2" stroke-width="1.5" fill="none" marker-end="url(#pfs-ah)"/>
+          <text x="288" y="58" text-anchor="middle" font-size="11" font-weight="500" fill="#646c83">terms &amp; evidence</text>
+          <text x="515" y="58" text-anchor="middle" font-size="11" font-weight="500" fill="#646c83">funds</text>
+
+          <!-- 裁决：多模型投票，M-of-N 收敛到一个可证明的 verdict -->
+          <rect x="40" y="90" width="300" height="330" rx="14" fill="#fff" stroke="#e8ebf3"/>
+          <text x="64" y="128" font-size="12" font-weight="600" letter-spacing=".02em" fill="#646c83">Adjudication</text>
+          <g stroke="#c3cbe8" stroke-width="1.3" fill="none">
+            <path d="M116 186L235 240"/><path d="M116 246L233 246"/><path d="M116 306L235 252"/>
+          </g>
+          <g fill="#eef1f9" stroke="#1505eb" stroke-width="1.4">
+            <circle class="pfs-m1 pfs-act" cx="104" cy="186" r="11"/><circle class="pfs-m2 pfs-act" cx="104" cy="246" r="11"/><circle class="pfs-m3 pfs-act" cx="104" cy="306" r="11"/>
+          </g>
+          <g fill="#1505eb">
+            <circle cx="104" cy="186" r="3.5"/><circle cx="104" cy="246" r="3.5"/><circle cx="104" cy="306" r="3.5"/>
+          </g>
+          <text x="104" y="160" text-anchor="middle" font-size="11.5" font-weight="600" fill="#646c83">AI models</text>
+          <circle class="pfs-vpulse pfs-act" cx="252" cy="246" r="16" fill="none" stroke="#1505eb" stroke-width="1.5"/>
+          <g class="pfs-verdict pfs-act">
+            <circle cx="252" cy="246" r="16" fill="#1505eb"/>
+            <path d="M244.5 246.5l5 5 10.5-11.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <text x="252" y="292" text-anchor="middle" font-size="11" font-weight="500" fill="#646c83">verdict</text>
+          <text x="64" y="370" font-size="14" font-weight="500" fill="#3c4356">Independent models vote</text>
+          <text x="64" y="394" font-size="12" fill="#646c83">M-of-N signed &#183; verdict proof</text>
+
+          <path class="pfs-flow" style="animation-delay:.35s" d="M340 246H394" stroke="#9aa4c2" stroke-width="1.5" fill="none" marker-end="url(#pfs-ah)"/>
+          <text x="367" y="230" text-anchor="middle" font-size="11" font-weight="500" fill="#646c83">ruling</text>
+
+          <!-- 结算场地：两条腿 -->
+          <rect x="400" y="90" width="440" height="330" rx="14" fill="#eef1f9" stroke="#dfe4f0"/>
+          <text x="424" y="128" font-size="12" font-weight="600" letter-spacing=".02em" fill="#646c83">Settlement &#8212; two legs</text>
+
+          <rect x="424" y="146" width="188" height="244" rx="10" fill="#fff" stroke="#e3e7f2"/>
+          <text x="448" y="186" font-size="15" font-weight="600" fill="#14161f">Escrow contract</text>
+          <text x="448" y="208" font-size="12.5" font-weight="600" fill="#1505eb">on Loka Chain</text>
+          <path d="M448 228H588" stroke="#eef0f6" stroke-width="1"/>
+          <text x="448" y="258" font-size="13" fill="#3c4356">hold &#183; release</text>
+          <text x="448" y="282" font-size="13" fill="#3c4356">rollback &#183; deadline</text>
+          <text x="448" y="334" font-size="11.5" fill="#646c83">every state change</text>
+          <text x="448" y="352" font-size="11.5" fill="#646c83">enforced by block time</text>
+          <g class="pfs-badge pfs-act">
+            <rect x="478" y="135" width="80" height="22" rx="11" fill="#fff" stroke="#e3e7f2"/>
+            <text class="pfs-bh pfs-act" x="518" y="150" text-anchor="middle" font-size="10.5" font-weight="600" fill="#646c83">holding</text>
+            <text class="pfs-br pfs-act" x="518" y="150" text-anchor="middle" font-size="10.5" font-weight="600" fill="#1aa35c">released</text>
+          </g>
+
+          <rect x="628" y="146" width="188" height="244" rx="10" fill="#fff" stroke="#e3e7f2"/>
+          <text x="652" y="186" font-size="15" font-weight="600" fill="#14161f">Payment channels</text>
+          <text x="652" y="208" font-size="12.5" font-weight="600" fill="#1505eb">peer to peer</text>
+          <path d="M652 228H792" stroke="#eef0f6" stroke-width="1"/>
+          <text x="652" y="258" font-size="13" fill="#3c4356">high frequency,</text>
+          <text x="652" y="282" font-size="13" fill="#3c4356">off-chain</text>
+          <text x="652" y="334" font-size="11.5" fill="#646c83">chain touched only to</text>
+          <text x="652" y="352" font-size="11.5" fill="#646c83">open, close or dispute</text>
+
+          <path class="pfs-flow" style="animation-delay:.7s" d="M840 246H894" stroke="#9aa4c2" stroke-width="1.5" fill="none" marker-end="url(#pfs-ah)"/>
+          <text x="867" y="230" text-anchor="middle" font-size="11" font-weight="500" fill="#646c83">outcome</text>
+
+          <!-- C2：每笔结算留一条记录，记录之间有因果链接 -->
+          <rect x="900" y="90" width="240" height="330" rx="14" fill="#fff" stroke="#e8ebf3"/>
+          <text x="924" y="128" font-size="12" font-weight="600" letter-spacing=".02em" fill="#646c83">Record</text>
+          <text x="924" y="170" font-size="16" font-weight="600" fill="#14161f">Setu network</text>
+          <g fill="#f5f7fc" stroke="#e6eaf4">
+            <rect class="pfs-rc1 pfs-act" x="924" y="192" width="192" height="40" rx="8"/>
+            <rect class="pfs-rc2 pfs-act" x="924" y="252" width="192" height="40" rx="8"/>
+            <rect class="pfs-rc3 pfs-act" x="924" y="312" width="192" height="40" rx="8"/>
+          </g>
+          <text x="940" y="217" font-size="13" fill="#3c4356">who paid</text>
+          <text x="940" y="277" font-size="13" fill="#3c4356">who disputed</text>
+          <text x="940" y="337" font-size="13" fill="#3c4356">how it ruled</text>
+          <g stroke="#b6bedd" stroke-width="1.3" fill="none">
+            <path d="M1020 232V246" marker-end="url(#pfs-ahc)"/>
+            <path d="M1020 292V306" marker-end="url(#pfs-ahc)"/>
+          </g>
+          <text x="924" y="388" font-size="11.5" fill="#646c83">each record linked to its cause</text>
+
+          <!-- 回流：这条线是整张图的论点 -->
+          <path class="pfs-loop" d="M1020 420V486H190V430" stroke="#1505eb" stroke-width="1.6" fill="none" marker-end="url(#pfs-ahb)"/>
+          <text x="605" y="474" text-anchor="middle" font-size="12" font-weight="600" letter-spacing=".01em" fill="#1505eb">History feeds the next ruling</text>
+
+          <!-- 沿链路循环的数据包：蓝 = 正在移动的东西（条款/资金/裁决/结果/历史） -->
+          <g fill="#1505eb">
+            <circle class="pfs-pk pfs-pkt pfs-act" r="3.5" style="offset-path:path('M405 48V66H190V84')"/>
+            <circle class="pfs-pk pfs-pkf pfs-act" r="3.5" style="offset-path:path('M405 48V66H620V84')"/>
+            <circle class="pfs-pk pfs-pkr pfs-act" r="3.5" style="offset-path:path('M340 246H394')"/>
+            <circle class="pfs-pk pfs-pko pfs-act" r="3.5" style="offset-path:path('M840 246H894')"/>
+            <circle class="pfs-pk pfs-pkl pfs-act" r="3.5" style="offset-path:path('M1020 420V486H190V430')"/>
+          </g>
+        </svg>
+      </figure>
+
+      <div class="stack-notes reveal">
+        <div><b>Adjudication</b>No single model &#8212; and no single operator &#8212; can decide your case.</div>
+        <div><b>Escrow on Loka Chain</b>With every Atara service down, both sides can still withdraw.</div>
+        <div><b>Payment channels</b>Thousands of payments; the chain sees two transactions.</div>
+        <div><b>Setu network</b>The history you price against is settlements, not self-reported scores.</div>
       </div>
     </div>
   </section>
@@ -810,7 +1284,7 @@
   <div class="wrap">
     <div class="footer-main">
       <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i></span><span class="wordmark">Atara</span></a>
-      <nav aria-label="Footer"><a href="#different">Why this</a><a href="#engine">How it works</a><a href="#conditions">Payment conditions</a></nav>
+      <nav aria-label="Footer"><a href="#different">Why this</a><a href="#stack">Under the hood</a><a href="#engine">How it works</a><a href="#conditions">Payment conditions</a></nav>
     </div>
     <div class="footer-note"><span>&copy; 2026 Atara</span><span>Atara is not a bank. The credit engine is in development and is not extending credit. Figures shown are illustrative.</span></div>
   </div>
@@ -821,112 +1295,91 @@
   'use strict';
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const instrument = document.getElementById('pricingInstrument');
-  const checks = [...document.querySelectorAll('.checks li')];
-  const outs = [...document.querySelectorAll('.out')];
+  /* 每一行现在是三个平级的格子，按 data-out 分组一起淡入 */
+  const rows = [0,1,2,3].map(i => [...document.querySelectorAll('.out[data-out="'+i+'"]')]);
+  const setIn = (i,on) => rows[i].forEach(n => n.classList.toggle('is-in',on));
   const el = id => document.getElementById(id);
-  const orderAmount = el('orderAmount'), riskValue = el('riskValue');
-  const feeRate = el('feeRate'), feeOther = el('feeOther');
-  const revBtn = el('revBtn'), revBtnText = el('revBtnText'), revNote = el('revNote');
+  const collVal = el('collVal'), riskValue = el('riskValue'), feeRate = el('feeRate');
 
+  /* 对方一侧固定 0.30%（Ellie 2026-08-20 给的量级）；我们随风险浮动，始终低于它。
+     两侧都是示意值，页脚已标 illustrative。真实费率等访谈（LANDING-SPEC 未决 #6）。 */
   const BOOK = [
-    { amount:2000000, risk:1.8, collateral:.08, fee:.0008, other:.0030 },
-    { amount:5400000, risk:.6,  collateral:.05, fee:.0004, other:.0020 },
-    { amount:750000,  risk:4.1, collateral:.34, fee:.0020, other:.0050 },
-    { amount:3100000, risk:2.4, collateral:.17, fee:.0012, other:.0040 }
+    { risk:1.8, collateral:.08, fee:.0014 },
+    { risk:.6,  collateral:.05, fee:.0010 },
+    { risk:4.1, collateral:.34, fee:.0026 },
+    { risk:2.4, collateral:.17, fee:.0018 }
   ];
   let bookIndex = 0;
   let alive = true;
   let timers = [];
-  let current = BOOK[0];
-  let voided = false;
 
-  const money = n => '$' + Math.round(n).toLocaleString('en-US');
-  const money2 = n => '$' + n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const rate = v => (v*100).toFixed(2) + '%';
+  const pct1 = v => v.toFixed(1);      /* % 号是独立元素，不进滚动的文本 */
+  const pct2 = v => v.toFixed(2);
   const later = (ms,fn) => timers.push(setTimeout(fn,ms));
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
   const DOTS = '\u00b7\u00b7\u00b7';
 
-  /* the risk number counts up, so it reads as computed rather than printed */
+  /* the three numbers count up, so they read as computed rather than printed.
+     run guards against a frame left pending by the previous counterparty:
+     rAF is paused while the tab is hidden, so on return a stale frame would
+     otherwise write the old number over the reset dots. */
+  let run = 0;
   function roll(node,to,duration,format) {
-    const start = performance.now();
+    const start = performance.now(), my = run;
     const frame = now => {
+      if(my !== run) return;
       const t = Math.min(1,(now-start)/duration);
       node.textContent = format(to*(1-Math.pow(1-t,3)));
       if(t<1 && alive) requestAnimationFrame(frame);
       else node.textContent = format(to);
     };
     requestAnimationFrame(frame);
+    /* rAF 不在隐藏标签页里跑，滚动会停在半路，屏幕上就留下一个错的价格。
+       到点无条件写终值——定时器照跑，rAF 不一定。 */
+    later(duration + 60,() => { if(my === run) node.textContent = format(to); });
   }
 
+  /* 只有第一轮清空并逐行入场。之后换对手方不再清卡——整张卡每 4.6 秒闪一次
+     既吵，也把「他们那列从不变」这个论点一起抹掉了。后续只有三个数字在动。 */
+  let first = true;
 
-  /* pressing it pulls the trade back: nothing is charged and the locked
-     amount returns. One counterparty in the book presses it for you. */
-  function reverse() {
-    if(voided) return;
-    voided = true;
-    instrument.classList.add('is-void');
-    revBtn.disabled = true;
-    revBtn.classList.add('is-pressed');
-    revBtnText.textContent = 'Reversed';
-    revNote.textContent = money(current.amount*current.collateral) + ' returned';
-  }
-  revBtn.addEventListener('click',reverse);
-
-  function reset() {
-    voided = false;
-    instrument.classList.remove('is-void');
-    revBtn.disabled = false;
-    revBtn.classList.remove('is-pressed');
-    revBtnText.textContent = 'Reverse this trade';
-    revNote.textContent = '';
-    checks.forEach(n => n.classList.remove('is-done'));
-    outs.forEach(n => n.classList.remove('is-in'));
-    [riskValue,feeRate].forEach(n => n.textContent = DOTS);
-    feeOther.textContent = '\u2014';
-  }
-
-  /* the reduced-motion path: everything cleared and answered at once */
+  /* the reduced-motion path: everything answered at once */
   function showStill(c) {
-    current = c;
-    orderAmount.textContent = money2(c.amount);
-    checks.forEach(n => n.classList.add('is-done'));
-    riskValue.textContent = c.risk.toFixed(1) + '%';
-    feeRate.textContent = rate(c.fee);
-    feeOther.textContent = rate(c.other);
-    outs.forEach(n => n.classList.add('is-in'));
+    collVal.textContent = pct1(c.collateral*100);
+    riskValue.textContent = pct1(c.risk);
+    feeRate.textContent = pct2(c.fee*100);
+    instrument.classList.add(c.risk >= 3.5 ? 'risk-hi' : c.risk >= 2 ? 'risk-mid' : 'risk-lo');
+    rows.forEach((_,i) => setIn(i,true));
   }
 
-  const CK_STEP = 480;                       /* one check clears at a time */
   function cycle() {
     clearTimers();
-    current = BOOK[bookIndex];
-    const c = current;
-    reset();
-    orderAmount.textContent = money2(c.amount);
-
-    checks.forEach((n,i) => later(600 + i*CK_STEP,() => n.classList.add('is-done')));
-    const cleared = 600 + checks.length*CK_STEP;
-
-    /* nothing about the answer shows until every check has cleared */
-    later(cleared + 220,() => {
-      outs[0].classList.add('is-in');
-      roll(riskValue,c.risk,900,v => v.toFixed(1)+'%');
-    });
-    /* the fee follows the risk closely enough to read as derived from it */
-    later(cleared + 520,() => {
-      outs[1].classList.add('is-in');
-      roll(feeRate,c.fee*100,800,v => v.toFixed(2)+'%');
-      feeOther.textContent = rate(c.other);
-    });
-    later(cleared + 1000,() => outs[2].classList.add('is-in'));
-
-    /* the third counterparty is the one that does not settle */
-    if(bookIndex === 2){
-      later(cleared + 2800,() => revBtn.classList.add('is-pressed'));
-      later(cleared + 3050,reverse);
+    run++;
+    const c = BOOK[bookIndex];
+    const t0 = first ? 420 : 240;
+    const step = first ? 260 : 210;
+    if(first){
+      rows.forEach((_,i) => setIn(i,false));
+      [collVal,riskValue,feeRate].forEach(n => n.textContent = DOTS);
     }
-    later(cleared + 5200,() => { bookIndex = (bookIndex+1)%BOOK.length; cycle(); });
+    instrument.classList.add('is-computing');
+    /* 风险档位：<2% 低 / 2–3.5% 中 / ≥3.5% 高。高档转红，读作信用差、风险大。 */
+    instrument.classList.remove('risk-lo','risk-mid','risk-hi');
+    instrument.classList.add(c.risk >= 3.5 ? 'risk-hi' : c.risk >= 2 ? 'risk-mid' : 'risk-lo');
+
+    /* 风险在第一行：它是模型算出来的那个数，后面两行都由它推出来 */
+    later(t0,() => { setIn(0,true); roll(riskValue,c.risk,900,pct1); });
+    later(t0 + step,() => { setIn(1,true); roll(feeRate,c.fee*100,800,pct2); });
+    later(t0 + step*2,() => { setIn(2,true); roll(collVal,c.collateral*100,900,pct1); });
+    /* the last row is never recomputed: it is a property of the protocol.
+       the computing line stops with it. */
+    later(t0 + step*3,() => {
+      setIn(3,true);
+      instrument.classList.remove('is-computing');
+    });
+    first = false;
+
+    later(4600,() => { bookIndex = (bookIndex+1)%BOOK.length; cycle(); });
   }
 
   if(reduced){alive=false;showStill(BOOK[0]);}
