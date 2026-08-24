@@ -283,7 +283,7 @@
      主图每层只留：编号+代号+职能 · 大图标 · 一句价值 · 关键词。
      子项明细收进悬停/聚焦展开（触屏常开）。右侧两张价值卡。
      底部流程条 = 可点导航：点哪层，滚到哪层并高亮。 */
-  .ap-section{background:oklch(98.3% .005 264);padding-block:var(--gap-section);
+  .ap-section{background:var(--paper);padding-block:var(--gap-section);
     --ap-line:oklch(91% .006 267);--ap-muted:oklch(46% .015 267);
     --ap-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace}
   .ap-section .wrap{max-width:1320px}
@@ -310,66 +310,53 @@
     grid-template-columns:clamp(150px,15vw,190px) minmax(0,1fr);
     gap:clamp(1rem,2.5vw,2rem);margin-bottom:3.25rem}
   .ap-layer:last-of-type{margin-bottom:0}
-  /* 层间连接：虚线 + 端点圆，对齐图标中心（卡内边距 1.5rem + 图标半径 20px） */
-  .ap-layer:not(:last-of-type)::after{content:"";position:absolute;
-    left:calc(clamp(150px,15vw,190px) + clamp(1rem,2.5vw,2rem) + 1.5rem + 20px);
-    top:100%;height:3.25rem;width:0;
-    border-left:1px dashed oklch(80% .02 267)}
-  .ap-layer:not(:last-of-type) .ap-card::after{content:"";position:absolute;
-    left:calc(1.5rem + 20px - 2.5px);bottom:-8px;width:5px;height:5px;
-    border-radius:50%;background:oklch(70% .04 267)}
 
-  .ap-tag{padding-top:.35rem}
-  .ap-num{display:inline-grid;place-items:center;width:30px;height:30px;
-    border-radius:8px;background:oklch(94% .035 258);
-    font:500 .75rem/1 var(--ap-mono);color:var(--blue)}
+  .ap-tag{padding-top:clamp(1.75rem,2.5vw,2.25rem)}
   .ap-name{margin:.5rem 0 .35rem;font:500 clamp(1.05rem,1.3vw,1.25rem)/1.2 var(--ap-mono);
     letter-spacing:-.02em;overflow-wrap:anywhere}
   .ap-role{font-size:.875rem;color:var(--ap-muted)}
 
-  .ap-card{position:relative;padding:1.5rem clamp(1.5rem,2.5vw,2rem);
-    border:1px solid var(--ap-line);border-radius:14px;background:#fff;
-    box-shadow:0 1px 2px oklch(20% .02 267 / .04);
-    transition:border-color .3s linear,box-shadow .3s var(--ease)}
-  .ap-layer:hover .ap-card,.ap-layer:focus-within .ap-card{
-    border-color:oklch(78% .05 266);box-shadow:0 10px 32px oklch(30% .06 266 / .09)}
+  /* Apple 面板语言：无边框、无阴影，层级靠面板底色与留白；悬停只把材质微调深一档 */
+  .ap-card{position:relative;padding:clamp(1.75rem,2.5vw,2.25rem) clamp(1.75rem,2.8vw,2.5rem);
+    border-radius:18px;background:#f5f5f7;
+    transition:background .3s linear}
+  .ap-layer:hover .ap-card,.ap-layer:focus-within .ap-card{background:#efeff2}
 
   .ap-top{display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap}
-  /* 必须显式成块：行内 span 忽略宽高，SVG 会掉到替换元素默认 150px */
-  .ap-ic{display:inline-grid;place-items:center;flex:0 0 48px;width:48px;height:48px;
-    border-radius:12px;background:oklch(94% .035 258);color:var(--blue)}
-  .ap-ic svg{width:26px;height:26px}
+  /* 必须显式成块：行内 span 忽略宽高，SVG 会掉到替换元素默认 150px。
+     裸 glyph，不套底板——容器越少越像产品页 */
+  .ap-ic{display:inline-grid;place-items:center;flex:0 0 34px;width:34px;height:34px;
+    color:var(--blue)}
+  .ap-ic svg{width:30px;height:30px}
   .ap-ic svg{display:block;width:100%;height:100%;fill:none;stroke:currentColor;
     stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-  .ap-value{margin:0;font-size:clamp(1.05rem,1.35vw,1.2rem);font-weight:500;
-    letter-spacing:-.015em}
-  .ap-chips{display:flex;flex-wrap:wrap;gap:.5rem;width:100%;margin:.9rem 0 0}
-  .ap-chips li{list-style:none;padding:.18rem .6rem;border:1px solid var(--ap-line);
-    border-radius:999px;font-size:.78rem;color:var(--ap-muted)}
+  .ap-value{margin:0;font-size:clamp(1.2rem,1.6vw,1.45rem);font-weight:600;
+    letter-spacing:-.022em}
+  .ap-meta{width:100%;margin:.8rem 0 0;font-size:.9rem;line-height:1.5;
+    color:var(--ap-muted)}
 
   /* 明细：0fr→1fr 展开；间距放在内层，折叠才能真正归零 */
   .ap-more{display:grid;grid-template-rows:0fr;opacity:0;
     transition:grid-template-rows .34s var(--ease),opacity .22s linear}
   .ap-more>div{overflow:hidden}
   .ap-more dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
-    gap:.9rem 1.5rem;margin:0;padding-top:1.25rem}
-  .ap-more .row{border-top:1px solid var(--ap-line);padding-top:.7rem}
-  .ap-more dt{font-size:.84rem;font-weight:500}
+    gap:1.1rem 2rem;margin:0;padding-top:1.4rem}
+  .ap-more .row{padding-top:.2rem}
+  .ap-more dt{font-size:.875rem;font-weight:600}
   .ap-more dd{margin:.2rem 0 0;font-size:.8rem;line-height:1.5;color:var(--ap-muted)}
   .ap-layer:hover .ap-more,.ap-layer:focus-within .ap-more{grid-template-rows:1fr;opacity:1}
   .ap-card:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 
   /* ── 右侧价值卡 ── */
   .ap-aside{position:sticky;top:2rem;display:flex;flex-direction:column;gap:1.25rem}
-  .ap-vcard{padding:1.5rem;border:1px solid var(--ap-line);border-radius:14px;
-    background:#fff}
-  /* 视觉锚：第一张价值卡翻成品牌蓝色块，全模块只此一个深色块 */
-  .ap-vcard.is-key{background:var(--blue);border-color:transparent;color:#fff}
+  .ap-vcard{padding:1.75rem;border-radius:18px;background:#f5f5f7}
+  /* 视觉锚：近黑 ink 卡（饱和大蓝块是 dashboard 语言），蓝只留给 glyph */
+  .ap-vcard.is-key{background:oklch(21% .015 267);color:#fff}
   .ap-vcard.is-key h3{color:#fff}
-  .ap-vcard.is-key li{color:oklch(100% 0 0 / .85);border-color:oklch(100% 0 0 / .22)}
-  .ap-vcard.is-key .ap-ic{background:oklch(100% 0 0 / .16);color:#fff}
-  .ap-vcard .ap-ic{width:40px;height:40px;flex:none;margin-bottom:1rem}
-  .ap-vcard .ap-ic svg{width:22px;height:22px}
+  .ap-vcard.is-key li{color:oklch(100% 0 0 / .82);border-color:oklch(100% 0 0 / .16)}
+  .ap-vcard.is-key .ap-ic{color:oklch(78% .12 262)}
+  .ap-vcard .ap-ic{width:32px;height:32px;flex:none;margin-bottom:1.1rem}
+  .ap-vcard .ap-ic svg{width:28px;height:28px}
   .ap-vcard h3{margin:0 0 .9rem;font-size:1rem;font-weight:500}
   .ap-vcard ul{margin:0;padding:0;list-style:none}
   .ap-vcard li{padding:.5rem 0;border-top:1px solid var(--ap-line);
@@ -1098,7 +1085,6 @@
 
           <div class="ap-layer reveal" id="ap-l1" style="--i:0">
             <div class="ap-tag">
-              <span class="ap-num">01</span>
               <div class="ap-name">atara-pay</div>
               <div class="ap-role">Entry &amp; routing</div>
             </div>
@@ -1109,7 +1095,7 @@
                   <path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/>
                   <circle cx="18" cy="5" r="3"/></svg></span>
                 <p class="ap-value">One surface to integrate against.</p>
-                <ul class="ap-chips"><li>API / SDK</li><li>Orders &middot; limits &middot; reconciliation</li><li>API keys</li></ul>
+                <p class="ap-meta">API / SDK &middot; orders, limits &amp; reconciliation &middot; API keys</p>
               </div>
               <div class="ap-more"><div><dl>
                 <div class="row"><dt>Client access</dt><dd>API and SDK — one integration for every venue.</dd></div>
@@ -1121,7 +1107,6 @@
 
           <div class="ap-layer reveal" id="ap-l2" style="--i:1">
             <div class="ap-tag">
-              <span class="ap-num">02</span>
               <div class="ap-name">aegean-consensus</div>
               <div class="ap-role">Judgement</div>
             </div>
@@ -1131,7 +1116,7 @@
                   <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/>
                   <path d="m9 12 2 2 4-4"/></svg></span>
                 <p class="ap-value">Two models, one signed verdict.</p>
-                <ul class="ap-chips"><li>credit model</li><li>adjudication model</li><li>M-of-N signatures</li></ul>
+                <p class="ap-meta">credit model &middot; adjudication model &middot; M-of-N signatures</p>
               </div>
               <div class="ap-more"><div><dl>
                 <div class="row"><dt>credit model</dt><dd>The counterparty&rsquo;s probability of default.</dd></div>
@@ -1144,7 +1129,6 @@
 
           <div class="ap-layer reveal" id="ap-l3" style="--i:2">
             <div class="ap-tag">
-              <span class="ap-num">03</span>
               <div class="ap-name">loka-chain</div>
               <div class="ap-role">Execution</div>
             </div>
@@ -1158,7 +1142,7 @@
                   <circle cx="16.5" cy="16.5" r=".5" fill="currentColor"/><path d="m13.4 13.4 2.7 2.7"/>
                   <circle cx="12" cy="12" r="2"/></svg></span>
                 <p class="ap-value">Funds held by contract, not by us.</p>
-                <ul class="ap-chips"><li>Escrow contract</li><li>HTLC channel</li></ul>
+                <p class="ap-meta">Escrow contract &middot; HTLC channel</p>
               </div>
               <div class="ap-more"><div><dl>
                 <div class="row"><dt>Escrow contract</dt><dd>Hold / release / rollback; the deadline is enforced by block time.</dd></div>
@@ -1170,7 +1154,6 @@
 
           <div class="ap-layer reveal" id="ap-l4" style="--i:3">
             <div class="ap-tag">
-              <span class="ap-num">04</span>
               <div class="ap-name">setu</div>
               <div class="ap-role">Record</div>
             </div>
@@ -1181,7 +1164,7 @@
                   <path d="M3 5v14a9 3 0 0 0 18 0V5"/>
                   <path d="M3 12a9 3 0 0 0 18 0"/></svg></span>
                 <p class="ap-value">Every settlement leaves a row.</p>
-                <ul class="ap-chips"><li>Settlement outcomes</li><li>VLC causal edges</li><li>TEE attestation</li></ul>
+                <p class="ap-meta">Settlement outcomes &middot; VLC causal edges &middot; TEE attestation</p>
               </div>
               <div class="ap-more"><div><dl>
                 <div class="row"><dt>Settlement outcomes</dt><dd>Who paid, who disputed, the final result.</dd></div>
