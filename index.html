@@ -304,6 +304,9 @@
   .ap-layer:last-of-type{margin-bottom:0}
 
   .ap-tag{padding-top:clamp(1.75rem,2.5vw,2.25rem)}
+  .ap-tic{display:inline-block;width:24px;height:24px;margin-bottom:.7rem;color:var(--blue)}
+  .ap-tic svg{display:block;width:100%;height:100%;fill:none;stroke:currentColor;
+    stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
   .ap-name{margin:.5rem 0 .35rem;font:500 clamp(1.05rem,1.3vw,1.25rem)/1.2 var(--ap-mono);
     letter-spacing:-.02em;overflow-wrap:anywhere}
   .ap-role{font-size:.875rem;color:var(--ap-muted)}
@@ -350,7 +353,16 @@
   /* 两张大价值卡横排在四层之下（参考 LokaWorld 的大色块卡）*/
   .ap-values{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;
     margin-top:3.25rem}
-  .ap-vcard{padding:clamp(2rem,3vw,2.75rem);border-radius:18px;background:#f5f5f7}
+  .ap-vcard{padding:clamp(2rem,3vw,2.75rem);border-radius:18px;background:#f5f5f7;
+    transition:background .35s var(--ease),transform .35s var(--ease)}
+  .ap-vcard h3,.ap-vcard li,.ap-vcard .ap-ic{transition:color .35s linear,border-color .35s linear}
+  .ap-vcard:hover{transform:translateY(-4px)}
+  /* 悬停变色：灰卡翻成深色，深卡翻成品牌蓝——同一动作，两张卡互为镜像 */
+  .ap-vcard:not(.is-key):hover{background:oklch(21% .015 267)}
+  .ap-vcard:not(.is-key):hover h3{color:#fff}
+  .ap-vcard:not(.is-key):hover li{color:oklch(100% 0 0 / .82);border-color:oklch(100% 0 0 / .16)}
+  .ap-vcard:not(.is-key):hover .ap-ic{color:oklch(78% .12 262)}
+  .ap-vcard.is-key:hover{background:var(--blue)}
   /* 视觉锚：近黑 ink 卡（饱和大蓝块是 dashboard 语言），蓝只留给 glyph */
   .ap-vcard.is-key{background:oklch(21% .015 267);color:#fff}
   .ap-vcard.is-key h3{color:#fff}
@@ -379,7 +391,9 @@
     .ap-more{grid-template-rows:1fr;opacity:1}
   }
   @media(prefers-reduced-motion:reduce){
-    .ap-more,.ap-card,.ap-layer.reveal{transition:none}
+    .ap-more,.ap-card,.ap-layer.reveal,.ap-vcard,.ap-vcard h3,.ap-vcard li,
+    .ap-vcard .ap-ic{transition:none}
+    .ap-vcard:hover{transform:none}
   }
 
   .stack-section{position:relative;min-height:min(146vh,1460px);
@@ -1081,7 +1095,8 @@
 
           <div class="ap-layer reveal" id="ap-l1" style="--i:0">
             <div class="ap-tag">
-              <div class="ap-name">atara-pay</div>
+              <span class="ap-tic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg></span>
+              <div class="ap-name">Atara-pay</div>
               <div class="ap-role">Entry &amp; routing</div>
             </div>
             <div class="ap-card" tabindex="0">
@@ -1100,7 +1115,8 @@
 
           <div class="ap-layer reveal" id="ap-l2" style="--i:1">
             <div class="ap-tag">
-              <div class="ap-name">aegean-consensus</div>
+              <span class="ap-tic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+              <div class="ap-name">Aegean-consensus</div>
               <div class="ap-role">Judgement</div>
             </div>
             <div class="ap-card" tabindex="0">
@@ -1120,7 +1136,8 @@
 
           <div class="ap-layer reveal" id="ap-l3" style="--i:2">
             <div class="ap-tag">
-              <div class="ap-name">loka-chain</div>
+              <span class="ap-tic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/><path d="m7.9 7.9 2.7 2.7"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/><path d="m13.4 10.6 2.7-2.7"/><circle cx="7.5" cy="16.5" r=".5" fill="currentColor"/><path d="m7.9 16.1 2.7-2.7"/><circle cx="16.5" cy="16.5" r=".5" fill="currentColor"/><path d="m13.4 13.4 2.7 2.7"/><circle cx="12" cy="12" r="2"/></svg></span>
+              <div class="ap-name">Loka-chain</div>
               <div class="ap-role">Execution</div>
             </div>
             <div class="ap-card" tabindex="0">
@@ -1139,7 +1156,8 @@
 
           <div class="ap-layer reveal" id="ap-l4" style="--i:3">
             <div class="ap-tag">
-              <div class="ap-name">setu</div>
+              <span class="ap-tic" aria-hidden="true"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg></span>
+              <div class="ap-name">Setu</div>
               <div class="ap-role">Record</div>
             </div>
             <div class="ap-card" tabindex="0">
