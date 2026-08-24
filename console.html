@@ -1067,6 +1067,19 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 .msg.long .bnote b{color:var(--warn)}
 /* 星座画布占右侧余宽；结论行横贯底部 */
 .thnet{flex:1;min-width:min(360px,100%)}
+/* 放行闸门清单：条件 · 实测 · 阈值，三列 */
+.thgates{width:100%;padding:2px 12px 0}
+.thgh{font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--faint);margin-bottom:8px}
+.thg{display:flex;align-items:baseline;gap:10px;padding:6px 0;font-size:12.5px;
+  border-top:1px solid var(--hairline-2);color:var(--mute)}
+.thg:first-of-type{border-top:0}
+.thg i{font-style:normal;width:12px;flex:none;color:var(--faint-2);font-size:11px}
+.thg.ok i{color:var(--green)}
+.thg b{font-weight:500;color:var(--mute);flex:1;min-width:0}
+.thg.ok b{color:var(--ink)}
+.thg em{font-style:normal;font-weight:600;color:var(--faint-2);font-variant-numeric:tabular-nums}
+.thg.ok em{color:var(--ink)}
+.thg span{flex:none;width:132px;text-align:right;font-size:11.5px;color:var(--faint)}
 .thcons{width:100%;display:flex;justify-content:center}
 .thcons:empty{display:none}
 /* 多 agent 票行：每行一个维度一票，末行是共识结论 */
@@ -3847,32 +3860,43 @@ document.getElementById('cno').onclick=()=>{document.getElementById('confirm').c
    一档条件一条轨道。每站写清「谁在做」，当前站给 ETA——
    条件单唯一重要的信息是「现在轮到谁、下一步发生什么」。 */
 const CSTAGE={
- 'Immediately':[
+ now:[
    ['lock','Funds locked',   'you',   ''],
-   ['cons','Release consensus','atara','3 checks'],
+   ['cons','Release consensus','atara','5 checks'],
    ['rel', 'Released',       'atara', '']],
- 'When I confirm':[
+ approve:[
    ['lock','Funds locked',   'you',   ''],
    ['deliv','Their delivery','peer',  'they mark it delivered'],
    ['mine','Your confirmation','you', 'nothing releases without you'],
-   ['cons','Release consensus','atara','3 checks'],
+   ['cons','Release consensus','atara','5 checks'],
    ['rel', 'Released',       'atara', '']],
- 'Proof + window':[
+ evidence:[
    ['lock','Funds locked',   'you',   ''],
    ['deliv','Their evidence','peer',  'they upload the proof'],
    ['mine','Your window',    'you',   'silence releases it'],
-   ['cons','Release consensus','atara','3 checks'],
+   ['cons','Release consensus','atara','5 checks'],
    ['rel', 'Released',       'atara', '']],
- 'On a date':[
+ /* API data 编译到 On a date 主分支，但它等的是指标够不够，不是等日子 */
+ data:[
+   ['lock','Funds locked',   'you',   ''],
+   ['deliv','Waiting on the metric','api','the source has to hit your target'],
+   ['cons','Release consensus','atara','5 checks'],
+   ['rel', 'Released',       'atara', '']],
+ time:[
    ['lock','Funds locked',   'you',   ''],
    ['deliv','Waiting for the date','clock',''],
-   ['cons','Release consensus','atara','3 checks'],
+   ['cons','Release consensus','atara','5 checks'],
    ['rel', 'Released',       'atara', '']],
 };
-const cstages=cond=>CSTAGE[cond]||CSTAGE['When I confirm'];
+/* 优先用编译时记下的真实类型；老路径（liveParse 直接设 S.cond）回落到主分支映射 */
+const condKind=snap=>snap.kind
+  || ({'Immediately':'now','When I confirm':'approve','Proof + window':'evidence',
+       'On a date':/API|api/.test(snap.condText||'')?'data':'time'}[snap.cond])
+  || 'approve';
+const cstages=snap=>CSTAGE[condKind(snap)]||CSTAGE.approve;
 /* 轨道：站名 + 当前站的一句 ETA。与买单卡的 steps() 同一套语言 */
 function crail(snap){
-  const st=cstages(snap.cond), i=st.findIndex(x=>x[0]===snap.stage);
+  const st=cstages(snap), i=st.findIndex(x=>x[0]===snap.stage);
   /* 轨道是这张卡的第一行（买单卡上面还有一行头），所以顶部要自己留白 */
   return `<div class="erail" style="padding:18px 20px 15px">`+st.map(([k,n,,eta],j)=>
     `<span class="es ${j<i?'done':j===i?'now':''}"><i></i>${n}${j===i&&eta?' · '+eta:''}</span>`
@@ -3884,23 +3908,27 @@ function crail(snap){
 function paintEscrow(){
   const snap=escrow; if(!snap||!snap.card)return;
   const st=snap.stage, card=snap.card;
-  const who=(cstages(snap.cond).find(x=>x[0]===st)||[])[2];
+  const who=(cstages(snap).find(x=>x[0]===st)||[])[2];
   const badge={lock:'Escrowed',deliv:'Waiting',mine:'Your turn',cons:'Verifying',
                rel:'Released',cancel:'Cancelled',dispute:'In review'}[st]||'Waiting';
   const done=st==='rel'||st==='cancel';
   card.className='deal'+(st==='mine'?' mine':'')+(done?' done':'');
   const amt=escAmtTxt(snap.amt,snap.coin);
   /* NEXT：一句话，主语是「谁」 */
+  const k=condKind(snap);
   const next={
-    lock:  snap.cond==='Immediately'
+    lock:  k==='now'
       ? `Funds are locked. Releasing now — the condition is already met.`
-      : `Funds are locked in escrow. Nothing moves until the condition is met.`,
-    deliv: snap.cond==='On a date'
+      : `Funds are locked in escrow. Nothing moves until every condition is met.`,
+    /* 等的是接口报回来的数，不是等日子——API data 编译到 On a date，文案不能跟着编译走 */
+    deliv: k==='data'
+      ? `Nothing to do. Atara reads the source until the metric hits your target.`
+      : k==='time'
       ? `Nothing to do. It releases on ${snap.p.date||'the date'}, clock-verified.`
-      : snap.cond==='Proof + window'
+      : k==='evidence'
         ? `Waiting on ${snap.cp.name} to upload the ${String(snap.p.proof||'proof').toLowerCase()}. Your window opens when it lands.`
         : `Waiting on ${snap.cp.name} to deliver. Nothing releases without you.`,
-    mine:  snap.cond==='Proof + window'
+    mine:  k==='evidence'
       ? `Their evidence is in. It releases on its own unless you dispute.`
       : `Their delivery is in. Release it, or leave it — silence past ${snap.p.within||snap.timeout||'14 days'} goes to review.`,
     cons:  `Three checks run before the money moves: terms, evidence, screening.`,
@@ -3931,7 +3959,7 @@ function paintEscrow(){
     </div>`;
   /* 动作行：每个阶段只给此刻真能做的事 */
   const foot=card.querySelector('[data-efoot]');
-  if(st==='mine'&&snap.cond==='Proof + window')
+  if(st==='mine'&&condKind(snap)==='evidence')
     foot.innerHTML=`<a href="#" class="dcancel lnk" data-edispute>Dispute</a>`
       +`<button class="btn btn-primary" data-eok>Release now</button>`;
   else if(st==='mine')
@@ -3960,7 +3988,7 @@ function startEscrow(){
   document.getElementById('empty')?.remove();
   const condText=S.condText||(CTPL[S.cond]?CTPL[S.cond].text(CTPL[S.cond].defs):S.cond);
   const snap={cp:S.cp,amt:S.amt,coin:S.coin,why:S.why,cond:S.cond,condText,
-              timeout:S.timeout, fallback:S.fallback,
+              timeout:S.timeout, fallback:S.fallback, kind:S.kind, conds:S.conds,
               p:S.cpar||(CTPL[S.cond]?{...CTPL[S.cond].defs}:{}), t:0};
   S.cpar=null;
   escrow=snap;
@@ -4053,30 +4081,220 @@ function disputeEscrow(){
    再共识一次——三方（买方条件、卖方条款、协议筛查）都点头才动钱。
    注意边界【决策】：这一步没有裁量权，只能「放行」或「拦下转人工」，
    不能改判条件——否则「条件成立即放款」的确定性就没了 */
-const RELEASE_VOTES=[
- ['Terms','payment matches the contract both sides agreed'],
- ['Evidence','condition evidence complete & untampered'],
- ['Screening','payout address · sanctions · amount within card'],
-];
+/* ══ 放行共识 ══
+   交易前那套问的是「这个人可不可信」——主观评分。
+   放行前问的是「条件到底成没成立」——可验证的事实。所以同一套语言，不同的中心：
+   环心不放信任分，放那个被测量出来的数，以及它对着的阈值。
+   前两个 agent 按条件类型换人：谁去读那份证据，谁就出现在这里。 */
+function releaseAgents(snap){
+  const p=snap.p||{}, cp=snap.cp;
+  const amt=escAmtTxt(snap.amt,snap.coin);
+  /* 三个与条件无关的常驻票：合同、资金、合规 */
+  const common=[
+   {n:'Terms Agent', d:'Order vs contract', v:'Pass',
+    m:'amount, payee and purpose match the order both sides signed — nothing was edited after escrow',
+    ev:{pull:'order record · 4 fields', rec:4, srcN:2,
+      srcs:[{n:'Signed order record',d:'hash 7f2a…c418 · unchanged since escrow opened'},
+            {n:'Amendment log',d:'0 edits after signing'}],
+      checks:[['Amount',amt+' — matches'],['Payee',cp.name+' — matches'],
+              ['Purpose',snap.why+' — matches'],['Edits after signing','None']],
+      kv:[['Order hash','7f2a…c418'],['Signed by','both parties'],['Fields compared','4 of 4']],
+      raw:['order_hash  7f2a…c418','amount      '+amt+'  == contract',
+           'payee       '+cp.name+'  == contract','amendments  0','verdict     MATCH']}},
+   {n:'Custody Agent', d:'Escrow state · double-spend', v:'Pass',
+    m:'the funds are still locked in this escrow and are not committed anywhere else',
+    ev:{pull:'escrow ledger · 2 checks', rec:2, srcN:1,
+      srcs:[{n:'Escrow ledger',d:'balance confirmed at release time'}],
+      checks:[['Funds still locked','Yes'],['Committed elsewhere','No'],['Escrow age','since order created']],
+      kv:[['Locked',amt],['Other claims','0'],['Ledger height','71,402,118']],
+      raw:['escrow_id   esc-'+ESCN,'locked      '+amt,'claims      0',
+           'state       LOCKED  ready_to_release']}},
+   {n:'Screening Agent', d:'Payout address · sanctions · card', v:'Pass',
+    m:'payout address is clean, no sanctions hit, and the amount sits inside the card that authorised it',
+    ev:{pull:'3 lists + card rules', rec:5, srcN:3,
+      srcs:[{n:'OFAC / UN / EU',d:'0 hits at release time'},
+            {n:'Payout address history',d:'seen before · 12 prior releases'},
+            {n:'Card rules',d:'per-payment cap and allowlist checked'}],
+      checks:[['Sanctions','0 hits'],['Payout address','known · 12 prior releases'],
+              ['Within card cap','Yes'],['Recipient on allowlist','Yes']],
+      kv:[['Lists queried','3'],['Address age','14 months'],['Prior releases','12']],
+      raw:['ofac/un/eu  0 hits   rechecked at release','payout      '+cp.name+'  first_seen 2025-06',
+           'card_rule   within cap  allowlist_ok','verdict     CLEAR']}},
+  ];
+  /* 一个条件原子派一到两个 agent：谁去读那份证据，谁就出现在图上。
+     参数直接读原子，别从 condText 里劈字符串——组合条件会劈出
+     「Both sides confirm + Ad platform API」这种源名。 */
+  const forAtom=c=>{
+    if(c.t==='data'){
+      const src=c.p.src||'API', metric=c.p.metric||'the metric', target=c.p.target||'the target';
+      return [
+       {n:'Oracle Agent', d:`${metric} fetched from ${src}`, v:'Pass',
+        m:`${src} reports ${metric.toLowerCase()} at 1,247 — above the ${target} you set`,
+        ev:{pull:src+' · 1 metric', rec:1, srcN:2,
+          srcs:[{n:src,d:'response signed · fetched at release time'},
+                {n:'Second read, 60 s apart',d:'same value — not a spike'}],
+          checks:[['Metric',metric],['Target',target],['Measured','1,247'],
+                  ['Second read','1,247 — stable'],['Fetched','at release time, not cached']],
+          kv:[['Source',src],['Metric',metric],['Measured','1,247'],['Target',target],['Margin','+24.7%']],
+          raw:['GET  '+src.toLowerCase().replace(/\s+/g,'-')+'/metrics  200','metric      '+metric,
+               'value       1247','target      '+target,'recheck     1247  (60s later)',
+               'sig         VALID','verdict     TARGET_MET']}},
+       {n:'Source Agent', d:'Is the reading trustworthy', v:'Pass',
+        m:'the response is signed by the source and the account it reports on is the one named in the order',
+        ev:{pull:'signature + binding', rec:2, srcN:1,
+          srcs:[{n:'Response signature',d:'valid · key published by '+src}],
+          checks:[['Response signature','Valid'],['Account in response','Matches the order'],
+                  ['Clock skew','< 2 s'],['Sandbox or test flag','Absent']],
+          kv:[['Signed by',src],['Account bound','yes']],
+          raw:['sig         VALID  key=src_pub_2026','account     == order.account',
+               'flags       none (no sandbox)','verdict     TRUSTWORTHY']}}];
+    }
+    if(c.t==='evidence'){
+      const doc=c.p.proof||'Evidence';
+      return [
+       {n:'Document Agent', d:doc+' authenticity', v:'Pass',
+        m:`the ${doc.toLowerCase()} is genuine — issuer signature checks out and the file was not retouched`,
+        ev:{pull:doc+' · 5 checks', rec:5, srcN:2,
+          srcs:[{n:'Issuer signature',d:'valid · bank certificate chain'},
+                {n:'File forensics',d:'no re-encoding, no edited regions'}],
+          checks:[['Issuer signature','Valid'],['Re-encoding','None'],['Edited regions','None'],
+                  ['Duplicate of an earlier upload','No'],['Issued','within the window']],
+          kv:[['Document',doc],['Issuer','CMB'],['Hash','b41d…09fe']],
+          raw:['file        '+doc.toLowerCase().replace(/\s+/g,'-')+'.pdf','sig         VALID  chain=CMB->CA',
+               'ela         no edited regions','dup_check   no match in 18mo','verdict     GENUINE']}},
+       {n:'Match Agent', d:'Evidence vs order', v:'Pass',
+        m:'the amount, the payer and the payee on the document match this order line for line',
+        ev:{pull:'4 fields compared', rec:4, srcN:1,
+          srcs:[{n:'Extracted fields',d:'OCR + structured parse'}],
+          checks:[['Amount',amt+' — matches'],['Payee',cp.name+' — matches'],
+                  ['Payer','you — matches'],['Date','inside the window']],
+          kv:[['Fields compared','4 of 4'],['Mismatches','0']],
+          raw:['amount      '+amt+'  == order','payee       '+cp.name+'  == order',
+               'date        inside window','verdict     MATCH']}}];
+    }
+    if(c.t==='approve'){
+      const both=(c.p.who||'Both sides confirm')!=='I confirm';
+      return [
+       {n:'Approval Agent', d:both?'Both confirmations recorded':'Your confirmation recorded', v:'Pass',
+        m:both?'both sides confirmed in-app, each signed with its own passkey and timestamped'
+              :'you confirmed in-app, signed with your passkey and timestamped',
+        ev:{pull:both?'2 confirmations':'1 confirmation', rec:both?2:1, srcN:both?2:1,
+          srcs:both?[{n:'Your confirmation',d:'passkey · just now'},
+                     {n:cp.name+"'s confirmation",d:'passkey · earlier today'}]
+                   :[{n:'Your confirmation',d:'passkey · just now'}],
+          checks:both?[['Your signature','Valid'],[cp.name+"'s signature",'Valid'],
+                       ['Both on this order','Yes'],['Replay of an older approval','No']]
+                     :[['Your signature','Valid'],['Bound to this order','Yes'],['Replay','None']],
+          kv:[['Confirmations',both?'2 of 2':'1 of 1'],['Signed with','passkey'],['Order bound','yes']],
+          raw:['sig[you]    VALID  passkey  bound=order 7f2a…c418']
+               .concat(both?['sig[peer]   VALID  passkey  bound=order 7f2a…c418']:[])
+               .concat(['replay      none','verdict     CONFIRMED'])}},
+       {n:'Delivery Agent', d:'What was confirmed', v:'Pass',
+        m:'the delivery record they attached is the one you approved — same files, same hash',
+        ev:{pull:'delivery record · 3 files', rec:3, srcN:1,
+          srcs:[{n:'Delivery record',d:'3 files · attached before your approval'}],
+          checks:[['Files changed after approval','None'],['Hash on record','Matches'],
+                  ['Attached before approval','Yes']],
+          kv:[['Files','3'],['Record hash','c02e…7731']],
+          raw:['files       3   hash c02e…7731','changed     none after approval','verdict     UNCHANGED']}}];
+    }
+    /* time */
+    const date=c.p&&c.p.date||p.date||'the date';
+    return [
+     {n:'Clock Agent', d:'Date reached · timezone', v:'Pass',
+      m:`the release date ${date} has passed in the order's timezone`,
+      ev:{pull:'time source · 3 servers', rec:3, srcN:3,
+        srcs:[{n:'NTP pool · 3 servers',d:'drift under 40 ms'},
+              {n:'Chain timestamp',d:'block 71,402,118'},
+              {n:'Order timezone',d:'Asia/Shanghai, set at signing'}],
+        checks:[['Release date',date+' — reached'],['Clock drift','< 40 ms'],
+                ['Timezone','Asia/Shanghai — as signed'],['Back-dating','Not detected']],
+        kv:[['Due',date],['Now','today'],['Sources agreeing','3 of 3']],
+        raw:['ntp[0..2]   drift 12ms 31ms 8ms','chain_ts    block 71,402,118',
+             'due         '+date,'verdict     DATE_REACHED']}},
+     {n:'Schedule Agent', d:'No hold or amendment', v:'Pass',
+      m:'no party asked to postpone and no amendment landed before the date',
+      ev:{pull:'order timeline · 0 holds', rec:1, srcN:1,
+        srcs:[{n:'Order timeline',d:'no hold, no amendment'}],
+        checks:[['Postponement requests','0'],['Amendments','0'],['Disputes open','0']],
+        kv:[['Holds','0'],['Amendments','0']],
+        raw:['holds       0','amendments  0','disputes    0','verdict     CLEAR_TO_RUN']}}];
+  };
+  /* 有原子表就按原子派人；多个原子时每个只派主 agent，免得图上挤成一团 */
+  const atoms=snap.conds&&snap.conds.length?snap.conds:null;
+  let specific;
+  if(atoms){
+    specific = atoms.length===1 ? forAtom(atoms[0])
+             : atoms.map(c=>forAtom(c)[0]);
+  }else{
+    const k=condKind(snap);
+    specific = k==='now'
+      ? [{n:'Instruction Agent', d:'Release instruction', v:'Pass',
+          m:'the release instruction came from you, signed with your passkey, on this order',
+          ev:{pull:'1 instruction', rec:1, srcN:1,
+            srcs:[{n:'Your instruction',d:'passkey · at confirm time'}],
+            checks:[['Signature','Valid'],['Bound to this order','Yes'],['Replay','None']],
+            kv:[['Signed with','passkey'],['Order bound','yes']],
+            raw:['sig[you]    VALID  passkey','bound       order 7f2a…c418','verdict     AUTHORISED']}}]
+      : forAtom({t:{approve:'approve',evidence:'evidence',data:'data',time:'time'}[k]||'approve', p});
+  }
+  return [...specific, ...common];
+}
+
+/* ══ 放行闸门 ══
+   放行不是一个判断，是一组判断的 AND：你设的每个条件都要过，
+   外加一条平台自己的——放款这一刻对手方的信任分还得站得住。
+   一条不过就不放。这里把每条的「实测值 vs 阈值」摊开写。 */
+const RELEASE_TRUST_MIN=85;   /* 与结论文案同一口径：85 以上按低风险定价 */
+function releaseGates(snap){
+  const g=[], p=snap.p||{};
+  const atoms=snap.conds&&snap.conds.length?snap.conds:null;
+  const add=(n,got,need)=>g.push({n,got,need});
+  if(atoms){
+    atoms.forEach(c=>{
+      if(c.t==='approve') add(c.p.who==='I confirm'?'Your confirmation':'Both sides confirmed',
+                              c.p.who==='I confirm'?'signed':'2 of 2', c.p.who==='I confirm'?'you':'both required');
+      if(c.t==='evidence')add(`${c.p.proof} verified`,'Genuine','issuer-signed, unedited');
+      if(c.t==='data')    add(`${c.p.src} · ${c.p.metric}`,'1,247',c.p.target||'the target');
+      if(c.t==='time')    add('Release date',c.p.date||'due','reached');
+    });
+  }else{
+    const k=condKind(snap);
+    if(k==='approve') add('Both sides confirmed','2 of 2','both required');
+    if(k==='evidence')add(`${p.proof||'Evidence'} verified`,'Genuine','issuer-signed, unedited');
+    if(k==='data')    add((snap.condText||'Metric').split(' · ').slice(0,2).join(' · '),'1,247','the target');
+    if(k==='time')    add('Release date',p.date||'due','reached');
+    if(k==='now')     add('Your instruction','signed','passkey');
+  }
+  /* 平台侧那一条：不是用户设的，但同样一票否决 */
+  add(`Counterparty trust at release`, String(snap.cp?.sc||snap.cp?.ifr||90), `≥ ${RELEASE_TRUST_MIN}`);
+  return g;
+}
+/* 环心：几条条件、过了几条 */
+function releaseCenter(snap){
+  const n=releaseGates(snap).length;
+  return {big:`${n} of ${n}`, line:'release conditions met'};
+}
+
 function runReleaseConsensus(){
-  const snap=escrow, c=snap.card;
+  const snap=escrow;
   snap.consRun=true;
   clearInterval(snap.iv);
   snap.stage='cons'; paintEscrow();
-  /* 三票就地长在面板里，替掉那句「下一步」——此刻正在跑的就是这三条 */
-  const mech=c.querySelector('.dmech');
-  mech.outerHTML=`<div class="econs" style="margin:2px 20px 14px">${RELEASE_VOTES.map(([n,d])=>
-      `<div class="ecv run"><span class="tk">◇</span><b>${n}</b><em>${d}</em></div>`).join('')}</div>`;
-  const rows=[...c.querySelectorAll('.ecv')];
-  rows.forEach((r,i)=>setTimeout(()=>{
-    r.classList.remove('run'); r.querySelector('.tk').textContent='✓';
-  }, 420+i*520));
-  setTimeout(()=>{
+  /* 放行也开一整块共识面板——与交易前同一套环+星座+证据层，
+     只是问题换了：不是「这人可不可信」，是「条件到底成没成立」 */
+  const list=releaseAgents(snap);
+  const t=thinking([],[],()=>{
     if(escrow!==snap)return;                    /* 中途被撤/被顶掉就别放了 */
     snap.consDone=true;
-    if(snap.sess)tpost(snap.tk,'Release consensus 3/3 — terms, evidence and screening agree.');
+    const gn=releaseGates(snap).length;
+    if(snap.sess)tpost(snap.tk,`Release approved — all ${gn} release conditions hold, checked by ${list.length} agents.`);
     releaseEscrow();
-  }, 420+RELEASE_VOTES.length*520+320);
+  }, null, {list, sc:100, center:releaseCenter(snap), gates:releaseGates(snap),
+    cons:{ok:list.length,total:list.length,need:list.length,
+      txt:`Consensus ${list.length}/${list.length} — one failed condition and nothing moves`}});
+  t.el.querySelector('.thlabel').textContent='Verifying the condition';
+  setTimeout(()=>{const l=t.el.querySelector('.thlabel'); if(l)l.textContent='Condition verified'}, t.total);
 }
 function releaseEscrow(now){
   if(!escrow)return;
@@ -4235,7 +4453,9 @@ const RISK_CONS={ok:7,total:7,need:6,txt:'Consensus 7/7 agree · needs 6 of 7 �
    不是发光科技风。约 120 根刻度分成 7 个扇区，扫描针绕环一周逐扇区点亮，
    刻度长度带固定伪随机微差（声纹感），90% 阈值是环上的实体标记，
    中心计数 0/7 → 7/7 定格。Canvas 2D；reduced-motion 直接画终态。 */
-function consensusRing(canvas, agents, startDelay, stepMs, score){
+/* center 可选：放行环的中心不是信任分，而是「被测量的那个事实」——
+   投票期间显示票数，票齐了才把测量结果落下来（结论跟着共识一起落地） */
+function consensusRing(canvas, agents, startDelay, stepMs, score, center){
   score=score||90;
   const DPR=Math.min(2,window.devicePixelRatio||1), CSS=220;
   canvas.width=CSS*DPR; canvas.height=CSS*DPR;
@@ -4284,8 +4504,19 @@ function consensusRing(canvas, agents, startDelay, stepMs, score){
     g.fillText('6/7', cx+Math.cos(a)*(r+16), cy+Math.sin(a)*(r+16)+3);
   }
   function centre(n,done){
-    /* 中心是结论本身：AI 评出的风险分，随投票逐步逼近；共识票数退居小字 */
     g.textAlign='center';
+    if(center){
+      /* 放行环：票没齐时中心只报进度，票齐了把测量值和它对的那个阈值一起落下 */
+      g.font='600 '+(done?String(center.big).length>6?'20px':'28px':'26px')+' Inter,system-ui,sans-serif';
+      g.fillStyle=C.ink;
+      g.fillText(done?String(center.big):`${n}/${N}`, cx, cy);
+      /* 圆心只有 152px，放得下一个大字加一行小字。
+         结论那句下面的共识行和闸门清单已经说过，这里不重复 */
+      g.font='500 10px Inter,system-ui,sans-serif'; g.fillStyle=done?C.mute:C.faint;
+      g.fillText(done?center.line:`${n}/${N} checks in`, cx, cy+19);
+      return;
+    }
+    /* 中心是结论本身：AI 评出的风险分，随投票逐步逼近；共识票数退居小字 */
     g.font='600 34px Inter,system-ui,sans-serif';
     g.fillStyle=C.ink;
     g.fillText(String(done?score:Math.round(score*n/N)), cx, cy);
@@ -4356,9 +4587,9 @@ function consensusNet(canvas, agents, base, voteStep, freezeAt){
   const rnd=i=>{const x=Math.sin(i*93.7+41.3)*43758.5;return x-Math.floor(x)};
   /* 三圈正圆轨道；节点带各自的公转角速度（内快外慢，其中一圈反向） */
   const ORB=[{r:44,w:.00052},{r:76,w:-.00034},{r:106,w:.00022}];
-  const RING_OF=[1,2,0,2,1,2,0];                    /* 7 节点分到三圈：2/2/3 */
+  const RING_OF=[1,2,0,2,1,2,0];                    /* 分圈模式，节点少时取模复用 */
   const nodes=agents.map((a,i)=>{
-    const o=ORB[RING_OF[i]];
+    const o=ORB[RING_OF[i%RING_OF.length]];
     return {a, o, r:8+rnd(i+2)*5,
       a0:rnd(i+11)*Math.PI*2,
       born:200+i*170};
@@ -4366,8 +4597,13 @@ function consensusNet(canvas, agents, base, voteStep, freezeAt){
   const npos=(n,t)=>{const th=n.a0+n.o.w*t;
     return {x:cx+Math.cos(th)*n.o.r, y:cy+Math.sin(th)*n.o.r}};
   /* 连线：交流期逐条长出（一边转一边出现连接） */
-  const edges=[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,0],[0,3],[1,5],[2,6]]
-    .map((e,k)=>({e, born:T.wake+k*380}));
+  /* 边按实际节点数生成：一圈相邻 + 几条弦。
+     写死 7 节点的索引在 5 个 agent 时会越界，异常会打断整个 draw——
+     连线之后的节点和名字就再也画不出来了 */
+  const ring=[...Array(N)].map((_,i)=>[i,(i+1)%N]);
+  const chords=[];
+  for(let i=0;i<N;i++){const j=(i+Math.floor(N/2))%N; if(i<j)chords.push([i,j]);}
+  const edges=[...ring,...chords].map((e,k)=>({e, born:T.wake+k*380}));
   /* 交流脉冲：贯穿交流期与投票前半段 */
   const msgs=[];
   for(let k=0;k<34;k++){
@@ -4590,7 +4826,7 @@ function thinking(steps, chips, done, verdict, agents){
      </div>
      <div class="thbody"><div class="thin">
        <div class="thsteps"></div><div class="chips"></div>
-       ${agents?'<div class="thagx"><canvas class="thring" width="220" height="220" aria-label="Multi-agent consensus ring"></canvas><canvas class="thnet" aria-label="Agents exchanging signals before consensus"></canvas><div class="thcons"></div></div><div class="agdoss"></div>':''}
+       ${agents?'<div class="thagx"><canvas class="thring" width="220" height="220" aria-label="Multi-agent consensus ring"></canvas><canvas class="thnet" aria-label="Agents exchanging signals before consensus"></canvas>'+(agents.gates?'<div class="thgates"></div>':'')+'<div class="thcons"></div></div><div class="agdoss"></div>':''}
        ${verdict?'<div class="thverd"></div>':''}
      </div></div>`;
   const log=document.getElementById('log');
@@ -4626,9 +4862,19 @@ function thinking(steps, chips, done, verdict, agents){
   const agBase=steps.length*190 + chips.length*90 + 400;
   const agDone=AG_TALK + agN*AG_STEP + 900;
   if(agents){
-    consensusRing(el.querySelector('.thring'), agents.list, agBase+AG_TALK, AG_STEP, agents.sc);
+    consensusRing(el.querySelector('.thring'), agents.list, agBase+AG_TALK, AG_STEP, agents.sc, agents.center);
     consensusNet(el.querySelector('.thnet'), agents.list, agBase, AG_STEP);
     agentEvidence(el, agents, agBase, AG_TALK, AG_STEP);
+    /* 放行闸门：一条一行，实测值对阈值。放行是这几条的 AND，一条不过就不放 */
+    if(agents.gates){
+      const gw=el.querySelector('.thgates');
+      gw.innerHTML=`<div class="thgh">Releases only if every one of these holds</div>`
+        +agents.gates.map(x=>`<div class="thg"><i>◇</i><b>${x.n}</b>`
+          +`<em>${x.got}</em><span>needs ${x.need}</span></div>`).join('');
+      [...gw.querySelectorAll('.thg')].forEach((r,i)=>setTimeout(()=>{
+        r.classList.add('ok'); r.querySelector('i').textContent='✓';
+      }, agBase+AG_TALK+agN*AG_STEP+240+i*260));
+    }
     setTimeout(()=>{
       const r=document.createElement('div'); r.className='tha cons';
       r.innerHTML=`<span class="tk">◆</span><b>${agents.cons.txt}</b>`;
@@ -4821,9 +5067,13 @@ function compileConds(conds,timeout){
   if(has('time')) p.date=has('time').p.date;
   else if(has('data')) p.date='the data target';
   if(has('approve')) p.within=timeout;
+  /* main 是给托管状态机用的四条主分支；kind 是「实际在等什么」，
+     给轨道站名和文案用——API data 编译到 On a date，但它等的是指标不是日期 */
+  const kind = has('approve') ? 'approve' : has('evidence') ? 'evidence'
+             : has('data') ? 'data' : has('time') ? 'time' : 'now';
   /* 超时兜底不是「释放条件」的一部分——它是条件没成立时的处置，
      混在同一句里既读不懂，用户也从没在编辑器里选过它 */
-  return {main, text, fallback:timeout, p};
+  return {main, kind, text, fallback:timeout, p};
 }
 
 const INTENTS=['Supplier balance','Delivery acceptance','Rent','Payroll',
@@ -5200,7 +5450,7 @@ function runAct(force){
     const cp=CPS.find(c=>c.name===a.peer)||CPS[0];
     const cc=compileConds(a.conds,a.timeout);   /* 组合 → 旧主分支 + 展示文本,托管状态机不感知组合 */
     S.cond=cc.main; S.cp=cp; S.amt=a.amt; S.coin=a.coin; S.why=a.why;
-    S.condText=cc.text; S.fallback=cc.fallback;
+    S.condText=cc.text; S.fallback=cc.fallback; S.kind=cc.kind; S.conds=a.conds;
     S.cpar={...cc.p};
     S.guessed={cp:false,amt:false,why:false};
     document.getElementById('empty')?.remove();
