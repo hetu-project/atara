@@ -333,8 +333,6 @@
     transition:border-color .3s linear,box-shadow .3s var(--ease)}
   .ap-layer:hover .ap-card,.ap-layer:focus-within .ap-card{
     border-color:oklch(78% .05 266);box-shadow:0 10px 32px oklch(30% .06 266 / .09)}
-  .ap-layer.is-hot .ap-card{border-color:var(--blue);
-    box-shadow:0 10px 32px oklch(30% .1 266 / .12)}
 
   .ap-top{display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap}
   /* 必须显式成块：行内 span 忽略宽高，SVG 会掉到替换元素默认 150px */
@@ -358,8 +356,7 @@
   .ap-more .row{border-top:1px solid var(--ap-line);padding-top:.7rem}
   .ap-more dt{font-size:.84rem;font-weight:500}
   .ap-more dd{margin:.2rem 0 0;font-size:.8rem;line-height:1.5;color:var(--ap-muted)}
-  .ap-layer:hover .ap-more,.ap-layer:focus-within .ap-more,
-  .ap-layer.is-hot .ap-more{grid-template-rows:1fr;opacity:1}
+  .ap-layer:hover .ap-more,.ap-layer:focus-within .ap-more{grid-template-rows:1fr;opacity:1}
   .ap-card:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 
   /* ── 右侧价值卡 ── */
@@ -378,22 +375,6 @@
   .ap-vcard li{padding:.5rem 0;border-top:1px solid var(--ap-line);
     font-size:.84rem;color:var(--ap-muted)}
 
-  /* ── 底部流程条：可点导航 ── */
-  .ap-flow{display:flex;align-items:center;gap:.25rem;flex-wrap:wrap;
-    margin-top:clamp(2.5rem,5vw,3.5rem);padding:.6rem;
-    border:1px solid var(--ap-line);border-radius:999px;width:fit-content;
-    background:#fff;box-shadow:0 1px 2px oklch(20% .02 267 / .04)}
-  .ap-flow button{display:flex;align-items:center;gap:.55rem;padding:.5rem .9rem;
-    border:0;border-radius:999px;background:none;cursor:pointer;
-    font:400 .8rem/1.4 var(--ap-mono);color:var(--ink);
-    transition:background .2s linear}
-  .ap-flow button i{font-style:normal;font-family:var(--sans);font-size:.75rem;
-    color:var(--ap-muted)}
-  .ap-flow button:hover{background:oklch(96% .01 266)}
-  .ap-flow button[aria-current="true"]{background:var(--blue);color:#fff}
-  .ap-flow button[aria-current="true"] i{color:oklch(100% 0 0 / .8)}
-  .ap-flow .sep{color:oklch(72% .02 267);font-size:.8rem}
-
   /* 入场：借用全局 reveal，逐层错开 */
   .ap-layer.reveal{transition-delay:calc(var(--i,0)*.12s)}
 
@@ -408,13 +389,12 @@
     .ap-layer{grid-template-columns:1fr;gap:.9rem;margin-bottom:2.5rem}
     .ap-layer:not(:last-of-type)::after,.ap-layer:not(:last-of-type) .ap-card::after{display:none}
     .ap-aside{flex-direction:column}
-    .ap-flow{border-radius:20px}
   }
   @media(hover:none){
     .ap-more{grid-template-rows:1fr;opacity:1}
   }
   @media(prefers-reduced-motion:reduce){
-    .ap-more,.ap-card,.ap-flow button,.ap-layer.reveal{transition:none}
+    .ap-more,.ap-card,.ap-layer.reveal{transition:none}
   }
 
   .stack-section{position:relative;min-height:min(146vh,1460px);
@@ -1125,10 +1105,10 @@
             <div class="ap-card" tabindex="0">
               <div class="ap-top">
                 <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
-                  <path d="M3.5 6.5h4M3.5 12h3M3.5 17.5h4"/>
-                  <path d="M7.5 6.5c3.2 0 3 4.2 5.4 5m-5.4 6c3.2 0 3-4.2 5.4-5"/>
-                  <circle cx="15.2" cy="12" r="2.1"/>
-                  <path d="M17.3 12h3.2m0 0-1.7-1.7m1.7 1.7-1.7 1.7"/></svg></span>
+                  <path d="M3 6h4M3 18h4M3 12h10.5"/>
+                  <path d="M7 6h1c3.6 0 3.2 4.6 5.6 5.5M7 18h1c3.6 0 3.2-4.6 5.6-5.5"/>
+                  <circle cx="15.5" cy="12" r="2"/>
+                  <path d="M17.5 12H21m-1.6-1.6L21 12l-1.6 1.6"/></svg></span>
                 <p class="ap-value">One surface to integrate against.</p>
                 <ul class="ap-chips"><li>API / SDK</li><li>Orders &middot; limits &middot; reconciliation</li><li>API keys</li></ul>
               </div>
@@ -1149,10 +1129,10 @@
             <div class="ap-card" tabindex="0">
               <div class="ap-top">
                 <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
-                  <circle cx="5" cy="5.2" r="1.9"/><circle cx="12" cy="4" r="1.9"/><circle cx="19" cy="5.2" r="1.9"/>
-                  <path d="M6.2 6.8 9.9 12M12 5.9V11m5.8-4.2L14.1 12"/>
-                  <circle cx="12" cy="16.3" r="4.2"/>
-                  <path d="m10.2 16.4 1.3 1.4 2.5-3"/></svg></span>
+                  <circle cx="4.5" cy="4.6" r="1.8"/><circle cx="12" cy="4.6" r="1.8"/><circle cx="19.5" cy="4.6" r="1.8"/>
+                  <path d="M5.4 6.2 9.6 11.4M12 6.4v4.4m6.6-4.6-4.2 5.2"/>
+                  <circle cx="12" cy="15.4" r="4.4"/>
+                  <path d="m10 15.5 1.5 1.6 2.7-3.3"/></svg></span>
                 <p class="ap-value">Two models, one signed verdict.</p>
                 <ul class="ap-chips"><li>credit model</li><li>adjudication model</li><li>M-of-N signatures</li></ul>
               </div>
@@ -1174,10 +1154,10 @@
             <div class="ap-card" tabindex="0">
               <div class="ap-top">
                 <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
-                  <path d="M5.5 4v16M18.5 4v16"/>
-                  <circle cx="12" cy="8.6" r="2.5"/>
-                  <path d="M12 11.1v2.7m0 0-3.6 3.4m3.6-3.4 3.6 3.4"/>
-                  <circle cx="8" cy="17.8" r="1.05"/><circle cx="16" cy="17.8" r="1.05"/></svg></span>
+                  <path d="M4.5 4.5v15M19.5 4.5v15"/>
+                  <circle cx="12" cy="12" r="2.7"/>
+                  <path d="M9.3 12H7m0 0 1.4-1.4M7 12l1.4 1.4"/>
+                  <path d="M14.7 12H17m0 0-1.4-1.4M17 12l-1.4 1.4"/></svg></span>
                 <p class="ap-value">Funds held by contract, not by us.</p>
                 <ul class="ap-chips"><li>Escrow contract</li><li>HTLC channel</li></ul>
               </div>
@@ -1198,9 +1178,9 @@
             <div class="ap-card" tabindex="0">
               <div class="ap-top">
                 <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
-                  <path d="M4 6.5h10M4 11.5h10M4 16.5h7"/>
-                  <path d="M16.5 16.5h.5c2.6 0 3-2.4 3-5s-.4-5-3-5h-.5"/>
-                  <circle cx="15.6" cy="6.5" r="1.15"/></svg></span>
+                  <path d="M4 7h10M4 12h10M4 17h6.5"/>
+                  <path d="M12.5 17H15c2.76 0 5-2.24 5-5s-2.24-5-5-5h-.6"/>
+                  <path d="m15.9 5.4-1.6 1.6 1.6 1.6"/></svg></span>
                 <p class="ap-value">Every settlement leaves a row.</p>
                 <ul class="ap-chips"><li>Settlement outcomes</li><li>VLC causal edges</li><li>TEE attestation</li></ul>
               </div>
@@ -1217,29 +1197,23 @@
         <aside class="ap-aside">
           <div class="ap-vcard is-key">
             <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="6.8"/><path d="m9.2 12.3 2 2.1 3.8-4.5"/>
-              <path d="M12 2.6v1.9M12 19.5v1.9M2.6 12h1.9M19.5 12h1.9"/></svg></span>
+              <circle cx="12" cy="12" r="6.5"/><path d="m9.3 12.2 1.9 2 3.5-4.2"/>
+              <path d="M12 3v1.8M12 19.2V21M3 12h1.8M19.2 12H21"/></svg></span>
             <h3>Final settlement</h3>
             <ul><li>Automated</li><li>Auditable</li><li>Traceable</li><li>Available even when we&rsquo;re down</li></ul>
           </div>
           <div class="ap-vcard">
             <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="2.3"/>
-              <circle cx="4.6" cy="6.4" r="1.7"/><circle cx="19.4" cy="6.4" r="1.7"/>
-              <circle cx="6" cy="19" r="1.7"/><circle cx="18" cy="19" r="1.7"/>
-              <path d="M10.2 10.6 6 7.6m7.8 3L18 7.6m-8.3 6.1L7 17.8m7.3-4.1 2.8 4.1"/></svg></span>
+              <circle cx="12" cy="12" r="2.4"/>
+              <circle cx="5.5" cy="5.5" r="1.7"/><circle cx="18.5" cy="5.5" r="1.7"/>
+              <circle cx="5.5" cy="18.5" r="1.7"/><circle cx="18.5" cy="18.5" r="1.7"/>
+              <path d="M10.3 10.3 6.7 6.7m7-0.001 3.6-3.6M10.3 13.7l-3.6 3.6m7 .001 3.6 3.6"/></svg></span>
             <h3>Ecosystem</h3>
             <ul><li>Multi-chain deployment</li><li>Reputation portability</li><li>Open API</li></ul>
           </div>
         </aside>
       </div>
 
-      <nav class="ap-flow" aria-label="Layers">
-        <button type="button" data-l="ap-l1">atara-pay<i>Entry</i></button><span class="sep" aria-hidden="true">&rsaquo;</span>
-        <button type="button" data-l="ap-l2">aegean-consensus<i>Judgement</i></button><span class="sep" aria-hidden="true">&rsaquo;</span>
-        <button type="button" data-l="ap-l3">loka-chain<i>Execution</i></button><span class="sep" aria-hidden="true">&rsaquo;</span>
-        <button type="button" data-l="ap-l4">setu<i>Record</i></button>
-      </nav>
     </div>
   </section>
 
@@ -1565,22 +1539,6 @@
      只在滚近时才加载 CDN，减少动效时完全不加载。 ── */
 
 
-  /* #arch 流程条：点哪层，滚到哪层并高亮；高亮同时展开那层的明细 */
-  (() => {
-    const flow = document.querySelector('#arch .ap-flow');
-    if(!flow) return;
-    const btns = [...flow.querySelectorAll('button[data-l]')];
-    btns.forEach(b => b.addEventListener('click', () => {
-      const layer = document.getElementById(b.dataset.l);
-      if(!layer) return;
-      document.querySelectorAll('#arch .ap-layer.is-hot')
-        .forEach(l => l.classList.remove('is-hot'));
-      layer.classList.add('is-hot');
-      btns.forEach(x => x.setAttribute('aria-current', x === b ? 'true' : 'false'));
-      layer.scrollIntoView({block:'center',
-        behavior: matchMedia('(prefers-reduced-motion:reduce)').matches ? 'instant' : 'smooth'});
-    }));
-  })();
 
   (() => {
     const host = document.getElementById('sxCanvas');
