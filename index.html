@@ -148,10 +148,12 @@
   .cmp::before{content:"";grid-column:1/-1;grid-row:1;align-self:end;
     height:1px;background:oklch(94% .004 264)}
 
-  .cmp-us{justify-self:start;align-self:center;padding:.25rem .75rem;border-radius:999px;
+  /* padding 简写会覆盖 .cmp-hd 的 padding-bottom——与分隔线的距离用 margin 给 */
+  .cmp-us{justify-self:start;align-self:end;margin-bottom:14px;
+    padding:.25rem .75rem;border-radius:999px;
     text-transform:uppercase;
     background:oklch(94% .035 258);color:var(--blue);font-weight:600}
-  .cmp-them{justify-self:start;align-self:center;
+  .cmp-them{justify-self:start;align-self:end;margin-bottom:14px;
     padding:.25rem 0 .25rem .75rem;
     text-transform:uppercase;color:oklch(52% .018 264)}
 
