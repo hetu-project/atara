@@ -357,11 +357,12 @@
     transition:background .35s var(--ease),transform .35s var(--ease)}
   .ap-vcard h3,.ap-vcard li,.ap-vcard .ap-ic{transition:color .35s linear,border-color .35s linear}
   .ap-vcard:hover{transform:translateY(-4px)}
-  /* 悬停变色：灰卡翻成深色，深卡翻成品牌蓝——同一动作，两张卡互为镜像 */
-  .ap-vcard:not(.is-key):hover{background:oklch(21% .015 267)}
+  /* 悬停变色：两张卡统一翻品牌蓝（"悬停=通电"）。灰卡不翻深色——
+     翻深会和旁边那张静态深卡撞色，同屏两张一样黑 */
+  .ap-vcard:not(.is-key):hover{background:var(--blue)}
   .ap-vcard:not(.is-key):hover h3{color:#fff}
   .ap-vcard:not(.is-key):hover li{color:oklch(100% 0 0 / .82);border-color:oklch(100% 0 0 / .16)}
-  .ap-vcard:not(.is-key):hover .ap-ic{color:oklch(78% .12 262)}
+  .ap-vcard:not(.is-key):hover .ap-ic{color:#fff}
   .ap-vcard.is-key:hover{background:var(--blue)}
   /* 视觉锚：近黑 ink 卡（饱和大蓝块是 dashboard 语言），蓝只留给 glyph */
   .ap-vcard.is-key{background:oklch(21% .015 267);color:#fff}
