@@ -1023,12 +1023,6 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 .cpgo{font-size:11px;font-weight:500;color:var(--accent)}
 .thgo .cpav{width:17px;height:17px;font-size:9px;margin-right:2px}
 
-#undobar{display:none;align-items:center;gap:12px;margin-bottom:14px;padding:12px 16px;background:var(--signal);border-radius:var(--r-card);font-size:13px;color:var(--signal-ink)}
-#undobar.show{display:flex}
-#undobar b{font-weight:600}
-#undobar .cd{font-weight:600}
-#undobar button{margin-left:auto;padding:4px 16px;border:1px solid oklch(45% .1 120 / .4);border-radius:999px;font-weight:600;font-size:13px;color:var(--signal-ink)}
-#undobar button:hover{background:oklch(94% .12 119)}
 
 #composer{display:none;background:var(--paper);border-radius:var(--r-card);box-shadow:var(--ring),var(--lift-lo);padding:20px 24px 16px;margin-bottom:14px}
 #composer.show{display:block}
@@ -1253,7 +1247,6 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .pwerr{font-size:11.5px;color:var(--warn);min-height:15px;padding:5px 2px 0;text-align:left}
 .pwerr:empty{min-height:0;padding:0}
 .pwhint{font-size:11px;color:var(--faint-2);padding:4px 2px 0;text-align:center}
-.pspw{margin:0 0 14px}
 /* 设置密码的小弹窗 */
 .pwmask{position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;padding:24px;
   background:oklch(18% .012 265/.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
@@ -1447,8 +1440,13 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .dpay{display:flex;flex-direction:column;font-size:13px}
 .dpay>div{display:flex;align-items:baseline;gap:16px;padding:9px 0;border-bottom:1px solid var(--hairline)}
 .dpay>div:last-child{border-bottom:0}
-.dpay dt{flex:none;width:96px;color:var(--faint)}
+/* 122px 才装得下最长的标签「Release condition」；96px 时它会折成两行 */
+.dpay dt{flex:none;width:122px;color:var(--faint)}
 .dpay dd{color:var(--ink);font-weight:500}
+/* 条件下面的兜底说明：次要信息，压一档 */
+/* dd 是 flex 容器（1451 行），带兜底说明时要转成竖排，否则说明会并排贴在条件右边 */
+.dpay dd:has(small){flex-direction:column;align-items:flex-start}
+.dpay dd small{display:block;margin-top:4px;font-size:11.5px;font-weight:400;line-height:1.5;color:var(--faint)}
 .dpct{margin-left:6px;color:var(--faint);font-weight:400}
 .dmech{margin-top:14px;font-size:12px;line-height:1.6;color:var(--mute)}
 .dmono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;letter-spacing:.01em;margin-left:8px}
@@ -1460,6 +1458,7 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .cpbtn:hover{border-color:var(--accent);color:var(--accent)}
 .dreq{margin-left:8px;font-size:11px;color:var(--faint);font-weight:400}
 .dfoot{display:flex;align-items:center;gap:12px;margin-top:16px}
+
 /* 返回在左、前进在右 */
 .dfoot .backbtn{order:-1;margin-right:auto}
 .dfoot .dnote{margin-right:auto}
@@ -1976,11 +1975,6 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
    <div class="view on" id="v-chat">
     <div id="thhead"></div>
     <div id="bistrip"></div>
-    <div id="undobar">
-      <span>Escrowed <b class="num" id="uamt"></b> → <b id="uwho"></b>，<span class="cd num" id="ucd">30s</span> until release</span>
-      <button id="undo">↺ Undo</button>
-    </div>
-
     <div id="log">
       <div id="empty">
         <h3>What would you like to settle?</h3>
@@ -2025,11 +2019,6 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
           <span class="psfund" id="psfund" hidden></span>
           <button class="pschg" id="pschg" hidden>Change card<i>⌄</i></button>
           <div class="psopts" id="psopts" role="listbox" aria-label="Cards"></div>
-        </div>
-        <div class="pspw">
-          <input type="password" class="pwin" id="pspwin" autocomplete="off" aria-label="Payment password">
-          <div class="pwerr" id="pspwerr"></div>
-          <div class="pwhint" id="pspwhint"></div>
         </div>
         <button class="btn btn-primary psok" id="cok"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 1.8a4.5 4.5 0 0 1 4.5 4.5c0 2.6-.7 5-2 7"/><path d="M8 4.4a1.9 1.9 0 0 1 1.9 1.9c0 2.3-.6 4.5-1.7 6.4M5.6 3.2A4.5 4.5 0 0 0 3.5 6.3M4.2 8.6c0 1.9-.4 3.5-1 4.9M6.1 7.1c.1 2.7-.4 5-1.3 6.9"/></svg> Confirm with passkey</button>
       </div>
@@ -3248,7 +3237,7 @@ function renderRulesPage(){
         </div>
         <div class="secrow">
           <span class="seci">🔒</span>
-          <span class="sectxt"><b>Payment password</b><em id="pwsub">Asked on every payment, alongside your passkey · demo password ${PAY_PW}</em></span>
+          <span class="sectxt"><b>Payment password</b><em id="pwsub">Unlocks a locked session, and stands in when no passkey is available · demo password ${PAY_PW}</em></span>
           <button class="btn btn-secondary" data-p="setpw">Change</button>
         </div>
         <div class="secrow">
@@ -3654,17 +3643,15 @@ document.getElementById('dismiss').onclick=e=>{e.preventDefault();document.getEl
 
 /* ───── 生命周期：建立托管 →（强确认）→ 托管+倒计时 → 撤回/放款 ───── */
 const log=document.getElementById('log');
+/* 条件单也是一笔付款——和交易池成交走同一个收银台。
+   分档只决定「为什么要你亲自确认」那句提示，不决定弹不弹 */
 document.getElementById('go').onclick=()=>{
   const t=tier();
-  if(t.level==='strong'){
-    requireVerify(t.why,
-      `To <b>${S.cp.name}</b> for <b>${S.why}</b> · release ${S.cond.toLowerCase()} · evidence: ${PROOFS[S.cond]}`,
-      startEscrow,
-      {amt:amtParts(S.amt,S.coin), amtUsd:usdOf(S.amt,S.coin),
-       fund:`From your available ${S.coin||'USD'} balance — locks into escrow until the condition clears`});
-    return;
-  }
-  startEscrow();
+  requireVerify(t.level==='strong'?t.why:'',
+    `To <b>${S.cp.name}</b> for <b>${S.why}</b> · release ${S.cond.toLowerCase()} · evidence: ${PROOFS[S.cond]}`,
+    startEscrow,
+    {amt:amtParts(S.amt,S.coin), amtUsd:usdOf(S.amt,S.coin),
+     fund:`From your available ${S.coin||'USD'} balance — locks into escrow until the condition clears`});
 };
 /* 安全校验：涉及资金的强确认档用 Passkey 仪式。演示版只模拟系统弹窗的
    节奏（等待生物识别 → 通过），不采集也不模仿任何真实凭据输入。 */
@@ -3708,7 +3695,7 @@ function openPwSetup(){
   const m=document.createElement('div'); m.id='pwmodal'; m.className='pwmask';
   m.innerHTML=`<div class="pwsheet" role="dialog" aria-modal="true" aria-label="Payment password">
     <h3>${set?'Change payment password':'Set a payment password'}</h3>
-    <p>Asked on every payment, alongside your passkey. Demo only — it stays in this browser tab and is never sent anywhere.</p>
+    <p>Unlocks a locked session, and stands in when no passkey is available. Demo only — it stays in this browser tab and is never sent anywhere.</p>
     ${set?`<input type="password" class="pwin" id="pwold" placeholder="Current password" autocomplete="off">`:''}
     <input type="password" class="pwin" id="pwnew" placeholder="${set?'New password':'Payment password'}" autocomplete="off">
     <input type="password" class="pwin" id="pwrep" placeholder="Repeat it" autocomplete="off">
@@ -3830,12 +3817,7 @@ function requireVerify(why, bodyHTML, cb, opts){
   pr.style.display=PAY_LIST.length?'':'none';
   document.getElementById('psopts').classList.remove('open');
   if(PAY_LIST.length)paintPay(); else document.getElementById('psopts').innerHTML='';
-  /* 每一笔都过：支付密码 + Passkey。没设过密码就在这里当场设 */
-  const pw=document.getElementById('pspwin');
-  pw.value=''; pw.placeholder='Payment password';
-  document.getElementById('pspwerr').textContent='';
-  /* 演示件：密码是公开的演示值，跟邀请码一个道理，不写出来没人能付款 */
-  document.getElementById('pspwhint').textContent=`Demo password ${PAY_PW}`;
+  /* 付款默认走 Passkey。支付密码是没有 Passkey 时的退路，不摆在这一屏 */
   document.getElementById('cok').innerHTML=PK_LABEL;
   PENDING_VERIFY=cb;
   document.getElementById('confirm').classList.add('show');
@@ -3847,12 +3829,6 @@ document.getElementById('confirm').addEventListener('click',e=>{
 document.getElementById('cok').onclick=ev=>{
   const b=ev.currentTarget;
   if(b.classList.contains('busy'))return;
-  /* 先过支付密码，再过 Passkey。没设过就当场设——不把人踢去设置页 */
-  const inp=document.getElementById('pspwin'), er=document.getElementById('pspwerr'), v=inp.value;
-  const bad=t=>{er.textContent=t;
-    inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake'); inp.focus()};
-  if(v!==PAY_PW) return bad(v?'Wrong payment password':'Enter your payment password');
-  er.textContent=''; inp.value='';
   b.classList.add('busy');
   const orig=b.innerHTML;
   b.innerHTML='<span class="pkpulse"></span>Waiting for Touch ID…';
@@ -3867,46 +3843,137 @@ document.getElementById('cok').onclick=ev=>{
 };
 document.getElementById('cno').onclick=()=>{document.getElementById('confirm').classList.remove('show')};
 
+/* ══ 条件单的执行阶段表 ══
+   一档条件一条轨道。每站写清「谁在做」，当前站给 ETA——
+   条件单唯一重要的信息是「现在轮到谁、下一步发生什么」。 */
+const CSTAGE={
+ 'Immediately':[
+   ['lock','Funds locked',   'you',   ''],
+   ['cons','Release consensus','atara','3 checks'],
+   ['rel', 'Released',       'atara', '']],
+ 'When I confirm':[
+   ['lock','Funds locked',   'you',   ''],
+   ['deliv','Their delivery','peer',  'they mark it delivered'],
+   ['mine','Your confirmation','you', 'nothing releases without you'],
+   ['cons','Release consensus','atara','3 checks'],
+   ['rel', 'Released',       'atara', '']],
+ 'Proof + window':[
+   ['lock','Funds locked',   'you',   ''],
+   ['deliv','Their evidence','peer',  'they upload the proof'],
+   ['mine','Your window',    'you',   'silence releases it'],
+   ['cons','Release consensus','atara','3 checks'],
+   ['rel', 'Released',       'atara', '']],
+ 'On a date':[
+   ['lock','Funds locked',   'you',   ''],
+   ['deliv','Waiting for the date','clock',''],
+   ['cons','Release consensus','atara','3 checks'],
+   ['rel', 'Released',       'atara', '']],
+};
+const cstages=cond=>CSTAGE[cond]||CSTAGE['When I confirm'];
+/* 轨道：站名 + 当前站的一句 ETA。与买单卡的 steps() 同一套语言 */
+function crail(snap){
+  const st=cstages(snap.cond), i=st.findIndex(x=>x[0]===snap.stage);
+  /* 轨道是这张卡的第一行（买单卡上面还有一行头），所以顶部要自己留白 */
+  return `<div class="erail" style="padding:18px 20px 15px">`+st.map(([k,n,,eta],j)=>
+    `<span class="es ${j<i?'done':j===i?'now':''}"><i></i>${n}${j===i&&eta?' · '+eta:''}</span>`
+  ).join('')+`</div>`;
+}
+
+/* 面板重画。徽标说状态，NEXT 行说「轮到谁、他要做什么」——
+   这一行是原来整屏最缺的东西：三处复读条件文本，却没人回答下一步。 */
+function paintEscrow(){
+  const snap=escrow; if(!snap||!snap.card)return;
+  const st=snap.stage, card=snap.card;
+  const who=(cstages(snap.cond).find(x=>x[0]===st)||[])[2];
+  const badge={lock:'Escrowed',deliv:'Waiting',mine:'Your turn',cons:'Verifying',
+               rel:'Released',cancel:'Cancelled',dispute:'In review'}[st]||'Waiting';
+  const done=st==='rel'||st==='cancel';
+  card.className='deal'+(st==='mine'?' mine':'')+(done?' done':'');
+  const amt=escAmtTxt(snap.amt,snap.coin);
+  /* NEXT：一句话，主语是「谁」 */
+  const next={
+    lock:  snap.cond==='Immediately'
+      ? `Funds are locked. Releasing now — the condition is already met.`
+      : `Funds are locked in escrow. Nothing moves until the condition is met.`,
+    deliv: snap.cond==='On a date'
+      ? `Nothing to do. It releases on ${snap.p.date||'the date'}, clock-verified.`
+      : snap.cond==='Proof + window'
+        ? `Waiting on ${snap.cp.name} to upload the ${String(snap.p.proof||'proof').toLowerCase()}. Your window opens when it lands.`
+        : `Waiting on ${snap.cp.name} to deliver. Nothing releases without you.`,
+    mine:  snap.cond==='Proof + window'
+      ? `Their evidence is in. It releases on its own unless you dispute.`
+      : `Their delivery is in. Release it, or leave it — silence past ${snap.p.within||snap.timeout||'14 days'} goes to review.`,
+    cons:  `Three checks run before the money moves: terms, evidence, screening.`,
+    rel:   `Settled. Performance written back to ${snap.cp.name}'s record.`,
+    cancel:`Cancelled — funds returned to your balance. No default recorded.`,
+    dispute:`Escalated to review. Funds stay locked until it resolves.`,
+  }[st]||'';
+  /* 撤销窗口的倒计时只写在按钮上——它是那个按钮的剩余寿命，不是这单的状态 */
+  const timer = st==='mine'&&snap.wsecs>0 ? `Releases in ${snap.wsecs}s (demo — real window ${snap.p.win||'3 days'})`
+    : st==='deliv'&&snap.wsecs>0 ? `${snap.wsecs}s (demo)` : '';
+  card.innerHTML=crail(snap)+`
+    <div class="pad">
+      <div class="dhead">
+        <b class="damt num">Transfer ${amt} to ${snap.cp.name}</b>
+        <span class="dsub">${badge}${timer?' · '+timer:''}</span>
+      </div>
+      <dl class="dpay">
+        <div><dt>Counterparty</dt><dd><button class="cplink" data-chatfor="${snap.cp.id}">${avSpan(snap.cp.name)}${snap.cp.name}<span class="cpgo">Chat ›</span></button></dd></div>
+        <div><dt>Release condition</dt><dd>${snap.condText}${
+          snap.fallback&&st!=='rel'&&st!=='cancel'
+            /* 兜底用大白话，不用「unresolved」这种谁也读不懂的词 */
+            ? `<small>If that has not happened in ${snap.fallback}, the order goes to a human reviewer instead of hanging.</small>`
+            : ''}</dd></div>
+        <div><dt>For</dt><dd>${snap.why}</dd></div>
+      </dl>
+      <p class="dmech">${next}</p>
+      <div class="dfoot" data-efoot></div>
+    </div>`;
+  /* 动作行：每个阶段只给此刻真能做的事 */
+  const foot=card.querySelector('[data-efoot]');
+  if(st==='mine'&&snap.cond==='Proof + window')
+    foot.innerHTML=`<a href="#" class="dcancel lnk" data-edispute>Dispute</a>`
+      +`<button class="btn btn-primary" data-eok>Release now</button>`;
+  else if(st==='mine')
+    foot.innerHTML=`<a href="#" class="dcancel lnk" data-ecancel>Cancel order</a>`
+      +`<button class="btn btn-primary" data-eok>Confirm &amp; release</button>`;
+  else if(st==='deliv'||st==='lock')
+    foot.innerHTML=`<a href="#" class="dcancel lnk" data-ecancel>Cancel order</a>`;
+  else if(st==='rel')
+    foot.innerHTML=`<a href="#" class="pkg lnk">Evidence ›</a>`;
+  else foot.remove();
+  foot.querySelector?.('[data-ecancel]')?.addEventListener('click',ev=>{ev.preventDefault();cancelEscrow()});
+  foot.querySelector?.('[data-eok]')?.addEventListener('click',ev=>{ev.preventDefault();releaseEscrow()});
+  foot.querySelector?.('[data-edispute]')?.addEventListener('click',ev=>{ev.preventDefault();disputeEscrow()});
+  card.querySelectorAll('[data-chatfor]').forEach(b=>b.onclick=ev=>{
+    ev.preventDefault(); openChatFor(b.dataset.chatfor);
+  });
+}
+
 let ESCN=0;
 function startEscrow(){
   document.getElementById('composer').classList.remove('show');
-  if(escrow)releaseEscrow(true);   /* 前一笔还挂着就按放款收口，避免两张卡抢一个 undobar */
+  if(escrow)releaseEscrow(true);   /* 前一笔还挂着就按放款收口，两张单不共用一个状态机 */
   /* 一张工单 = 一笔 order。新命令永远开新会话——工单是凭证，
      有终态后只读，不许后来的订单叠进旧记录 */
   newSession();
   document.getElementById('empty')?.remove();
   const condText=S.condText||(CTPL[S.cond]?CTPL[S.cond].text(CTPL[S.cond].defs):S.cond);
-  const snap={cp:S.cp,amt:S.amt,coin:S.coin,why:S.why,cond:S.cond,condText,secs:30,phase:'undo',
+  const snap={cp:S.cp,amt:S.amt,coin:S.coin,why:S.why,cond:S.cond,condText,
+              timeout:S.timeout, fallback:S.fallback,
               p:S.cpar||(CTPL[S.cond]?{...CTPL[S.cond].defs}:{}), t:0};
   S.cpar=null;
   escrow=snap;
   used=Math.min(budget,used+usdOf(snap.amt,snap.coin));renderBalance();
 
-  /* 执行轨道：黑箱问题的答案——钱在哪一站、下一站什么时候，写在卡上 */
+  /* 执行面板：与买单卡同一套（徽标 → 主数字 → KV → 下一步 → 动作），
+     条件单提交后要看的就是「这单走到哪一步、现在轮到谁」 */
+  snap.stage='lock';
   const card=document.createElement('div');
-  card.className='tcard esc2';
-  card.innerHTML=`
-    <div class="erow"><span class="st">Escrowed</span>
-      <span class="etxt">${snap.condText} · <span class="who">${snap.cp.name}</span> · ${snap.why}</span>
-      <b class="amt num">${escAmtTxt(snap.amt,snap.coin)}</b></div>
-    <div class="erail">
-      <span class="es done"><i></i>Verified</span>
-      <span class="es done"><i></i>Funds reserved</span>
-      <span class="es" data-es="wait"><i></i>Waiting · ${CETA[snap.cond]||''}</span>
-      <span class="es" data-es="cons"><i></i>Consensus</span>
-      <span class="es" data-es="rel"><i></i>Release</span>
-    </div>
-    <div class="efoot">
-      <span class="ecd num" data-ecd>Reversible for 30 s — no reason needed</span>
-      <button class="btn btn-primary ebtn" data-eok hidden>Confirm &amp; release</button>
-      <a href="#" class="lnk ecancel" data-edispute hidden>Dispute</a>
-      <a href="#" class="lnk ecancel" data-ecancel>Cancel order</a>
-    </div>`;
+  card.className='deal mine';
   document.getElementById('log').prepend(card);
   snap.card=card;
-  card.querySelector('[data-ecancel]').onclick=ev=>{ev.preventDefault();cancelEscrow()};
-  card.querySelector('[data-eok]').onclick=ev=>{ev.preventDefault();releaseEscrow()};
-  card.querySelector('[data-edispute]').onclick=ev=>{ev.preventDefault();disputeEscrow()};
+  paintEscrow();
 
   /* 注册成工单：会话 + 左栏 Tasks 行 + 播报流，与交易任务同构 */
   ESCN++; const sid='esc-'+ESCN, cp=S.cp;
@@ -3916,73 +3983,58 @@ function startEscrow(){
     mk:{peer:cp.name, name:cp.name, side:'pay', u:snap.amt, coin:'USD', fiat:'USD', ccy:'USD',
         sc:cp.ifr, deals:cp.deals, rate:cp.ifr},
     headHTML:`${avSpan(cp.name,'thav')}
-      <span class="thwho"><b>Transfer ${escAmtTxt(snap.amt,snap.coin)} to ${cp.name}</b><span>Task · ${condText}</span></span>
+      <span class="thwho"><b>Transfer ${escAmtTxt(snap.amt,snap.coin)} to ${cp.name}</b><span>Task · ${cp.name}</span></span>
       <button class="thgo" data-chatfor="${cp.id}">${avSpan(cp.name)}Message ${cp.name} ›</button>`};
   SESSIONS.push(sess); ACTIVE=sess; THREAD=null; setHead(sess);
   snap.sess=sid; snap.tk=sess;
   taskUpsert(sid,{title:`Transfer ${escAmtTxt(snap.amt,snap.coin)} to ${cp.name}`, st:'run', sess:sid});
   renderLeft(); setLTab('ai'); setPlaceholder();
-  tpost(sess,`Order created · ${condText} · reversible for 30 s`);
+  /* 播报只说增量——条件文本在卡上已经写了一次，这里再抄一遍就是第三份拷贝 */
+  tpost(sess,'Order created · funds locked in escrow');
+  paintEscrow();
 
-  document.getElementById('uamt').textContent=escAmtTxt(snap.amt,snap.coin);
-  document.getElementById('uwho').textContent=snap.cp.name;
-  document.getElementById('ucd').textContent='30s';
-  document.getElementById('undobar').classList.add('show');
-
+  /* 阶段推进。撤销窗口关掉之后才进条件等待——
+     原来的绿条把「撤销窗口」写成了「放款倒计时」，这两件事必须分开说 */
   snap.iv=setInterval(()=>{
-    if(snap.phase==='undo'){
-      snap.secs--;
-      document.getElementById('ucd').textContent=snap.secs+'s';
-      card.querySelector('[data-ecd]').textContent=`Reversible for ${snap.secs} s — no reason needed`;
-      if(snap.secs<=0){
-        snap.phase='wait';
-        document.getElementById('undobar').classList.remove('show');
-        card.querySelector('.st').textContent='Waiting';
-        card.querySelector('[data-es="wait"]').classList.add('now');
-        const ecd=card.querySelector('[data-ecd]');
-        if(snap.cond==='Immediately'){releaseEscrow();return}
-        if(snap.cond==='On a date'){snap.wsecs=12;
-          ecd.textContent=`Releases on ${snap.p.date||'the 1st'} · clock-verified (demo 12 s)`;}
-        else if(snap.cond==='When I confirm')
-          ecd.textContent='Waiting on their delivery — nothing releases without you';
-        else ecd.textContent=`Waiting on their ${String(snap.p.proof||'proof').toLowerCase()} — your ${snap.p.win||'3 days'} window starts when it lands`;
-      }
-    }else if(snap.phase==='wait'){
+    if(escrow!==snap){clearInterval(snap.iv);return}
+    if(snap.stage==='lock'){
+      /* 锁定是一个瞬时事实，不是一段等待——停一拍让人看清，然后就走。
+         「30 秒后悔窗口」已经去掉：密码 + Passkey 都过完了，再加一道倒计时是自相矛盾。
+         真正的可逆性在条件成立前的 Cancel order 上，那才是托管的意义。 */
+      if(snap.cond==='Immediately'){releaseEscrow();return}
+      snap.stage='deliv';
+      if(snap.cond==='On a date')snap.wsecs=12;
+      paintEscrow();
+      return;
+    }
+    if(snap.stage==='deliv'){
       snap.t++;
-      const ecd=card.querySelector('[data-ecd]');
       if(snap.cond==='On a date'){
-        if(--snap.wsecs<=0)releaseEscrow();
-      }else if(snap.cond==='When I confirm'){
-        /* 流程：对方交付并附证据 → 你确认放款；一直不动，到期升级审查 */
-        if(snap.t===5){
-          tpost(snap.tk,`${snap.cp.name} marked it delivered · evidence attached to the record`);
-          ecd.textContent=`Their delivery is in — confirm to release · silent past ${snap.p.within||'14 days'} goes to review`;
-          card.querySelector('[data-eok]').hidden=false;
-        }
-      }else{ /* Proof + window */
-        if(snap.t===4){
-          tpost(snap.tk,`${snap.cp.name} uploaded the ${String(snap.p.proof||'proof').toLowerCase()} · your window is open`);
-          snap.wsecs=15;
-          card.querySelector('[data-edispute]').hidden=false;
-        }
-        if(snap.wsecs!=null){
-          ecd.textContent=`Releases in ${snap.wsecs}s unless you dispute (demo — real window ${snap.p.win||'3 days'})`;
-          if(--snap.wsecs<0)releaseEscrow();
-        }
+        if(--snap.wsecs<=0){releaseEscrow();return}
+        paintEscrow(); return;
       }
+      if(snap.cond==='When I confirm'&&snap.t===5){
+        tpost(snap.tk,`${snap.cp.name} marked it delivered · evidence attached to the record`);
+        snap.stage='mine'; paintEscrow(); return;
+      }
+      if(snap.cond==='Proof + window'&&snap.t===4){
+        tpost(snap.tk,`${snap.cp.name} uploaded the ${String(snap.p.proof||'proof').toLowerCase()} · your window is open`);
+        snap.stage='mine'; snap.wsecs=15; paintEscrow(); return;
+      }
+      return;
+    }
+    if(snap.stage==='mine'&&snap.wsecs!=null){
+      /* 凭证档：窗口内不异议就自动放行 */
+      if(--snap.wsecs<0){releaseEscrow();return}
+      paintEscrow();
     }
   },1000);
 }
-document.getElementById('undo').onclick=()=>cancelEscrow();
 /* 撤销：放款前随时可撤——窗口期免说明，窗口后也只是原路退回 */
 function cancelEscrow(){
   if(!escrow)return;
   clearInterval(escrow.iv);
-  document.getElementById('undobar').classList.remove('show');
-  const c=escrow.card;
-  c.querySelector('.st').className='st done'; c.querySelector('.st').textContent='Refunded';
-  c.querySelector('.efoot').innerHTML='<span class="ecd">Cancelled — funds returned to your balance</span>';
-  c.querySelector('[data-es="wait"]')?.classList.remove('now');
+  escrow.stage='cancel'; paintEscrow();
   used=Math.max(0,used-usdOf(escrow.amt,escrow.coin));renderBalance();
   if(escrow.sess){taskUpsert(escrow.sess,{st:'done'});
     tpost(escrow.tk,'Cancelled — funds returned to your balance. No default recorded.')}
@@ -3992,11 +4044,7 @@ function cancelEscrow(){
 function disputeEscrow(){
   if(!escrow)return;
   clearInterval(escrow.iv);
-  document.getElementById('undobar').classList.remove('show');
-  const c=escrow.card;
-  c.querySelector('.st').className='st'; c.querySelector('.st').textContent='Disputed';
-  c.querySelector('[data-es="wait"]')?.classList.remove('now');
-  c.querySelector('.efoot').innerHTML='<span class="ecd">Escalated to review — funds stay locked until it resolves</span>';
+  escrow.stage='dispute'; paintEscrow();
   tpost(escrow.tk,'You disputed within the window — escalated to review. Funds stay locked; the uploaded evidence and this record go with it.');
   if(escrow.sess)taskUpsert(escrow.sess,{st:'you'});
   escrow=null;
@@ -4014,16 +4062,10 @@ function runReleaseConsensus(){
   const snap=escrow, c=snap.card;
   snap.consRun=true;
   clearInterval(snap.iv);
-  document.getElementById('undobar').classList.remove('show');
-  c.querySelector('.st').textContent='Consensus';
-  c.querySelector('[data-es="wait"]')?.classList.remove('now');
-  c.querySelector('[data-es="wait"]')?.classList.add('done');
-  c.querySelector('[data-es="cons"]')?.classList.add('now');
-  c.querySelector('[data-eok]')?.setAttribute('hidden','');
-  c.querySelector('[data-edispute]')?.setAttribute('hidden','');
-  const foot=c.querySelector('.efoot');
-  foot.querySelector('[data-ecd]').outerHTML=
-    `<div class="econs" data-ecd>${RELEASE_VOTES.map(([n,d])=>
+  snap.stage='cons'; paintEscrow();
+  /* 三票就地长在面板里，替掉那句「下一步」——此刻正在跑的就是这三条 */
+  const mech=c.querySelector('.dmech');
+  mech.outerHTML=`<div class="econs" style="margin:2px 20px 14px">${RELEASE_VOTES.map(([n,d])=>
       `<div class="ecv run"><span class="tk">◇</span><b>${n}</b><em>${d}</em></div>`).join('')}</div>`;
   const rows=[...c.querySelectorAll('.ecv')];
   rows.forEach((r,i)=>setTimeout(()=>{
@@ -4041,12 +4083,9 @@ function releaseEscrow(now){
   /* 正常路径先过放行共识；强制收口（开新单顶掉旧单）跳过动画直接结清 */
   if(!now && !escrow.consDone){ if(!escrow.consRun)runReleaseConsensus(); return; }
   clearInterval(escrow.iv);
-  document.getElementById('undobar').classList.remove('show');
+  escrow.stage='rel'; paintEscrow();
   const c=escrow.card;
-  c.querySelector('.st').className='st ok'; c.querySelector('.st').textContent='Released';
   c.querySelectorAll('.es').forEach(x=>{x.classList.remove('now');x.classList.add('done')});
-  c.querySelector('.efoot').innerHTML=
-    '<span class="ecd">Settled · performance written back</span><a href="#" class="pkg lnk">Evidence ›</a>';
   c.classList.add('celebrate');
   RECS.unshift({d:'today',w:escrow.cp.name,t:escrow.condText,a:escAmtTxt(escrow.amt,escrow.coin),s:'Released'});
   if(escrow.sess){taskUpsert(escrow.sess,{st:'done'});
@@ -4730,7 +4769,7 @@ const ACT_DEF={
 const CTPL={
  'Immediately':   {fields:[], defs:{}, text:()=>'immediately'},
  'When I confirm':{fields:[{w:'within',k:'within'}], defs:{within:'14 days'},
-                   text:p=>`you confirm receipt · unresolved after ${p.within} goes to review`},
+                   text:p=>'you confirm receipt'},
  'Proof + window':{fields:[{w:'of',k:'proof',opts:['Bank receipt','Delivery record','Work delivered']},
                            {w:'window',k:'win'}],
                    defs:{proof:'Delivery record',win:'3 days'},
@@ -4782,7 +4821,9 @@ function compileConds(conds,timeout){
   if(has('time')) p.date=has('time').p.date;
   else if(has('data')) p.date='the data target';
   if(has('approve')) p.within=timeout;
-  return {main, text:`${text} · unresolved after ${timeout} goes to review`, p};
+  /* 超时兜底不是「释放条件」的一部分——它是条件没成立时的处置，
+     混在同一句里既读不懂，用户也从没在编辑器里选过它 */
+  return {main, text, fallback:timeout, p};
 }
 
 const INTENTS=['Supplier balance','Delivery acceptance','Rent','Payroll',
@@ -5159,7 +5200,7 @@ function runAct(force){
     const cp=CPS.find(c=>c.name===a.peer)||CPS[0];
     const cc=compileConds(a.conds,a.timeout);   /* 组合 → 旧主分支 + 展示文本,托管状态机不感知组合 */
     S.cond=cc.main; S.cp=cp; S.amt=a.amt; S.coin=a.coin; S.why=a.why;
-    S.condText=cc.text;
+    S.condText=cc.text; S.fallback=cc.fallback;
     S.cpar={...cc.p};
     S.guessed={cp:false,amt:false,why:false};
     document.getElementById('empty')?.remove();
@@ -5286,7 +5327,6 @@ function newSession(){
   document.getElementById('log').innerHTML=
     '<div id="empty"><h3>What would you like to settle?</h3></div>';
   document.getElementById('composer').classList.remove('show');
-  document.getElementById('undobar').classList.remove('show');
   SELLER.el=null;
   const f=document.getElementById('free'); f.value='';
   setPlaceholder(); syncSend(); autogrow();
