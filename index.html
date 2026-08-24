@@ -8,7 +8,7 @@
 <title>Atara · Conditional payment protocol</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@300;400&amp;display=swap">
 <style>
   :root {
     --paper: #ffffff;
@@ -148,14 +148,17 @@
   .cmp::before{content:"";grid-column:1/-1;grid-row:1;align-self:end;
     height:1px;background:oklch(94% .004 264)}
 
-  .cmp-us{justify-self:center;padding:.25rem .75rem;border-radius:999px;
+  .cmp-us{justify-self:start;padding:.25rem .75rem;border-radius:999px;
     text-transform:uppercase;
     background:oklch(94% .035 258);color:var(--blue);font-weight:600}
-  .cmp-them{justify-self:center;text-transform:uppercase;color:oklch(52% .018 264)}
+  .cmp-them{justify-self:start;padding-inline-start:.75rem;
+    text-transform:uppercase;color:oklch(52% .018 264)}
 
   .cmp-lbl{font-size:.875rem;line-height:1.35;color:oklch(48% .015 264)}
-  .cmp-v{display:flex;flex-direction:column;align-items:center;color:var(--blue)}
-  .cmp-t{display:flex;flex-direction:column;align-items:center;
+  .cmp-v{display:flex;flex-direction:column;align-items:flex-start;
+    padding-inline-start:.75rem;color:var(--blue)}
+  .cmp-t{display:flex;flex-direction:column;align-items:flex-start;
+    padding-inline-start:.75rem;
     font-size:.875rem;font-weight:500;color:oklch(52% .018 264)}
 
   /* 数值 24px/500，% 18px。对标稿的 % 用 text-blue-400（白底约 2.5:1，不达 AA），
@@ -167,7 +170,6 @@
   .cmp-t .nv{font-weight:300;color:oklch(52% .018 264)}
   .cmp-t .nu{color:oklch(52% .018 264)}
 
-  .bar{display:none}   /* 对标稿没有对比条。删掉这行即恢复 */
 
   /* 风险档位：三格条 + 颜色。填几格是第一重信号，颜色是第二重——
      只靠颜色区分对色觉障碍不成立。档位在 .ticket 上，值随对手方变。 */
@@ -194,7 +196,7 @@
   .risk-hi  .rg-needle{transform:rotate(62deg)}
 
   /* 末行：text-sm font-medium bg-blue-50/50 py-2 px-3 rounded-lg leading-snug */
-  .vword{padding:.5rem .75rem;border-radius:8px;background:oklch(94% .035 258 / .75);
+  .vword{margin-inline-start:-.75rem;padding:.5rem .75rem;border-radius:8px;background:oklch(94% .035 258 / .75);
     font-size:.875rem;font-weight:500;line-height:1.375;text-align:center}
 
   .out{opacity:0;transform:translateY(.35rem);
@@ -270,107 +272,215 @@
     .protocol-item .pfig *{animation:none}
   }
 
-  /* ── stack panorama：四层一张全景，回流线是论点 ── */
-  .stack-section{background:#fff;padding-block:var(--gap-section)}
-  .stack-section h2{margin:0;max-width:26ch;font-size:clamp(1.75rem,2.7vw,2.4rem);
-    font-weight:300;line-height:1.14;letter-spacing:-.03em;text-wrap:balance}
-  .stack-figure{margin:clamp(2rem,4vw,3rem) 0 0;border-radius:4px;overflow:hidden;
-    background:#fff;border:1px solid var(--hairline);padding:clamp(1rem,2.2vw,2rem)}
-  .stack-figure svg{display:block;width:100%;height:auto}
-  .pfs-flow{stroke-dasharray:70;stroke-dashoffset:70;
-    animation:pfs-draw .6s var(--ease) both;animation-play-state:paused}
-  .pfs-loop{stroke-dasharray:1000;stroke-dashoffset:1000;
-    animation:pfs-draw 1.2s var(--ease) 1.05s both;animation-play-state:paused}
-  .pfs-flow2{stroke-dasharray:260;stroke-dashoffset:260;
-    animation:pfs-draw .9s var(--ease) both;animation-play-state:paused}
-  .stack-figure.in .pfs-flow,.stack-figure.in .pfs-loop,
-  .stack-figure.in .pfs-flow2{animation-play-state:running}
-  @keyframes pfs-draw{to{stroke-dashoffset:0}}
-  /* ── 交易编排：每 7 秒执行一笔完整交易 ──
-     0-4% 订单脉冲 → 2-14% 条款/资金两包分头出发 → 16-30% 三个模型依次点火 →
-     30-36% verdict 落章（31-45% 扩散环）→ 36-46% ruling 包 → 50% 托管徽标
-     holding→released → 52-62% outcome 包 → 64-74% 三条记录依次写入 →
-     72-96% 历史包沿回流线爬回。所有演员共用 7s 周期，滚动进入才开演。 */
-  .pfs-act{animation-duration:7s;animation-timing-function:linear;
-    animation-iteration-count:infinite;animation-play-state:paused}
-  .stack-figure.in .pfs-act{animation-play-state:running}
+  /* ── stack：Three.js 轴测场景 + HUD。原设计是全屏独立页，这里改成页面里的一段：
+     canvas 尺寸跟着 section 而不是视口，body 的 overflow 不动。 ── */
+  /* 下面紧接 #engine 的圆角深色卡，两块深色之间原来只夹着卡片自己的 18px 白边，
+     读起来像渲染出错。这里留出真正的白间距，让那道白是设计而不是缝。 */
 
-  .pfs-order{transform-box:fill-box;transform-origin:center;animation-name:pfs-order}
-  @keyframes pfs-order{0%,4%,100%{transform:scale(1)}1.5%{transform:scale(1.05)}}
 
-  .pfs-m1,.pfs-m2,.pfs-m3{transform-box:fill-box;transform-origin:center}
-  .pfs-m1{animation-name:pfs-m1}.pfs-m2{animation-name:pfs-m2}.pfs-m3{animation-name:pfs-m3}
-  @keyframes pfs-m1{0%,16%,21%,100%{transform:scale(1);fill:#eef1f9}18.5%{transform:scale(1.25);fill:#d7defb}}
-  @keyframes pfs-m2{0%,20.5%,25.5%,100%{transform:scale(1);fill:#eef1f9}23%{transform:scale(1.25);fill:#d7defb}}
-  @keyframes pfs-m3{0%,25%,30%,100%{transform:scale(1);fill:#eef1f9}27.5%{transform:scale(1.25);fill:#d7defb}}
 
-  .pfs-verdict{transform-box:fill-box;transform-origin:center;animation-name:pfs-verdict}
-  @keyframes pfs-verdict{0%,29.5%,100%{transform:scale(1)}31%{transform:scale(.8)}33.5%{transform:scale(1.14)}36%{transform:scale(1)}}
-  .pfs-vpulse{transform-box:fill-box;transform-origin:center;animation-name:pfs-vpulse}
-  @keyframes pfs-vpulse{0%,30%{transform:scale(1);opacity:0}32%{opacity:.5}45%,100%{transform:scale(1.9);opacity:0}}
+  /* ── #arch 方案 A：精简主图 + 交互展开（2026-08-24，按 Ellie 的四层架构图重做）──
+     主图每层只留：编号+代号+职能 · 大图标 · 一句价值 · 关键词。
+     子项明细收进悬停/聚焦展开（触屏常开）。右侧两张价值卡。
+     底部流程条 = 可点导航：点哪层，滚到哪层并高亮。 */
+  .ap-section{background:oklch(98.3% .005 264);padding-block:var(--gap-section);
+    --ap-line:oklch(91% .006 267);--ap-muted:oklch(46% .015 267);
+    --ap-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace}
+  .ap-section .wrap{max-width:1320px}
 
-  .pfs-badge{animation-name:pfs-badge}
-  @keyframes pfs-badge{0%,13%{opacity:0}15%,88%{opacity:1}92%,100%{opacity:0}}
-  .pfs-bh{animation-name:pfs-bh}
-  @keyframes pfs-bh{0%,49%{opacity:1}51%,100%{opacity:0}}
-  .pfs-br{animation-name:pfs-br}
-  @keyframes pfs-br{0%,51%{opacity:0}53%,100%{opacity:1}}
+  .ap-head{display:flex;align-items:flex-end;justify-content:space-between;
+    gap:2rem;margin-bottom:clamp(2.5rem,5vw,4rem)}
+  .ap-eyebrow{display:flex;align-items:center;gap:.6rem;margin:0 0 1rem;
+    font:400 .7rem/1 var(--ap-mono);letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ap-muted)}
+  .ap-eyebrow::before{content:"";width:22px;height:1px;background:var(--ink)}
+  .ap-head h2{margin:0 0 .75rem;font-size:var(--t-head);font-weight:300;
+    line-height:1.05;letter-spacing:-.034em}
+  .ap-head .sub{margin:0;max-width:44ch;font-size:1rem;line-height:1.6;
+    color:var(--ap-muted)}
+  .ap-motto{flex:0 0 auto;margin:0;text-align:right;font-size:.9rem;line-height:1.7;
+    color:var(--ap-muted)}
+  .ap-motto b{display:block;font-weight:500;color:var(--ink)}
 
-  .pfs-rc1{animation-name:pfs-rc1}.pfs-rc2{animation-name:pfs-rc2}.pfs-rc3{animation-name:pfs-rc3}
-  @keyframes pfs-rc1{0%,63%,69%,100%{fill:#f5f7fc}65.5%{fill:#dfe5fb}}
-  @keyframes pfs-rc2{0%,66%,72%,100%{fill:#f5f7fc}68.5%{fill:#dfe5fb}}
-  @keyframes pfs-rc3{0%,69%,75%,100%{fill:#f5f7fc}71.5%{fill:#dfe5fb}}
+  .ap-grid{display:grid;grid-template-columns:minmax(0,1fr) clamp(220px,19vw,264px);
+    gap:clamp(1.5rem,3vw,2.5rem);align-items:start}
 
-  /* 数据包：offset-path 不支持的浏览器会堆在原点，先藏后开 */
-  .pfs-pk{visibility:hidden}
-  @supports (offset-path:path('M0 0H10')){
-    .pfs-pk{visibility:visible;opacity:0}
-    .pfs-pkt{animation-name:pfs-pkt}.pfs-pkf{animation-name:pfs-pkf}
-    .pfs-pkr{animation-name:pfs-pkr}.pfs-pko{animation-name:pfs-pko}
-    .pfs-pkl{animation-name:pfs-pkl}
+  /* ── 层 ── */
+  .ap-layer{position:relative;display:grid;
+    grid-template-columns:clamp(150px,15vw,190px) minmax(0,1fr);
+    gap:clamp(1rem,2.5vw,2rem);margin-bottom:3.25rem}
+  .ap-layer:last-of-type{margin-bottom:0}
+  /* 层间连接：虚线 + 端点圆，对齐图标中心（卡内边距 1.5rem + 图标半径 20px） */
+  .ap-layer:not(:last-of-type)::after{content:"";position:absolute;
+    left:calc(clamp(150px,15vw,190px) + clamp(1rem,2.5vw,2rem) + 1.5rem + 20px);
+    top:100%;height:3.25rem;width:0;
+    border-left:1px dashed oklch(80% .02 267)}
+  .ap-layer:not(:last-of-type) .ap-card::after{content:"";position:absolute;
+    left:calc(1.5rem + 20px - 2.5px);bottom:-8px;width:5px;height:5px;
+    border-radius:50%;background:oklch(70% .04 267)}
+
+  .ap-tag{padding-top:.35rem}
+  .ap-num{display:inline-grid;place-items:center;width:30px;height:30px;
+    border-radius:8px;background:oklch(94% .035 258);
+    font:500 .75rem/1 var(--ap-mono);color:var(--blue)}
+  .ap-name{margin:.5rem 0 .35rem;font:500 clamp(1.05rem,1.3vw,1.25rem)/1.2 var(--ap-mono);
+    letter-spacing:-.02em;overflow-wrap:anywhere}
+  .ap-role{font-size:.875rem;color:var(--ap-muted)}
+
+  .ap-card{position:relative;padding:1.5rem clamp(1.5rem,2.5vw,2rem);
+    border:1px solid var(--ap-line);border-radius:14px;background:#fff;
+    box-shadow:0 1px 2px oklch(20% .02 267 / .04);
+    transition:border-color .3s linear,box-shadow .3s var(--ease)}
+  .ap-layer:hover .ap-card,.ap-layer:focus-within .ap-card{
+    border-color:oklch(78% .05 266);box-shadow:0 10px 32px oklch(30% .06 266 / .09)}
+  .ap-layer.is-hot .ap-card{border-color:var(--blue);
+    box-shadow:0 10px 32px oklch(30% .1 266 / .12)}
+
+  .ap-top{display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap}
+  /* 必须显式成块：行内 span 忽略宽高，SVG 会掉到替换元素默认 150px */
+  .ap-ic{display:inline-grid;place-items:center;flex:0 0 48px;width:48px;height:48px;
+    border-radius:12px;background:oklch(94% .035 258);color:var(--blue)}
+  .ap-ic svg{width:26px;height:26px}
+  .ap-ic svg{display:block;width:100%;height:100%;fill:none;stroke:currentColor;
+    stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .ap-value{margin:0;font-size:clamp(1.05rem,1.35vw,1.2rem);font-weight:500;
+    letter-spacing:-.015em}
+  .ap-chips{display:flex;flex-wrap:wrap;gap:.5rem;width:100%;margin:.9rem 0 0}
+  .ap-chips li{list-style:none;padding:.18rem .6rem;border:1px solid var(--ap-line);
+    border-radius:999px;font-size:.78rem;color:var(--ap-muted)}
+
+  /* 明细：0fr→1fr 展开；间距放在内层，折叠才能真正归零 */
+  .ap-more{display:grid;grid-template-rows:0fr;opacity:0;
+    transition:grid-template-rows .34s var(--ease),opacity .22s linear}
+  .ap-more>div{overflow:hidden}
+  .ap-more dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:.9rem 1.5rem;margin:0;padding-top:1.25rem}
+  .ap-more .row{border-top:1px solid var(--ap-line);padding-top:.7rem}
+  .ap-more dt{font-size:.84rem;font-weight:500}
+  .ap-more dd{margin:.2rem 0 0;font-size:.8rem;line-height:1.5;color:var(--ap-muted)}
+  .ap-layer:hover .ap-more,.ap-layer:focus-within .ap-more,
+  .ap-layer.is-hot .ap-more{grid-template-rows:1fr;opacity:1}
+  .ap-card:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+
+  /* ── 右侧价值卡 ── */
+  .ap-aside{position:sticky;top:2rem;display:flex;flex-direction:column;gap:1.25rem}
+  .ap-vcard{padding:1.5rem;border:1px solid var(--ap-line);border-radius:14px;
+    background:#fff}
+  /* 视觉锚：第一张价值卡翻成品牌蓝色块，全模块只此一个深色块 */
+  .ap-vcard.is-key{background:var(--blue);border-color:transparent;color:#fff}
+  .ap-vcard.is-key h3{color:#fff}
+  .ap-vcard.is-key li{color:oklch(100% 0 0 / .85);border-color:oklch(100% 0 0 / .22)}
+  .ap-vcard.is-key .ap-ic{background:oklch(100% 0 0 / .16);color:#fff}
+  .ap-vcard .ap-ic{width:40px;height:40px;flex:none;margin-bottom:1rem}
+  .ap-vcard .ap-ic svg{width:22px;height:22px}
+  .ap-vcard h3{margin:0 0 .9rem;font-size:1rem;font-weight:500}
+  .ap-vcard ul{margin:0;padding:0;list-style:none}
+  .ap-vcard li{padding:.5rem 0;border-top:1px solid var(--ap-line);
+    font-size:.84rem;color:var(--ap-muted)}
+
+  /* ── 底部流程条：可点导航 ── */
+  .ap-flow{display:flex;align-items:center;gap:.25rem;flex-wrap:wrap;
+    margin-top:clamp(2.5rem,5vw,3.5rem);padding:.6rem;
+    border:1px solid var(--ap-line);border-radius:999px;width:fit-content;
+    background:#fff;box-shadow:0 1px 2px oklch(20% .02 267 / .04)}
+  .ap-flow button{display:flex;align-items:center;gap:.55rem;padding:.5rem .9rem;
+    border:0;border-radius:999px;background:none;cursor:pointer;
+    font:400 .8rem/1.4 var(--ap-mono);color:var(--ink);
+    transition:background .2s linear}
+  .ap-flow button i{font-style:normal;font-family:var(--sans);font-size:.75rem;
+    color:var(--ap-muted)}
+  .ap-flow button:hover{background:oklch(96% .01 266)}
+  .ap-flow button[aria-current="true"]{background:var(--blue);color:#fff}
+  .ap-flow button[aria-current="true"] i{color:oklch(100% 0 0 / .8)}
+  .ap-flow .sep{color:oklch(72% .02 267);font-size:.8rem}
+
+  /* 入场：借用全局 reveal，逐层错开 */
+  .ap-layer.reveal{transition-delay:calc(var(--i,0)*.12s)}
+
+  @media(max-width:1024px){
+    .ap-grid{grid-template-columns:1fr}
+    .ap-aside{position:static;flex-direction:row}
+    .ap-aside .ap-vcard{flex:1}
   }
-  @keyframes pfs-pkt{0%,2%{offset-distance:0%;opacity:0}3.5%{opacity:.95}12.5%{opacity:.95}14%,100%{offset-distance:100%;opacity:0}}
-  @keyframes pfs-pkf{0%,2%{offset-distance:0%;opacity:0}3.5%{opacity:.95}12.5%{opacity:.95}14%,100%{offset-distance:100%;opacity:0}}
-  @keyframes pfs-pkr{0%,36%{offset-distance:0%;opacity:0}37.5%{opacity:.95}44.5%{opacity:.95}46%,100%{offset-distance:100%;opacity:0}}
-  @keyframes pfs-pko{0%,52%{offset-distance:0%;opacity:0}53.5%{opacity:.95}60.5%{opacity:.95}62%,100%{offset-distance:100%;opacity:0}}
-  @keyframes pfs-pkl{0%,72%{offset-distance:0%;opacity:0}74%{opacity:.95}94%{opacity:.95}96%,100%{offset-distance:100%;opacity:0}}
-
-  /* ── 滚动装配（Firefox 无 view()：回落到现有 reveal + 一次性画线）── */
-  @supports (animation-timeline: view()){
-    .stack-section h2.reveal,.stack-notes.reveal{
-      opacity:1;transform:none;transition:none;
-      animation:pfs-rise both;animation-timeline:view();animation-range:entry 0% entry 90%}
-    .stack-figure.reveal{opacity:1;transform:none;transition:none;
-      view-timeline:--stackv;
-      animation:pfs-rise both;animation-timeline:view();animation-range:entry 0% entry 65%}
-    .pfs-flow2{animation-timeline:--stackv;animation-delay:0s;
-      animation-range:entry 30% cover 34%;animation-play-state:running}
-    .pfs-flow{animation-timeline:--stackv;animation-delay:0s;
-      animation-range:entry 55% cover 42%;animation-play-state:running}
-    .pfs-loop{animation-timeline:--stackv;animation-delay:0s;
-      animation-range:cover 22% cover 52%;animation-play-state:running}
+  @media(max-width:760px){
+    .ap-head{flex-direction:column;align-items:flex-start}
+    .ap-motto{text-align:left}
+    .ap-layer{grid-template-columns:1fr;gap:.9rem;margin-bottom:2.5rem}
+    .ap-layer:not(:last-of-type)::after,.ap-layer:not(:last-of-type) .ap-card::after{display:none}
+    .ap-aside{flex-direction:column}
+    .ap-flow{border-radius:20px}
   }
-  @keyframes pfs-rise{from{opacity:0;transform:translateY(34px)}}
-  /* 成对纪律：图里是技术事实，图下四格是各层对用户意味着什么 */
-  .stack-notes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:clamp(1.25rem,2.5vw,2.5rem);margin-top:clamp(1.75rem,3vw,2.5rem)}
-  .stack-notes div{font-size:.9375rem;line-height:1.55;color:oklch(38% .02 267)}
-  .stack-notes b{display:block;margin-bottom:.4rem;font-size:.72rem;font-weight:600;
-    letter-spacing:.02em;color:oklch(38% .02 267)}
-  @media(max-width:900px){.stack-notes{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  /* 窄屏：1180 宽的图缩进 350px 里字号只剩 4px。改为图内横向滚动，
-     svg 保住最小宽度，右缘自然露出下一段当滚动线索 */
-  @media(max-width:700px){
-    .stack-figure{overflow-x:auto;-webkit-overflow-scrolling:touch}
-    .stack-figure svg{min-width:880px}
+  @media(hover:none){
+    .ap-more{grid-template-rows:1fr;opacity:1}
   }
-  @media(max-width:520px){.stack-notes{grid-template-columns:1fr}}
   @media(prefers-reduced-motion:reduce){
-    .pfs-flow,.pfs-loop,.pfs-flow2{animation:none;stroke-dashoffset:0}
-    .pfs-pk,.pfs-vpulse{animation:none;visibility:hidden;opacity:0}
-    .pfs-act{animation:none}
-    .pfs-badge,.pfs-br{opacity:0}
-    .stack-section h2.reveal,.stack-notes.reveal,.stack-figure.reveal{animation:none;opacity:1;transform:none}
+    .ap-more,.ap-card,.ap-flow button,.ap-layer.reveal{transition:none}
+  }
+
+  .stack-section{position:relative;min-height:min(146vh,1460px);
+    margin-bottom:var(--gap-section);overflow:hidden;background:#060608;
+    color:#fff;isolation:isolate}
+  .sx-env{position:absolute;inset:0;z-index:1;background:#060608}
+  .sx-canvas{position:absolute;inset:0;z-index:3;mix-blend-mode:screen}
+  .sx-canvas canvas{display:block}
+  .sx-ground{position:absolute;left:0;right:0;bottom:0;height:30%;z-index:2;
+    background:linear-gradient(to bottom,transparent,#060608 20%)}
+
+  .sx-hud{position:relative;z-index:10;display:flex;flex-direction:column;
+    min-height:min(146vh,1460px);
+    padding:clamp(3rem,5vw,5rem) clamp(2rem,4vw,4rem) clamp(6rem,10vw,10rem);
+    pointer-events:none}
+  .sx-head{text-align:center;margin-top:clamp(1rem,2vw,2rem)}
+  .sx-head h1{margin:0 0 1rem;font-size:clamp(1.75rem,3vw,2.75rem);font-weight:300;
+    letter-spacing:-.02em;line-height:1.1;text-shadow:0 0 20px rgba(255,255,255,.2)}
+  .sx-head p{max-width:640px;margin:0 auto;font-size:clamp(1rem,1.1vw,1.125rem);
+    line-height:1.5;letter-spacing:.01em;color:rgba(255,255,255,.6)}
+
+  /* 四行，一行对一层：左右交错，行高相等作为兜底；
+     场景跑起来后 .pinned 会把每块按相机投影钉到它那一层的高度上。 */
+  .sx-grid{flex:1;position:relative;display:grid;
+    grid-template-columns:1fr clamp(240px,26vw,400px) 1fr;
+    grid-template-rows:repeat(4,1fr);
+    column-gap:2rem;row-gap:clamp(1.5rem,3vw,3rem);margin-top:clamp(2rem,4vw,4rem)}
+  .sx-block{display:flex;flex-direction:column;justify-content:center}
+  .sx-block[data-layer="chn"]{grid-row:1}
+  .sx-block[data-layer="adj"]{grid-row:2}
+  .sx-block[data-layer="stl"]{grid-row:3}
+  .sx-block[data-layer="rcd"]{grid-row:4}
+
+  /* 钉住时不再是 grid：网格子项一旦有确定的 grid-row，绝对定位的包含块就变成那一格，
+     50% 会按格子宽算，右栏会被压成一条。改成 block 容器，包含块就是整个文案栏。 */
+  .sx-grid.pinned{display:block}
+  .sx-grid.pinned .sx-block{position:absolute;top:var(--sy,50%);transform:translateY(-50%);
+    width:calc(50% - clamp(120px,11vw,180px))}
+  .sx-grid.pinned .sx-left{left:0}
+  .sx-grid.pinned .sx-right{right:0}
+  .sx-left{grid-column:1;align-items:flex-end;text-align:right;padding-right:clamp(1rem,3vw,4rem)}
+  .sx-right{grid-column:3;align-items:flex-start;text-align:left;
+    padding-left:clamp(1rem,3vw,4rem);padding-top:clamp(2rem,5vw,6rem)}
+  .sx-title{margin:0 0 .75rem;font-size:clamp(1.2rem,1.7vw,1.5rem);font-weight:500;
+    letter-spacing:-.01em}
+  .sx-en{max-width:470px;margin:0 0 1.15rem;font-size:.95rem;line-height:1.5;
+    color:rgba(255,255,255,.6)}
+  .sx-you{max-width:470px;margin:0;font-size:.875rem;line-height:1.55;
+    color:rgba(255,255,255,.82)}
+  .sx-left .sx-you{margin-left:auto}
+
+  @media(max-width:900px){
+    .sx-grid{grid-template-columns:1fr;grid-template-rows:auto;gap:1rem}
+    .sx-canvas{display:none}
+    .sx-block,.sx-left,.sx-right{grid-column:1;align-items:flex-start;text-align:left;
+      padding:1rem 0}
+    .sx-grid{grid-template-rows:auto}
+    .sx-block[data-layer]{grid-row:auto}
+    .sx-you,.sx-en,.sx-title{max-width:none}
+    .sx-left .sx-you{margin-left:0}
+    .stack-section,.sx-hud{min-height:0}
+    .sx-hud{padding-block:clamp(3rem,8vw,5rem)}
+  }
+  /* 场景是纯装饰：减少动效时不加载 Three.js，只留 HUD 与静态底 */
+  @media(prefers-reduced-motion:reduce){
+    .sx-canvas{display:none}
   }
 
   .engine-section{position:relative;height:340svh;background:#fff;color:oklch(97% .004 260);
@@ -695,13 +805,13 @@
           <span class="cmp-lbl out" data-out="0">AI-computed risk of default</span>
           <strong class="cmp-v out" data-out="0">
             <span class="vline">
+              <span class="nv" id="riskValue">&middot;&middot;&middot;</span><i class="nu">%</i>
               <svg class="rgauge" viewBox="0 0 20 13.5" aria-hidden="true">
                 <path class="rg-track" d="M2 11.5a8 8 0 0 1 16 0"/>
                 <path class="rg-fill" d="M2 11.5a8 8 0 0 1 16 0"/>
                 <path class="rg-needle" d="M10 11.5V4.4"/>
                 <circle class="rg-hub" cx="10" cy="11.5" r="1.7"/>
               </svg>
-              <span class="nv" id="riskValue">&middot;&middot;&middot;</span><i class="nu">%</i>
             </span>
           </strong>
           <span class="cmp-t out" data-out="0">None</span>
@@ -862,11 +972,7 @@
                 .pfj-t2{animation:pfjudgement-tick 5.4s ease-out both .45s;animation-play-state:paused}
                 .pfj-t3{animation:pfjudgement-tick 5.4s ease-out both .8s;animation-play-state:paused}
                 @keyframes pfjudgement-tick{0%,14%{opacity:0}26%,100%{opacity:1}}
-                .pfj-t1 circle,.pfj-t2 circle,.pfj-t3 circle{transform-box:fill-box;transform-origin:center;
-                  animation:pfjudgement-beat 4.2s ease-in-out infinite;animation-play-state:paused}
-                .pfj-t2 circle{animation-delay:.5s}.pfj-t3 circle{animation-delay:1s}
-                @keyframes pfjudgement-beat{0%,22%,100%{transform:scale(1)}9%{transform:scale(1.18)}}
-                @media(prefers-reduced-motion:reduce){.pfj-t1,.pfj-t2,.pfj-t3{animation:none;opacity:1}.pfj-t1 circle,.pfj-t2 circle,.pfj-t3 circle{animation:none}}
+                @media(prefers-reduced-motion:reduce){.pfj-t1,.pfj-t2,.pfj-t3{animation:none;opacity:1}}
               </style>
             
               <!-- 左栏：框按内容定尺寸，与右侧三张卡的整体中线对齐（y=254），不再拉高去凑上下边 -->
@@ -881,29 +987,23 @@
 
               <text class="pfj-cap" x="470" y="112">WHAT THE PROTOCOL SETTLES ON</text>
             
-              <rect class="pfj-card" x="470" y="140" width="370" height="64" rx="10"/>
               <g class="pfj-t1">
-                <circle cx="484" cy="168" r="10" fill="#1aa35c"/>
-                <path d="M479 168l4 4 7.5-8.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect class="pfj-card" x="470" y="140" width="370" height="64" rx="10"/>
+                <text class="pfj-test" x="496" y="174">moisture &#8804; 12%</text>
+                <text class="pfj-by" x="496" y="196">settled by <tspan class="pfj-src">the lab certificate</tspan></text>
               </g>
-              <text class="pfj-test" x="512" y="174">moisture &#8804; 12%</text>
-              <text class="pfj-by" x="512" y="196">settled by <tspan class="pfj-src">the lab certificate</tspan></text>
             
-              <rect class="pfj-card" x="470" y="222" width="370" height="64" rx="10"/>
               <g class="pfj-t2">
-                <circle cx="484" cy="250" r="10" fill="#1aa35c"/>
-                <path d="M479 250l4 4 7.5-8.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect class="pfj-card" x="470" y="222" width="370" height="64" rx="10"/>
+                <text class="pfj-test" x="496" y="256">count = 400 units</text>
+                <text class="pfj-by" x="496" y="278">settled by <tspan class="pfj-src">the inspection report</tspan></text>
               </g>
-              <text class="pfj-test" x="512" y="256">count = 400 units</text>
-              <text class="pfj-by" x="512" y="278">settled by <tspan class="pfj-src">the inspection report</tspan></text>
             
-              <rect class="pfj-card" x="470" y="304" width="370" height="64" rx="10"/>
               <g class="pfj-t3">
-                <circle cx="484" cy="332" r="10" fill="#1aa35c"/>
-                <path d="M479 332l4 4 7.5-8.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect class="pfj-card" x="470" y="304" width="370" height="64" rx="10"/>
+                <text class="pfj-test" x="496" y="338">landed by 30 Sep</text>
+                <text class="pfj-by" x="496" y="360">settled by <tspan class="pfj-src">the bill of lading</tspan></text>
               </g>
-              <text class="pfj-test" x="512" y="338">landed by 30 Sep</text>
-              <text class="pfj-by" x="512" y="360">settled by <tspan class="pfj-src">the bill of lading</tspan></text>
             </svg>
           </figure>
         </article>
@@ -999,126 +1099,200 @@
     </div>
   </section>
 
-  <section class="stack-section" id="stack">
+  <!-- 方案 A：精简主图 + 交互展开（2026-08-24，按 Ellie 的四层架构图）。
+       口径处理：「跨链互通」写成 Reputation portability——
+       资金不过桥是主卖点，不能被自己的价值卡打架；图里的中文全部英文化（整页无汉字）。 -->
+  <section class="ap-section" id="arch" aria-labelledby="arch-h">
     <div class="wrap">
-      <h2 class="reveal">A stack with no single point of trust.</h2>
+      <header class="ap-head">
+        <div>
+          <p class="ap-eyebrow">Architecture</p>
+          <h2 id="arch-h">Atara Protocol</h2>
+          <p class="sub">Four layers for trusted payment and settlement.</p>
+        </div>
+        <p class="ap-motto"><b>Trustless by design.</b>Verifiable by default.</p>
+      </header>
 
-      <!-- 全景架构图：Order → 多模型裁决 → 结算两条腿 → C2 记录，
-           回流线（记录喂回下一次裁决）是整张图的论点。
-           不出现内部代号；可具名的只有 Loka Chain 与 C2 network；TEE 不出现。 -->
-      <figure class="stack-figure reveal" role="img" aria-label="One order splits two ways: its terms and evidence go to adjudication, where independent AI models vote and sign a ruling M-of-N, while the funds go straight into settlement — an escrow contract on Loka Chain enforced by block time, or peer-to-peer payment channels for high frequency. The ruling controls the release. Every outcome is written to the Setu network as a record linked to its cause, and that history feeds the next ruling.">
-        <svg viewBox="0 0 1180 540" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs>
-            <marker id="pfs-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0 0L10 5 0 10z" fill="#9aa4c2"/></marker>
-            <marker id="pfs-ahb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0 0L10 5 0 10z" fill="#1505eb"/></marker>
-            <marker id="pfs-ahc" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto"><path d="M0 0L10 5 0 10z" fill="#b6bedd"/></marker>
-          </defs>
+      <div class="ap-grid">
+        <div class="ap-stack">
 
-          <!-- 入口：一笔订单分两路——条款与证据进裁决，资金直接进结算。
-               这是真实拓扑：钱不经过模型。 -->
-          <g class="pfs-order pfs-act">
-            <rect x="333" y="14" width="144" height="34" rx="17" fill="#1505eb"/>
-            <text x="405" y="36" text-anchor="middle" font-size="12" font-weight="600" letter-spacing=".01em" fill="#fff">One order</text>
-          </g>
-          <path class="pfs-flow2" d="M405 48V66H190V84" stroke="#9aa4c2" stroke-width="1.5" fill="none" marker-end="url(#pfs-ah)"/>
-          <path class="pfs-flow2" style="animation-delay:.15s" d="M405 48V66H620V84" stroke="#9aa4c2" stroke-width="1.5" fill="none" marker-end="url(#pfs-ah)"/>
-          <text x="288" y="58" text-anchor="middle" font-size="11" font-weight="500" fill="#646c83">terms &amp; evidence</text>
-          <text x="515" y="58" text-anchor="middle" font-size="11" font-weight="500" fill="#646c83">funds</text>
+          <div class="ap-layer reveal" id="ap-l1" style="--i:0">
+            <div class="ap-tag">
+              <span class="ap-num">01</span>
+              <div class="ap-name">atara-pay</div>
+              <div class="ap-role">Entry &amp; routing</div>
+            </div>
+            <div class="ap-card" tabindex="0">
+              <div class="ap-top">
+                <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
+                  <path d="M3.5 6.5h4M3.5 12h3M3.5 17.5h4"/>
+                  <path d="M7.5 6.5c3.2 0 3 4.2 5.4 5m-5.4 6c3.2 0 3-4.2 5.4-5"/>
+                  <circle cx="15.2" cy="12" r="2.1"/>
+                  <path d="M17.3 12h3.2m0 0-1.7-1.7m1.7 1.7-1.7 1.7"/></svg></span>
+                <p class="ap-value">One surface to integrate against.</p>
+                <ul class="ap-chips"><li>API / SDK</li><li>Orders &middot; limits &middot; reconciliation</li><li>API keys</li></ul>
+              </div>
+              <div class="ap-more"><div><dl>
+                <div class="row"><dt>Client access</dt><dd>API and SDK — one integration for every venue.</dd></div>
+                <div class="row"><dt>Routing</dt><dd>Orders, limits, reconciliation, and where this trade settles.</dd></div>
+                <div class="row"><dt>API keys</dt><dd>Authentication and scoping per counterparty.</dd></div>
+              </dl></div></div>
+            </div>
+          </div>
 
-          <!-- 裁决：多模型投票，M-of-N 收敛到一个可证明的 verdict -->
-          <rect x="40" y="90" width="300" height="330" rx="14" fill="#fff" stroke="#e8ebf3"/>
-          <text x="64" y="128" font-size="12" font-weight="600" letter-spacing=".02em" fill="#646c83">Adjudication</text>
-          <g stroke="#c3cbe8" stroke-width="1.3" fill="none">
-            <path d="M116 186L235 240"/><path d="M116 246L233 246"/><path d="M116 306L235 252"/>
-          </g>
-          <g fill="#eef1f9" stroke="#1505eb" stroke-width="1.4">
-            <circle class="pfs-m1 pfs-act" cx="104" cy="186" r="11"/><circle class="pfs-m2 pfs-act" cx="104" cy="246" r="11"/><circle class="pfs-m3 pfs-act" cx="104" cy="306" r="11"/>
-          </g>
-          <g fill="#1505eb">
-            <circle cx="104" cy="186" r="3.5"/><circle cx="104" cy="246" r="3.5"/><circle cx="104" cy="306" r="3.5"/>
-          </g>
-          <text x="104" y="160" text-anchor="middle" font-size="11.5" font-weight="600" fill="#646c83">AI models</text>
-          <circle class="pfs-vpulse pfs-act" cx="252" cy="246" r="16" fill="none" stroke="#1505eb" stroke-width="1.5"/>
-          <g class="pfs-verdict pfs-act">
-            <circle cx="252" cy="246" r="16" fill="#1505eb"/>
-            <path d="M244.5 246.5l5 5 10.5-11.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-          </g>
-          <text x="252" y="292" text-anchor="middle" font-size="11" font-weight="500" fill="#646c83">verdict</text>
-          <text x="64" y="370" font-size="14" font-weight="500" fill="#3c4356">Independent models vote</text>
-          <text x="64" y="394" font-size="12" fill="#646c83">M-of-N signed &#183; verdict proof</text>
+          <div class="ap-layer reveal" id="ap-l2" style="--i:1">
+            <div class="ap-tag">
+              <span class="ap-num">02</span>
+              <div class="ap-name">aegean-consensus</div>
+              <div class="ap-role">Judgement</div>
+            </div>
+            <div class="ap-card" tabindex="0">
+              <div class="ap-top">
+                <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
+                  <circle cx="5" cy="5.2" r="1.9"/><circle cx="12" cy="4" r="1.9"/><circle cx="19" cy="5.2" r="1.9"/>
+                  <path d="M6.2 6.8 9.9 12M12 5.9V11m5.8-4.2L14.1 12"/>
+                  <circle cx="12" cy="16.3" r="4.2"/>
+                  <path d="m10.2 16.4 1.3 1.4 2.5-3"/></svg></span>
+                <p class="ap-value">Two models, one signed verdict.</p>
+                <ul class="ap-chips"><li>credit model</li><li>adjudication model</li><li>M-of-N signatures</li></ul>
+              </div>
+              <div class="ap-more"><div><dl>
+                <div class="row"><dt>credit model</dt><dd>The counterparty&rsquo;s probability of default.</dd></div>
+                <div class="row"><dt>adjudication model</dt><dd>Whether the condition was met.</dd></div>
+                <div class="row"><dt>M-of-N signatures</dt><dd>No single signer can rule alone.</dd></div>
+                <div class="row"><dt>Verdict proof</dt><dd>Every ruling carries its trace.</dd></div>
+              </dl></div></div>
+            </div>
+          </div>
 
-          <path class="pfs-flow" style="animation-delay:.35s" d="M340 246H394" stroke="#9aa4c2" stroke-width="1.5" fill="none" marker-end="url(#pfs-ah)"/>
-          <text x="367" y="230" text-anchor="middle" font-size="11" font-weight="500" fill="#646c83">ruling</text>
+          <div class="ap-layer reveal" id="ap-l3" style="--i:2">
+            <div class="ap-tag">
+              <span class="ap-num">03</span>
+              <div class="ap-name">loka-chain</div>
+              <div class="ap-role">Execution</div>
+            </div>
+            <div class="ap-card" tabindex="0">
+              <div class="ap-top">
+                <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
+                  <path d="M5.5 4v16M18.5 4v16"/>
+                  <circle cx="12" cy="8.6" r="2.5"/>
+                  <path d="M12 11.1v2.7m0 0-3.6 3.4m3.6-3.4 3.6 3.4"/>
+                  <circle cx="8" cy="17.8" r="1.05"/><circle cx="16" cy="17.8" r="1.05"/></svg></span>
+                <p class="ap-value">Funds held by contract, not by us.</p>
+                <ul class="ap-chips"><li>Escrow contract</li><li>HTLC channel</li></ul>
+              </div>
+              <div class="ap-more"><div><dl>
+                <div class="row"><dt>Escrow contract</dt><dd>Hold / release / rollback; the deadline is enforced by block time.</dd></div>
+                <div class="row"><dt>Conditional payment</dt><dd>Release in full, return in full, or split.</dd></div>
+                <div class="row"><dt>HTLC channel</dt><dd>Low latency, dispute backstop, instant settlement.</dd></div>
+              </dl></div></div>
+            </div>
+          </div>
 
-          <!-- 结算场地：两条腿 -->
-          <rect x="400" y="90" width="440" height="330" rx="14" fill="#eef1f9" stroke="#dfe4f0"/>
-          <text x="424" y="128" font-size="12" font-weight="600" letter-spacing=".02em" fill="#646c83">Settlement &#8212; two legs</text>
+          <div class="ap-layer reveal" id="ap-l4" style="--i:3">
+            <div class="ap-tag">
+              <span class="ap-num">04</span>
+              <div class="ap-name">setu</div>
+              <div class="ap-role">Record</div>
+            </div>
+            <div class="ap-card" tabindex="0">
+              <div class="ap-top">
+                <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
+                  <path d="M4 6.5h10M4 11.5h10M4 16.5h7"/>
+                  <path d="M16.5 16.5h.5c2.6 0 3-2.4 3-5s-.4-5-3-5h-.5"/>
+                  <circle cx="15.6" cy="6.5" r="1.15"/></svg></span>
+                <p class="ap-value">Every settlement leaves a row.</p>
+                <ul class="ap-chips"><li>Settlement outcomes</li><li>VLC causal edges</li><li>TEE attestation</li></ul>
+              </div>
+              <div class="ap-more"><div><dl>
+                <div class="row"><dt>Settlement outcomes</dt><dd>Who paid, who disputed, the final result.</dd></div>
+                <div class="row"><dt>VLC causal edges</dt><dd>A verifiable graph of what caused what.</dd></div>
+                <div class="row"><dt>TEE attestation</dt><dd>Trust that carries across parties.</dd></div>
+              </dl></div></div>
+            </div>
+          </div>
 
-          <rect x="424" y="146" width="188" height="244" rx="10" fill="#fff" stroke="#e3e7f2"/>
-          <text x="448" y="186" font-size="15" font-weight="600" fill="#14161f">Escrow contract</text>
-          <text x="448" y="208" font-size="12.5" font-weight="600" fill="#1505eb">on Loka Chain</text>
-          <path d="M448 228H588" stroke="#eef0f6" stroke-width="1"/>
-          <text x="448" y="258" font-size="13" fill="#3c4356">hold &#183; release</text>
-          <text x="448" y="282" font-size="13" fill="#3c4356">rollback &#183; deadline</text>
-          <text x="448" y="334" font-size="11.5" fill="#646c83">every state change</text>
-          <text x="448" y="352" font-size="11.5" fill="#646c83">enforced by block time</text>
-          <g class="pfs-badge pfs-act">
-            <rect x="478" y="135" width="80" height="22" rx="11" fill="#fff" stroke="#e3e7f2"/>
-            <text class="pfs-bh pfs-act" x="518" y="150" text-anchor="middle" font-size="10.5" font-weight="600" fill="#646c83">holding</text>
-            <text class="pfs-br pfs-act" x="518" y="150" text-anchor="middle" font-size="10.5" font-weight="600" fill="#1aa35c">released</text>
-          </g>
+        </div>
 
-          <rect x="628" y="146" width="188" height="244" rx="10" fill="#fff" stroke="#e3e7f2"/>
-          <text x="652" y="186" font-size="15" font-weight="600" fill="#14161f">Payment channels</text>
-          <text x="652" y="208" font-size="12.5" font-weight="600" fill="#1505eb">peer to peer</text>
-          <path d="M652 228H792" stroke="#eef0f6" stroke-width="1"/>
-          <text x="652" y="258" font-size="13" fill="#3c4356">high frequency,</text>
-          <text x="652" y="282" font-size="13" fill="#3c4356">off-chain</text>
-          <text x="652" y="334" font-size="11.5" fill="#646c83">chain touched only to</text>
-          <text x="652" y="352" font-size="11.5" fill="#646c83">open, close or dispute</text>
-
-          <path class="pfs-flow" style="animation-delay:.7s" d="M840 246H894" stroke="#9aa4c2" stroke-width="1.5" fill="none" marker-end="url(#pfs-ah)"/>
-          <text x="867" y="230" text-anchor="middle" font-size="11" font-weight="500" fill="#646c83">outcome</text>
-
-          <!-- C2：每笔结算留一条记录，记录之间有因果链接 -->
-          <rect x="900" y="90" width="240" height="330" rx="14" fill="#fff" stroke="#e8ebf3"/>
-          <text x="924" y="128" font-size="12" font-weight="600" letter-spacing=".02em" fill="#646c83">Record</text>
-          <text x="924" y="170" font-size="16" font-weight="600" fill="#14161f">Setu network</text>
-          <g fill="#f5f7fc" stroke="#e6eaf4">
-            <rect class="pfs-rc1 pfs-act" x="924" y="192" width="192" height="40" rx="8"/>
-            <rect class="pfs-rc2 pfs-act" x="924" y="252" width="192" height="40" rx="8"/>
-            <rect class="pfs-rc3 pfs-act" x="924" y="312" width="192" height="40" rx="8"/>
-          </g>
-          <text x="940" y="217" font-size="13" fill="#3c4356">who paid</text>
-          <text x="940" y="277" font-size="13" fill="#3c4356">who disputed</text>
-          <text x="940" y="337" font-size="13" fill="#3c4356">how it ruled</text>
-          <g stroke="#b6bedd" stroke-width="1.3" fill="none">
-            <path d="M1020 232V246" marker-end="url(#pfs-ahc)"/>
-            <path d="M1020 292V306" marker-end="url(#pfs-ahc)"/>
-          </g>
-          <text x="924" y="388" font-size="11.5" fill="#646c83">each record linked to its cause</text>
-
-          <!-- 回流：这条线是整张图的论点 -->
-          <path class="pfs-loop" d="M1020 420V486H190V430" stroke="#1505eb" stroke-width="1.6" fill="none" marker-end="url(#pfs-ahb)"/>
-          <text x="605" y="474" text-anchor="middle" font-size="12" font-weight="600" letter-spacing=".01em" fill="#1505eb">History feeds the next ruling</text>
-
-          <!-- 沿链路循环的数据包：蓝 = 正在移动的东西（条款/资金/裁决/结果/历史） -->
-          <g fill="#1505eb">
-            <circle class="pfs-pk pfs-pkt pfs-act" r="3.5" style="offset-path:path('M405 48V66H190V84')"/>
-            <circle class="pfs-pk pfs-pkf pfs-act" r="3.5" style="offset-path:path('M405 48V66H620V84')"/>
-            <circle class="pfs-pk pfs-pkr pfs-act" r="3.5" style="offset-path:path('M340 246H394')"/>
-            <circle class="pfs-pk pfs-pko pfs-act" r="3.5" style="offset-path:path('M840 246H894')"/>
-            <circle class="pfs-pk pfs-pkl pfs-act" r="3.5" style="offset-path:path('M1020 420V486H190V430')"/>
-          </g>
-        </svg>
-      </figure>
-
-      <div class="stack-notes reveal">
-        <div><b>Adjudication</b>No single model &#8212; and no single operator &#8212; can decide your case.</div>
-        <div><b>Escrow on Loka Chain</b>With every Atara service down, both sides can still withdraw.</div>
-        <div><b>Payment channels</b>Thousands of payments; the chain sees two transactions.</div>
-        <div><b>Setu network</b>The history you price against is settlements, not self-reported scores.</div>
+        <aside class="ap-aside">
+          <div class="ap-vcard is-key">
+            <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="6.8"/><path d="m9.2 12.3 2 2.1 3.8-4.5"/>
+              <path d="M12 2.6v1.9M12 19.5v1.9M2.6 12h1.9M19.5 12h1.9"/></svg></span>
+            <h3>Final settlement</h3>
+            <ul><li>Automated</li><li>Auditable</li><li>Traceable</li><li>Available even when we&rsquo;re down</li></ul>
+          </div>
+          <div class="ap-vcard">
+            <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="2.3"/>
+              <circle cx="4.6" cy="6.4" r="1.7"/><circle cx="19.4" cy="6.4" r="1.7"/>
+              <circle cx="6" cy="19" r="1.7"/><circle cx="18" cy="19" r="1.7"/>
+              <path d="M10.2 10.6 6 7.6m7.8 3L18 7.6m-8.3 6.1L7 17.8m7.3-4.1 2.8 4.1"/></svg></span>
+            <h3>Ecosystem</h3>
+            <ul><li>Multi-chain deployment</li><li>Reputation portability</li><li>Open API</li></ul>
+          </div>
+        </aside>
       </div>
+
+      <nav class="ap-flow" aria-label="Layers">
+        <button type="button" data-l="ap-l1">atara-pay<i>Entry</i></button><span class="sep" aria-hidden="true">&rsaquo;</span>
+        <button type="button" data-l="ap-l2">aegean-consensus<i>Judgement</i></button><span class="sep" aria-hidden="true">&rsaquo;</span>
+        <button type="button" data-l="ap-l3">loka-chain<i>Execution</i></button><span class="sep" aria-hidden="true">&rsaquo;</span>
+        <button type="button" data-l="ap-l4">setu<i>Record</i></button>
+      </nav>
+    </div>
+  </section>
+
+  <section class="stack-section" id="stack" aria-labelledby="stack-h" hidden>
+    <div class="sx-env" aria-hidden="true"></div>
+    <div class="sx-canvas" id="sxCanvas" aria-hidden="true"></div>
+    <div class="sx-ground" aria-hidden="true"></div>
+
+    <div class="sx-hud">
+      <header class="sx-head">
+        <h1 id="stack-h">You don&rsquo;t have to trust us.</h1>
+        <p>Four layers route, judge, execute and record one trade.<br>Each answers to evidence, not to us.</p>
+      </header>
+
+      <!-- 四块按层序排，左右交错；每块用 data-layer 与场景里对应那一层对齐 -->
+      <!-- 四块对应实际架构的四个组件；data-layer 是场景里那一层的几何体，
+           顺序 chn→adj→stl→rcd 就是自上而下的 入口 → 判断 → 执行 → 沉淀 -->
+      <div class="sx-grid" id="sxRows">
+        <div class="sx-block sx-left" data-layer="chn">
+          <h2 class="sx-title">Routing</h2>
+          <p class="sx-en">One surface takes the order, the limits and the reconciliation, and decides
+            where the trade settles. It is the only thing you integrate against.</p>
+          <p class="sx-you">One API key, one order. You never pick a chain or a venue.</p>
+        </div>
+
+        <div class="sx-block sx-right" data-layer="adj">
+          <h2 class="sx-title">Judgement</h2>
+          <p class="sx-en">Every trade is read twice — one model prices the
+            counterparty's risk of default, the other rules on whether the condition was met.
+            Neither decides alone: a verdict takes M-of-N signatures and carries the trace of the
+            evidence it was built from.</p>
+          <p class="sx-you">No single model — and no single operator — can decide your case.</p>
+        </div>
+
+        <div class="sx-block sx-left" data-layer="stl">
+          <h2 class="sx-title">Execution</h2>
+          <p class="sx-en">Funds sit in an escrow contract with three states — hold, release,
+            rollback — and a deadline that block time enforces, not us. The contract is deployed on
+            the chain the counterparty already settles on, so value never leaves the chain it
+            started on.</p>
+          <p class="sx-you">With every Atara service down, both sides can still withdraw. No bridge.</p>
+        </div>
+
+        <div class="sx-block sx-right" data-layer="rcd">
+          <h2 class="sx-title">Record</h2>
+          <p class="sx-en">Every settlement writes one row — who paid, who disputed, how it ruled —
+            written by the settlement itself, not by either side. Each row is linked to the events
+            that caused it, and the credit model reads those rows on the next trade.</p>
+          <p class="sx-you">The second trade is priced on the first, from settlements rather than
+            self-reported scores.</p>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -1284,7 +1458,7 @@
   <div class="wrap">
     <div class="footer-main">
       <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i></span><span class="wordmark">Atara</span></a>
-      <nav aria-label="Footer"><a href="#different">Why this</a><a href="#stack">Under the hood</a><a href="#engine">How it works</a><a href="#conditions">Payment conditions</a></nav>
+      <nav aria-label="Footer"><a href="#different">Why this</a><a href="#arch">Architecture</a><a href="#engine">How it works</a><a href="#conditions">Payment conditions</a></nav>
     </div>
     <div class="footer-note"><span>&copy; 2026 Atara</span><span>Atara is not a bank. The credit engine is in development and is not extending credit. Figures shown are illustrative.</span></div>
   </div>
@@ -1384,6 +1558,288 @@
 
   if(reduced){alive=false;showStill(BOOK[0]);}
   else cycle();
+  /* ── #stack：Three.js 轴测场景（参考对标稿的中间效果）。
+     四组对应四层：裁决 = 二十面体核心 + 三块单据 + 节点 + 粒子场；
+     结算 = 双层立方框 + 四个状态八面体 + 转换路径 + 中心核；
+     多链 = 四道同心环；记录 = 圆柱账本 + 内核；中轴一根脊柱贯穿。
+     只在滚近时才加载 CDN，减少动效时完全不加载。 ── */
+
+
+  /* #arch 流程条：点哪层，滚到哪层并高亮；高亮同时展开那层的明细 */
+  (() => {
+    const flow = document.querySelector('#arch .ap-flow');
+    if(!flow) return;
+    const btns = [...flow.querySelectorAll('button[data-l]')];
+    btns.forEach(b => b.addEventListener('click', () => {
+      const layer = document.getElementById(b.dataset.l);
+      if(!layer) return;
+      document.querySelectorAll('#arch .ap-layer.is-hot')
+        .forEach(l => l.classList.remove('is-hot'));
+      layer.classList.add('is-hot');
+      btns.forEach(x => x.setAttribute('aria-current', x === b ? 'true' : 'false'));
+      layer.scrollIntoView({block:'center',
+        behavior: matchMedia('(prefers-reduced-motion:reduce)').matches ? 'instant' : 'smooth'});
+    }));
+  })();
+
+  (() => {
+    const host = document.getElementById('sxCanvas');
+    const sect = document.getElementById('stack');
+    if(!host || !sect || sect.hidden) return;   // 模块隐藏时不拉 three
+
+
+    // 单列布局下四块文案会压在光柱上，读不了；窄屏索性不拉 three（同时省掉这段下载）
+    if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+    if(innerWidth <= 900) return;
+
+    const B='https://cdn.jsdelivr.net/npm/three@0.128.0/';
+    const SRC=[B+'build/three.min.js',
+      B+'examples/js/shaders/CopyShader.js', B+'examples/js/shaders/LuminosityHighPassShader.js',
+      B+'examples/js/postprocessing/EffectComposer.js', B+'examples/js/postprocessing/RenderPass.js',
+      B+'examples/js/postprocessing/ShaderPass.js', B+'examples/js/postprocessing/UnrealBloomPass.js'];
+    const load = src => new Promise((ok,no)=>{
+      const el=document.createElement('script'); el.src=src; el.onload=ok; el.onerror=no;
+      document.head.appendChild(el);
+    });
+
+    let started=false;
+    const boot = async () => {
+      if(started) return; started=true;
+      try { for(const src of SRC) await load(src); } catch(e){ host.remove(); return; }
+      const T=window.THREE; if(!T || !T.EffectComposer){ host.remove(); return; }
+
+      const size=()=>({w:sect.clientWidth, h:sect.clientHeight});
+      let {w,h}=size();
+      const scene=new T.Scene();
+      const camera=new T.PerspectiveCamera(45, w/h, .1, 1000);
+      camera.position.set(0,1.2,16.5);
+      const renderer=new T.WebGLRenderer({antialias:false, alpha:true});
+      renderer.setSize(w,h); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+      host.appendChild(renderer.domElement);
+
+      const wire=new T.LineBasicMaterial({color:0x5ba4e5,transparent:true,opacity:.4,blending:T.AdditiveBlending});
+      const stack=new T.Group(); stack.position.y=-.5;
+
+      // 裁决
+      const adj=new T.Group(); adj.scale.setScalar(.55);
+      const core=new T.LineSegments(new T.WireframeGeometry(new T.IcosahedronGeometry(.5,1)),
+        new T.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.9}));
+      adj.add(core);
+      const docG=new T.PlaneGeometry(.35,.5,1,1);
+      const docM=new T.MeshBasicMaterial({color:0x5ba4e5,transparent:true,opacity:.12,side:T.DoubleSide,wireframe:true});
+      for(let i=0;i<3;i++){ const d=new T.Mesh(docG,docM); const a=(i/3)*Math.PI*2+Math.PI/6;
+        d.position.set(Math.cos(a)*1, (Math.random()-.5)*.3, Math.sin(a)*1);
+        d.rotation.y=-a+Math.PI/2; d.userData={doc:1,off:Math.random()*Math.PI*2}; adj.add(d); }
+      const nG=new T.IcosahedronGeometry(.06,0);
+      const nM=new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.7});
+      for(let i=0;i<8;i++){ const n=new T.Mesh(nG,nM);
+        n.position.set((Math.random()-.5)*.6,(Math.random()-.5)*.6,(Math.random()-.5)*.6);
+        n.userData={sp:.5+Math.random()*.5,off:Math.random()*Math.PI*2}; adj.add(n); }
+      const fG=new T.BufferGeometry(), N=200, fp=new Float32Array(N*3);
+      for(let i=0;i<N*3;i++) fp[i]=(Math.random()-.5)*2.5;
+      fG.setAttribute('position',new T.BufferAttribute(fp,3));
+      const field=new T.Points(fG,new T.PointsMaterial({color:0xffffff,size:.025,transparent:true,opacity:.4}));
+      adj.add(field); stack.add(adj);
+
+      // 结算
+      // 结算层：只有四枚自转的白块（四个状态）。原本外面套了一个线框立方体、
+      // 内部还有状态间的对角线和一枚四面体核，全部删了——线太多，读起来是个笼子。
+      const stl=new T.Group(); stl.scale.setScalar(.55);
+      const sG=new T.OctahedronGeometry(.2,0);
+      const sM=new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.7});
+      [[.42,.4,.42],[-.42,.4,-.42],[.42,-.4,-.42],[-.42,-.4,.42]].forEach((pp,i)=>{
+        const m=new T.Mesh(sG,sM); m.position.set(...pp); m.userData={rot:.015+i*.003}; stl.add(m); });
+      stack.add(stl);
+
+      // 多链
+      const chn=new T.Group(); chn.scale.setScalar(.55);
+      for(let i=0;i<4;i++){ const m=new T.LineSegments(
+          new T.WireframeGeometry(new T.TorusGeometry(1.5+i*.2,.02,16,64)), wire);
+        m.rotation.x=Math.PI/2+(Math.random()*.2-.1); m.rotation.y=Math.random()*.2-.1;
+        m.userData={rot:(Math.random()-.5)*.02}; chn.add(m); }
+      stack.add(chn);
+
+      // 记录
+      // 32×8 的网格加上叠加混合，泛光下会糊成一坨亮块，压到 28×3，
+      // 三圈横向分隔线正好读成账目行；中间那根实心圆柱去掉，它只是在中轴上又加一层光。
+      const rcd=new T.Group(); rcd.scale.setScalar(.55);
+      rcd.add(new T.LineSegments(new T.WireframeGeometry(new T.CylinderGeometry(1.8,1.6,1,28,3)),
+        new T.LineBasicMaterial({color:0x5ba4e5,transparent:true,opacity:.3,blending:T.AdditiveBlending})));
+      stack.add(rcd);
+
+      // 中轴：原来是 8 段线框圆柱——渲出来就是一根白棒，两端硬切断。
+      // 换成一张不随整叠旋转的着色器面片：锐核 + 柔晕的径向衰减、两端平滑淡出、
+      // 经过四层处各有一道提亮。不跑脉冲，只有极慢的呼吸。
+      const spineMat=new T.ShaderMaterial({
+        transparent:true, depthWrite:false, blending:T.AdditiveBlending,
+        uniforms:{ uNodes:{value:new T.Vector4(.85,.62,.38,.15)}, uBreath:{value:0},
+                   uEnter:{value:0}, uFocus:{value:new T.Vector4(1,1,1,1)} },
+        vertexShader:`varying vec2 vUv;
+          void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+        fragmentShader:`
+          uniform vec4 uNodes; uniform vec4 uFocus; uniform float uBreath; uniform float uEnter;
+          varying vec2 vUv;
+          float node(float y,float c){ float d=(y-c)/.026; return exp(-d*d); }
+          void main(){
+            float x=abs(vUv.x-.5)*2.;
+            float core=pow(max(0.,1.-x),22.);          // 锐利的核
+            float halo=pow(max(0.,1.-x),2.6)*.085;      // 柔和的外晕
+            float ends=smoothstep(0.,.10,vUv.y)*smoothstep(0.,.10,1.-vUv.y);
+            float n=node(vUv.y,uNodes.x)*uFocus.x+node(vUv.y,uNodes.y)*uFocus.y
+                   +node(vUv.y,uNodes.z)*uFocus.z+node(vUv.y,uNodes.w)*uFocus.w;
+            float grow=smoothstep(0.,1.,clamp((uEnter*1.35-(1.-vUv.y)*.35),0.,1.));
+            float a=(core+halo)*ends*(1.+n*1.35)*(.30+.05*uBreath)*grow;
+            gl_FragColor=vec4(vec3(1.),a);
+          }`});
+      const spine=new T.Mesh(new T.PlaneGeometry(.46,9.4,1,1), spineMat);
+      scene.add(spine);          // 不入 stack：导管固定，物件绕着它转
+      scene.add(stack);
+
+      const composer=new T.EffectComposer(renderer);
+      composer.addPass(new T.RenderPass(scene,camera));
+      const bloom=new T.UnrealBloomPass(new T.Vector2(w,h),1.5,.8,.1);
+      bloom.strength=1.2; bloom.radius=.5; bloom.threshold=.1;
+      composer.addPass(bloom);
+
+      // 记下每个材质的基准不透明度：焦点与入场都是在这个基准上做乘法
+      const ORDER0=['chn','adj','stl','rcd'];
+      const groups={adj:adj, stl:stl, chn:chn, rcd:rcd};
+      ORDER0.forEach(k=>groups[k].traverse(o=>{
+        if(o.material && o.material.opacity!==undefined && o.material.userData.base===undefined)
+          o.material.userData.base=o.material.opacity;
+      }));
+
+      // 四块文案定版面，三维去对齐它——反过来（把文字往画面上凑）会被容器高度卡住。
+      // 四行等分文案栏的高度；每次都据此反算层间距和整叠的位置。
+      const rows=document.getElementById('sxRows');
+      const ORDER=['chn','adj','stl','rcd'];
+      const layers={adj:adj, stl:stl, chn:chn, rcd:rcd};
+      const FOV=45*Math.PI/180;
+      let baseY=-.5;
+      const pin=()=>{
+        if(!rows) return;
+        const ch=sect.clientHeight;
+        const rr=rows.getBoundingClientRect(), sr=sect.getBoundingClientRect();
+        const H=rr.height, gridTop=rr.top-sr.top;
+        if(!(ch>0 && H>0)) return;
+        const pad=Math.min(90, H*.12);
+        const span=Math.max(120, H-2*pad);
+
+        // 文案：四行等分
+        const blocks=ORDER.map(k=>rows.querySelector('.sx-block[data-layer="'+k+'"]'));
+        blocks.forEach((el,i)=>{ if(el) el.style.setProperty('--sy',(pad+i*span/3).toFixed(1)+'px'); });
+        [0,1,2,3].forEach(i=>{ rowsY[i]=gridTop+pad+i*span/3; });
+        rows.classList.add('pinned');
+
+        // 三维：反解出层间距 S 与整叠中心 baseY，使四层正好落在那四行上
+        const visH=2*Math.tan(FOV/2)*camera.position.z;
+        const S=span*visH/(3*ch);
+        baseY=camera.position.y+visH*(.5-(gridTop+H/2)/ch);
+        ORDER.forEach((k,i)=>{ layers[k].position.y=(1.5-i)*S; });
+
+        // 导管：长度盖住四层再各留一段，四个提亮点按层的实际位置换算成 UV
+        const half=1.5*S+1.05;
+        spine.scale.set(1, 2*half/9.4, 1);
+        spine.position.set(0, baseY, 0);
+        const nv=spineMat.uniforms.uNodes.value;
+        [0,1,2,3].forEach(i=>{ nv.setComponent(i, ((1.5-i)*S+half)/(2*half)); });
+        stack.position.y=baseY;      // 整叠不再上下浮动，位置一次定死
+      };
+
+      // ── 指针：只取偏航与焦点，不动相机 ──
+      // pin() 的投影公式建立在「相机不动、层在 z=0」上；动相机或让整叠俯仰
+      // 都会让四层与文案错位。所以视差只走 rotation.y（不改 y），焦点只改亮度与体量。
+      let pxN=0, pyN=-1;               // 归一化指针位置，pyN<0 表示指针不在这一屏
+      const rowsY=[0,0,0,0];           // 四层在 section 内的像素高度，pin() 里更新
+      sect.addEventListener('pointermove', e=>{
+        const r=sect.getBoundingClientRect();
+        pxN=((e.clientX-r.left)/r.width-.5)*2;
+        pyN=(e.clientY-r.top);
+      }, {passive:true});
+      sect.addEventListener('pointerleave', ()=>{ pyN=-1; }, {passive:true});
+
+      const foc=[1,1,1,1], focT=[1,1,1,1];
+      let yaw=0, yawV=0;
+      const enter={v:0, t0:0, on:false};
+
+      let t=0, raf=0, live=true;
+      const tick=()=>{
+        raf=0; if(!live) return;
+        t+=.005;
+
+        // 入场：一次性，四层错开落位（ease-out cubic）
+        if(enter.on && enter.v<1){
+          enter.v=Math.min(1,(performance.now()-enter.t0)/1500);
+        }
+        const ez=x=>1-Math.pow(1-Math.max(0,Math.min(1,x)),3);
+        spineMat.uniforms.uEnter.value=ez(enter.v*1.15);
+
+        // 焦点：指针落在哪一行，那一层保持满亮，其余退到 48%。
+        // 中性态（指针不在这一屏）四层一律满亮——没有鼠标时这一屏必须是对的。
+        if(pyN<0){ focT.fill(1); }
+        else {
+          let best=0, bd=1e9;
+          rowsY.forEach((y,i)=>{ const d=Math.abs(pyN-y); if(d<bd){ bd=d; best=i; } });
+          for(let i=0;i<4;i++) focT[i]=(i===best)?1:.48;
+        }
+
+        // 偏航：阻尼弹簧，不是 lerp——lerp 是橡皮筋感，弹簧才有重量
+        yawV=(yawV+((pxN*.09)-yaw)*.055)*.82; yaw+=yawV;
+        // 自主漂移：三个不可约周期叠加，肉眼抓不到循环
+        stack.rotation.y=yaw+Math.sin(t*.37)*.045+Math.sin(t*.113)*.028;
+
+        const fv=spineMat.uniforms.uFocus.value;
+        ORDER0.forEach((k,i)=>{
+          foc[i]+=(focT[i]-foc[i])*.07;
+          const f=foc[i], g=groups[k];
+          const e=ez((enter.v*1.15)-i*.11);                 // 错开 110ms 落位
+          g.traverse(o=>{ if(o.material && o.material.userData.base!==undefined)
+            o.material.opacity=o.material.userData.base*f*e; });
+          g.scale.setScalar(.55*(.955+.045*f)*(.94+.06*e));
+          g.position.z=(1-e)*-1.6;                          // 从远处落到位
+          fv.setComponent(i, f);                            // 导管上那一处也跟着退
+        });
+
+        // 各层自转：恒速换成漂移，整体放慢
+        adj.rotation.y+=.0042*(.7+.3*Math.sin(t*.29));
+        core.rotation.x+=.0062; core.rotation.y+=.0091*(.75+.25*Math.sin(t*.41));
+        adj.children.forEach(c=>{
+          if(c.userData.sp) c.position.y+=Math.sin(t*c.userData.sp+c.userData.off)*.0006;
+          else if(c.userData.doc){ c.position.y+=Math.sin(t*2+c.userData.off)*.0011;
+            c.rotation.z=Math.sin(t*1.5+c.userData.off)*.03; }
+        });
+        field.rotation.y-=.0013;
+        stl.rotation.y-=.0026*(.8+.2*Math.sin(t*.23));
+        stl.children.forEach(c=>{ if(c.userData.rot){
+          c.rotation.x+=c.userData.rot*.45; c.rotation.y+=c.userData.rot*.31; } });
+        chn.children.forEach(r=>{ r.rotation.z+=r.userData.rot*.42; });
+        rcd.rotation.y+=.0009;
+
+        spineMat.uniforms.uBreath.value=Math.sin(t*.19);
+        spine.position.y=baseY;
+        composer.render();
+        raf=requestAnimationFrame(tick);
+      };
+      const go=()=>{ if(!raf&&live) raf=requestAnimationFrame(tick); };
+      const stop=()=>{ if(raf){ cancelAnimationFrame(raf); raf=0; } };
+      // 离开视口就停，别在后台烧 GPU
+      new IntersectionObserver(e=>{ live=e[0].isIntersecting;
+        if(live && !enter.on){ enter.on=true; enter.t0=performance.now(); }
+        live?go():stop(); },{threshold:.01}).observe(sect);
+      document.addEventListener('visibilitychange',()=>{ document.hidden?stop():go(); });
+      // 钉住会让文案栏塌掉、section 变矮，渲染尺寸必须跟着走，
+      // 否则 canvas 还按旧高度画、被 CSS 压扁，四层就对不上文案了。
+      const resize=()=>{ const n=size(); if(!n.w||!n.h) return;
+        camera.aspect=n.w/n.h; camera.updateProjectionMatrix();
+        renderer.setSize(n.w,n.h); composer.setSize(n.w,n.h); pin(); };
+      addEventListener('resize', resize);
+      resize();
+      if(window.ResizeObserver){ let ro=0;
+        new ResizeObserver(()=>{ cancelAnimationFrame(ro); ro=requestAnimationFrame(resize); }).observe(sect); }
+      go();
+    };
+    new IntersectionObserver(e=>{ if(e[0].isIntersecting) boot(); },{rootMargin:'400px'}).observe(sect);
+  })();
 
   const observer=new IntersectionObserver(([entry])=>{
     if(reduced)return;
