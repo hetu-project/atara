@@ -295,8 +295,7 @@
   .ap-head .sub{margin:0;max-width:44ch;font-size:1rem;line-height:1.6;
     color:var(--ap-muted)}
 
-  .ap-grid{display:grid;grid-template-columns:minmax(0,1fr) clamp(220px,19vw,264px);
-    gap:clamp(1.5rem,3vw,2.5rem);align-items:start}
+  .ap-grid{display:block}
 
   /* ── 层 ── */
   .ap-layer{position:relative;display:grid;
@@ -348,35 +347,33 @@
   .ap-card:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 
   /* ── 右侧价值卡 ── */
-  .ap-aside{position:sticky;top:2rem;display:flex;flex-direction:column;gap:1.25rem}
-  .ap-vcard{padding:1.75rem;border-radius:18px;background:#f5f5f7}
+  /* 两张大价值卡横排在四层之下（参考 LokaWorld 的大色块卡）*/
+  .ap-values{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;
+    margin-top:3.25rem}
+  .ap-vcard{padding:clamp(2rem,3vw,2.75rem);border-radius:18px;background:#f5f5f7}
   /* 视觉锚：近黑 ink 卡（饱和大蓝块是 dashboard 语言），蓝只留给 glyph */
   .ap-vcard.is-key{background:oklch(21% .015 267);color:#fff}
   .ap-vcard.is-key h3{color:#fff}
   .ap-vcard.is-key li{color:oklch(100% 0 0 / .82);border-color:oklch(100% 0 0 / .16)}
   .ap-vcard.is-key .ap-ic{color:oklch(78% .12 262)}
-  .ap-vcard .ap-ic{width:32px;height:32px;flex:none;margin-bottom:1.1rem}
+  .ap-vcard .ap-ic{width:36px;height:36px;flex:none;margin-bottom:1.25rem}
   .ap-vcard .ap-ic svg{width:28px;height:28px}
-  .ap-vcard h3{margin:0 0 .9rem;font-size:1rem;font-weight:500}
+  .ap-vcard h3{margin:0 0 1rem;font-size:clamp(1.25rem,1.6vw,1.5rem);font-weight:600;
+    letter-spacing:-.02em}
   .ap-vcard ul{margin:0;padding:0;list-style:none}
-  .ap-vcard li{padding:.5rem 0;border-top:1px solid var(--ap-line);
-    font-size:.84rem;color:var(--ap-muted)}
+  .ap-vcard li{padding:.6rem 0;border-top:1px solid var(--ap-line);
+    font-size:.95rem;color:var(--ap-muted)}
 
   /* 入场：借用全局 reveal，逐层错开 */
   .ap-layer.reveal{transition-delay:calc(var(--i,0)*.12s)}
 
-  @media(max-width:1024px){
-    .ap-grid{grid-template-columns:1fr}
-    .ap-aside{position:static;flex-direction:row}
-    .ap-aside .ap-vcard{flex:1}
-  }
   @media(max-width:760px){
+    .ap-values{grid-template-columns:1fr}
     .ap-card{grid-template-columns:1fr}
     .ap-illo{grid-column:1;grid-row:auto;max-width:230px;margin-top:.75rem}
     .ap-head{flex-direction:column;align-items:flex-start}
     .ap-layer{grid-template-columns:1fr;gap:.9rem;margin-bottom:2.5rem}
     .ap-layer:not(:last-of-type)::after,.ap-layer:not(:last-of-type) .ap-card::after{display:none}
-    .ap-aside{flex-direction:column}
   }
   @media(hover:none){
     .ap-more{grid-template-rows:1fr;opacity:1}
@@ -1161,7 +1158,7 @@
 
         </div>
 
-        <aside class="ap-aside">
+        <div class="ap-values">
           <div class="ap-vcard is-key">
             <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="6.5"/><path d="m9.3 12.2 1.9 2 3.5-4.2"/>
@@ -1178,7 +1175,8 @@
             <h3>Ecosystem</h3>
             <ul><li>Multi-chain deployment</li><li>Reputation portability</li><li>Open API</li></ul>
           </div>
-        </aside>
+        </div>
+
       </div>
 
     </div>
@@ -1310,6 +1308,7 @@
           <div class="model-point"><b>A price, not a gate</b><p>Other systems answer whether you may proceed. This answers what you post and what you pay.</p></div>
           <div class="model-point"><b>The exit is written first</b><p>How a trade unwinds is fixed before either side commits, not negotiated after something breaks.</p></div>
         </div>
+
       </div>
     </div>
   </section>
