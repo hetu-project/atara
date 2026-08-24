@@ -317,12 +317,19 @@
   .ap-role{font-size:.875rem;color:var(--ap-muted)}
 
   /* Apple 面板语言：无边框、无阴影，层级靠面板底色与留白；悬停只把材质微调深一档 */
-  .ap-card{position:relative;padding:clamp(1.75rem,2.5vw,2.25rem) clamp(1.75rem,2.8vw,2.5rem);
+  .ap-card{position:relative;display:grid;
+    grid-template-columns:minmax(0,1fr) clamp(180px,17vw,235px);
+    column-gap:clamp(1.25rem,2vw,2rem);align-items:center;
+    padding:clamp(1.75rem,2.5vw,2.25rem) clamp(1.75rem,2.8vw,2.5rem);
     border-radius:18px;background:#f5f5f7;
     transition:background .3s linear}
+  .ap-top,.ap-more{grid-column:1}
+  /* 等距插画：程序生成（第九稿手摆坐标的教训），线稿 + 品牌蓝点睛 */
+  .ap-illo{grid-column:2;grid-row:1/span 2;margin:0;align-self:center}
+  .ap-illo-svg{display:block;width:100%;height:auto;overflow:visible}
   .ap-layer:hover .ap-card,.ap-layer:focus-within .ap-card{background:#efeff2}
 
-  .ap-top{display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap}
+  .ap-top{display:block}
   /* 必须显式成块：行内 span 忽略宽高，SVG 会掉到替换元素默认 150px。
      裸 glyph，不套底板——容器越少越像产品页 */
   .ap-ic{display:inline-grid;place-items:center;flex:0 0 34px;width:34px;height:34px;
@@ -371,6 +378,8 @@
     .ap-aside .ap-vcard{flex:1}
   }
   @media(max-width:760px){
+    .ap-card{grid-template-columns:1fr}
+    .ap-illo{grid-column:1;grid-row:auto;max-width:230px;margin-top:.75rem}
     .ap-head{flex-direction:column;align-items:flex-start}
     .ap-motto{text-align:left}
     .ap-layer{grid-template-columns:1fr;gap:.9rem;margin-bottom:2.5rem}
@@ -1090,10 +1099,6 @@
             </div>
             <div class="ap-card" tabindex="0">
               <div class="ap-top">
-                <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
-                  <circle cx="6" cy="19" r="3"/>
-                  <path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/>
-                  <circle cx="18" cy="5" r="3"/></svg></span>
                 <p class="ap-value">One surface to integrate against.</p>
                 <p class="ap-meta">API / SDK &middot; orders, limits &amp; reconciliation &middot; API keys</p>
               </div>
@@ -1102,6 +1107,7 @@
                 <div class="row"><dt>Routing</dt><dd>Orders, limits, reconciliation, and where this trade settles.</dd></div>
                 <div class="row"><dt>API keys</dt><dd>Authentication and scoping per counterparty.</dd></div>
               </dl></div></div>
+              <figure class="ap-illo" aria-hidden="true"><svg class="ap-illo-svg" viewBox="-14 0 268 168" aria-hidden="true"><g transform="translate(0,88)"><polygon points="116.2,-62.7 249.2,3.8 123.8,66.5 -9.2,-0.0" fill="none" stroke="#3c4152" stroke-width="1" opacity="0.2"/><polygon points="95.3,-44.6 112.4,-36.1 112.4,-42.2 95.3,-50.8" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="129.5,-44.6 112.4,-36.1 112.4,-42.2 129.5,-50.8" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="112.4,-59.3 129.5,-50.8 112.4,-42.2 95.3,-50.8" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><path d="M121.0,-41.2 L128.6,-0.4" fill="none" stroke="var(--blue)" stroke-width="1.1" opacity="0.55"/><polygon points="63.0,-28.5 80.1,-19.9 80.1,-26.1 63.0,-34.6" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="97.2,-28.5 80.1,-19.9 80.1,-26.1 97.2,-34.6" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="80.1,-43.2 97.2,-34.6 80.1,-26.1 63.0,-34.6" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><path d="M88.7,-25.1 L128.6,-0.4" fill="none" stroke="var(--blue)" stroke-width="1.1" opacity="0.55"/><polygon points="30.7,-12.3 47.8,-3.8 47.8,-9.9 30.7,-18.5" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="64.9,-12.3 47.8,-3.8 47.8,-9.9 64.9,-18.5" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="47.8,-27.0 64.9,-18.5 47.8,-9.9 30.7,-18.5" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><path d="M56.4,-8.9 L128.6,-0.4" fill="none" stroke="var(--blue)" stroke-width="1.1" opacity="0.55"/><polygon points="108.6,9.5 148.5,29.5 148.5,11.6 108.6,-8.4" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="188.4,9.5 148.5,29.5 148.5,11.6 188.4,-8.3" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="148.5,-28.3 188.4,-8.3 148.5,11.6 108.6,-8.4" fill="#eef1fe" stroke="#3c4152" stroke-width="1" opacity="1"/><path d="M168.4,18.6 L192.2,30.5" fill="none" stroke="var(--blue)" stroke-width="1.3" opacity="0.9"/><circle cx="192.2" cy="30.5" r="2.4" fill="var(--blue)"/></g></svg></figure>
             </div>
           </div>
 
@@ -1112,9 +1118,6 @@
             </div>
             <div class="ap-card" tabindex="0">
               <div class="ap-top">
-                <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
-                  <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/>
-                  <path d="m9 12 2 2 4-4"/></svg></span>
                 <p class="ap-value">Two models, one signed verdict.</p>
                 <p class="ap-meta">credit model &middot; adjudication model &middot; M-of-N signatures</p>
               </div>
@@ -1124,6 +1127,7 @@
                 <div class="row"><dt>M-of-N signatures</dt><dd>No single signer can rule alone.</dd></div>
                 <div class="row"><dt>Verdict proof</dt><dd>Every ruling carries its trace.</dd></div>
               </dl></div></div>
+              <figure class="ap-illo" aria-hidden="true"><svg class="ap-illo-svg" viewBox="-14 0 268 168" aria-hidden="true"><g transform="translate(0,105)"><polygon points="120.0,-53.2 230.2,1.9 120.0,57.0 9.8,1.9" fill="none" stroke="#3c4152" stroke-width="1" opacity="0.2"/><polygon points="66.8,3.8 120.0,30.4 120.0,13.4 66.8,-13.2" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="173.2,3.8 120.0,30.4 120.0,13.4 173.2,-13.2" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="120.0,-39.8 173.2,-13.2 120.0,13.4 66.8,-13.2" fill="#eef1fe" stroke="#3c4152" stroke-width="1" opacity="1"/><path d="M113.3,-38.2 L113.3,-21.3" fill="none" stroke="#3c4152" stroke-width="1" opacity="0.4" stroke-dasharray="2 3"/><polygon points="90.5,-40.1 117.1,-26.8 117.1,-29.0 90.5,-42.3" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="136.2,-36.3 117.1,-26.8 117.1,-29.0 136.2,-38.5" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="109.5,-51.8 136.2,-38.5 117.1,-29.0 90.5,-42.3" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><path d="M152.3,-34.8 L152.3,-18.0" fill="none" stroke="#3c4152" stroke-width="1" opacity="0.4" stroke-dasharray="2 3"/><polygon points="129.5,-36.7 156.1,-23.4 156.1,-25.7 129.5,-39.0" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="175.1,-32.9 156.1,-23.4 156.1,-25.7 175.1,-35.2" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="148.5,-48.5 175.1,-35.2 156.1,-25.7 129.5,-39.0" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><path d="M105,-8 l5.5,5 l10,-10" fill="none" stroke="var(--blue)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg></figure>
             </div>
           </div>
 
@@ -1134,13 +1138,6 @@
             </div>
             <div class="ap-card" tabindex="0">
               <div class="ap-top">
-                <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
-                  <rect width="18" height="18" x="3" y="3" rx="2"/>
-                  <circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/><path d="m7.9 7.9 2.7 2.7"/>
-                  <circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/><path d="m13.4 10.6 2.7-2.7"/>
-                  <circle cx="7.5" cy="16.5" r=".5" fill="currentColor"/><path d="m7.9 16.1 2.7-2.7"/>
-                  <circle cx="16.5" cy="16.5" r=".5" fill="currentColor"/><path d="m13.4 13.4 2.7 2.7"/>
-                  <circle cx="12" cy="12" r="2"/></svg></span>
                 <p class="ap-value">Funds held by contract, not by us.</p>
                 <p class="ap-meta">Escrow contract &middot; HTLC channel</p>
               </div>
@@ -1149,6 +1146,7 @@
                 <div class="row"><dt>Conditional payment</dt><dd>Release in full, return in full, or split.</dd></div>
                 <div class="row"><dt>HTLC channel</dt><dd>Low latency, dispute backstop, instant settlement.</dd></div>
               </dl></div></div>
+              <figure class="ap-illo" aria-hidden="true"><svg class="ap-illo-svg" viewBox="-14 0 268 168" aria-hidden="true"><g transform="translate(0,100)"><polygon points="114.3,-59.9 243.5,4.8 125.7,63.6 -3.5,-0.9" fill="none" stroke="#3c4152" stroke-width="1" opacity="0.2"/><path d="M97.2,-12.2 L70.6,-25.6" fill="none" stroke="var(--blue)" stroke-width="1.2" opacity="0.7"/><polygon points="45.9,-27.6 64.9,-18.1 64.9,-24.9 45.9,-34.4" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="83.9,-27.6 64.9,-18.1 64.9,-24.9 83.9,-34.4" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="64.9,-43.8 83.9,-34.4 64.9,-24.9 45.9,-34.4" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><path d="M142.8,10.6 L169.4,23.8" fill="none" stroke="var(--blue)" stroke-width="1.2" opacity="0.7"/><polygon points="158.9,29.0 177.9,38.5 177.9,31.7 158.9,22.2" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="196.9,29.0 177.9,38.5 177.9,31.7 196.9,22.2" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="177.9,12.7 196.9,22.2 177.9,31.7 158.9,22.2" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="74.4,0.0 120.0,22.8 120.0,-0.2 74.4,-23.0" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="165.6,0.0 120.0,22.8 120.0,-0.2 165.6,-23.0" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="120.0,-45.8 165.6,-23.0 120.0,-0.2 74.4,-23.0" fill="#eef1fe" stroke="#3c4152" stroke-width="1" opacity="1"/><ellipse cx="120.0" cy="-23.3" rx="10.5" ry="5.2" fill="none" stroke="var(--blue)" stroke-width="1.6"/><ellipse cx="120.0" cy="-26.7" rx="10.5" ry="5.2" fill="#eef1fe" stroke="var(--blue)" stroke-width="1.6"/></g></svg></figure>
             </div>
           </div>
 
@@ -1159,10 +1157,6 @@
             </div>
             <div class="ap-card" tabindex="0">
               <div class="ap-top">
-                <span class="ap-ic" aria-hidden="true"><svg viewBox="0 0 24 24">
-                  <ellipse cx="12" cy="5" rx="9" ry="3"/>
-                  <path d="M3 5v14a9 3 0 0 0 18 0V5"/>
-                  <path d="M3 12a9 3 0 0 0 18 0"/></svg></span>
                 <p class="ap-value">Every settlement leaves a row.</p>
                 <p class="ap-meta">Settlement outcomes &middot; VLC causal edges &middot; TEE attestation</p>
               </div>
@@ -1171,6 +1165,7 @@
                 <div class="row"><dt>VLC causal edges</dt><dd>A verifiable graph of what caused what.</dd></div>
                 <div class="row"><dt>TEE attestation</dt><dd>Trust that carries across parties.</dd></div>
               </dl></div></div>
+              <figure class="ap-illo" aria-hidden="true"><svg class="ap-illo-svg" viewBox="-14 0 268 168" aria-hidden="true"><g transform="translate(0,102)"><polygon points="112.4,-57.0 234.0,3.8 120.0,60.8 -1.6,0.0" fill="none" stroke="#3c4152" stroke-width="1" opacity="0.2"/><polygon points="63.0,-7.6 127.6,24.7 127.6,19.3 63.0,-13.0" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="177.0,0.0 127.6,24.7 127.6,19.3 177.0,-5.4" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="112.4,-37.7 177.0,-5.4 127.6,19.3 63.0,-13.0" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="63.0,-15.2 127.6,17.1 127.6,11.7 63.0,-20.6" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="177.0,-7.6 127.6,17.1 127.6,11.7 177.0,-13.0" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="112.4,-45.3 177.0,-13.0 127.6,11.7 63.0,-20.6" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="63.0,-22.8 127.6,9.5 127.6,4.1 63.0,-28.2" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="177.0,-15.2 127.6,9.5 127.6,4.1 177.0,-20.6" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="112.4,-52.9 177.0,-20.6 127.6,4.1 63.0,-28.2" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><path d="M117.1,-49.7 L162.8,-26.9" fill="none" stroke="#3c4152" stroke-width="1" opacity="0.45"/><path d="M104.8,-43.5 L150.4,-20.8" fill="none" stroke="#3c4152" stroke-width="1" opacity="0.45"/><path d="M92.4,-37.4 L138.1,-14.6" fill="none" stroke="#3c4152" stroke-width="1" opacity="0.45"/><path d="M154,19 C 184,15 192,-12 166,-14" fill="none" stroke="var(--blue)" stroke-width="1.5"/><circle cx="166" cy="-14" r="2.4" fill="var(--blue)"/></g></svg></figure>
             </div>
           </div>
 
