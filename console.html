@@ -675,6 +675,37 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 .cacts .btn{display:inline-flex;align-items:center;gap:6px}
 .cacts .btn svg{opacity:.75}
 /* 列表落回基底：盒子 + 五个大写胶囊是纯粹的容器通胀，行间一条淡线就够 */
+/* ══ History 台账 ══ 六列对齐：时间 · 对手方 · 事由 · 金额 · 状态 · 凭据。
+   金额右对齐成一列才能纵向比大小；卡壳去掉，用发丝线分行 */
+.hbar{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.hfils{display:flex;gap:4px;flex-wrap:wrap}
+.hfil{display:inline-flex;align-items:baseline;gap:6px;padding:5px 11px;border-radius:999px;
+  border:1px solid transparent;background:none;cursor:pointer;font:inherit;font-size:12.5px;color:var(--mute)}
+.hfil:not(:disabled):hover{background:var(--cream);color:var(--ink)}
+.hfil.on{background:var(--card);border-color:var(--hairline);color:var(--ink);font-weight:500}
+.hfil b{font-weight:600;font-size:11.5px;color:var(--faint)}
+.hfil.on b{color:var(--mute)}
+.hfil:disabled{opacity:.42;cursor:default}
+.hbar .btn{margin-left:auto}
+.hlist{display:flex;flex-direction:column}
+.hday{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);
+  padding:18px 2px 7px}
+.hday:first-child{padding-top:0}
+.hrow{display:grid;grid-template-columns:52px minmax(0,1fr) 100px 104px auto;
+  align-items:baseline;gap:14px;padding:11px 2px;font-size:13.5px;
+  border-top:1px solid var(--hairline-2)}
+.hrow:hover{background:var(--cream)}
+.htime{color:var(--faint);font-size:12.5px}
+.hwho{font-weight:600;color:var(--ink);min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hwho em{font-style:normal;font-weight:400;font-size:12.5px;color:var(--mute);margin-left:8px}
+.hamt{text-align:right;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.hst{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--mute)}
+.hst i{width:6px;height:6px;border-radius:50%;background:var(--green);flex:none}
+.hst.neg{color:var(--neg)} .hst.neg i{background:var(--neg)}
+.hev{font-size:12.5px}
+.hempty{padding:28px 2px;font-size:13px;color:var(--faint);
+  border-top:1px solid var(--hairline-2)}
 .rcard.flat{background:none;box-shadow:none;border-radius:0}
 .rcard.flat .rrow{padding-inline:0}
 .stag{font-size:12px;color:var(--faint)}
@@ -3434,19 +3465,45 @@ const RECS=[
  {d:'08-11 09:05',w:'Aria Studio',t:'On my approval · design delivery',a:'$6,500', s:'Released'},
  {d:'08-09 17:22',w:'OTC D118722',t:'Bought 6.45 ETH',   a:'$20,200',s:'Refunded'},
 ];
+/* ══ History ══ 结算流水是一份台账，不是一叠卡片。
+   一天一个小标题、一笔一行、金额右对齐成一列——能纵向比大小才叫台账。
+   （旧版按日期切成 rsec + rcard，每组常常只有一笔，卡壳比内容还高） */
+let RECFILT='all';
+const recParts=r=>{const i=r.d.indexOf(' ');
+  return i<0?{day:r.d,time:''}:{day:r.d.slice(0,i),time:r.d.slice(i+1)}};
+const recDay=d=>d==='today'?'Today':d;
 function renderRecs(){
-  const by={};RECS.forEach(r=>{(by[r.d.split(' ')[0]]=by[r.d.split(' ')[0]]||[]).push(r)});
+  const counts={all:RECS.length,
+    Released:RECS.filter(r=>r.s==='Released').length,
+    Refunded:RECS.filter(r=>r.s==='Refunded').length,
+    Disputed:RECS.filter(r=>r.s==='Disputed').length};
+  const list=RECFILT==='all'?RECS:RECS.filter(r=>r.s===RECFILT);
+  const by={}; list.forEach(r=>{const {day}=recParts(r); (by[day]=by[day]||[]).push(r)});
+  const chip=(k,n)=>`<button class="hfil${RECFILT===k?' on':''}" data-rf="${k}"${
+    n===0&&k!=='all'?' disabled':''}>${k==='all'?'All':k}<b class="num">${n}</b></button>`;
   document.getElementById('recsbody').innerHTML=
-    `<div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-       <button class="btn btn-ghost btn-sm">Export</button></div>`+
-    Object.entries(by).map(([d,rs])=>
-      `<div class="rsec"><h3>${d}</h3><div class="rcard">${rs.map(r=>
-        `<div class="rrow"><span class="rk num">${r.d.split(' ')[1]}</span>
-          <span><span class="rv">${r.w}</span><span class="rd">${r.t}</span></span>
-          <span style="text-align:right"><span class="rv num">${r.a}</span>
-            <span class="rd" style="color:${r.s==='Refunded'?'var(--neg)':'var(--faint)'}">${r.s} · <a href="#" class="pkg lnk" style="margin:0">Evidence</a></span></span>
-        </div>`).join('')}</div></div>`).join('')+
-    `<p class="rnote">Every settlement keeps an evidence pack.<i class="info" tabindex="0" data-tip="Terms agreed, review report, escrow record and the evidence release was based on.">i</i></p>`;
+    `<div class="hbar">
+       <div class="hfils">${chip('all',counts.all)}${chip('Released',counts.Released)}${
+         chip('Refunded',counts.Refunded)}${chip('Disputed',counts.Disputed)}</div>
+       <button class="btn btn-ghost btn-sm">Export</button>
+     </div>`
+    + (list.length?`<div class="hlist">`+Object.entries(by).map(([day,rs])=>
+        `<div class="hday">${recDay(day)}</div>`+rs.map(r=>{
+          const {time}=recParts(r);
+          const neg=r.s!=='Released';
+          /* 对手方和事由同格：中栏窄的时候两个弹性列会互相挤成一个字母 */
+          return `<div class="hrow">
+            <span class="htime num">${time||'—'}</span>
+            <span class="hwho">${r.w}<em>${r.t}</em></span>
+            <span class="hamt num">${r.a}</span>
+            <span class="hst${neg?' neg':''}"><i></i>${r.s}</span>
+            <a href="#" class="hev lnk">Evidence</a>
+          </div>`}).join('')).join('')+`</div>`
+      : `<div class="hempty">No ${RECFILT.toLowerCase()} settlements yet.</div>`)
+    + `<p class="rnote">Every settlement keeps an evidence pack.<i class="info" tabindex="0" data-tip="Terms agreed, review report, escrow record and the evidence release was based on.">i</i></p>`;
+  document.querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>{
+    RECFILT=b.dataset.rf; renderRecs();
+  });
 }
 
 /* ───── 右栏（右→中→左 单向联动） ───── */
@@ -4305,7 +4362,8 @@ function releaseEscrow(now){
   const c=escrow.card;
   c.querySelectorAll('.es').forEach(x=>{x.classList.remove('now');x.classList.add('done')});
   c.classList.add('celebrate');
-  RECS.unshift({d:'today',w:escrow.cp.name,t:escrow.condText,a:escAmtTxt(escrow.amt,escrow.coin),s:'Released'});
+  RECS.unshift({d:'today '+new Date().toTimeString().slice(0,5),
+    w:escrow.cp.name,t:escrow.condText,a:escAmtTxt(escrow.amt,escrow.coin),s:'Released'});
   if(escrow.sess){taskUpsert(escrow.sess,{st:'done'});
     tpost(escrow.tk,'Released — evidence pack recorded, performance written back.')}
   escrow=null;
