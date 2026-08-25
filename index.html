@@ -219,10 +219,13 @@
   }
 
   .ecosystem{position:absolute;z-index:3;left:50%;bottom:1.2rem;width:min(calc(100% - 2 * var(--pad)),var(--maxw));transform:translateX(-50%);display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2.4rem;border-top:1px solid var(--line);padding-top:1rem}
-  .ecosystem-label{font-size:.64rem;text-transform:uppercase;letter-spacing:.13em;color:var(--muted-white);white-space:nowrap}
+  /* 标题折两行收窄，别把 logo 带挤到右边去 */
+  .ecosystem-label{max-width:7.5rem;font-size:.64rem;line-height:1.45;text-transform:uppercase;letter-spacing:.13em;color:var(--muted-white)}
   .logo-window{overflow:hidden}
   .logo-track{display:flex;align-items:center;width:max-content;gap:clamp(2.5rem,4.5vw,5rem);animation:marquee 35s linear infinite}
-  .logo-track img{display:block;max-width:6.6rem;max-height:1.65rem;object-fit:contain;filter:grayscale(1) brightness(0) invert(1);opacity:.4}
+  /* 这批校徽本身就是白色线稿。原来那组滤镜里的 brightness(0) invert(1)
+     会把所有明暗一律压成纯白，盾牌里的刻线全糊死成一坨实心块——只留去色 */
+  .logo-track img{display:block;max-width:6.2rem;max-height:1.75rem;object-fit:contain;filter:grayscale(1);opacity:.72}
   @keyframes marquee{to{transform:translateX(-50%)}}
 
   .wrap{width:100%;max-width:var(--maxw);margin-inline:auto;padding-inline:var(--pad)}
@@ -379,6 +382,15 @@
   .ap-vcard ul{margin:0;padding:0;list-style:none}
   .ap-vcard li{padding:.6rem 0;border-top:1px solid var(--ap-line);
     font-size:.95rem;color:var(--ap-muted)}
+
+  /* 两个「由模型说话」的层用同一档色块标出来：共识管正常路径，裁决管异常路径。
+     入口 / 执行 / 记录保持中性——不然人人都是重点就等于没有重点 */
+  .ap-layer.is-model .ap-card{background:oklch(96.4% .014 265)}
+  .ap-layer.is-model:hover .ap-card{background:oklch(94.8% .02 265)}
+  .ap-layer.is-model .ap-name{color:var(--blue)}
+
+  /* 记录是地基：整叠压在它上面，用一条横贯的线托住 */
+  .ap-layer:last-of-type .ap-card{border-top:1px solid oklch(80% .01 267)}
 
   /* 入场：借用全局 reveal，逐层错开 */
   .ap-layer.reveal{transition-delay:calc(var(--i,0)*.12s)}
@@ -824,7 +836,7 @@
     </div>
 
     <div class="ecosystem" aria-label="Advaita ecosystem">
-      <span class="ecosystem-label">Advaita ecosystem</span>
+      <span class="ecosystem-label">Researchers &amp; collaborators from</span>
       <div class="logo-window"><div class="logo-track" id="logoTrack" aria-hidden="true"></div></div>
     </div>
   </section>
@@ -1090,7 +1102,7 @@
       <header class="ap-head">
         <div>
           <h2 id="arch-h">The Atara Stack</h2>
-          <p class="sub">Every layer adds another guarantee for your trade.</p>
+          <p class="sub">A payment moves down the stack, and every layer writes into the record at the bottom. Adjudication is the only layer that can send a settlement back up.</p>
         </div>
       </header>
 
@@ -1117,28 +1129,28 @@
             </div>
           </div>
 
-          <div class="ap-layer reveal" id="ap-l2" style="--i:1">
+          <div class="ap-layer reveal is-model" id="ap-l2" style="--i:1">
             <div class="ap-tag">
               <span class="ap-tic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg></span>
               <div class="ap-name">Aegean-consensus</div>
-              <div class="ap-role">Judgement</div>
+              <div class="ap-role">Consensus</div>
             </div>
             <div class="ap-card" tabindex="0">
               <div class="ap-top">
-                <p class="ap-value">Two models, one signed verdict.</p>
-                <p class="ap-meta">credit model &middot; adjudication model &middot; M-of-N signatures</p>
+                <p class="ap-value">The normal path. Many readers, one signed verdict.</p>
+                <p class="ap-meta">credit model &middot; adjudication model &middot; M-of-N signatures + verdict proof</p>
               </div>
               <div class="ap-more"><div><dl>
-                <div class="row"><dt>credit model</dt><dd>The counterparty&rsquo;s probability of default.</dd></div>
+                <div class="row"><dt>credit model</dt><dd>What this counterparty is worth, on this trade.</dd></div>
                 <div class="row"><dt>adjudication model</dt><dd>Whether the condition was met.</dd></div>
-                <div class="row"><dt>M-of-N signatures</dt><dd>No single signer can rule alone.</dd></div>
-                <div class="row"><dt>Verdict proof</dt><dd>Every ruling carries its trace.</dd></div>
+                <div class="row"><dt>M-of-N signatures</dt><dd>Each agent reads one source on its own. No single signer rules.</dd></div>
+                <div class="row"><dt>verdict proof</dt><dd>Every ruling carries the evidence it was built from.</dd></div>
               </dl></div></div>
               <figure class="ap-illo" aria-hidden="true"><svg class="ap-illo-svg" viewBox="-14 0 268 168" aria-hidden="true"><g transform="translate(0,96)"><polygon points="116.2,-57.0 237.8,3.8 120.0,62.7 -1.6,1.9" fill="none" stroke="#3c4152" stroke-width="1" opacity="0.2"/><polygon points="78.2,-20.9 140.9,10.4 140.9,1.9 78.2,-29.4" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="182.7,-10.5 140.9,10.4 140.9,1.9 182.7,-19.0" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="120.0,-50.3 182.7,-19.0 140.9,1.9 78.2,-29.4" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="105.8,-37.5 120.0,-30.3 120.0,-53.3 105.8,-60.4" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="134.2,-37.5 120.0,-30.3 120.0,-53.3 134.2,-60.4" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="120.0,-67.6 134.2,-60.4 120.0,-53.3 105.8,-60.4" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><path d="M116.2,-33.1 L104.8,8.4" fill="none" stroke="var(--blue)" stroke-width="1" opacity="0.45"/><polygon points="126.7,-27.0 140.9,-19.9 140.9,-42.9 126.7,-50.0" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="155.2,-27.0 140.9,-19.9 140.9,-42.9 155.2,-50.0" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="140.9,-57.1 155.2,-50.0 140.9,-42.9 126.7,-50.0" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><path d="M137.1,-22.6 L104.8,8.4" fill="none" stroke="var(--blue)" stroke-width="1" opacity="0.45"/><polygon points="147.6,-16.6 161.8,-9.4 161.8,-32.4 147.6,-39.5" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="176.1,-16.6 161.8,-9.4 161.8,-32.4 176.1,-39.5" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="161.8,-46.6 176.1,-39.5 161.8,-32.4 147.6,-39.5" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><path d="M158.0,-12.2 L104.8,8.4" fill="none" stroke="var(--blue)" stroke-width="1" opacity="0.45"/><polygon points="55.4,10.5 102.9,34.2 102.9,29.1 55.4,5.4" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="126.7,22.3 102.9,34.2 102.9,29.1 126.7,17.2" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="79.2,-6.5 126.7,17.2 102.9,29.1 55.4,5.4" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="71.9,0.9 77.6,3.7 77.6,2.2 71.9,-0.6" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="83.3,0.9 77.6,3.7 77.6,2.2 83.3,-0.6" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="77.6,-3.5 83.3,-0.6 77.6,2.2 71.9,-0.6" fill="var(--blue)" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="80.3,5.1 86.0,7.9 86.0,6.4 80.3,3.5" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="91.7,5.1 86.0,7.9 86.0,6.4 91.7,3.5" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="86.0,0.7 91.7,3.5 86.0,6.4 80.3,3.5" fill="var(--blue)" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="88.7,9.2 94.3,12.1 94.3,10.6 88.7,7.7" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="100.0,9.2 94.3,12.1 94.3,10.6 100.0,7.7" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="94.3,4.9 100.0,7.7 94.3,10.6 88.7,7.7" fill="var(--blue)" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="97.0,13.4 102.7,16.3 102.7,14.7 97.0,11.9" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="108.4,13.4 102.7,16.3 102.7,14.7 108.4,11.9" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="102.7,9.0 108.4,11.9 102.7,14.7 97.0,11.9" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="105.4,17.6 111.1,20.5 111.1,18.9 105.4,16.1" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="116.8,17.6 111.1,20.5 111.1,18.9 116.8,16.1" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="111.1,13.2 116.8,16.1 111.1,18.9 105.4,16.1" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/></g></svg></figure>
             </div>
           </div>
 
-          <div class="ap-layer reveal" id="ap-l3" style="--i:2">
+<div class="ap-layer reveal" id="ap-l3" style="--i:2">
             <div class="ap-tag">
               <span class="ap-tic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/><path d="m7.9 7.9 2.7 2.7"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/><path d="m13.4 10.6 2.7-2.7"/><circle cx="7.5" cy="16.5" r=".5" fill="currentColor"/><path d="m7.9 16.1 2.7-2.7"/><circle cx="16.5" cy="16.5" r=".5" fill="currentColor"/><path d="m13.4 13.4 2.7 2.7"/><circle cx="12" cy="12" r="2"/></svg></span>
               <div class="ap-name">Loka-chain</div>
@@ -1158,11 +1170,34 @@
             </div>
           </div>
 
-          <div class="ap-layer reveal" id="ap-l4" style="--i:3">
+          <!-- 裁决：条件有争议时的终审，也是唯一能把已执行的结算回滚掉的一层。
+               位置在执行之下、记录之上——记录是地基（只被写入不被改写），
+               「能回滚」这件事用向上的箭头表达，不用位置表达 -->
+          <div class="ap-layer reveal is-model" id="ap-l4" style="--i:3">
+            <div class="ap-tag">
+              <span class="ap-tic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M3 7h1a17 17 0 0 0 8-2a17 17 0 0 0 8 2h1"/><path d="M5 8l3 8a5 5 0 0 1-6 0Z"/><path d="M5 8V7"/><path d="M19 8l3 8a5 5 0 0 1-6 0Z"/><path d="M19 8V7"/><path d="M7 21h10"/></svg></span>
+              <div class="ap-name">Adjudication</div>
+              <div class="ap-role">Judgement</div>
+            </div>
+            <div class="ap-card" tabindex="0">
+              <div class="ap-top">
+                <p class="ap-value">The last word when a condition is disputed &mdash; and the only ruling that can roll a settlement back.</p>
+                <p class="ap-meta">dispute window &amp; remedy &middot; rollback of an executed settlement &middot; sellable as a neutral resolver</p>
+              </div>
+              <div class="ap-more"><div><dl>
+                <div class="row"><dt>dispute window &amp; remedy</dt><dd>Either side can object inside the window; the remedy is defined before either commits.</dd></div>
+                <div class="row"><dt>rollback</dt><dd>A ruling here runs back through execution — the escrow contract unwinds it on chain.</dd></div>
+                <div class="row"><dt>neutral resolver</dt><dd>The same adjudication can be sold to markets that need a ruling layer of their own.</dd></div>
+              </dl></div></div>
+              <figure class="ap-illo" aria-hidden="true"><svg class="ap-illo-svg" viewBox="-14 0 268 168" aria-hidden="true"><g transform="translate(0,96)"><polygon points="116.2,-57.0 237.8,3.8 120.0,62.7 -1.6,1.9" fill="none" stroke="#3c4152" stroke-width="1" opacity="0.2"/><polygon points="103.5,-42.6 120.0,-34.4 120.0,-12.4 103.5,-20.6" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="120.0,-34.4 136.5,-42.6 136.5,-20.6 120.0,-12.4" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="120.0,-50.9 136.5,-42.6 120.0,-34.4 103.5,-42.6" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="106.2,-49.6 120.0,-42.8 120.0,-35.8 106.2,-42.6" fill="var(--blue)" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="120.0,-42.8 133.8,-49.6 133.8,-42.6 120.0,-35.8" fill="var(--blue)" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="120.0,-56.5 133.8,-49.6 120.0,-42.8 106.2,-49.6" fill="var(--blue)" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="30.6,-7.4 62.2,8.4 62.2,12.4 30.6,-3.4" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="62.2,8.4 93.9,-7.4 93.9,-3.4 62.2,12.4" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="62.2,-23.2 93.9,-7.4 62.2,8.4 30.6,-7.4" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="41.6,-18.4 62.2,-8.1 62.2,2.9 41.6,-7.4" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="62.2,-8.1 82.9,-18.4 82.9,-7.4 62.2,2.9" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="62.2,-28.8 82.9,-18.4 62.2,-8.1 41.6,-18.4" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="146.1,-7.4 177.8,8.4 177.8,12.4 146.1,-3.4" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="177.8,8.4 209.4,-7.4 209.4,-3.4 177.8,12.4" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="177.8,-23.2 209.4,-7.4 177.8,8.4 146.1,-7.4" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="157.1,-20.4 177.8,-10.1 177.8,2.9 157.1,-7.4" fill="#e7e8ee" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="177.8,-10.1 198.4,-20.4 198.4,-7.4 177.8,2.9" fill="#dcdee6" stroke="#3c4152" stroke-width="1" opacity="1"/><polygon points="177.8,-30.8 198.4,-20.4 177.8,-10.1 157.1,-20.4" fill="#ffffff" stroke="#3c4152" stroke-width="1" opacity="1"/><path d="M177.8,-23.1 C171.8,-61.1 72.2,-61.6 62.2,-27.6" fill="none" stroke="var(--blue)" stroke-width="1.4" stroke-linecap="round"/><path d="M62.2,-27.6 L69.0,-34.9" fill="none" stroke="var(--blue)" stroke-width="1.4" stroke-linecap="round"/><path d="M62.2,-27.6 L60.5,-37.4" fill="none" stroke="var(--blue)" stroke-width="1.4" stroke-linecap="round"/><circle cx="177.8" cy="-23.1" r="2.6" fill="var(--blue)"/></g></svg></figure>
+            </div>
+          </div>
+
+          <div class="ap-layer reveal" id="ap-l5" style="--i:4">
             <div class="ap-tag">
               <span class="ap-tic" aria-hidden="true"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg></span>
               <div class="ap-name">Setu</div>
-              <div class="ap-role">Record</div>
+              <div class="ap-role">Record &middot; the floor</div>
             </div>
             <div class="ap-card" tabindex="0">
               <div class="ap-top">
@@ -1262,7 +1297,7 @@
       <div class="engine-card">
       <canvas class="engine-field" id="engineField" aria-hidden="true"></canvas>
       <div class="wrap engine-stage">
-        <h2>An AI model prices every payment.</h2>
+        <h2>An AI model assesses the risk in every payment.</h2>
 
         <div class="engine-steps">
           <div class="engine-step is-active" data-engine-step>
@@ -1798,9 +1833,11 @@
     else if(instrument.getBoundingClientRect().bottom>0){alive=true;cycle();}
   });
 
-  const logos=['ethereum-foundation','g42','cyberport','hkstp','a-star','ai-singapore','vana','pr-spera','intelligent-internet','desci-world','bio','hetu','researchhub','open-targets'];
+  /* Advaita 的研究机构 collaborator。原来那批是科研生态项目（BIO、ResearchHub、
+     Open Targets 一类），摆在一个结算产品页脚上对不上号，数量也压过了它该有的分量 */
+  const logos=['mit','harvard','princeton','columbia','berkeley','yale','nus','ethz','stanford'];
   const logoTrack=document.getElementById('logoTrack');
-  logoTrack.innerHTML=logos.concat(logos).map(name=>`<img src="assets/logos/${name}.png" alt="" loading="lazy" decoding="async">`).join('');
+  logoTrack.innerHTML=logos.concat(logos).map(name=>`<img src="assets/logos/adv-${name}.png" alt="" loading="lazy" decoding="async">`).join('');
 
 
   /* module 2 is a plain document flow now: the intro pins via CSS and
