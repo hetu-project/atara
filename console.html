@@ -167,18 +167,45 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
    面板已隐藏而中栏没变宽，读起来就是"关了但没生效"。列宽瞬切，动画交给面板自身的淡出 */
 /* grid-template-rows:minmax(0,1fr) 是关键：不写的话行高由最高的一栏内容决定，
    中栏内容一长就把整行撑高，左栏跟着变高、底部账户入口被顶出视口，中栏也滚不动 */
-main{display:grid;grid-template-columns:268px 1fr 360px;grid-template-rows:minmax(0,1fr);
-  height:100%;min-height:0;overflow:hidden}
-main.rout{grid-template-columns:268px 1fr 0}
+/* 中栏与右栏对半分：右栏不再是「边条」，它和对话区同等重要——
+   一半是你在跟谁谈，一半是机器替你查到了什么。
+   下限 420 保证证据条两列排得开；上限 820 免得超宽屏上一条流水拉成一行字。 */
+main{position:relative;display:grid;
+  grid-template-columns:var(--lw) minmax(0,1fr) minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);
+  height:100%;min-height:0;overflow:hidden;--lw:268px}
+main.rout{grid-template-columns:var(--lw) 1fr 0}
+main.lout{--lw:68px}
+/* 窄屏先让中栏活下来——对话比旁观机器干活重要 */
+@media (max-width:1440px){main{grid-template-columns:var(--lw) minmax(0,1fr) minmax(0,1.08fr)}}
+@media (max-width:1240px){main{grid-template-columns:var(--lw) minmax(0,1fr) 360px}}
 /* 面板保持自身宽度，列宽归零时向右滑出被 main 裁掉——比压缩内容干净。
    visibility 是兜底：列宽动画在部分浏览器不支持，但收起后必须真的不可见、不可点 */
-#right{width:360px;justify-self:end;transition:opacity var(--dur-fast) var(--ease)}
+#right{width:100%;max-width:1040px;justify-self:end;transition:opacity var(--dur-fast) var(--ease)}
 main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 
 /* 左栏顶部品牌区 · 与官网 index.html 的 .brand-mark 完全同构（十字 + 三点），点击回官网 */
-.lbrandrow{display:flex;align-items:center;gap:8px;padding:16px 12px 12px 16px;flex:none}
+.lbrandrow{display:flex;align-items:center;gap:8px;padding:14px 12px 10px 12px;flex:none}
 .lbrand{display:flex;align-items:center;gap:12px;flex:none;text-decoration:none;color:var(--ink)}
 .lbrand:hover .lmark,.lbrand:hover b{color:var(--accent)}
+/* 折叠按钮有两个身位，每个状态只露一个：
+   展开态在行尾（#lfoldx），logo 保持是 logo；
+   折叠态占 logo 的位置（#lfold），指上去标记淡出、折叠图标淡入。
+   一个按钮两种排布做不到——展开时标记要在链接里，折叠时要在按钮里。 */
+.lfold{display:none}
+.lfoldx{margin-left:auto}
+main.lout .lfold{display:inline-flex}
+main.lout .lbrand,main.lout .demo,main.lout .lfoldx{display:none}
+.lfold{position:relative;width:32px;height:32px;flex:none;
+  align-items:center;justify-content:center;border:0;background:none;cursor:pointer;
+  border-radius:var(--r-control);color:var(--ink);
+  transition:background var(--dur-fast) var(--ease)}
+.lfold:hover{background:var(--card)}
+.lfold .lmark,.lfold .lfi{position:absolute;
+  transition:opacity var(--dur-fast) var(--ease)}
+.lfold .lfi{opacity:0;color:var(--mute)}
+.lfold:hover .lmark,.lfold:focus-visible .lmark{opacity:0}
+.lfold:hover .lfi,.lfold:focus-visible .lfi{opacity:1}
 .lmark{width:16.8px;height:16.8px;position:relative;display:inline-block;flex:none;color:var(--ink)}
 .lmark::before,.lmark::after{content:"";position:absolute;left:50%;top:50%;background:currentColor;transform:translate(-50%,-50%)}
 .lmark::before{width:100%;height:2px}
@@ -213,7 +240,58 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 .lchev{margin-left:auto;flex:none;font-size:14px;color:var(--faint-2)}
 
 /* ── 左栏 · 对手方账本 ── */
+/* 注意别在这儿加 overflow:hidden —— 账户菜单是 position:absolute 挂在 .luserrow 里的，
+   栏一裁，折叠态下 232px 的菜单就只剩 68px 露在外面。
+   防止折叠时标签溢出，只裁真正会溢出的那两块（见 main.lout 那组规则）。 */
 #left{border-right:1px solid var(--hairline);background:var(--paper);display:flex;flex-direction:column;min-height:0}
+
+/* ══ 左栏折叠 ══ 68px 图标条：留导航图标、会话头像、账户头像。
+   折叠不是「藏起来」——每个还留着的元素都要仍然可点、可认、可回。
+   文字用 title 兜底，图标本身在展开态被看熟过，所以认得出。 */
+.lfold{flex:none}
+main.lout .lbrandrow{justify-content:center;gap:0;padding:14px 0 10px}
+main.lout .lbrand{gap:0}
+main.lout .lbrandrow .sayic{margin:0}
+
+/* 右栏重开拉手：只在收起时露出，贴右缘 */
+.redge{position:absolute;top:50%;right:0;transform:translateY(-50%);
+  width:20px;height:60px;display:none;align-items:center;justify-content:center;
+  border:1px solid var(--hairline);border-right:0;
+  border-radius:var(--r-control) 0 0 var(--r-control);
+  background:var(--paper);color:var(--faint);cursor:pointer;z-index:4;
+  transition:color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.redge:hover{color:var(--ink);background:var(--card)}
+main.rout .redge{display:flex}
+/* 栏内工具按钮与 20px 导航图标同量级，免得看起来是两套东西 */
+#left .sayic,#left #themebtn{width:32px;height:32px;border-radius:var(--r-control)}
+#left .sayic svg,#left #themebtn svg{width:18px;height:18px}
+
+main.lout .navs{padding:8px 10px}
+/* 标签是裸文本节点，选择器选不中——只能用 font-size:0 把它压掉，
+   再在图标上把字号还回来（svg 尺寸是写死的，不受影响） */
+main.lout .navs,main.lout #tasklist{overflow:hidden}
+main.lout .nav{justify-content:center;gap:0;padding-inline:0;font-size:0;overflow:hidden}
+main.lout .nav .ni{margin:0;font-size:16px}
+
+/* Chats 标签在窄条里没地方写，直接收掉。
+   不要在这儿补一条线——.navs 的 border-bottom 已经分好组了，再加就是两条 */
+main.lout .lsec{display:none}
+main.lout #tasklist{padding:0 10px}
+main.lout #tasklist .chatrow{justify-content:center;gap:0;padding:7px 0}
+main.lout #tasklist .chatrow .n,main.lout #tasklist .chmeta{display:none}
+/* 未读数在窄条里没地方摆，收成头像右上角一点 */
+main.lout #tasklist .chatrow{position:relative}
+main.lout #tasklist .chatrow .cpav::after{content:'';position:absolute;top:5px;right:12px;
+  width:8px;height:8px;border-radius:999px;background:var(--accent);
+  box-shadow:0 0 0 2px var(--paper);opacity:0;transition:opacity var(--dur-fast) var(--ease)}
+main.lout #tasklist .chatrow:has(.unread) .cpav::after{opacity:1}
+
+main.lout .luserrow{flex-direction:column;gap:6px;padding:8px 0 12px}
+main.lout .luser{flex:none;justify-content:center;padding:6px 0;width:100%}
+main.lout .lutxt,main.lout .lchev{display:none}
+
+/* 折叠态下按钮就是图标，命中区不能跟着缩水 */
+main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
 .coltitle{font-size:11px;font-weight:500;letter-spacing:.14em;color:var(--faint);padding:0 18px 10px}
 
 /* 资金块 · 置于右栏顶部 */
@@ -257,6 +335,83 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
   display:inline-flex;align-items:center;justify-content:center}
 .ltc:empty{display:none}
 .ltab.on .ltc{background:oklch(50% 0 0/.25);color:var(--on-inverse)}
+/* ══ 左栏收件箱（微信式）══ */
+/* 必须挂在 #tasklist 下：基础规则 .cp .n{align-items:center} 排在本块之后，
+   同特异性会把它盖回去——column 方向下那条正好把名字横向居中。 */
+#tasklist .chatrow{align-items:center;gap:10px;padding:9px 16px}
+#tasklist .chatrow .cpav{width:34px;height:34px;flex:none;border-radius:50%;
+  font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center}
+#tasklist .chatrow .n{display:flex;flex-direction:column;align-items:flex-start;
+  gap:2px;flex:1;min-width:0;line-height:1.3;text-align:left}
+#tasklist .chatrow .n em{font-style:normal;font-weight:500;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tasklist .chatrow .n i{font-style:normal;font-size:11.5px;color:var(--faint);max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tasklist .chmeta{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none}
+#tasklist .chmeta time{font-size:10.5px;color:var(--faint-2)}
+
+/* ══ Contacts 页 ══ 名册：一行一个人，右侧两个动作 */
+.ctcard{background:var(--paper);border-radius:var(--r-card);box-shadow:var(--ring);overflow:hidden}
+.ctrow{display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer}
+.ctrow + .ctrow{border-top:1px solid var(--hairline)}
+.ctrow:hover{background:var(--canvas)}
+.ctrow.pend{cursor:default;opacity:.75}
+.ctav{width:38px;height:38px;flex:none;border-radius:50%;font-size:13px;font-weight:600;
+  display:flex;align-items:center;justify-content:center}
+.ctn{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;line-height:1.3}
+.ctn em{font-style:normal;font-size:14px;font-weight:600;color:var(--ink)}
+.ctn i{font-style:normal;font-size:12px;color:var(--faint)}
+.ctled{flex:none;font-size:12.5px;color:var(--mute)}
+.ctacts{display:flex;gap:8px;flex:none}
+
+/* ══ 通讯录 ══ */
+.cpadd{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;margin-bottom:4px;
+  border:0;background:none;cursor:pointer;font:inherit;font-size:13px;color:var(--mute);
+  border-radius:var(--r-control);text-align:left}
+.cpadd:hover{background:var(--cream);color:var(--ink)}
+.cpaddi{display:flex;width:26px;height:26px;flex:none;align-items:center;justify-content:center;
+  border-radius:50%;border:1px dashed var(--line-strong);color:var(--faint)}
+.cpadd:hover .cpaddi{border-color:var(--accent);color:var(--accent)}
+#cplist .cp{display:flex;align-items:center;gap:9px}
+#cplist .cpav{width:26px;height:26px;flex:none;border-radius:50%;font-size:11px;font-weight:600;
+  display:flex;align-items:center;justify-content:center}
+#cplist .cp .n{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;line-height:1.3}
+#cplist .cp .n em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#cplist .cp .n i{font-style:normal;font-size:11px;color:var(--faint)}
+#cplist .cp.pend .cpav{opacity:.5}
+#cplist .cp.pend .n i{color:var(--warn)}
+/* 添加联系人弹窗 */
+.acseg{display:flex;gap:2px;padding:3px;margin-bottom:16px;border-radius:var(--r-control);background:var(--card)}
+.acs{flex:1;padding:6px 8px;border:0;border-radius:6px;background:none;cursor:pointer;
+  font:inherit;font-size:12.5px;color:var(--mute)}
+.acs.on{background:var(--paper);color:var(--ink);font-weight:500;box-shadow:var(--lift-lo)}
+.acf{display:block;margin-bottom:14px}
+.acf>span{display:block;margin-bottom:6px;font-size:12px;color:var(--faint)}
+.acf>span em{font-style:normal;opacity:.7}
+.acf input{width:100%;height:38px;padding:0 12px;border-radius:var(--r-control);
+  border:1px solid var(--hairline);background:var(--canvas);font:inherit;font-size:13.5px;
+  color:var(--ink);outline:none}
+.acf input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-wash)}
+.acchips{display:flex;gap:5px;flex-wrap:wrap}
+.acchip{padding:5px 11px;border-radius:999px;border:1px solid var(--hairline);background:none;
+  cursor:pointer;font:inherit;font-size:12.5px;color:var(--mute)}
+.acchip:hover{border-color:var(--line-strong);color:var(--ink)}
+.acchip.on{background:var(--blue-wash);border-color:var(--blue);color:var(--accent);font-weight:500}
+.acnote{font-size:12px;line-height:1.6;color:var(--faint);margin:0 0 12px}
+.acfoot{display:flex;align-items:center;gap:12px;margin-top:18px}
+.acfoot .btn{margin-left:auto}
+.acerr{font-size:12px;color:var(--warn)}
+.aclink{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:12px;
+  border-radius:var(--r-control);background:var(--card);font-size:13px}
+.aclink span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.aclist{display:flex;flex-direction:column;gap:2px}
+.acrow{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;
+  border-radius:var(--r-control);background:none;cursor:pointer;font:inherit;text-align:left}
+.acrow:hover{background:var(--cream)}
+.acrow .n{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;line-height:1.3}
+.acrow .n em{font-style:normal;font-size:13px;font-weight:500;color:var(--ink)}
+.acrow .n i{font-style:normal;font-size:11.5px;color:var(--faint)}
+.acgo{font-size:12.5px;color:var(--accent);font-weight:500}
 .lempty{display:flex;align-items:center;justify-content:center;padding:56px 0;color:var(--faint-2)}
 .lempty[hidden]{display:none}
 .lpane{flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto}
@@ -268,7 +423,6 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 .lsc:empty{display:none}
 /* 状态只用点说：灰=已完成 · 绿=进行中 · 黄=等你处理（文字进 title/aria）。
    点挪到行首后标题要吃满剩余宽，否则 space-between 会把短标题推到右边 */
-#tasklist .cp .n{flex:1;min-width:0}
 /* 状态只用点说（见上） */
 .tkst{flex:none;display:inline-flex;align-items:center}
 .tkst i{width:7px;height:7px;border-radius:999px;background:var(--faint-2);display:block}
@@ -277,8 +431,8 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 .tkst.done i{background:var(--faint-2)}
 
 .navs{flex:none;padding:8px 8px;border-bottom:1px solid var(--hairline)}
-.nav{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:8px 8px;border-radius:var(--r-control);font-size:14px;color:var(--mute);font-weight:500}
-.nav .ni{display:flex;align-items:center;justify-content:center;color:var(--faint);width:16px;flex:none}
+.nav{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;text-align:left;padding:8px 10px;border-radius:var(--r-control);font-size:14px;color:var(--mute);font-weight:500}
+.nav .ni{display:flex;align-items:center;justify-content:center;color:var(--faint);width:20px;flex:none}
 .nav .c{margin-left:auto;font-size:11px;color:var(--faint);font-weight:600}
 .nav:hover{background:var(--canvas);color:var(--ink)}
 .nav.on{background:var(--card);color:var(--ink);font-weight:500}
@@ -677,6 +831,39 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 /* 列表落回基底：盒子 + 五个大写胶囊是纯粹的容器通胀，行间一条淡线就够 */
 /* ══ History 台账 ══ 六列对齐：时间 · 对手方 · 事由 · 金额 · 状态 · 凭据。
    金额右对齐成一列才能纵向比大小；卡壳去掉，用发丝线分行 */
+/* ══ Payments 页 ══ 两段一密一疏：上面在飞（纸卡，可点，有动作），
+   下面台账（平铺在底色上，退后一层）。中间 48px 的空是分组的主力，不用分割线。 */
+.psec{display:flex;align-items:center;gap:10px;margin:0 2px 12px}
+.psec.settled{margin-top:48px}
+.psec h3{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--faint);margin:0}
+.pcount{font-size:11px;font-weight:600;color:var(--faint);background:var(--cream);
+  border-radius:999px;padding:1px 7px;line-height:1.6}
+.psec .hfils{margin-left:auto}
+.psec .btn{margin-left:8px}
+
+.pfcard{background:var(--paper);border-radius:var(--r-card);box-shadow:var(--ring);overflow:hidden}
+/* 固定首列宽度让 Your turn / Waiting 两种状态的金额落在同一列；
+   末列留空也占位，有按钮没按钮的行金额都对齐 */
+.pfrow{display:grid;grid-template-columns:96px minmax(0,1fr) auto 84px;
+  align-items:center;gap:14px;padding:15px 18px;cursor:pointer}
+.pfrow + .pfrow{border-top:1px solid var(--hairline)}
+.pfrow:hover{background:var(--canvas)}
+.pfrow:focus-visible{outline:var(--focus-w) solid var(--focus-c);outline-offset:calc(-1 * var(--focus-w))}
+.pfst{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--faint)}
+.pfst i{width:7px;height:7px;border-radius:999px;background:var(--green);flex:none}
+.pfrow.you .pfst{color:var(--ink);font-weight:500}
+.pfrow.you .pfst i{background:var(--warn);box-shadow:0 0 0 3px var(--warn-wash)}
+.pfn{display:flex;flex-direction:column;gap:3px;min-width:0;line-height:1.35}
+.pfn em{font-style:normal;font-size:13.5px;font-weight:500;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pfn i{font-style:normal;font-size:12px;color:var(--faint)}
+.pfamt{font-size:14px;font-weight:600;color:var(--ink);text-align:right;
+  font-variant-numeric:tabular-nums}
+.pfact{display:flex;justify-content:flex-end}
+.pfempty{padding:26px 18px;font-size:13px;color:var(--faint);
+  background:var(--paper);border-radius:var(--r-card);box-shadow:var(--ring)}
+
 .hbar{display:flex;align-items:center;gap:12px;margin-bottom:18px}
 .hfils{display:flex;gap:4px;flex-wrap:wrap}
 .hfil{display:inline-flex;align-items:baseline;gap:6px;padding:5px 11px;border-radius:999px;
@@ -684,6 +871,7 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 .hfil:not(:disabled):hover{background:var(--cream);color:var(--ink)}
 .hfil.on{background:var(--card);border-color:var(--hairline);color:var(--ink);font-weight:500}
 .hfil b{font-weight:600;font-size:11.5px;color:var(--faint)}
+#right .hfil b{font-size:var(--rt-badge);font-weight:var(--rt-badge-w)}
 .hfil.on b{color:var(--mute)}
 .hfil:disabled{opacity:.42;cursor:default}
 .hbar .btn{margin-left:auto}
@@ -776,10 +964,10 @@ main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
 /* flex 子项默认 shrink:1 会被容器压扁——卡片内容被自身 overflow:hidden 裁掉后，
    容器认为没有溢出，滚动条就不出现。这是 min-height:0 之外的第二个坑 */
 #log>*{flex:0 0 auto}
+/* 空态：标题与输入框聚成一组，从 12vh 起。提交之后 #empty 被移除，
+   :has 失配，输入框自动落回底部——切换发生在「提交」那一刻，不是进门那一刻。 */
 #empty{margin:auto;display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 20px}
-/* 空态：标题与输入条聚成一组垂直居中。有对话后 #empty 被移除，:has 失配，输入条自动回到底部 */
 #v-chat{position:relative}
-/* 居中靠上:标题-输入框-快捷卡作为一组,从 18vh 处开始,不吸底也不居中 */
 #v-chat:has(#empty){justify-content:flex-start;padding-top:12vh}
 #v-chat:has(#empty) #log{flex:0 1 auto;margin-bottom:56px}
 #v-chat:has(#empty) #empty{margin:0 auto;padding:0 20px}
@@ -1532,54 +1720,696 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 
 /* ── 右栏 · 上：球在谁手里；下：我给出的授权规则 ── */
 #right{border-left:1px solid var(--hairline);background:var(--paper);display:flex;flex-direction:column;min-height:0}
-#rstate{flex:1;overflow-y:auto;padding:4px 0;min-height:0}
-/* 右栏 tab：进行中 / 自动执行。切换即换列表，tab 下不再起分组标题 */
-.rtabs{display:flex;align-items:center;flex:none;padding:0 16px 0 24px;border-bottom:1px solid var(--hairline)}
-#rhide{margin-left:auto;align-self:center}
-.rt{padding:11px 2px;margin-right:20px;margin-bottom:-1px;font-size:13px;color:var(--mute);
-  border-bottom:2px solid transparent;
-  transition:color var(--dur-fast) var(--ease),border-color var(--dur-fast) var(--ease)}
-.rt:hover{color:var(--ink)}
-.rt.on{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
-.rt .c{font-size:11px;color:var(--mute);margin-left:6px;font-weight:400}
-/* 最近完成收成底部一行——左栏「历史」是它的正主，右栏不给它常驻位置 */
-.rdone{display:flex;align-items:center;gap:8px;width:100%;flex:none;
-  padding:14px 24px;font-size:12px;font-weight:500;color:var(--mute);
-  border-top:1px solid var(--hairline);
+
+/* ══ 右栏字号阶梯 ══
+   之前这一栏有 21 种 字号/字重 组合（7.5–15.5px，同一字号跨三种字重），
+   等于没有阶梯——眼睛拿不到优先级信号，只能一行行读。
+   收成四档，每档一个用途，别处不许再写 font-size。
+     lead  唯一的锚点：读数与金额
+     title 模块标题、行首、卡片状态
+     body  正文行
+     meta  时间、计数、标签、徽章 */
+#right{
+  --rt-lead: 18px;   --rt-lead-w: 600;
+  --rt-title:13px;   --rt-title-w:600;
+  --rt-body: 12.5px; --rt-body-w: 400;
+  --rt-meta: 11px;   --rt-meta-w: 400;
+  /* 徽章不是正文的一档：它有底色、有边界，读者天然把它当标记而不是文字。
+     单列一个角色，免得为了它把 meta 那一档劈成两个字重。 */
+  --rt-badge:10px;   --rt-badge-w:600;
+  /* 人字形箭头之类的字形也不进阶梯，统一一个尺寸就行 */
+  --rt-icon: 12px;
+}
+/* 右栏间距只认两套刻度：--sp（4/8/12/16/24/32/40）管排版节奏，
+   6px 是控件内部的微距（图标↔字、点↔字）。骑缝值（5/7/9/10/11/13/14）不许再进来；
+   1–3px 只准用于光学对齐（基线、圆点、负 margin），不算节奏。 */
+
+/* ══ 右栏 · Assessment（评估过程）══
+   一条脊线串起时间顺序，最新的在最上面并带一圈脉冲。
+   层级只用三样：字重、灰阶、和节点那一点颜色——这栏是余光扫的，不能抢中栏。 */
+.afhead{flex:none;display:flex;align-items:center;justify-content:flex-end;padding:12px 16px 6px}
+.afttl{font-size:var(--rt-title);font-weight:var(--rt-title-w);color:var(--ink)}
+.aflive{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:var(--rt-meta);color:var(--faint)}
+.aflive i{width:6px;height:6px;border-radius:999px;background:var(--faint-2);flex:none}
+.aflive.on i{background:var(--green);animation:afpulse 1.6s var(--ease) infinite}
+.aflive.on em{color:var(--green)}
+.aflive em{font-style:normal;letter-spacing:.04em;text-transform:uppercase}
+
+@keyframes afpulse{0%,100%{box-shadow:0 0 0 0 var(--green-wash)}50%{box-shadow:0 0 0 4px var(--green-wash)}}
+
+.afbar{height:3px;border-radius:999px;background:var(--hairline);overflow:hidden}
+.afbar i{display:block;height:100%;border-radius:999px;background:var(--accent);
+  width:0;transition:width .5s var(--ease)}
+
+.affeed{min-height:0;padding:2px 16px 14px}
+.afempty{padding:8px 4px 2px;font-size:var(--rt-body);line-height:1.6;color:var(--faint-2)}
+
+/* 脊线画在行上而不是容器上：容器画线会在最后一条下面拖一截空线 */
+.afrow{position:relative;display:flex;gap:12px;padding:9px 0 11px}
+.afrow::before{content:'';position:absolute;left:4px;top:0;bottom:0;width:1px;
+  background:var(--hairline)}
+.afrow:first-child::before{top:13px}
+.afrow:last-child::before{bottom:auto;height:13px}
+.afrow[role="button"]{cursor:pointer}
+.afrow[role="button"]:hover .aftop b{color:var(--accent)}
+.afrow:focus-visible{outline:var(--focus-w) solid var(--focus-c);outline-offset:2px;border-radius:6px}
+.afnode{position:relative;flex:none;width:9px;display:flex;justify-content:center;padding-top:5px}
+.afnode i{width:9px;height:9px;border-radius:999px;background:var(--paper);
+  box-shadow:0 0 0 1.5px var(--faint-2)}
+.afrow.agent .afnode i,.afrow.cons .afnode i{box-shadow:0 0 0 1.5px var(--green);
+  background:var(--green)}
+.afrow.gate .afnode i{box-shadow:0 0 0 1.5px var(--accent);background:var(--accent)}
+.afrow.fresh .afnode i{animation:afpop .5s var(--ease) both}
+@keyframes afpop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
+
+.afmain{flex:1;min-width:0}
+.aftop{display:flex;align-items:baseline;gap:8px}
+.aftop b{font-size:var(--rt-title);font-weight:var(--rt-title-w);color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aftop time{margin-left:auto;flex:none;font-size:var(--rt-meta);color:var(--faint-2)}
+.afv{flex:none;font-size:var(--rt-badge);font-weight:var(--rt-badge-w);letter-spacing:.04em;text-transform:uppercase;
+  padding:1px 6px;border-radius:999px;color:var(--faint);background:var(--cream)}
+.afv.ok{color:var(--green);background:var(--green-wash)}
+.afv.warn{color:var(--warn);background:var(--warn-wash)}
+.afline{margin:3px 0 0;font-size:var(--rt-body);line-height:1.55;color:var(--mute)}
+.afmeta{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:var(--rt-meta);color:var(--faint-2)}
+.afmore{margin-left:auto;flex:none;color:var(--faint-2);font-size:var(--rt-icon);line-height:1;
+  transition:transform var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.afrow[role="button"]:hover .afmore{color:var(--accent)}
+.afrow.open .afmore{color:var(--accent);transform:rotate(180deg)}
+
+/* ── 共识可视化在右栏里的重排 ──
+   原来是「环 220px + 星座」并排，430px 放不下：改成竖着摞，
+   环收到 200 并居中，星座占满整宽。面板本身不再有卡片外框——它已经在一块面板里了 */
+#afpanel{padding:8px 16px 2px}
+.think.inrail{background:none;box-shadow:none;border-radius:0;overflow:visible}
+.think.inrail .thead{padding:8px 4px 10px}
+/* 竖排、整体居中并限宽：右栏现在是半屏，可视化不该跟着拉到 700 宽——
+   环和星座都有各自舒服的尺寸，超过就只是变稀 */
+.think.inrail .thagx{flex-direction:column;align-items:center;gap:10px;padding:0;
+  max-width:520px;margin-inline:auto}
+.think.inrail .thring{width:248px;height:248px;margin-inline:auto}
+.think.inrail .thnet{width:100%;min-width:0}   /* 高度由 consensusNet 内联写入 */
+.think.inrail .thgates,.think.inrail .thcons,.think.inrail .thverd{
+  width:100%;max-width:520px;margin-inline:auto}
+.think.inrail .thgates,.think.inrail .thcons{padding-inline:0}
+.think.inrail .thverd{margin-inline:0}
+.think.inrail .thsteps,.think.inrail .chips{padding-inline:4px}
+
+/* 批次条：名字在面板头上写过了，这里只留进度 */
+/* ══ 右栏三模块 ══
+   之前只靠留白分组，得读了才知道边界。改成三块实体卡面浮在 canvas 上：
+   一眼就是三块。代价是里层不能再有卡——卡中卡是噪音，所以下面所有内容都拍平，
+   分隔交给发丝线。 */
+/* ══ 右栏版式 ══
+   参考里那个剪辑器的关键不是边框多，是三个区域**固定在各自的格子里**，
+   只有格子内部的内容滚。整栏一起滚就等于没有分区。
+   这里给两个版式，用栏顶的 Layout 键切换：
+     A —— 上左订单 / 上右指标+星座 / 下全宽 Activity
+     B —— 上全宽订单 / 下左 Agent status / 下右 Assessment */
+/* 右栏三块的排布：
+   Assessment 换到顶上全宽：它是实时的、要盯着看的那一块（左环右进度）。
+   Agent status 是背景参考（战绩 + 候命阵容），不需要顶带，挪到下半部与订单并排。 */
+/* 版式 B（laybtn 切换）：Assessment 吃掉 Agent status——
+   上 2/3 一个大模块（环 | 星盘 一排在顶，进度在下，候命排贴底），
+   下 1/3 全宽 Order status。切换时 .rsplit 和 .aswrap 由 setLayout 搬家。 */
+#right.lay-b .rgrid{grid-template-areas:"f f" "o o";
+  grid-template-rows:minmax(0,2fr) minmax(0,1fr)}
+#right.lay-b #rm-stats{display:none}
+#right.lay-b #rm-feed{border-bottom:1px solid var(--hairline)}
+#right.lay-b .assplit{flex:0 0 clamp(176px,24vh,244px)}
+#right.lay-b .assplit>#arring{flex:1 1 46%;display:flex;
+  align-items:center;justify-content:center;min-height:0;padding:4px 6px}
+/* 格子矮于画布时等比缩，不许裁顶——黄扇区顶被切一刀最显眼 */
+#right.lay-b .assplit>#arring .arring{max-height:100%;max-width:100%;height:auto}
+#right.lay-b .assplit>.rsplit{flex:1 1 54%;min-width:0;padding:0}
+#right.lay-b .rtnetw{max-width:none}
+#right.lay-b .assplit>.rsplit>.rstats{display:none}
+#right.lay-b .aswrap{flex:1;min-height:0}
+/* 进度区自己不滚（dock 内部滚），A 留的 20px 滚动底衬在这儿就是一条空带 */
+#right.lay-b .aswrap>#afruns{padding-bottom:4px}
+#right.lay-b .roster{margin-top:0;padding-top:var(--sp-1)}
+/* 批次头收掉：目录+详情自己就是这块的全部，头是多余的一层 */
+#right.lay-b .arun.open>.arhead{display:none}
+/* 目录列窄，读数换行放标题下面 */
+#right.lay-b .arst{flex-wrap:wrap;gap:1px 8px}
+#right.lay-b .arsl{margin:0;white-space:normal;flex-basis:100%}
+/* B 的进度区是主从两栏：左边竖排四步当目录，右边一整块常驻当前选中步骤的详情。
+   点左边换右边——详情不再挤在步骤行里，也不跳页。 */
+#right.lay-b .arsx{display:none}
+#right.lay-b .arst[role="button"]:hover b{color:var(--accent)}
+#right.lay-b .aswrap>#afruns{display:flex;flex-direction:column}
+#right.lay-b #afruns .arun.open{flex:1;min-height:0;display:flex;
+  align-items:stretch;gap:var(--sp-5)}
+/* 空态骨架同样左右排：.aidle 自带的竖排（A 版式的居中规则）在这里要让位 */
+#right.lay-b .arun.aidle{flex-direction:row;justify-content:flex-start}
+#right.lay-b .arun.aidle .arsteps{align-self:center}
+/* 空态就一个词，摆正中间——长句子塞在角落里只会显得这块没做完 */
+#right.lay-b .arun.aidle .ardock{display:grid;place-items:center}
+.asby{font-size:var(--rt-body);color:var(--faint-2);letter-spacing:.02em}
+#right.lay-b .arsteps{flex:0 0 216px;min-width:0;padding:2px 0}
+#right.lay-b .arstep{border-radius:8px;padding:2px 8px 2px 6px;margin-left:-6px}
+#right.lay-b .arstep::before{left:13px}
+#right.lay-b .arstep.open{background:var(--canvas)}
+#right.lay-b .arstep.open .arst b{color:var(--ink)}
+/* 面板不再是一块沉底色的卡——右栏是一张纸，这块也平铺在纸面上，
+   跟左边目录的分界交给一条竖发丝线和留白，跟 profile 页同一套语法 */
+.ardock{flex:1;min-width:0;margin:2px 0 4px;padding:2px var(--sp-2) 20px var(--sp-5);
+  border-left:1px solid var(--hairline-2);
+  overflow-y:auto;scrollbar-width:none;
+  animation:agfadeup .2s var(--ease) both}
+.ardock::-webkit-scrollbar{display:none}
+/* 平铺后滚动裁切要有出口暗示：底部一道渐隐（内容装得下时它自然不出现） */
+.ardock{mask-image:linear-gradient(to bottom,#000 calc(100% - 18px),transparent);
+  -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 18px),transparent)}
+/* Agent profile 占一整页：进了这一层，顶排的环和星盘都收起——
+   读 profile 的时候它们只是占地方的背景 */
+#right.lay-b #rm-feed .rmb:has(.agpage) .assplit{display:none}
+/* 一张纸，不是三张卡：模块之间原来留 10px 的缝让底色透出来，
+   在暗色下那就是三条黑杠。改成共用一个表面，分区交给一条发丝线和留白。 */
+.rgrid{flex:1;min-height:0;display:grid;gap:0;padding:0;background:var(--paper);
+  grid-template-areas:"f f" "o s";
+  grid-template-columns:minmax(240px,1fr) minmax(0,1.15fr);
+  /* 顶带占多一点：Assessment 是要盯着看的，下面两块是查阅性的。
+     空态现在也有内容（灰环 + 四步 + 候命排），按比例分不会留空 */
+  /* 顶带只需装下环(230)+候命排(60)，给满一半就是白给；剩下的匀给订单列表 */
+  grid-template-rows:minmax(0,.82fr) minmax(0,1fr)}
+#rm-orders{grid-area:o} #rm-stats{grid-area:s} #rm-feed{grid-area:f}
+
+.rmod{background:var(--paper);display:flex;flex-direction:column;min-height:0;min-width:0}
+#rm-feed{border-bottom:1px solid var(--hairline)}
+#rm-stats{border-left:1px solid var(--hairline)}
+/* 只有内容滚，模块头不动——这是「分区」和「长页面」的分水岭 */
+.rmb{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none}
+.rmb::-webkit-scrollbar{display:none}
+.rmh{flex:none;display:flex;align-items:center;gap:var(--sp-2);
+  padding:var(--sp-4) var(--sp-4) var(--sp-2);background:var(--paper)}
+/* 标题只在内容滚起来的时候才长出那条线——静止时一条不必要的横线，
+   滚动时它才真的在挡住下面划过去的内容 */
+.rmod.sc .rmh{box-shadow:0 1px 0 var(--hairline)}
+/* 这三个标题是路牌不是内容：压小、退到 faint，让下面的数字和状态抢走视线。
+   不转全大写——句式大小写有字形起伏，扫读时认得更快；
+   全大写只在极短的机器标签上才划算。彩色小竖条也删了：
+   三块内容本来就在三个位置上，不需要再给每块发一个颜色徽记。 */
+.rmh h3{margin:0;font-size:var(--rt-title);font-weight:var(--rt-title-w);
+  letter-spacing:0;color:var(--faint)}
+
+/* Agent status 现在在下半部的窄格子里：星座在上、读数在下，不再左右分。
+   中间不加分隔线——空当已经够分组了 */
+.rsbody{display:flex;flex-direction:column}
+.rsplit{flex:1;min-height:0;display:flex;flex-direction:column;align-items:stretch;
+  gap:2px;padding:2px 0 0}
+
+/* ── 一排候命的人 ──
+   星座讲的是「它们在转」，这一排讲的是「它们是谁、现在什么状态」。
+   两者说的是同一批 agent，放在一起才像一屋子人在待命。 */
+/* 名字不截断：装不下就让这一条横滑，省略号会把 Provenance / Sanctions 这种
+   本来就该看清的名字砍掉一半 */
+.roster{flex:none;position:relative;z-index:1;background:var(--paper);
+  display:flex;gap:4px;padding:var(--sp-2) var(--sp-3) var(--sp-3);
+  margin-top:var(--sp-2);overflow-x:auto;scrollbar-width:none}
+.roster::-webkit-scrollbar{display:none}
+/* 排面装不下七个人时右缘淡出——「后面还有」得看得出来；滚到头就收掉 */
+.roster.more{mask-image:linear-gradient(to right,#000 calc(100% - 44px),transparent);
+  -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 44px),transparent)}
+.ragp{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:5px 8px;
+  min-height:40px;/* 闲时不带副标，开工多一行——锁高防整排跳动 */
+  border:0;background:none;cursor:pointer;text-align:left;
+  border-radius:var(--r-control);transition:background var(--dur-fast) var(--ease)}
+.ragp:hover{background:var(--canvas)}
+/* 选中态：这一排现在是选择器，不只是状态灯 */
+.ragp.sel{background:var(--canvas);box-shadow:inset 0 0 0 1px var(--line-strong)}
+.ragp.sel .ragt b{color:var(--ink)}
+.ragp:focus-visible{outline:var(--focus-w) solid var(--focus-c);outline-offset:1px}
+/* ── agent 标识的状态 ──
+   角色不换，换神态：闲着褪色打盹 → checking 眼神左右扫、身体弹性起伏 →
+   判定后回血定住（结论交给下面的 pass/note 字色，不再套边框——
+   边框套上去像永远在加载）。flag 只瞪眼。排队制，同时只有一个在动。 */
+.ragav{width:30px;height:30px;flex:none;display:block;
+  transition:filter var(--dur-normal) var(--ease),opacity var(--dur-normal) var(--ease)}
+.ragav svg{display:block;width:100%;height:100%;overflow:visible}
+.ragav .gart,.ragav .geyes{transform-box:fill-box;transform-origin:center}
+.ragp.idle .ragav,.ragp.queued .ragav{filter:grayscale(.7) brightness(.85);opacity:.62}
+.ragp.checking .ragav .gart{animation:gsquash 1.5s var(--ease) infinite}
+.ragp.checking .ragav .geyes{animation:geyescan 1.7s ease-in-out infinite}
+.ragp.flag .ragav .geyes{transform:scaleY(1.28)}
+@keyframes gsquash{0%,100%{transform:scale(1,1) translateY(0)}
+  38%{transform:scale(1.08,.9) translateY(.7px)}
+  62%{transform:scale(.955,1.06) translateY(-.8px)}}
+@keyframes geyescan{0%,42%{transform:translateX(-1.4px)}
+  50%,92%{transform:translateX(1.4px)}100%{transform:translateX(-1.4px)}}
+@media (prefers-reduced-motion:reduce){
+  .ragav .gart,.ragav .geyes{animation:none!important}
+}
+.ragt{display:flex;flex-direction:column;gap:1px;line-height:1.25}
+.ragt b{font-size:var(--rt-body);font-weight:var(--rt-body-w);color:var(--mute);white-space:nowrap}
+.ragt i{font-style:normal;font-size:var(--rt-meta);color:var(--faint-2);white-space:nowrap}
+.ragp.checking .ragt b,.ragp.pass .ragt b,.ragp.note .ragt b,.ragp.flag .ragt b{color:var(--ink)}
+.ragp.queued .ragt b{color:var(--mute)}
+.ragp.checking{background:var(--paper)}
+.ragp.checking .ragt i{color:var(--accent)}
+.ragp.queued{background:none}
+.ragp.pass .ragt i{color:var(--green)}
+.ragp.note .ragt i{color:var(--warn)}
+.ragp.flag .ragt i{color:var(--neg)}
+@media (prefers-reduced-motion:reduce){.ragav{transition:none}}
+/* 必须裁剪：格子一矮，flex:1 会缩到画布高度以下，
+   而 canvas 不会跟着缩——它就直接画到下面的读数上了 */
+.rsplit>.rtable{order:1;flex:1;min-height:0;min-width:0;justify-content:center;
+  padding-inline:0;overflow:hidden}
+.rsplit>.rstats{order:2;flex:none;
+  grid-template-columns:minmax(0,1fr);gap:0;background:none;border:0;
+  align-content:center;padding:2px 0}
+.rmc{font-size:var(--rt-badge);font-weight:var(--rt-badge-w);color:var(--on-inverse,var(--paper));background:var(--warn);
+  border-radius:999px;padding:1px var(--sp-2);line-height:1.6}
+.rmc:empty{display:none}
+.rmsub{margin-left:auto;font-size:var(--rt-meta);color:var(--faint-2)}
+
+/* ① 订单状态 —— 平铺在模块卡面上，分隔只用发丝线 */
+/* ① 一笔一张卡。这一块是要动手的东西，卡片比表格行更像「一件待办」——
+   有边界、有独立的动作落点。地面换成 canvas，卡才浮得起来。 */
+/* 订单排成一排排小卡，金额居中是主角：扫一排卡 = 扫「出多少、进多少」。
+   − 是轮到你付的，+ 是等着进来的。状态和人退到上下两行陪衬。 */
+#ro-list{padding:var(--sp-2) var(--sp-4) var(--sp-4);background:none;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(186px,1fr));
+  /* 行高不吃容器剩余高度：只剩一行卡时 stretch 会把卡抻到整个模块那么高 */
+  align-content:start;gap:var(--sp-2)}
+.rocard{display:flex;flex-direction:column;align-items:flex-start;gap:7px;
+  padding:10px 12px 9px;text-align:left;min-width:0;
+  background:var(--canvas);border:0;border-radius:var(--r-card);
+  box-shadow:none;cursor:pointer;
+  transition:background var(--dur-fast) var(--ease)}
+.rocard:hover{background:var(--card)}
+.rocard:active{background:var(--cream)}
+.roc-big{display:block;align-self:center;padding:2px 0 1px;
+  font-size:20px;font-weight:600;letter-spacing:-.02em;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.roc-big.in{color:var(--green)}
+.roc-big.none{color:var(--faint-2);font-weight:400}
+/* 状态是卡片的第一行，也是这一块唯一的重点 */
+/* 状态行退一级：金额是这张卡的主角，状态是给它定性的标签 */
+.roc-st{display:flex;align-items:center;gap:6px;font-size:var(--rt-meta);font-weight:var(--rt-meta-w);color:var(--mute)}
+.roc-st i{width:6px;height:6px;border-radius:999px;flex:none;background:var(--faint-2)}
+.rocard.you .roc-st i{background:var(--warn);box-shadow:0 0 0 3px var(--warn-wash)}
+.rocard.them .roc-st i{background:var(--accent)}
+.roc-st time{margin-left:auto;flex:none;font-size:var(--rt-meta);font-weight:var(--rt-meta-w);color:var(--faint-2)}
+
+/* 订单描述已删。卡上只剩状态 + 人 + 金额 + 动作 */
+.roc-av{width:20px;height:20px;flex:none;border-radius:50%;font-size:9px;font-weight:600;
+  display:flex;align-items:center;justify-content:center}
+.roc-who{font-size:var(--rt-body);color:var(--mute);min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* 筛选条：单子多起来才出现（≤2 张不值得占一行），贴在列表顶端不随内容滚走 */
+/* 筛选跟标题同一行：它是这一块的视图开关，不是列表内容，
+   而且省下一整行的高度给订单本身 */
+.rmhfil{margin-left:auto}
+.rmhfil .hfils{display:flex;gap:2px}
+.rmhfil .hfil{padding:2px var(--sp-2);font-size:var(--rt-meta)}
+.roc-bot{display:flex;align-items:center;gap:6px;width:100%;min-width:0;padding-top:1px}
+.roc-bot time{margin-left:auto;flex:none;font-size:var(--rt-meta);color:var(--faint-2)}
+.rofoot{padding:var(--sp-3) var(--sp-4);font-size:var(--rt-body);color:var(--faint)}
+.roempty{padding:var(--sp-4);font-size:var(--rt-body);color:var(--faint)}
+
+/* ② Agent status：四块数字 + 待命阵容。1px 网格线就是分隔，不再套一层卡 */
+/* ② 这一块是「读数」不是「列表」：数字放大、底色沉一档，跟上下两块的行式排布拉开 */
+/* 四个读数：标签在左、值在右，一行一个。没有描述句——这是仪表，不是说明书 */
+.rstats{display:grid;grid-template-columns:minmax(0,1fr);background:none}
+.rtile{display:flex;align-items:baseline;gap:var(--sp-3);padding:var(--sp-2) var(--sp-4);background:none}
+.rtile + .rtile{border-top:1px solid var(--hairline-2)}
+.rtile span{flex:1;min-width:0;font-size:var(--rt-body);color:var(--mute)}
+.rtile b{flex:none;font-size:var(--rt-lead);font-weight:var(--rt-lead-w);color:var(--ink);letter-spacing:-.01em;
+  font-variant-numeric:tabular-nums}
+.rtable{display:flex;align-items:center;padding:var(--sp-2) var(--sp-4)}
+/* 待命星座：常驻，不表态。
+   外面套一层限宽容器 —— consensusNet 按父宽算画布，父级一宽轨道簇就飘在中间一小块，
+   周围全是空。收到 360，簇才填得满。 */
+/* 秀肌肉的地方：给足尺寸并居中。宽度别开太大——簇是圆的，宽过头只是两侧留白 */
+.rtnetw{flex:1;min-width:0;max-width:400px;margin:0 auto;display:flex;align-items:center}
+.rtnet{display:block;width:100%;opacity:.72;
+  transition:opacity var(--dur-normal) var(--ease)}
+.rtable.live .rtnet{opacity:1}
+.aflive em{font-style:normal;letter-spacing:0;text-transform:none}
+.laybtn[hidden]{display:none}
+.laybtn{flex:none;width:24px;height:24px;margin:-4px -6px -4px 0;display:grid;place-items:center;
+  border:0;border-radius:var(--r-chip);background:none;color:var(--faint);cursor:pointer;
   transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
-.rdone .c{color:var(--faint)}
-.rdone .ch{margin-left:auto;color:var(--faint-2)}
-.rdone:hover{background:var(--canvas);color:var(--ink)}
-.rdone:hover .ch{color:var(--accent)}
-/* 卡边 10 + 卡内 14 = 24，与余额块同一条文字边 */
-.group{padding:4px 10px 8px;display:flex;flex-direction:column;gap:8px}
-.rempty{padding:32px 24px;font-size:12px;color:var(--faint);text-align:center}
+.laybtn:hover{background:var(--card);color:var(--ink)}
+.laybtn:focus-visible{outline:var(--focus-w) solid var(--focus-c);outline-offset:1px}
+/* .rth/.rtfoot/.rag 已随说明文字一并退役——那块只剩星座本体 */
 
-/* 待办卡：状态 + 时长 / 一句话 / 对手方 + 金额 */
-.qcard{display:flex;flex-direction:column;gap:7px;width:100%;text-align:left;position:relative;
-  padding:12px 14px;border-radius:var(--r-control);
-  border:1px solid var(--hairline);background:var(--surface);
-  transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
-.qcard:hover{border-color:var(--line-strong)}
-.qcard:active{background:var(--canvas)}
-/* 轮到你：左缘色条 + 淡底，不只靠颜色 */
-.qcard.mine{border-color:var(--blue-wash-edge,rgba(37,99,235,.28));background:var(--blue-wash);padding-left:16px}
-.qcard.mine::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
-  border-radius:var(--r-control) 0 0 var(--r-control);background:var(--blue)}
-.qcard.mine:hover{border-color:var(--accent)}
+/* 顶部批次进度条已删：下面步骤条本来就在逐条报进度（第几步、几条源、几票），
+   顶上再来一根抽象的百分比是同一件事说两遍。 */
 
-.qtop{display:flex;align-items:center;gap:8px}
-.qtag{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;
-  letter-spacing:.01em;color:var(--mute)}
-.qtag svg{width:12px;height:12px;flex:none}
-.qcard.mine .qtag{color:var(--accent)}
-.qwhen{margin-left:auto;flex:none;font-size:11px;color:var(--faint)}
-.qdesc{font-size:13px;font-weight:500;line-height:1.45;color:var(--ink)}
-.qbot{display:flex;align-items:baseline;gap:8px}
-.qwho{font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.qamt{margin-left:auto;flex:none;font-size:12px;font-weight:500;color:var(--ink)}
+/* 溯源链：一跳一行，左侧竖线把顺序串起来 */
+.afflow{position:relative;padding-left:2px}
+.afhop{position:relative;display:grid;grid-template-columns:auto 1fr auto;
+  align-items:baseline;gap:4px 8px;padding:0 0 9px 14px}
+.afhop::before{content:'';position:absolute;left:3px;top:6px;bottom:0;width:1px;
+  background:var(--hairline)}
+.afhop:last-child{padding-bottom:0}
+.afhop:last-child::before{display:none}
+.afhop i{position:absolute;left:0;top:4px;width:7px;height:7px;border-radius:999px;
+  background:var(--paper);box-shadow:0 0 0 1.5px var(--faint-2)}
+.afhop b{grid-column:1;font-size:var(--rt-body);font-weight:var(--rt-body-w);color:var(--ink)}
+.afhop time{grid-column:3;font-size:var(--rt-meta);color:var(--faint-2)}
+.afhop em{grid-column:1/-1;font-style:normal;font-size:var(--rt-meta);color:var(--faint);line-height:1.45}
 
+/* 批次分隔：靠空当分组，只留一条极淡的线做锚 */
+.afdiv{display:flex;align-items:baseline;gap:var(--sp-2);margin:var(--sp-5) 0 var(--sp-2);
+  padding-top:var(--sp-4);border-top:1px solid var(--hairline)}
+.afdiv span{font-size:var(--rt-meta);font-weight:var(--rt-meta-w);letter-spacing:0;
+  color:var(--faint-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.afdiv time{margin-left:auto;flex:none;font-size:var(--rt-meta);color:var(--faint-2)}
+.afdiv + .afrow::before{top:13px}
+/* ══ 中栏 · Thinking 轨迹 ══ 对话流里的一瞥，不做成卡片：
+   它是过渡态，跑完收成一行，想看再展开。留档在右栏 Assessment 里。 */
+.thk{align-self:flex-start;display:flex;flex-direction:column;width:100%;max-width:520px;
+  margin:4px 0 2px}
+.thkh{display:inline-flex;align-items:center;gap:8px;width:fit-content;margin-left:-6px;
+  padding:4px 6px;border:0;background:none;cursor:pointer;border-radius:var(--r-control);
+  transition:background var(--dur-fast) var(--ease)}
+.thkh:hover{background:var(--canvas)}
+.thksp{font-size:var(--rt-icon);color:var(--faint);line-height:1}
+.thk.working .thksp{color:var(--mute)}
+.thkl{font-size:var(--rt-title);font-weight:var(--rt-title-w);color:var(--mute);white-space:nowrap}
+.thkl.shimmer{background:linear-gradient(90deg,var(--faint) 35%,var(--ink) 50%,var(--faint) 65%);
+  background-size:200% 100%;-webkit-background-clip:text;background-clip:text;
+  color:transparent;animation:agshimmer 1.4s linear infinite}
+.thkc{font-size:var(--rt-icon);color:var(--faint-2);line-height:1;
+  transition:transform var(--dur-normal) var(--ease)}
+.thk.open .thkc{transform:rotate(180deg)}
 
+/* 展开区用 grid-template-rows 过渡，高度不用写死 */
+.thkb{display:grid;grid-template-rows:0fr;opacity:0;
+  transition:grid-template-rows .4s cubic-bezier(.23,1,.32,1),opacity .3s var(--ease)}
+.thk.open .thkb{grid-template-rows:1fr;opacity:1}
+.thkb>.thkin{overflow:hidden;position:relative;margin:2px 0 0 5px;padding-left:16px}
+.thkline{position:absolute;left:3px;top:0;bottom:6px;width:1px;background:var(--hairline)}
+.thkrows{display:flex;flex-direction:column;gap:2px;padding:4px 0}
+.thkr{display:flex;align-items:center;gap:9px;min-height:26px;padding:2px 6px;
+  border-radius:6px;animation:agfadeup .32s cubic-bezier(.23,1,.32,1) both}
+.thkri{flex:none;width:13px;height:13px;display:block}
+/* 跑着的那行是转圈，完成的落成对勾 */
+.thkr.run .thkri{border:1.5px solid var(--line-strong);border-top-color:var(--mute);
+  border-radius:999px;animation:spin .7s linear infinite}
+.thkr.done .thkri{border:0;background:no-repeat center/13px 13px;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2372757c' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")}
+.thkrt{min-width:0;font-size:var(--rt-body);color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thkr.done .thkrt{color:var(--mute)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){
+  .thkl.shimmer{animation:none;background:none;color:var(--mute)}
+  .thkr,.thkr.run .thkri{animation:none}
+  .thkb{transition:none}
+}
+
+/* ══ 一次核验 = 一条进度 ══ */
+#afruns{padding:var(--sp-2) var(--sp-4) var(--sp-4)}
+.arun + .arun{margin-top:6px;padding-top:6px;border-top:1px solid var(--hairline-2)}
+.arhead{display:flex;align-items:center;gap:var(--sp-2);width:100%;padding:var(--sp-2) 2px;
+  background:none;border:0;text-align:left;cursor:pointer;border-radius:var(--r-control)}
+.arhead:hover{background:var(--canvas)}
+.arhi{width:8px;height:8px;flex:none;border-radius:999px;background:var(--green)}
+.arhi.run{background:var(--accent);animation:afpulse 1.4s var(--ease) infinite}
+.arhi.flag{background:var(--warn)}
+.arht{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;line-height:1.3}
+.arht b{font-size:var(--rt-title);font-weight:var(--rt-title-w);color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arht i{font-style:normal;font-size:var(--rt-meta);color:var(--faint)}
+.arhead time{flex:none;font-size:var(--rt-meta);color:var(--faint-2)}
+.archev{flex:none;color:var(--faint-2);font-size:var(--rt-icon);line-height:1;
+  transition:transform var(--dur-fast) var(--ease)}
+.arhead.on .archev{transform:rotate(180deg)}
+
+/* 每一步：左边一根脊线串起顺序，右边一句结论 */
+.arsteps{padding:2px 0 6px}
+/* 空态：内容矮、格子高，居中比顶天挂着好看；提示句对齐步骤文字的起笔 */
+.arun.aidle{min-height:100%;display:flex;flex-direction:column;justify-content:center}
+.aidle .afempty{padding-left:26px}
+.arstep{position:relative;display:flex;gap:12px;padding:0 0 2px 2px}
+.arstep::before{content:'';position:absolute;left:7px;top:14px;bottom:0;width:1px;
+  background:var(--hairline)}
+.arstep:last-child::before{display:none}
+/* 7px 不是节奏是几何：把 11px 的点摆到首行文字的视觉中心 */
+.arsi{position:relative;flex:none;width:12px;display:flex;justify-content:center;padding-top:7px}
+.arsi i{width:11px;height:11px;border-radius:999px;background:var(--paper);
+  box-shadow:0 0 0 1.5px var(--faint-2);font-size:8px;line-height:11px;text-align:center;
+  color:transparent;font-style:normal}
+.arstep.done .arsi i{background:var(--green);box-shadow:0 0 0 1.5px var(--green);color:var(--paper)}
+.arstep.run .arsi i{background:var(--accent);box-shadow:0 0 0 1.5px var(--accent);
+  animation:afpulse 1.4s var(--ease) infinite}
+.arsm{flex:1;min-width:0;padding-bottom:var(--sp-2)}
+.arst{display:flex;align-items:baseline;gap:var(--sp-2);padding:var(--sp-1) 0}
+.arst[role="button"]{cursor:pointer}
+.arst b{flex:none;font-size:var(--rt-body);font-weight:500;color:var(--mute)}
+.arstep.done .arst b,.arstep.run .arst b{color:var(--ink)}
+/* 结论是这一行的重点：它回答「这一步查出了什么」 */
+/* 读数退一级：标题是路标（正文号/中量/实色），读数是补充（小一号/灰）。
+   原来读数比标题还重，两行糊成一团分不出主次 */
+.arsl{flex:1;min-width:0;font-size:var(--rt-meta);color:var(--faint);font-weight:var(--rt-meta-w);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arstep.wait .arsl{color:var(--faint-2)}
+.arsx{flex:none;color:var(--faint-2);font-size:var(--rt-icon);transition:transform var(--dur-fast) var(--ease)}
+.arstep.open .arsx{transform:rotate(180deg);color:var(--accent)}
+.arst[role="button"]:hover .arsx{color:var(--accent)}
+
+/* 折叠详情：默认收着，这里是给事后看的 */
+.arsd{display:none;margin-top:4px;padding:10px 12px;border-radius:var(--r-card);
+  background:var(--canvas);box-shadow:var(--ring)}
+/* 长清单自动分列：190px 一列，宽度有多少用多少，高度立刻压下来 */
+.ardcols{columns:190px;column-gap:var(--sp-5)}
+.ardcols .ards{break-inside:avoid}
+.arstep.open .arsd{display:block;animation:agfadeup .2s var(--ease) both}
+.ards{margin-bottom:var(--sp-1);line-height:1.4}
+.ards b{display:block;font-size:var(--rt-body);font-weight:var(--rt-body-w);color:var(--ink)}
+.ards em{font-style:normal;font-size:var(--rt-meta);color:var(--faint)}
+.ardv{display:grid;grid-template-columns:auto auto 1fr;gap:2px var(--sp-2);align-items:baseline;
+  padding:var(--sp-1) 0}
+.ardv + .ardv{border-top:1px solid var(--hairline-2)}
+.ardv b{font-size:var(--rt-body);font-weight:var(--rt-body-w);color:var(--ink)}
+.ardvv{font-size:var(--rt-badge);font-weight:var(--rt-badge-w);letter-spacing:.03em;text-transform:uppercase;
+  padding:1px 6px;border-radius:999px;color:var(--green);background:var(--green-wash)}
+.ardv.note .ardvv{color:var(--warn);background:var(--warn-wash)}
+.ardv.flag .ardvv{color:var(--neg);background:var(--warn-wash)}
+.ardv em{grid-column:1/-1;font-style:normal;font-size:var(--rt-body);color:var(--mute);line-height:1.45}
+/* 可展开的 agent 行 */
+.ardv.can{grid-template-columns:auto auto auto 1fr;cursor:pointer;
+  padding:6px 6px;margin:0 -6px;border-radius:6px}
+.ardv.can:hover{background:var(--canvas)}
+.ardv:focus-visible{outline:var(--focus-w) solid var(--focus-c);outline-offset:1px;border-radius:6px}
+.ardvx{color:var(--faint-2);font-size:var(--rt-icon);line-height:1;
+  transition:transform var(--dur-fast) var(--ease)}
+.ardv.can:hover .ardvx{color:var(--accent);transform:translateX(1px)}
+/* 底稿本体：默认收着 */
+.ardd{display:none;margin:2px 0 8px;padding:10px 12px;border-radius:var(--r-card);
+  background:var(--paper);box-shadow:var(--ring)}
+.ardd.open{display:block;animation:agfadeup .2s var(--ease) both}
+.ardd .afev{display:block;margin:0;padding:0;background:none;box-shadow:none}
+
+/* ── agent profile ── 分工只有一条线：左＝它是谁、量什么（能力）；
+   右＝这一笔它干了啥（读数、来源、结论）。数字只出现在右边——
+   左边一旦带读数，两栏就都像结果，分栏白分。
+   顶条只放返回：它是导航，得有个不随排法漂移的家。 */
+/* 进了 profile 就收掉「Assessment」那一行：这一带本来就矮，
+   顶上不该有两条平行的行头（一条说模块名，一条说返回）。
+   agtop 这时候就是这块的头，所以吃 .rmh 的那套间距。 */
+#rm-feed:has(.agpage) .rmh{display:none}
+.agtop{flex:none;display:flex;align-items:center;gap:var(--sp-2);
+  padding:var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-3);
+  animation:agfadeup .2s var(--ease) both}
+.agtop[hidden]{display:none}
+.agback{flex:none;display:inline-flex;align-items:center;gap:2px;
+  padding:var(--sp-1) var(--sp-2) var(--sp-1) 6px;border:0;border-radius:999px;cursor:pointer;
+  background:var(--canvas);color:var(--mute);font:inherit;font-size:var(--rt-meta);
+  transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.agback svg{display:block}
+.agback:hover{background:var(--card);color:var(--ink)}
+.agback:focus-visible{outline:var(--focus-w) solid var(--focus-c);outline-offset:1px}
+.agth{font-size:var(--rt-meta);color:var(--faint-2)}
+/* 整页一个骨架：名片头横排（徽记 · 名字 · 判定章 · 来源），内容在其下分栏。
+   身份横着排是 profile 的常规读法——名字挨着脸，不是脸压着名字。 */
+.agpage{padding:2px var(--sp-4) var(--sp-4);animation:agfadeup .24s var(--ease) both}
+.agph2{display:flex;align-items:center;gap:var(--sp-3);
+  padding-bottom:var(--sp-3);margin-bottom:var(--sp-4);
+  border-bottom:1px solid var(--hairline-2)}
+.agid{min-width:0;display:flex;flex-direction:column;gap:2px}
+/* 标识后面垫一团同色弥散光：线稿单摆在空白里就是「很普通」，
+   有了这层光它才像一枚徽记。颜色继承判定色——通过是绿、存疑是琥珀。 */
+.agcav{position:relative;width:44px;height:44px;flex:none;display:block;color:var(--mute)}
+.agcav::before{content:'';position:absolute;inset:-34%;border-radius:50%;
+  background:radial-gradient(circle,currentColor,transparent 66%);opacity:.16}
+.agcav svg{position:relative;display:block;width:100%;height:100%;overflow:visible}
+.agpage.pass .agcav{color:var(--green)}
+.agpage.note .agcav{color:var(--warn)}
+.agpn{font-size:17px;font-weight:600;color:var(--ink);letter-spacing:-.01em;line-height:1.2}
+.agpr{font-size:var(--rt-meta);color:var(--faint);line-height:1.35}
+.agph2 .ardvv,.agph2 .agpidle{flex:none;margin-left:var(--sp-1);
+  padding:3px 9px;letter-spacing:.05em}
+.agph2 .agpidle{border-radius:999px;background:var(--canvas)}
+.agpage.note .ardvv{color:var(--warn);background:var(--warn-wash)}
+.agpage.flag .ardvv{color:var(--neg);background:var(--warn-wash)}
+.agsrc{margin-left:auto;flex:none;text-align:right;
+  font-size:var(--rt-meta);color:var(--faint-2);line-height:1.4}
+.agsrc .num{font-weight:600;color:var(--ink)}
+/* 读数表：名目左、读数右，两列铺——五六条只占三行高 */
+.agcks{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:0 var(--sp-6)}
+/* 两列 grid 里行序左右交错，用兄弟选择器画线会让两列顶行一深一浅——每行都带 */
+.agck{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--sp-2);padding:5px 0;
+  font-size:var(--rt-body);box-shadow:0 -1px 0 var(--hairline-2)}
+.agck span{flex:1;min-width:0;color:var(--mute)}
+.agck b{flex:none;font-weight:600;color:var(--ink);text-align:right}
+/* 固定档案与工作记录之间的一条线：上面是「它是谁」，下面是「这一笔它干了啥」 */
+.agsep{border-top:1px solid var(--hairline);margin:var(--sp-4) 0}
+/* run 态的能力清单收成一行内联：在场（这是它的固定档案），
+   但不再是第二张表——真正的读数表就在下面 */
+.agmline{margin:2px 0 0;font-size:var(--rt-meta);color:var(--faint);line-height:1.6}
+.agmline span{margin-right:var(--sp-2);color:var(--faint-2);
+  font-weight:var(--rt-meta-w);letter-spacing:.04em;text-transform:uppercase;font-size:var(--rt-badge)}
+/* 读数行的状态点：绿=这一票已定，灰=还在查 */
+.agdot{flex:none;width:6px;height:6px;border-radius:999px;background:var(--green);
+  align-self:center}
+.agdot.dim{background:var(--faint-2)}
+/* 百分比读数的量条：3px，一眼读出「92 在满格里的位置」 */
+.agmeter{flex-basis:100%;height:3px;margin:2px 0 3px 14px;border-radius:2px;
+  background:var(--hairline-2);overflow:hidden}
+.agmeter b{display:block;height:100%;border-radius:2px;background:var(--accent)}
+.agwork>.afsec{margin:0 0 var(--sp-3)}
+.agwork>.afev{display:grid;margin:var(--sp-4) 0 0;padding:0;background:none;box-shadow:none;
+  gap:0 var(--sp-4);grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  align-content:start}
+.agwork .afsx.wide{grid-column:1/-1}
+.agwork .asby{padding:var(--sp-6) 0;text-align:center}
+/* 空态：能力清单就是全部内容，横着铺满版面（多列），不缩在角落衬出一片空 */
+.agmeasure .afsec{margin:0 0 var(--sp-2)}
+.agmeasure .agtags{columns:190px;column-gap:var(--sp-6);max-width:660px}
+.agmeasure .agtag{break-inside:avoid}
+/* 维度只列名目——这一笔各查成什么样，右边 Checks run 里有。
+   不用胶囊：一列灰底方块读起来是「一堆标签」，而且又给这一栏引入了第二种底色。
+   规格表式的清单（前导点 + 纯文字）才像 profile 里的「能力」段。 */
+.agtags{display:block;width:100%}
+.agtag{display:block;position:relative;padding:0 0 0 13px;margin-bottom:7px;
+  font-size:var(--rt-meta);color:var(--mute);line-height:1.4}
+.agtag::before{content:'';position:absolute;left:0;top:.5em;
+  width:4px;height:4px;border-radius:1px;background:currentColor;opacity:.45}
+/* 滚动出口：贴着滚动视口底边的一道渐隐。
+   用 sticky 不用 ::after——绝对定位的伪元素会跟着内容一起滚走，
+   只有 sticky 才一直待在视口下沿，滚到底也才收得掉。 */
+.asfade{position:sticky;bottom:0;z-index:1;flex:none;height:30px;margin:-30px 0 0;
+  pointer-events:none;opacity:0;visibility:hidden;
+  transition:opacity var(--dur-fast) var(--ease);
+  background:linear-gradient(to top,var(--paper),transparent)}
+/* visibility 一定要跟着 opacity 走：opacity:0 的按钮照样接得到点击，
+   滚到底之后那儿会留一个看不见但能按的东西 */
+.more>.asfade{opacity:1;visibility:visible}
+/* 光有渐隐不够——暗色界面里那点明度差会被当成边缘阴影。
+   给它一个能按的把手，「下面还有」就从暗示变成了控件。 */
+.asdn{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);
+  width:22px;height:22px;padding:0;border:0;border-radius:999px;cursor:pointer;
+  pointer-events:auto;display:grid;place-items:center;
+  background:var(--card);box-shadow:var(--ring);color:var(--faint);
+  font:inherit;font-size:var(--rt-icon);line-height:1;
+  transition:color var(--dur-fast) var(--ease),transform var(--dur-fast) var(--ease)}
+.asdn::before{content:'⌄';display:block;margin-top:-4px}
+.asdn:hover{color:var(--ink);transform:translateX(-50%) translateY(1px)}
+.asdn:focus-visible{outline:var(--focus-w) solid var(--focus-c);outline-offset:1px}
+
+.agpidle{font-size:var(--rt-badge);font-weight:var(--rt-badge-w);letter-spacing:.03em;
+  text-transform:uppercase;color:var(--faint-2)}
+.agpm{margin:0 0 var(--sp-4);font-size:14px;color:var(--ink);line-height:1.5;
+  letter-spacing:-.005em;max-width:56ch}
+.afsx>.afsec:first-child{margin-top:0}
+.afsx{margin-bottom:var(--sp-5)}
+.ardg{display:flex;align-items:baseline;gap:var(--sp-2);padding:var(--sp-1) 0;font-size:var(--rt-body)}
+.ardg + .ardg{border-top:1px solid var(--hairline-2)}
+.ardg b{flex:1;min-width:0;color:var(--ink);font-weight:500}
+.ardg .num{flex:none;font-weight:600;color:var(--ink)}
+.ardg em{flex:none;font-style:normal;color:var(--faint-2)}
+
+/* Assessment 内部：环在左、进度在右。环是落点，进度是过程，并排看最省事。
+   这一带按比例占高，空态内容撑不满——让内容竖向居中、候命排贴底，
+   比在下面留一片空好看 */
+#rm-feed .rmb{display:flex;flex-direction:column}
+/* align-items 不能用 center：内容比容器高时，居中会把它同时往上下两头顶出去
+   （展开证据清单实测顶到 y=-318 / bottom=902，直接盖住下面两块模块）。
+   改成 stretch，让进度那一列自己滚；环是固定高的块，单独居中即可。 */
+.assplit{flex:1;min-height:0;display:flex;align-items:stretch;gap:6px}
+/* 环是自足的圆，居中读得通；agent 名片是文字块，必须跟右栏共享顶边，
+   否则两栏两个起始边，读作错位（实测名片顶边低 122px） */
+.assplit>#arring{flex:0 0 250px;align-self:center}
+#right:not(.lay-b) .assplit.reading>#arring{display:none}
+.assplit:has(.agcard)>#arring{align-self:start}
+/* 外层那道渐隐只服务上下排的单条滚动；左右分栏时两栏各滚各的，用不上它 */
+.assplit>.asfade{display:none}
+
+/* 闸门条：跟在环下面，实测值对阈值 */
+.argates{margin:2px 4px 6px;display:flex;flex-direction:column;gap:1px}
+.argate{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:baseline;
+  padding:var(--sp-1) var(--sp-2);border-radius:6px;background:var(--canvas)}
+.argate i{width:6px;height:6px;border-radius:999px;background:var(--green);
+  align-self:center}
+.argate b{font-size:var(--rt-body);font-weight:var(--rt-body-w);color:var(--ink);min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.argate .num{font-size:var(--rt-body);font-weight:var(--rt-body-w);color:var(--ink)}
+.argate em{grid-column:2/-1;font-style:normal;font-size:var(--rt-meta);color:var(--faint-2)}
+/* 滚动区要有出口提示：裁掉 262px 却什么都不说，切口又落在行中间，
+   读起来像坏了而不是「还能往下滚」。三处滚动盒共用同一套出口（.asfade + .asdn），
+   只有定位方式不同——这一处滚的是里面的 #afruns，所以渐隐挂在外壳上，绝对定位。 */
+.aswrap{flex:1;min-width:0;min-height:0;position:relative;display:flex}
+.aswrap>.asfade{position:absolute;left:0;right:0;bottom:0;margin:0;height:36px}
+.aswrap>#afruns{flex:1;min-width:0;min-height:0;overflow-y:auto;
+  scrollbar-width:none;padding-bottom:20px}
+/* 跑完之后进度只剩四行，这一栏却有 490 —— 空档全堆在下面，右下角就空了一大块。
+   竖向居中，让它跟左边那个环共用一条中线。
+   safe center：内容比容器高时自动退回顶端对齐，不会像纯 center 那样两头都顶出去
+   （之前展开证据清单实测顶到 y=-318，直接盖住下面的模块）。 */
+.aswrap>#afruns:has(.arun){display:flex;flex-direction:column;
+  justify-content:safe center}
+.aswrap>#afruns::-webkit-scrollbar{display:none}
+#arring{padding:8px 6px 2px}
+#arring:empty{display:none}
+.arring{display:block;width:220px;height:220px;margin:0 auto}
+/* 闸门要跟环共用这一栏的高度，环让出 44px 给它们 */
+.arring.sm{width:176px;height:176px}
+/* 兜底：万一闸门条数超出预期，这一栏自己滚，绝不半截截断 */
+.assplit>#arring:has(.argates){align-self:stretch;overflow-y:auto;scrollbar-width:none}
+.assplit>#arring:has(.argates)::-webkit-scrollbar{display:none}
+/* 空态的环压暗：还没查，它不该跟跑完的那一圈一样亮 */
+.arring.dim{opacity:.45}
+@media (max-width:1240px){
+  .assplit{flex-direction:column}
+  .assplit>#arring{flex:none;align-self:center}
+}
+
+/* 段首那条分隔不需要上边线和上留白——它上面就是「Live」标题，没有要分开的东西 */
+.affeed .afdiv:first-child{margin-top:0;padding-top:0;border-top:0}
+
+/* 证据默认收着：这栏是余光扫的，展开是主动动作 */
+.afev{display:none;margin-top:var(--sp-2);padding:var(--sp-3);border-radius:var(--r-card);
+  background:var(--canvas);box-shadow:var(--ring)}
+.afrow.open .afev{display:block;animation:agfadeup .22s var(--ease) both}
+.afsec{font-size:var(--rt-meta);font-weight:var(--rt-meta-w);letter-spacing:0;
+  color:var(--faint-2);margin:var(--sp-5) 0 var(--sp-2)}
+.afsec:first-child{margin-top:0}
+.afsec:first-child{margin-top:0}
+.afk{position:relative;padding:5px 0 5px 16px;margin:0;line-height:1.4}
+.afk+.afk{border-top:1px solid var(--hairline-2)}
+/* 每个来源前一枚小勾：查过了。列表从「一堆名字」变成「清点完的清单」 */
+.afk::before{content:'✓';position:absolute;left:1px;top:6px;
+  font-size:10px;line-height:1.4;color:var(--green)}
+.afk b{display:block;font-size:var(--rt-body);font-weight:var(--rt-body-w);color:var(--ink)}
+.afk em{font-style:normal;font-size:var(--rt-meta);color:var(--faint)}
+.afc{display:flex;gap:var(--sp-2);align-items:baseline;padding:5px 0;font-size:var(--rt-body)}
+.afc+.afc{border-top:1px solid var(--hairline-2)}
+.afc span{color:var(--mute);min-width:0;flex:1}
+.afc b{flex:none;font-weight:600;color:var(--ink)}
+.afraw{margin:0;padding:10px 12px;border-radius:6px;background:var(--canvas);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:11px;line-height:1.7;color:var(--mute);
+  white-space:pre;overflow-x:auto}
+/* 老右栏（rstate/qcard 一族）的样式已随 DOM 一起退役 */
 
 /* ══ 控件基座：所有非 .btn 的控件也必须落在同一套尺寸上 ══
    IconButton 28×28 · Segmented h28 · TextLink 12/500 · 图标一律 16 */
@@ -1623,7 +2453,51 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .btn[disabled]{opacity:.45;pointer-events:none}
 
 /* ══ Prompt Bar（照 beautifului.dev 的 Composer：@ 引用 · 条件选择 · 发送） ══ */
-#say{position:relative;flex:none;width:100%;max-width:820px;align-self:center}
+/* ══ 输入框两态：默认是一行窄胶囊，点开才展成整块面板 ══
+   静止状态不该占掉半屏——它多数时候只是「入口」，不是「工作面」。
+   弹性曲线与宽高同时 morph 参考 21st.dev/@easemize/ai-chat-input；
+   彩虹光束沿用本来那套（:focus-within 触发），展开即点亮。 */
+#say{position:relative;flex:none;width:100%;max-width:820px;align-self:center;
+  --spring:cubic-bezier(.175,.885,.32,1.275);
+  transition:max-width .4s var(--spring)}
+#say.mini{max-width:440px}
+
+/* 折叠占位：静止时显示，展开后让位给 textarea */
+.sayopen{position:absolute;left:18px;right:52px;top:0;bottom:0;z-index:3;
+  display:flex;align-items:center;border:0;background:none;cursor:text;
+  font:inherit;font-size:15px;font-weight:500;color:var(--placeholder);text-align:left;
+  opacity:0;pointer-events:none;transform:scale(1.03) translateY(2px);
+  transition:opacity .22s var(--ease),transform .3s var(--spring)}
+.sayopen span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#say.mini .sayopen{opacity:1;pointer-events:auto;transform:none}
+
+/* 关键：折叠时不能改 flex-direction —— 那是不可动画的硬重排，
+   参考里之所以丝滑，就是因为两态的盒模型完全一样，只有 height / max-width 在动。
+   这里同理：方向、对齐都不变，textarea 收成 0 高，工具行原地留着。 */
+/* gap 必须归零：折叠态内容 = 0(textarea) + gap + 32(工具行) + 16(内距)，
+   留着 8 的 gap 就是 56，而高度钉死在 48 —— overflow:hidden 正好把发送键削掉一截。
+   归零后 0+0+32+16=48，严丝合缝，按钮也自然垂直居中。 */
+#say.mini .sayrow{padding:8px;border-radius:24px;overflow:hidden;gap:0}
+#say.mini #free{height:0!important;min-height:0;opacity:0;padding:0;pointer-events:none}
+#say.mini #abar{opacity:0;pointer-events:none}
+/* 折叠态只留发送那一颗——附件、麦克风在一行胶囊里没有落脚点。
+   用 display:none 不会让 #send 移位，它本来就是 margin-left:auto 顶在右端 */
+#say.mini .saytools>*:not(#send){display:none}
+
+/* 高度由 JS 写成具体像素才能过渡（auto 不可动画）；圆角、内距同程 */
+.sayrow{transition:border-color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease),
+  height .4s var(--spring),border-radius .4s var(--spring),padding .4s var(--spring),
+  gap .4s var(--spring)}
+#say #free,#say #abar{transition:opacity .24s var(--ease),height .4s var(--spring)}
+/* 打字撑高用快而平的曲线；弹性只留给开合。两种改高度混用同一条弹簧，
+   每敲一个字盒子都要弹一下——这正是「不如人家丝滑」的地方 */
+#say.smooth .sayrow,#say.smooth #free{transition:height .15s ease-out}
+/* 底部工具行进出带一点虚化位移，和参考里的手感一致 */
+.saytools{transition:opacity .3s var(--spring),transform .3s var(--spring),filter .3s var(--spring)}
+#say.mini .saytools{filter:none;transform:none}
+@media (prefers-reduced-motion:reduce){
+  #say,.sayrow,.sayopen,.saytools{transition:none}
+}
 .sayrow{position:relative;z-index:1;display:flex;flex-direction:column;gap:8px;padding:16px 14px 10px;
   background:var(--paper);border:1px solid var(--hairline);border-radius:var(--r-panel);
   box-shadow:var(--lift-lo);transition:border-color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
@@ -1978,30 +2852,24 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
   <!-- 左 · 从哪儿开始：三个入口 + 对话列表。对话不是入口，它是默认状态 -->
   <nav id="left" aria-label="Navigation">
     <div class="lbrandrow">
+      <!-- 折叠态：logo 的位置就是展开按钮，指上去标记变成折叠图标 -->
+      <button class="lfold" id="lfold" title="Expand sidebar" aria-label="Expand sidebar" aria-expanded="false"><span class="lmark" aria-hidden="true"><i></i></span><svg class="lfi" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.6"/><path d="M6.2 3v10"/></svg></button>
+      <!-- 展开态：logo 就是 logo，折叠按钮回到行尾自己的位置 -->
       <a class="lbrand" href="index.html" aria-label="Back to site"><span class="lmark" aria-hidden="true"><i></i></span><b>Atara</b></a>
       <span class="demo">DEMO</span>
-      <button class="sayic" id="themebtn" title="Toggle theme" aria-label="Toggle theme"></button>
-    </div>
-    <div class="ltabs" role="tablist" aria-label="Sidebar">
-      <button class="ltab on" role="tab" data-lt="ai" aria-selected="true"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6.8 8 2.5l5.5 4.3V13a.8.8 0 0 1-.8.8H9.8V9.5H6.2v4.3H3.3a.8.8 0 0 1-.8-.8Z"/></svg>Home</button>
-      <button class="ltab" role="tab" data-lt="ppl" aria-selected="false"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="5.5" r="2.6"/><path d="M1.8 13.4c.6-2.4 2.3-3.6 4.2-3.6s3.6 1.2 4.2 3.6"/><path d="M10.6 3.2a2.6 2.6 0 0 1 0 4.6M12.4 9.9c1 .5 1.7 1.7 2 3.5"/></svg>Contacts</button>
+      <button class="sayic lfoldx" id="lfoldx" title="Collapse sidebar" aria-label="Collapse sidebar" aria-expanded="true"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.6"/><path d="M6.2 3v10"/></svg></button>
     </div>
     <div class="lpane" id="lp-ai">
     <div class="navs">
-      <button class="nav" id="newchat" title="New order"><span class="ni"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.4 8.5V12a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 12V4.1A1.5 1.5 0 0 1 4 2.6h3.5"/><path d="M11.1 2.4a1.4 1.4 0 0 1 2 2L8.6 8.9l-2.6.6.6-2.6 4.5-4.5Z"/></svg></span>New order</button>
-      <button class="nav" data-v="market"><span class="ni"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 5.5h9M9 3l2.5 2.5L9 8"/><path d="M13.5 10.5h-9M7 8 4.5 10.5 7 13"/></svg></span>Trade</button>
-      <button class="nav" data-v="recs"><span class="ni"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5.2V8l2 1.4"/></svg></span>History</button>
+      <button class="nav" id="newchat" title="New order"><span class="ni"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.4 8.5V12a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 12V4.1A1.5 1.5 0 0 1 4 2.6h3.5"/><path d="M11.1 2.4a1.4 1.4 0 0 1 2 2L8.6 8.9l-2.6.6.6-2.6 4.5-4.5Z"/></svg></span>New order</button>
+      <button class="nav" data-v="market"><span class="ni"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="m10.4 5.6-1.2 3.6-3.6 1.2 1.2-3.6 3.6-1.2Z"/></svg></span>Discover</button>
+      <button class="nav" data-v="contacts"><span class="ni"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="5.5" r="2.6"/><path d="M1.8 13.4c.6-2.4 2.3-3.6 4.2-3.6s3.6 1.2 4.2 3.6"/><path d="M10.6 3.2a2.6 2.6 0 0 1 0 4.6M12.4 9.9c1 .5 1.7 1.7 2 3.5"/></svg></span>Contacts</button>
+      <button class="nav" data-v="recs"><span class="ni"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5.2V8l2 1.4"/></svg></span>Payments</button>
     </div>
-    <div class="lsec" id="tasksec" hidden>Tasks</div>
+    <div class="lsec" id="tasksec" hidden>Chats</div>
     <div id="tasklist"></div>
     </div>
-    <div class="lpane" id="lp-ppl" hidden>
-      <div id="cplist"></div>
-      <div class="lempty" id="lempty" aria-label="No counterparties yet">
-        <svg width="44" height="44" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="5.5" r="2.6"/><path d="M1.8 13.4c.6-2.4 2.3-3.6 4.2-3.6s3.6 1.2 4.2 3.6"/><path d="M10.6 3.2a2.6 2.6 0 0 1 0 4.6M12.4 9.9c1 .5 1.7 1.7 2 3.5"/></svg>
-      </div>
-    </div>
-    <div class="luserrow">
+        <div class="luserrow">
       <button class="luser" id="luserbtn" aria-haspopup="menu" aria-expanded="false">
         <span class="lav">D</span>
         <span class="lutxt">
@@ -2009,7 +2877,7 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
           <em class="lsub">Personal account · <span class="num" id="rn"></span> cards</em>
         </span>
       </button>
-      <button class="sayic" id="rtoggle" title="Open panel" aria-label="Open panel" aria-expanded="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5H13.5V6.5"/><path d="M13.5 2.5 7.5 8.5"/><path d="M12 9.5v3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3"/></svg></button>
+      <button class="sayic" id="themebtn" title="Toggle theme" aria-label="Toggle theme"></button>
     </div>
   </nav>
 
@@ -2020,9 +2888,7 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
     <div id="thhead"></div>
     <div id="bistrip"></div>
     <div id="log">
-      <div id="empty">
-        <h3>What would you like to settle?</h3>
-      </div>
+      <div id="empty"><h3>What would you like to settle?</h3></div>
     </div>
 
     <div id="composer">
@@ -2078,6 +2944,7 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
       </div>
       <div class="sayrow">
         <div id="abar" hidden></div>
+        <button class="sayopen" id="sayopen" type="button" tabindex="0" aria-label="Write a payment"><span id="sayopent"></span></button>
         <textarea id="free" rows="1" aria-label="Describe a payment" placeholder="Describe a payment — try “Buy 5,000 USDT with CNY” or “Pay Huachuang 3,000 on delivery”"></textarea>
         <div class="saytools">
         <button class="sayic" id="actplus" title="New order" aria-label="New order" aria-expanded="false" style="display:none"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg></button>
@@ -2089,9 +2956,17 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
     </div>
    </div>
 
+   <div class="view" id="v-contacts">
+     <div class="vhead">
+       <h2>Contacts</h2>
+       <button class="btn btn-secondary" id="cpadd"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg>Add contact</button>
+     </div>
+     <div class="vbody" id="cpbody"></div>
+   </div>
+
    <div class="view" id="v-market">
      <div class="vhead">
-       <h2>Trade</h2>
+       <h2>Discover</h2>
        <div class="dtypes" id="dtypes"></div>
      </div>
      <div class="vbody" id="mkbody">
@@ -2114,8 +2989,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 
    <div class="view" id="v-recs">
      <div class="vhead">
-       <h2>History</h2>
-       <p>Settled, refunded and disputed — each keeps its evidence pack</p>
+       <h2>Payments</h2>
+       <p>Every payment you have started. Live ones sit at the top until they settle.</p>
      </div>
      <div class="vbody" id="recsbody"></div>
    </div>
@@ -2123,29 +2998,55 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 
   <!-- 右 · 状态：按"球在谁手里"分组，永不按人分组 -->
   <!-- 右 · 上：球在谁手里；下：资金与本周额度 -->
-  <aside id="right" aria-label="Status & funds">
-    <div id="balance">
-      <div class="bhead">
-        <span class="bk">Total value</span>
-        <button class="sayic" id="rhide" title="Collapse panel" aria-label="Collapse panel"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 4 4 4-4 4"/></svg></button>
-      </div>
-      <div class="brow">
-        <div class="bv num" id="bv"></div>
-        <button class="eyebtn" id="eyebtn" title="Show balance" aria-label="Show balance" aria-pressed="false"></button>
-      </div>
-      <div class="bmini">
-        <span class="bmr"><i class="bmi">◈</i>Available<b class="num" id="bavail"></b></span>
-        <span class="bmr"><i class="bmi">⛨</i>In escrow<b class="num" id="besc"></b></span>
-      </div>
-      <div class="bq">
-        <div class="bqt">Autopay this week<span class="bqv num" id="gused"></span></div>
-        <div class="bar"><i id="gbar"></i></div>
-      </div>
+  <!-- 右栏 = 后台在做什么。左/中栏是跟人沟通和看订单状态，这里是机器那一侧的流水。
+       资金全貌（余额 / 资产 / 定期 / 流水）在账户页 Profile 里，不在这条栏上重复。 -->
+  <!-- 右栏三块：① 轮到你的订单 ② AI 战绩与待命阵容 ③ 实时共识流水。
+       左中是「你在跟谁谈」，右边是「机器替你查到了什么」，各占一半。 -->
+  <aside id="right" aria-label="Assessment and agent status">
+    <!-- 栏顶不再挂标题：三块模块各自有名字，再挂一个总标题会跟模块名重复 -->
+    <div class="rgrid" id="rgrid">
+      <!-- ① 订单 -->
+      <section class="rmod" id="rm-orders">
+        <!-- 头上不再挂角标和「N in flight」：下面那排筛选 chip
+             （All 5 / Needs you 2 / Waiting 3）说的是同一件事，写两遍是噪音 -->
+        <div class="rmh"><h3>Order status</h3><span class="rmhfil" id="ro-fil"></span></div>
+        <div class="rmb" id="ro-list"></div>
+      </section>
+
+      <!-- ② 指标 + 待命阵容 -->
+      <section class="rmod" id="rm-stats">
+        <div class="rmh"><h3>Agent status</h3><span class="rmsub" id="rs-since"></span></div>
+        <div class="rmb rsbody">
+          <div class="rsplit">
+            <div class="rstats" id="rs-tiles"></div>
+            <div class="rtable" id="rs-table"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ③ 实时动态 -->
+      <section class="rmod" id="rm-feed">
+        <div class="rmh"><h3>Assessment</h3>
+          <span class="aflive" id="aflive"><i></i><em>idle</em></span>
+          <button class="laybtn" id="laybtn" type="button" title="Switch layout" aria-label="Switch layout">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+              <rect x="1" y="1" width="12" height="5.4" rx="1.2"/>
+              <rect x="1" y="8.6" width="5.4" height="4.4" rx="1.2"/>
+              <rect x="8.6" y="8.6" width="4.4" height="4.4" rx="1.2"/></svg>
+          </button></div>
+        <div class="rmb">
+          <div class="agtop" id="agtop" hidden></div>
+          <div class="assplit">
+            <div id="arring"></div>
+            <div class="aswrap"><div id="afruns"></div>
+              <div class="asfade"><button class="asdn" type="button" aria-label="Scroll for more"></button></div></div>
+            <div class="asfade"><button class="asdn" type="button" aria-label="Scroll for more"></button></div>
+          </div>
+          <div class="roster" id="rs-roster"></div>
+          <div id="afpanel" hidden></div>
+        </div>
+      </section>
     </div>
-    <div class="rttl">Assets</div>
-    <div id="alist"></div>
-    <div class="rttl">Scheduled<span class="c num" id="c-sched"></span></div>
-    <div id="rstate"><div class="group" id="rlist"></div></div>
   </aside>
 
 </main>
@@ -2165,12 +3066,28 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 
 <script>
 /* ───── 模拟数据（对齐设计文档 §5.1 线框示例） ───── */
+/* 通讯录 = 可以付款的人。这张表既是左栏的联系人列表，也是条件单里的收款人来源——
+   两者本来就该是同一份，分开维护只会让"能付给谁"和"认识谁"对不上。
+   rel 关系标签不是装饰：它决定新建条件单时预填哪套释放条件（见 REL_COND）。 */
 const CPS=[
- {id:'hc', name:'Huachuang',   type:'firm',  net:-3000, ifr:91, deals:12},
- {id:'kj', name:'Kenji M.',   type:'person',net: 1200, ifr:97, deals:31},
- {id:'ar', name:'Aria Studio',type:'firm',  net:  650, ifr:88, deals:6},
- {id:'pa', name:'Procurement agent', type:'agent', net:    0, ifr:95, deals:58},
+ {id:'hc', name:'Huachuang',   type:'firm',  net:-3000, ifr:91, deals:12,
+  atr:'ATR-4C19B7', rel:'Supplier', since:'Mar 2025'},
+ {id:'kj', name:'Kenji M.',   type:'person',net: 1200, ifr:97, deals:31,
+  atr:'ATR-9D02E5', rel:'Client',   since:'Nov 2024'},
+ {id:'ar', name:'Aria Studio',type:'firm',  net:  650, ifr:88, deals:6,
+  atr:'ATR-2F73A8', rel:'Supplier', since:'Jun 2026'},
+ {id:'pa', name:'Procurement agent', type:'agent', net:0, ifr:95, deals:58,
+  atr:'ATR-7B41D0', rel:'My agent', since:'Feb 2026'},
 ];
+/* 关系决定默认条件：给供应商付款默认要凭证 + 我确认；给客户或自己的 agent 默认立即 */
+const REL_COND={
+ 'Supplier':[{t:'evidence',p:{proof:'Delivery record'}},{t:'approve',p:{who:'I confirm'}}],
+ 'Client'  :[],
+ 'Colleague':[],
+ 'Friend'  :[],
+ 'My agent':[],
+};
+const RELS=['Supplier','Client','Colleague','Friend','My agent'];
 /* desc 一句话说清这一步要做什么，amt 金额，when 相对时间——
    原来每条只有「名字 + 动作」两个字段，看不出这笔多大、等了多久 */
 let ITEMS=[
@@ -2280,7 +3197,11 @@ let SHOW_BAL=false;
 const MASK='••••••';
 const usd=n=>'$'+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 const COIN_HUE={USDT:158,USDC:220,BTC:36,ETH:250};
+/* 余额 / 资产 / 定期原来住在右栏，现在右栏改成 agent 流水，这几块的全貌
+   在账户页 Profile 里（余额模块 + Assets / Auto payment / Activity 三个分栏）。
+   渲染器保留但对缺失宿主空转——锁屏、充值、改额度都还会调它们。 */
 function renderBalance(){
+  if(!document.getElementById('bv'))return;
   const tot=ASSETS.reduce((a,x)=>a+(x.avail+x.escrow)*x.fx,0);
   const av =ASSETS.reduce((a,x)=>a+x.avail*x.fx,0);
   const esc=ASSETS.reduce((a,x)=>a+x.escrow*x.fx,0);
@@ -2298,7 +3219,8 @@ function renderBalance(){
   eye.setAttribute('aria-pressed',String(SHOW_BAL));
   eye.title = SHOW_BAL ? 'Hide balance' : 'Show balance';
 }
-document.getElementById('eyebtn').onclick=()=>{SHOW_BAL=!SHOW_BAL;renderBalance()};
+const _eye=document.getElementById('eyebtn');
+if(_eye)_eye.onclick=()=>{SHOW_BAL=!SHOW_BAL;renderBalance()};
 
 /* 市场挂单池（模拟） */
 /* rate 成交率 · rel 平均放行秒数 · min 最小起投(CNY) · known 是否交易过
@@ -2343,11 +3265,14 @@ const TASKS=[];
 const TKST={run:['run','Running'], you:['you','Your turn'], done:['done','Done']};
 function taskUpsert(id,patch){
   let t=TASKS.find(x=>x.id===id);
-  if(!t){t={id}; TASKS.unshift(t)}
+  if(!t){t={id, at:Date.now()}; TASKS.unshift(t)}
   Object.assign(t,patch); renderLeft();
+  if(typeof renderRoOrders==='function')renderRoOrders();
 }
 let lTab='ai';
-function setLTab(t){
+/* 2026-08-26 左栏双分区取消：通讯录升级为主区页面（v-contacts），
+   左栏常驻 导航 + Chats。setLTab 保留空壳只为不改一圈调用点。 */
+function setLTab(t){return;
   lTab=t;
   document.querySelectorAll('.ltab').forEach(b=>{
     const on=b.dataset.lt===t;
@@ -2359,37 +3284,32 @@ function setLTab(t){
 document.querySelectorAll('.ltab').forEach(b=>b.onclick=()=>setLTab(b.dataset.lt));
 
 function renderLeft(){
-  /* Assistant：功能 + Tasks（事，有状态有终态）。Contacts：对手方目录（人）。
-     一笔交易在 Tasks 里是主体，在联系人账本里只是一条——消息归人，状态归事。 */
-  const order={you:0,run:1,done:2};
-  const ts=[...TASKS].sort((a,b)=>order[a.st]-order[b.st]);
-  document.getElementById('tasksec').hidden=!ts.length;
-
-  document.getElementById('tasklist').innerHTML=ts.map(t=>{const [cls,lb]=TKST[t.st];
-    const on=ACTIVE&&(ACTIVE.id===t.sess||ACTIVE.id===t.id);
-    return `<button class="cp${on?' on':''}" data-task="${t.sess||t.id}" title="${lb}">
-      <span class="tkst ${cls}" aria-label="${lb}"><i></i></span>
-      <span class="n"><em>${t.title}</em></span>
+  /* 左栏 = 导航 + Chats（微信式收件箱：头像 · 最近一条 · 未读）。
+     订单流的入口后续挪去右栏；通讯录在主区 v-contacts。
+     排序按最近活动，最新的在最上面——收件箱的唯一正确顺序 */
+  const chats=SESSIONS.filter(x=>x.kind==='chat')
+    .sort((a,b)=>(b.lastAt||0)-(a.lastAt||0));
+  document.getElementById('tasksec').hidden=!chats.length;
+  document.getElementById('tasklist').innerHTML=chats.map(c=>{
+    const on=ACTIVE&&ACTIVE.id===c.id;
+    const un=c.unread||0;
+    return `<button class="cp chatrow${on?' on':''}" data-chat="${c.id}">
+      ${avSpan(c.name,'cpav')}
+      <span class="n"><em>${c.name}</em><i>${c.last||''}</i></span>
+      <span class="chmeta">${c.lastT?`<time>${c.lastT}</time>`:''}${
+        un?`<span class="v dot unread num">${un}</span>`:''}</span>
     </button>`}).join('');
-  document.querySelectorAll('#tasklist [data-task]').forEach(b=>b.onclick=()=>{
-    const t=TASKS.find(x=>x.sess===b.dataset.task||x.id===b.dataset.task);
-    if(t?.sess){restoreSession(t.sess)} else if(t?.seed){openSeedTask(t)}
-    switchView('chat');
+  document.querySelectorAll('#tasklist [data-chat]').forEach(b=>b.onclick=()=>{
+    restoreSession(b.dataset.chat); switchView('chat');
   });
-
-  const el=document.getElementById('cplist');
-  document.getElementById('lempty').hidden=!!CHATS.length;
-
-  el.innerHTML=CHATS.map(c=>{
-    const sess=SESSIONS.find(x=>x.id===c.id);
-    const un=sess?.unread||0;
-    return `<button class="cp ${selected===c.id?'on':''}" data-id="${c.id}" aria-selected="${selected===c.id}">
-      <span class="n"><em>${c.name}</em>${c.type==='agent'?'<span class="tag">Agent</span>':''}</span>
-      ${un?`<span class="v dot unread num">${un}</span>`:''}
-    </button>`}).join('');
-  el.querySelectorAll('#cplist .cp').forEach(b=>b.onclick=()=>{
-    restoreSession(b.dataset.id); switchView('chat');
-  });
+}
+/* 会话行的「最近一条」：谁往流里写东西，谁就顺手更新它 */
+function touchChat(sess,text){
+  if(!sess||sess.kind!=='chat')return;
+  sess.last=String(text).replace(/<[^>]*>/g,'').slice(0,48);
+  sess.lastAt=Date.now();
+  sess.lastT=new Date().toTimeString().slice(0,5);
+  renderLeft();
 }
 function renderStrip(){
   const s=document.getElementById('bistrip');
@@ -2410,7 +3330,9 @@ function switchView(v){
   window.railForView?.(v);
   if(v==='rules')renderRules();
   if(v==='recs')renderRecs();
+  if(v==='contacts')renderContactsPage();
 }
+document.getElementById('cpadd').onclick=openAddContact;
 document.querySelectorAll('.nav[data-v]').forEach(b=>b.onclick=()=>switchView(b.dataset.v));
 
 /* ── 左下角账户入口：二级菜单，Profile（资金）/ Settings（安全） ── */
@@ -2488,7 +3410,9 @@ document.getElementById('lkout').onclick=()=>{
     const ex=document.getElementById('umenu');
     if(ex){ex.remove();lu.setAttribute('aria-expanded','false');return}
     const m=document.createElement('div'); m.id='umenu'; m.className='ddmenu umenu'; m.setAttribute('role','menu');
-    m.style.left='8px'; m.style.bottom='calc(100% - 6px)';
+    /* 折叠态左栏只有 68px，菜单要往右开到中栏上面去，不然它自己会挤成一条 */
+    m.style.left=document.querySelector('main').classList.contains('lout')?'10px':'8px';
+    m.style.bottom='calc(100% - 6px)';
     const ico={
       user:'<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="5" r="2.6"/><path d="M2.8 13.5a5.2 5.2 0 0 1 10.4 0"/></svg>',
       /* 齿轮要有齿廓——纯射线画出来是太阳，和顶部主题切换撞脸 */
@@ -2542,12 +3466,72 @@ const fire=()=>{if(PARSING)return; if(ACT)return runAct();
 document.getElementById('send').onclick=fire;
 
 const $send=document.getElementById('send');
+/* ══ 输入框折叠 / 展开 ══
+   高度必须写成具体像素才能过渡（auto 不可动画）：折叠钉在 48，
+   展开时先量出自然高度再从 48 补到那个值，过渡结束把 height 交回给 autogrow。 */
+const $sayw=document.getElementById('say'), $sayopen=document.getElementById('sayopen');
+const $sayrow=document.querySelector('.sayrow');
+let SAY_MINI=false;
+function sayHeight(){                       /* 量展开后的自然高度，量完还原 */
+  const prev=$sayrow.style.height;
+  $sayrow.style.transition='none'; $sayrow.style.height='auto';
+  const h=$sayrow.offsetHeight;
+  $sayrow.style.height=prev; void $sayrow.offsetHeight; $sayrow.style.transition='';
+  return h;
+}
+function sayMini(on){
+  if(SAY_MINI===on)return;
+  SAY_MINI=on; sayEase(true);
+  if(on){
+    $sayrow.style.height=$sayrow.offsetHeight+'px';   /* 从当前实高起跳，不跳变 */
+    void $sayrow.offsetHeight;
+    $sayw.classList.add('mini');
+    $sayrow.style.height='48px';
+    $free.blur();
+  }else{
+    $sayw.classList.remove('mini');
+    const h=sayHeight();
+    $sayw.classList.add('mini'); $sayrow.style.height='48px'; void $sayrow.offsetHeight;
+    $sayw.classList.remove('mini');
+    $sayrow.style.height=h+'px';
+    /* 过渡收尾后把高度还给 autogrow，否则打字撑不开 */
+    clearTimeout(sayMini._t);
+    sayMini._t=setTimeout(()=>{if(!SAY_MINI)$sayrow.style.height=''},440);
+    $free.focus();
+  }
+  syncPlaceholderPill();
+}
+/* 胶囊上的文字跟 textarea 的 placeholder 同源，改一处就够 */
+function syncPlaceholderPill(){
+  document.getElementById('sayopent').textContent=$free.placeholder;
+}
+/* 开合用弹簧，打字撑高用快曲线——切换靠这个 class */
+function sayEase(spring){document.getElementById('say').classList.toggle('smooth',!spring)}
+$sayopen.onclick=()=>sayMini(false);
+$sayopen.addEventListener('focus',()=>sayMini(false));
+/* 空着离开就收回去。动作面板开着、正在解析、有内容时都不收——
+   那几种情形用户还在这块上工作。
+   挂 focusout 而不是 textarea 的 blur：面板里还有一堆可聚焦的槽位，
+   只盯 textarea 的话，从槽位上离开就收不到信号，框会空着一直撑开。 */
+function sayMaybeCollapse(){
+  setTimeout(()=>{
+    if($free.value.trim()||ACT||PARSING)return;
+    if($sayw.contains(document.activeElement))return;
+    sayMini(true);
+  },120);
+}
+$sayw.addEventListener('focusout',sayMaybeCollapse);
+document.getElementById('free').addEventListener('input',()=>{if(SAY_MINI)sayMini(false)});
+
 function syncSend(){
   const has=(ACT || $free.value.trim().length>0) && !PARSING;
   $send.disabled=!has; $send.classList.toggle('ready',has);
 }
 /* 自适应高度：1 行起，最多 6 行（max-height 156 后转滚动） */
-const autogrow=()=>{$free.style.height='auto';$free.style.height=$free.scrollHeight+'px'};
+const autogrow=()=>{
+  if(SAY_MINI)return;              /* 折叠态高度由 sayMini 管，别互相打 */
+  sayEase(false);                  /* 打字撑高：快曲线，不要每敲一个字弹一下 */
+  $free.style.height='auto';$free.style.height=$free.scrollHeight+'px'};
 $free.addEventListener('input',syncSend); $free.addEventListener('input',autogrow);
 /* 打字实时填句：清空输入则收起自动开出的句子 */
 $free.addEventListener('input',()=>{
@@ -3473,6 +4457,27 @@ const recParts=r=>{const i=r.d.indexOf(' ');
   return i<0?{day:r.d,time:''}:{day:r.d.slice(0,i),time:r.d.slice(i+1)}};
 const recDay=d=>d==='today'?'Today':d;
 function renderRecs(){
+  /* 这一页是「订单的家」：在飞的付款在上（能动手的排最前），已结算台账在下。
+     节奏是刻意的——上面一块纸卡、密、可点；空 48px；下面平铺台账，退到底色上。
+     结算状态筛选器归 Settled 那一段，不放页顶：筛选器不该比内容先被看见。 */
+
+  /* ── 上：在飞 ── */
+  const rank={you:0,run:1};
+  const live=TASKS.filter(t=>t.st!=='done').sort((a,b)=>rank[a.st]-rank[b.st]);
+  const liveHTML = live.length
+    ? `<div class="pfcard">`+live.map(t=>{
+        const i=t.seed||{}, cp=CPS.find(c=>c.id===i.cp);
+        const you=t.st==='you';
+        const sub=[cp?cp.name:(i.who||''), i.when||''].filter(Boolean).join(' · ');
+        return `<div class="pfrow${you?' you':''}" data-live="${t.id}" role="button" tabindex="0">
+          <span class="pfst"><i></i>${you?'Your turn':'Waiting'}</span>
+          <span class="pfn"><em>${t.title}</em>${sub?`<i>${sub}</i>`:''}</span>
+          <span class="pfamt num">${i.amt?'$'+i.amt.toLocaleString():''}</span>
+          <span class="pfact">${you?`<button class="btn btn-primary btn-sm" data-open="${t.id}">Open</button>`:''}</span>
+        </div>`}).join('')+`</div>`
+    : `<div class="pfempty">Nothing in flight. Every payment you start shows up here until it settles.</div>`;
+
+  /* ── 下：已结算台账 ── */
   const counts={all:RECS.length,
     Released:RECS.filter(r=>r.s==='Released').length,
     Refunded:RECS.filter(r=>r.s==='Refunded').length,
@@ -3481,12 +4486,16 @@ function renderRecs(){
   const by={}; list.forEach(r=>{const {day}=recParts(r); (by[day]=by[day]||[]).push(r)});
   const chip=(k,n)=>`<button class="hfil${RECFILT===k?' on':''}" data-rf="${k}"${
     n===0&&k!=='all'?' disabled':''}>${k==='all'?'All':k}<b class="num">${n}</b></button>`;
+
   document.getElementById('recsbody').innerHTML=
-    `<div class="hbar">
-       <div class="hfils">${chip('all',counts.all)}${chip('Released',counts.Released)}${
-         chip('Refunded',counts.Refunded)}${chip('Disputed',counts.Disputed)}</div>
-       <button class="btn btn-ghost btn-sm">Export</button>
-     </div>`
+    `<div class="psec"><h3>In flight</h3>${live.length?`<span class="pcount num">${live.length}</span>`:''}</div>`
+    + liveHTML
+    + `<div class="psec settled">
+         <h3>Settled</h3>
+         <div class="hfils">${chip('all',counts.all)}${chip('Released',counts.Released)}${
+           chip('Refunded',counts.Refunded)}${chip('Disputed',counts.Disputed)}</div>
+         <button class="btn btn-ghost btn-sm">Export</button>
+       </div>`
     + (list.length?`<div class="hlist">`+Object.entries(by).map(([day,rs])=>
         `<div class="hday">${recDay(day)}</div>`+rs.map(r=>{
           const {time}=recParts(r);
@@ -3501,16 +4510,757 @@ function renderRecs(){
           </div>`}).join('')).join('')+`</div>`
       : `<div class="hempty">No ${RECFILT.toLowerCase()} settlements yet.</div>`)
     + `<p class="rnote">Every settlement keeps an evidence pack.<i class="info" tabindex="0" data-tip="Terms agreed, review report, escrow record and the evidence release was based on.">i</i></p>`;
+
   document.querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>{
     RECFILT=b.dataset.rf; renderRecs();
   });
+  const go=id=>{
+    const t=TASKS.find(x=>x.id===id); if(!t)return;
+    if(t.sess){restoreSession(t.sess)} else if(t.seed){openSeedTask(t)}
+    switchView('chat');
+  };
+  document.querySelectorAll('#recsbody [data-live]').forEach(r=>{
+    r.onclick=()=>go(r.dataset.live);
+    r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go(r.dataset.live)}};
+  });
+  document.querySelectorAll('#recsbody [data-open]').forEach(b=>
+    b.onclick=e=>{e.stopPropagation(); go(b.dataset.open)});
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   右栏 · Assessment —— 评估过程的后台流水
+   这栏不是装饰动画：每一条都由真实事件推进来（thinking() 的解析步骤、
+   七个风险 agent 的逐票、放行闸门的逐条、最后的结论）。没有事件就没有条目。
+   为什么值得占一整栏：这个产品卖的就是「付款前有人替你查过」，
+   查的过程只在对话里一闪而过，等于白查了。
+   ═══════════════════════════════════════════════════════════════ */
+/* ══ 右栏 ① 订单状态 ══
+   这一块的主角是**状态**，不是订单描述。一笔单子挂在这儿，用户真正想知道的是
+   「现在卡在哪一步、球在谁手里」——所以状态是卡片的第一行，描述退到第二行。
+   状态从真实条件推：escrow 单看 kind（approve/evidence/data/time），
+   种子单看它的 what 字段。推不出来才落到通用的「等对方」。 */
+const OSTATE={
+  approve : ['you',  'Needs your approval'],
+  confirm : ['you',  'Needs your confirmation'],
+  evidence: ['them', 'Waiting on their evidence'],
+  deliver : ['them', 'Waiting on their delivery'],
+  data    : ['auto', 'Waiting on the metric'],
+  time    : ['auto', 'Waiting for the release date'],
+  agent   : ['auto', 'Your agent is working on it'],
+  otc     : ['them', 'Waiting on the counterparty'],
+  them    : ['them', 'Waiting on the other side'],
+};
+function orderState(t){
+  const i=t.seed||{};
+  if(t.kind && OSTATE[t.kind]) return t.st==='you' ? OSTATE.approve : OSTATE[t.kind];
+  const w=(i.what||'').toLowerCase();
+  if(/approve/.test(w))        return OSTATE.approve;
+  if(/confirm/.test(w))        return OSTATE.confirm;
+  if(/deliver|ship/.test(w))   return OSTATE.deliver;
+  if(/quot/.test(w))           return OSTATE.agent;
+  return t.st==='you' ? OSTATE.approve : OSTATE.them;
+}
+let OFILT='all';
+function renderRoOrders(){
+  const box=document.getElementById('ro-list'); if(!box)return;
+  /* 全部在飞的单子都列出来——「等对方上传凭证」也是一种状态，
+     只列轮到你的那几笔就漏掉了一半事实 */
+  const rank={you:0,run:1};
+  const live=TASKS.filter(t=>t.st!=='done').sort((a,b)=>rank[a.st]-rank[b.st]);
+  const mine=live.filter(t=>t.st==='you');
+
+  /* 筛选只有两类值得分：球在我手里、球在别处。
+     再细分成七种状态就成了选项迷宫——状态本来就写在每张卡上了。 */
+  const sets={all:live, you:mine, wait:live.filter(t=>t.st!=='you')};
+  if(!sets[OFILT])OFILT='all';
+  const list=sets[OFILT];
+  const chip=(k,lb)=>`<button class="hfil${OFILT===k?' on':''}" data-of="${k}"${
+    sets[k].length?'':' disabled'}>${lb}<b class="num">${sets[k].length}</b></button>`;
+  /* 筛选条挂在模块头右侧，跟标题一行 */
+  const fil=document.getElementById('ro-fil');
+  if(fil)fil.innerHTML=live.length>2
+    ? `<div class="hfils">${chip('all','All')}${
+        chip('you','Needs you')}${chip('wait','Waiting')}</div>` : '';
+
+  box.innerHTML = (list.length
+    ? list.map(t=>{
+        /* 卡上只留关键四样：状态、人、金额、动作。订单描述删掉——
+           它在工单页里写得更全，挤在这张小卡上只是把状态那一行的重量稀释掉 */
+        const i=t.seed||{}, cp=CPS.find(c=>c.id===(i.cp||t.cpid));
+        const sess=t.sess?SESSIONS.find(x=>x.id===t.sess):null;
+        const who=cp?cp.name:(i.who||sess?.mk?.name||sess?.name||'');
+        const when=i.when||(t.at?afAgo(t.at):'');
+        const amt=i.amt||t.amt;
+        const [tone,label]=orderState(t);
+        /* 方向：轮到你的是要付出去的钱（−），等对方的是要进来的（+）。
+           金额是这张卡的主角——扫一排卡就是扫「进出各多少」 */
+        const dir=tone==='you'?'out':'in';
+        return `<button class="rocard ${tone}" data-ro="${t.id}">
+          <span class="roc-st"><i></i>${label}</span>
+          ${amt?`<b class="roc-big num ${dir}">${dir==='out'?'−':'+'}$${(+amt).toLocaleString()}</b>`
+               :`<b class="roc-big none">—</b>`}
+          <span class="roc-bot">
+            ${who?avSpan(who,'roc-av'):''}
+            ${who?`<span class="roc-who">${who}</span>`:''}
+            <time>${when}</time>
+          </span>
+        </button>`}).join('')
+    : `<div class="roempty">${OFILT==='all'
+        ? 'Nothing in flight. Payments you start show up here with what they are waiting on.'
+        : 'Nothing in this state right now.'}</div>`);
+
+  document.querySelectorAll('#ro-fil [data-of]').forEach(b=>b.onclick=()=>{OFILT=b.dataset.of; renderRoOrders()});
+  box.querySelectorAll('[data-ro]').forEach(b=>b.onclick=()=>{
+    const t=TASKS.find(x=>x.id===b.dataset.ro); if(!t)return;
+    if(t.sess){restoreSession(t.sess)} else if(t.seed){openSeedTask(t)}
+    switchView('chat');
+  });
+}
+
+/* ══ 右栏 ② 模型战绩 + 待命阵容 ══
+   数字取自本会话真实发生过的事（流水条目、已结算流水），不是写死的宣传语——
+   演示里也只报它真的做过的量。阵容那一段是常驻的：七个 agent 不是跑的时候才存在。 */
+const AI_SINCE='since Mar 2025';
+function renderRoStats(){
+  const tiles=document.getElementById('rs-tiles'); if(!tiles)return;
+  document.getElementById('rs-since').textContent=AI_SINCE;
+  /* 四个参数，单列排，不带描述句——这一块是仪表读数，不是说明书。
+     两个比率的口径写在这儿，免得以后没人说得清它们是怎么来的：
+       成功率 = 按条件放行的笔数 ÷ 评估过的笔数（其余是被闸门拦下或退回的）
+       准确率 = 1 − 放行后又起争议的笔数 ÷ 放行笔数
+     准确率能算，是因为「放行后起争议」是账面上有记录的事实——
+     它衡量的是模型放行的判断后来有没有被推翻，不是什么无从核对的自评。 */
+  const consNow=AFEED.filter(e=>e.kind==='cons').length;
+  const assessed=1284+consNow;
+  const released=1179+RECS.filter(r=>r.s==='Released').length;
+  const disputed=9+RECS.filter(r=>r.s==='Disputed').length;
+  const pct=(x,n)=>n?(Math.round(x/n*1000)/10).toFixed(1)+'%':'—';
+  const standby=AFJOB?0:RISK_AGENTS.length;
+  const T=[['Payments assessed',assessed.toLocaleString()],
+           ['Success rate',pct(released,assessed)],
+           ['Accuracy',pct(released-disputed,released)],
+           ['Agents standing by',AFJOB?`${RISK_AGENTS.length} checking`:String(standby)]];
+  tiles.innerHTML=T.map(([k,v])=>
+    `<div class="rtile"><span>${k}</span><b class="num">${v}</b></div>`).join('');
+
+  /* 阵容改用星座本体：七个 agent 在轨道上慢慢转，不表态——「候命」看得见，
+     比七个灰色胶囊有说服力。真跑起来的那张在下面 Assessment 里。 */
+  const live=!!AFJOB;
+  const box=document.getElementById('rs-table');
+  if(!box.dataset.built){
+    box.dataset.built='1';
+    /* 只留星座本体。原来那段解释文字去掉了：候命与否看图上的球，
+       人数和状态右边的读数里已经有。 */
+    box.innerHTML=`<div class="rtnetw"><canvas class="rtnet" aria-label="Seven risk agents"></canvas></div>`;
+  }
+  /* 待命 ↔ 开工 换同一张画布：待命是几个球各自飘，开工才长出连线、票脉冲和中心核。
+     只在模式真变了的时候重启，否则每次重绘都会把动画掐回开头。 */
+  /* 三态而不是两态：跑完不能退回待命——那等于把刚得出的结论擦掉。
+     done = 定格在锁定那一帧（全网连上、票色落定、中心核带 ✓），
+     和左边的环、下面的闸门一样把结果留在台面上。下一笔开跑才重置。 */
+  const mode=live?'run':(AFLAST?'done':'idle');
+  if(box.dataset.mode!==mode){
+    box.dataset.mode=mode;
+    const c=box.querySelector('.rtnet');
+    /* 开工那张的起点对齐面板里的真实时间轴（thinking 的 agBase≈400，交流期 4.6s） */
+    /* 高度量实际格子：写死 236 在矮格子里会被 overflow:hidden 裁掉底下那排球 */
+    const h=Math.max(150,Math.min(300,(box.clientHeight||244)-8));
+    if(mode==='done')
+      /* freezeAt 传一个大数即可：draw 里 tt 会夹到 T.end，不必去算 4600+7×1050 那串，
+         voteStep 一改那个硬编码就悄悄错位了 */
+      consensusNet(c, RISK_AGENTS, 0, 1050, 1e6, false, h);
+    else
+      consensusNet(c, RISK_AGENTS, live?400:0, 1050, null, !live, h);
+  }
+  box.classList.toggle('live',live);
+  renderRoster(live);
+}
+
+/* 七张机器人脸：白底、深色线条，各自一个点缀色。
+   眼睛 / 嘴 / 天线三处换法组合出七个不重样的——不用外部图片，
+   单文件原型不该为七个 26px 的头像去引资源。 */
+/* ── agent 标识 ──
+   软萌角色（参考 bible-strong avatar lab 的形状语言重新自绘——
+   原项目 AGPL，代码不能搬，风格不受版权保护）：
+   每个 agent 一个软形状 + 竖条眼。本体自带专属色；
+   眼睛单独成组（.geyes），checking 靠眼神扫动而不是转圈。 */
+function agentGlyph(i){
+  const star=(pn,r1,r2)=>{let d='';for(let k=0;k<pn*2;k++){
+    const r=k%2?r2:r1, a=Math.PI*k/pn-Math.PI/2;
+    d+=(k?'L':'M')+(14+r*Math.cos(a)).toFixed(1)+' '+(14+r*Math.sin(a)).toFixed(1)}
+    return d+'Z'};
+  const G=[
+   /* Identity —— 蓝圆脸：最基础的一张脸，身份就是「你是谁」 */
+   {c:'#5B7CFA', body:`<circle cx="14" cy="14" r="11.6"/>`},
+   /* Provenance —— 绿 blob：链上流过来的一摊，形状不规则 */
+   {c:'#3E9B6C', body:`<path d="M14 2.9c4.6-.5 9.3 2.2 10.4 6.6 1 4.1-.4 8.7-3.4 11.5-3 2.8-8 3.7-11.9 2-3.8-1.7-6.3-5.8-5.9-10C3.6 8.7 6.6 4.8 10.3 3.5c1.2-.4 2.5-.5 3.7-.6Z"/>`},
+   /* Graph —— 蓝四叶：四个节点抱成一团 */
+   {c:'#4F86E8', body:`<circle cx="9.2" cy="9.2" r="6.4"/><circle cx="18.8" cy="9.2" r="6.4"/>
+     <circle cx="9.2" cy="18.8" r="6.4"/><circle cx="18.8" cy="18.8" r="6.4"/>
+     <rect x="8" y="8" width="12" height="12"/>`},
+   /* Sanctions —— 橙圆角三角：路边的警示牌 */
+   {c:'#E8833A', body:`<path d="M12 3.6c1-1.6 3-1.6 4 0l8.6 15.4c1 1.7-.2 3.9-2 3.9H5.4c-1.8 0-3-2.2-2-3.9Z"/>`, ey:16.5},
+   /* Behavior —— 粉花：五瓣，性格外放 */
+   {c:'#E993B9', body:`<circle cx="14" cy="6.6" r="5"/><circle cx="21" cy="11.7" r="5"/>
+     <circle cx="18.3" cy="19.9" r="5"/><circle cx="9.7" cy="19.9" r="5"/>
+     <circle cx="7" cy="11.7" r="5"/><circle cx="14" cy="13.5" r="6.2"/>`},
+   /* Pricing —— 黄太阳：十二芒星，市场的光 */
+   {c:'#EFBE3F', body:`<path d="${star(12,12.3,8.9)}"/>`},
+   /* Velocity —— 白幽灵：速度与异动，飘的 */
+   {c:'#E8E5DF', body:`<path d="M5.4 13.2C5.4 7.9 9.2 4 14 4s8.6 3.9 8.6 9.2v8.2c0 1.1-1.2 1.7-2 1l-1.5-1.3-2 1.8c-.6.5-1.5.5-2.1 0L14 22l-1 .9c-.6.5-1.5.5-2.1 0l-2-1.8-1.5 1.3c-.8.7-2 .1-2-1Z"/>`, ec:'#4a4a52'},
+  ][i%7];
+  const ey=G.ey||13.4, ec=G.ec||'#1e2026';
+  return `<svg viewBox="0 0 28 28" aria-hidden="true">
+    <g class="gart">
+      <g fill="${G.c}">${G.body}</g>
+      <g class="geyes" fill="${ec}">
+        <rect x="10.4" y="${ey-2.6}" width="2.5" height="5.6" rx="1.25"/>
+        <rect x="15.1" y="${ey-2.6}" width="2.5" height="5.6" rx="1.25"/>
+      </g>
+    </g>
+  </svg>`;
+}
+
+
+/* 一排 agent：头像 + 名字 + 状态。闲着就是 idle，开工挨个变 checking，
+   出票后落成它自己的结论。状态从流水里读——AFEED 里已经有每个 agent 的票，
+   这里不另造一套状态机。 */
+function renderRoster(live){
+  const el=document.getElementById('rs-roster'); if(!el)return;
+  const runId=AFJOB?AFJOB.id:AFLAST;
+  /* 队头 = 第一个还没表态的。它是「正在查」的那一个，其余都在等 */
+  const HEAD=RISK_AGENTS.findIndex(a=>
+    !(runId&&AFEED.find(e=>e.run===runId&&e.kind==='agent'&&e.title===a.n)));
+  el.innerHTML=RISK_AGENTS.map((a,i)=>{
+    const short=a.n.replace(/ Agent$/,'');
+    /* 只认当前这一批的票，上一笔的结论不该挂在这一笔的脸上 */
+    const voted=runId?AFEED.find(e=>e.run===runId&&e.kind==='agent'&&e.title===a.n):null;
+    /* 票面有三档，别把「带备注的通过」写成「被拦下」——那是两回事：
+       Pass / Pass · note（放行但记一笔）/ 其余才是真反对 */
+    const v=voted?String(voted.v||''):'';
+    /* 七个一起转圈没有信息量，只有疲劳——票本来就是一个一个落的，
+       那就照实画：轮到谁谁转（checking），后面的静止排队（queued），
+       表过态的封印（pass/note/flag）。眼睛只需要盯一个动的东西。 */
+    const st = voted ? (/note/i.test(v) ? 'note' : (/^pass/i.test(v) ? 'pass' : 'flag'))
+             : !live ? 'idle'
+             : (i===HEAD ? 'checking' : 'queued');
+    const txt={pass:'pass',note:'pass · note',flag:'objected',
+               checking:'checking',queued:'queued',idle:''}[st];
+    return `<button type="button" class="ragp ${st}${ASEL===a.n?' sel':''}"
+        data-agsel="${a.n}" aria-pressed="${ASEL===a.n}" title="${a.n} · ${a.d}">
+      <span class="ragav">${agentGlyph(i)}</span>
+      <span class="ragt"><b>${short}</b>${txt?`<i>${txt}</i>`:''}</span>
+    </button>`}).join('');
+  /* 点头像 = 选中这个 agent，上面右栏切成它的底稿；再点一次回到进度 */
+  el.querySelectorAll('[data-agsel]').forEach(b=>b.onclick=()=>{
+    /* 再点一次回到进度——跟顶条那个返回键走同一条路，
+       否则环、顶条、批次进度条三样各还各的，总有一样忘了还 */
+    if(ASEL===b.dataset.agsel)return arunAgentBack();
+    ASEL=b.dataset.agsel;
+    renderRoster(!!AFJOB); arunRender();
+  });
+  const more=()=>el.classList.toggle('more', el.scrollWidth-el.scrollLeft-el.clientWidth>8);
+  if(!el.dataset.sbound){el.dataset.sbound='1'; el.addEventListener('scroll',more)}
+  setTimeout(more,0);
+}
+function renderRight3(){renderRoOrders();renderRoStats()}
+/* 版式切换：B 把星盘（.rsplit）搬进 assplit 当第二列、把进度（.aswrap）
+   降到下一排全宽；A 各回各家。搬的是同一批节点，canvas 的绘制循环不断。 */
+function setLayout(b,boot){
+  const R=document.getElementById('right'); if(!R)return;
+  R.classList.toggle('lay-b',!!b);
+  const sp=document.querySelector('.assplit'), aw=document.querySelector('.aswrap');
+  const rsp=document.querySelector('.rsplit'), fade=sp&&sp.querySelector(':scope>.asfade');
+  const rsBody=document.querySelector('#rm-stats .rmb');
+  if(!sp||!aw||!rsp)return;
+  if(b){ sp.insertBefore(rsp, fade); sp.parentElement.insertBefore(aw, sp.nextSibling); }
+  else { rsBody.appendChild(rsp); sp.insertBefore(aw, fade); }
+  try{localStorage.setItem('atara-rlayout', b?'b':'a')}catch(e){}
+  /* 星盘的高是构建时按格子量定的，_refit 只管宽——切版式后必须整张重建。
+     boot 那一次只清标记不重画：AFEED 等数据还没初始化，重画交给后面的启动链 */
+  const rt=document.getElementById('rs-table');
+  if(rt){rt.dataset.mode=''; if(!boot)renderRoStats();}
+  document.querySelectorAll('canvas').forEach(c=>c._refit&&c._refit());
+  setTimeout(asMore,0);
+}
+/* B 版式已定稿为唯一版式：切换入口藏起，boot 恒走 B。
+   A 的规则先留着——按钮只是 hidden，要回头随时能回。 */
+(()=>{
+  const btn=document.getElementById('laybtn');
+  if(btn)btn.hidden=true;
+  setLayout(true,true);
+})();
+/* 模块头的那条线只在自己这块滚起来之后出现——静止时它是纯噪音，
+   滚动时它才真的在挡住从下面划过去的内容 */
+document.querySelectorAll('#right .rmb').forEach(b=>{
+  const mod=b.closest('.rmod');
+  const sync=()=>mod&&mod.classList.toggle('sc', b.scrollTop>2);
+  b.addEventListener('scroll',sync); sync();
+});
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('.asdn'); if(!b)return;
+  /* 滚的是谁，两种排法不一样：左右分栏时是它旁边的证据列，
+     上下排时是包着它的那一整条。先往里找兄弟，再往上找祖先，到模块体为止。 */
+  let host=b.parentElement.parentElement;
+  let sc=[...host.children].find(c=>c.scrollHeight-c.clientHeight>8)||null;
+  while(!sc&&host&&!host.classList.contains('rmb')){
+    if(host.scrollHeight-host.clientHeight>8){sc=host;break}
+    host=host.parentElement;
+  }
+  /* 直接跳，不用 smooth——平滑滚动（无论 scrollBy 还是 scroll-behavior）
+     都靠逐帧推进，这套环境里帧不发，按下去就纹丝不动。宁可硬翻一屏。 */
+  if(sc)sc.scrollTop+=Math.round(sc.clientHeight*.8);
+});
+
+const AFEED=[];          /* 最新在前，封顶 40 条 */
+let AFJOB=null;          /* 当前在跑的批次 {name,n,got,t0} */
+const afNow=()=>Date.now();
+/* 批次条写「Assessing Harbor Desk」而不是「Assessing counterparty」——
+   知道是谁的时候就说是谁，泛称留给不知道的情形 */
+const AF_SUBJ_NAME=(label,subj)=>
+  (label==='Assessing counterparty'&&subj&&subj!==label) ? 'Assessing '+subj : (label||'Working');
+const afAgo=t=>{const d=Math.round((afNow()-t)/1000);
+  return d<3?'now':d<60?d+'s':d<3600?Math.round(d/60)+'m':Math.round(d/3600)+'h'};
+
+function afPush(e){
+  AFEED.unshift(Object.assign({t:afNow(), run:AFJOB?AFJOB.id:0,
+    runName:AFJOB?AFJOB.subject:'Earlier',
+    id:'af'+(AFEED.length+Math.round(performance.now()))},e));
+  if(AFEED.length>40)AFEED.length=40;
+  if(AFJOB&&e.kind==='agent')AFJOB.got++;
+  afRender(); renderRoStats();
+}
+let AFRUN=0, AF_SUBJ=null, AFLAST=null;   /* AFLAST：最近跑完的那一批，结论留在标识上 */   /* AF_SUBJ：调用方在起跑前放下的主题（对手方名字） */
+function afStart(name,n,subject){
+  AFRUN++;
+  const subj=subject||AF_SUBJ||name||'Working'; AF_SUBJ=null;
+  AFJOB={id:AFRUN, name:AF_SUBJ_NAME(name,subj), n:n||0, got:0, t0:afNow(), subject:subj};
+  afLive(true); afRender(); renderRoStats();
+}
+/* 收工要重绘：批次结束后这一组也该长出自己的分隔，
+   否则最上面一块永远没有归属标签，看不出它是哪一笔的 */
+function afStop(){AFLAST=AFJOB?AFJOB.id:AFLAST; AFJOB=null; afLive(false); afRender(); renderRoStats();}
+function afClearPanel(){const h=document.getElementById('afpanel');
+  if(h){h.innerHTML=''; h.hidden=true}}
+function afLive(on){
+  const l=document.getElementById('aflive'); if(!l)return;
+  l.classList.toggle('on',!!on);
+  l.querySelector('em').textContent=on?'live':'idle';
+}
+/* 一条 agent 的证据摘要：来源读了什么、跑了哪些检查、原始记录。
+   数据直接取 RISK_AGENTS[i].ev，和面板内的底稿同一份，不另编一套。 */
+function afEvid(e,opt){
+  const ev=e&&e.ev?e.ev:e; if(!ev||!ev.srcs&&!ev.checks&&!ev.raw)return '';
+  const skipChk=opt&&opt.skipChecks;
+  const src=(ev.srcs||[]).map(x=>`<div class="afk"><b>${x.n}</b><em>${x.d}</em></div>`).join('');
+  const flow=(ev.flow||[]).map(x=>
+    `<div class="afhop"><i></i><b>${x.n}</b><em>${x.d}</em><time>${x.t}</time></div>`).join('');
+  const kv=(ev.kv||[]).map(x=>`<div class="afc"><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');
+  const chk=(ev.checks||[]).map(x=>`<div class="afc"><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');
+  const raw=(ev.raw||[]).join('\n');
+  /* 每段包成 section：宽度够的时候好分栏——这些都是短标签行，
+     靠变宽不会变矮，只有分栏才真的省高度 */
+  const sec=(t,body,cls='')=>body?`<section class="afsx ${cls}"><h4 class="afsec">${t}</h4>${body}</section>`:'';
+  return `<div class="afev">
+    ${sec('Where it looked',src)}
+    ${sec('How the funds got here',flow&&`<div class="afflow">${flow}</div>`)}
+    ${sec('What it found',kv)}
+    ${skipChk?'':sec('Checks run',chk)}
+    ${sec('Raw record',raw&&`<pre class="afraw">${raw}</pre>`,'wide')}
+  </div>`;
+}
+function afRender(){
+  const el=document.getElementById('affeed'); if(!el)return;
+  if(!AFEED.length){
+    el.innerHTML=`<div class="afempty">Nothing running. Start a payment and the checks behind it show up here as they happen.</div>`;
+    return;
+  }
+  const open=new Set([...el.querySelectorAll('.afrow.open')].map(r=>r.dataset.af));
+  /* 按批次分组：不分组的话十几条同一灰度铺到底，看不出哪几条属于这一笔。
+     正在跑的那批不画分隔——它的名字已经在上面的批次条里，写两遍是噪音 */
+  let lastRun=null;
+  el.innerHTML=AFEED.map((e,idx)=>{
+    let div='';
+    if(e.run!==lastRun){
+      const live=AFJOB&&e.run===AFJOB.id;
+      if(!live)div=`<div class="afdiv"><span>${e.runName||'Earlier'}</span><time>${afAgo(e.t)}</time></div>`;
+      lastRun=e.run;
+    }
+    const can=!!e.ev;
+    const vcls=e.v==='Pass'?'ok':e.v?'warn':'';
+    return div+`<div class="afrow ${e.kind}${idx===0&&AFJOB?' fresh':''}${open.has(e.id)?' open':''}"
+        data-af="${e.id}"${can?' role="button" tabindex="0"':''}>
+      <span class="afnode"><i></i></span>
+      <div class="afmain">
+        <div class="aftop">
+          <b>${e.title}</b>
+          ${e.v?`<span class="afv ${vcls}">${e.v}</span>`:''}
+          <time>${afAgo(e.t)}</time>
+        </div>
+        ${e.line?`<p class="afline">${e.line}</p>`:''}
+        ${e.meta||can?`<div class="afmeta">${e.meta||''}${
+          can?'<span class="afmore" aria-hidden="true">⌄</span>':''}</div>`:''}
+        ${can?afEvid(e):''}
+      </div>
+    </div>`}).join('');
+  el.querySelectorAll('.afrow[role="button"]').forEach(r=>{
+    const tog=()=>r.classList.toggle('open');
+    r.onclick=tog;
+    r.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();tog()}};
+  });
+}
+/* ══════════════════════════════════════════════════════════
+   Assessment · 一次评估 = 一条进度
+   每一步只给一句结论，过程收在折叠里。用户在付钱，不是在读报告——
+   没事别烦他，有事顶到脸上。共识与闸门用圆环，那是这块最该被看见的一帧。
+   ══════════════════════════════════════════════════════════ */
+const RUN_STEPS={
+  assess:[['read','Read the order'],['pull','Collected evidence'],
+          ['check','Agent checks'],['cons','Consensus']],
+  release:[['read','Read the condition'],['pull','Collected evidence'],
+           ['check','Agent checks'],['gates','Release gates'],['cons','Released']],
+};
+const ARUNS=[];                 /* 最新在前 */
+let ASEL=null;                  /* 候命排里选中的 agent —— 选中时右侧切成它的底稿 */
+let ARUN=null;
+function arunStart(kind,subject,agents){
+  ARUN={id:'r'+(ARUNS.length+1)+'-'+Math.round(performance.now()), kind, subject,
+        t:Date.now(), agents:agents||[], open:true,
+        steps:RUN_STEPS[kind].map(([k,n])=>({k,n,st:'wait',line:'',detail:null}))};
+  ARUNS.forEach(r=>r.open=false);
+  ARUNS.unshift(ARUN); if(ARUNS.length>8)ARUNS.length=8;
+  /* 主语兜底：有些入口没设过 AF_SUBJ，subject 会退成面板标签「Reading」，
+     那样中栏会写成「Assessing Reading」——先挡掉 */
+  const who=(!subject||/^reading$/i.test(subject)||/counterparty|condition/i.test(subject))
+    ? '' : subject;
+  ARUN.note=kind==='release'
+    ? (who?`Verifying the condition on ${who}`:'Verifying the condition')
+    : (who?`Assessing ${who}`:'Assessing this payment');
+  thinkStart(ARUN.note);
+  thinkRow('read', who?`Read the order · ${who}`:'Read the order','done');
+  arunRender();
+}
+function arunStep(k,patch){
+  if(!ARUN)return;
+  const st=ARUN.steps.find(x=>x.k===k); if(!st)return;
+  Object.assign(st,patch);
+  /* 一步开跑，它前面的都算结了——省得每处都手写一遍前置状态 */
+  if(patch.st==='run'||patch.st==='done'){
+    for(const x of ARUN.steps){ if(x===st)break; if(x.st==='wait')x.st='done' }
+  }
+  /* 中栏那条轨迹跟着走：每一步一行，跑着的那行是 spinner，完成落成对勾。
+     进行中和完成用两套措辞——「Reading the sources · reading sources…」这种
+     把状态词和结论拼在一起，读起来是同一句话说两遍 */
+  if(!ARUN.done){
+    const done=st.st==='done', L=st.line||'';
+    const TXT={
+      pull : done ? (L?`Read ${L}`:'Read the sources') : 'Reading the sources',
+      check: done ? (L||'Agents finished') : `Agents checking${L?` · ${L}`:''}`,
+      gates: done ? (L?`Release gates · ${L}`:'Release gates hold') : 'Checking the release gates',
+      cons : done ? (L||'Consensus reached') : 'Reaching consensus',
+    };
+    if(TXT[st.k])thinkRow(st.k, TXT[st.k], done?'done':'run');
+  }
+  arunRender();
+}
+function arunEnd(){ if(ARUN)ARUN.done=true; thinkSettle(); arunRender(); }
+/* 新一轮开始前先把环收回空态，免得上一笔的闸门读数挂在这一笔头上 */
+function arunRingReset(){arunIdle()}
+
+/* ══ 中栏 · Thinking 轨迹 ══
+   移植自给定的 ThinkingState（React → 原生）：
+     ✦ + shimmer 标题 + 收起箭头 ┃ 展开后左侧一条竖线串起各行
+     当前行转 spinner，已完成的行落成对勾，行逐条淡入上移
+     跑完标题换成「Assessed in 14s」，仍然可以再展开
+   跟右栏那条完整进度的分工：这里是对话流里的一瞥，右栏是留档。 */
+let THK=null;
+function thinkStart(label){
+  const log=document.getElementById('log'); if(!log)return;
+  thinkClear();
+  /* 评估一开始就撤掉空态标题：界面在提交那一刻就切进对话态，
+     输入框落到底部、轨迹接在上面。等结论出来才变，中间那十几秒是干等 */
+  document.getElementById('empty')?.remove();
+  const el=document.createElement('div');
+  el.className='thk'; el.id='thk';
+  el.innerHTML=`<button class="thkh" type="button" aria-expanded="true">
+      <span class="thksp" aria-hidden="true">✦</span>
+      <span class="thkl shimmer">${label}</span>
+      <span class="thkc" aria-hidden="true">⌄</span>
+    </button>
+    <div class="thkb"><div class="thkin"><span class="thkline" aria-hidden="true"></span>
+      <div class="thkrows"></div></div></div>`;
+  log.appendChild(el);
+  THK={el, t0:Date.now(), rows:[], open:true};
+  /* 展开状态只存在 class 上，不挂在 THK 上——thinkSettle() 会把 THK 置空，
+     回调里再引用它就抛异常，跑完之后这个按钮就点不动了 */
+  el.querySelector('.thkh').onclick=()=>{
+    const open=!el.classList.contains('open');
+    el.classList.toggle('open',open);
+    el.querySelector('.thkh').setAttribute('aria-expanded',String(open));
+  };
+  el.classList.add('open');
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+/* 同一个 key 再来一次就是原地更新，不新增一行——步骤会从「进行中」变「已完成」 */
+function thinkRow(key,text,state){
+  if(!THK)return;
+  const wrap=THK.el.querySelector('.thkrows');
+  let r=THK.rows.find(x=>x.key===key);
+  if(!r){
+    r={key,el:document.createElement('div')};
+    r.el.className='thkr'; r.el.style.animationDelay=(THK.rows.length*90)+'ms';
+    wrap.appendChild(r.el); THK.rows.push(r);
+  }
+  r.el.className='thkr '+(state||'run');
+  r.el.innerHTML=`<span class="thkri" aria-hidden="true"></span><span class="thkrt">${text}</span>`;
+  THK.el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function thinkSettle(label){
+  if(!THK)return;
+  const secs=Math.max(1,Math.round((Date.now()-THK.t0)/1000));
+  const l=THK.el.querySelector('.thkl');
+  l.classList.remove('shimmer');
+  l.textContent=label||`Assessed in ${secs}s`;
+  THK.el.querySelectorAll('.thkr.run').forEach(r=>r.className='thkr done');
+  THK=null;
+}
+function thinkClear(){document.getElementById('thk')?.remove(); THK=null}
+
+/* 顶部那只环：跑起来就挂上，扫描节奏与投票一一对齐（每票一格，7 票扫满一圈）。
+   它不参与 arunRender 的重绘——重绘会新建 canvas，动画就被掐回开头。 */
+let LAST_RING=null;             /* 环最后一次画的参数——从 agent 视图返回时要还原它 */
+function arunRing(agents, delay, stepMs, score, center, gates){
+  const host=document.getElementById('arring'); if(!host)return;
+  LAST_RING={agents, stepMs, score, center, gates};
+  /* 闸门跟着环一起摆出来：实测值对阈值，一条不过就不放。
+     这是我们和「给个意见」最不一样的地方，不该只在折叠里 */
+  /* 有闸门的时候环缩一号：环 220 + 闸门 ~80 塞不进这一栏，
+     最后一条闸门会被 .rmb 拦腰裁掉，看着像上一笔的残留。
+     位图仍按 220 画再缩放显示，不掉清晰度。 */
+  const sm=gates&&gates.length?' sm':'';
+  host.innerHTML=`<canvas class="arring${sm}" width="220" height="220" aria-label="Consensus"></canvas>`
+    +(gates&&gates.length?`<div class="argates">${gates.map(g=>
+       `<div class="argate"><i></i><b>${g.n}</b><span class="num">${g.got}</span>`
+       +`<em>needs ${g.need}</em></div>`).join('')}</div>`:'');
+  host.hidden=false;
+  consensusRing(host.firstChild, agents, delay, stepMs, score, center);
+}
+/* 空态：灰环停在 0，闸门一条都不显示。
+   之前我拿上一笔的分数把它填满，还编了两条闸门读数——那是凭空造数据，
+   空态就该老实是空的：还没查，所以什么都没有。 */
+/* 从 agent 名片切回来：有跑过就还原那一圈的完成态，没跑过就回空态 */
+function arunRingRestore(){
+  if(!LAST_RING)return arunIdle();
+  const L=LAST_RING;
+  arunRing(L.agents, -(L.agents.length*L.stepMs+2000), L.stepMs, L.score, L.center, L.gates);
+}
+function arunIdle(){
+  LAST_RING=null;
+  const host=document.getElementById('arring'); if(!host)return;
+  host.innerHTML=`<canvas class="arring dim" width="220" height="220" aria-label="No assessment running"></canvas>`;
+  host.hidden=false;
+  consensusRing(host.firstChild, RISK_AGENTS, null, 1050, 0, null);
+}
+
+/* 单个 agent 的面板：它是谁、这一笔它怎么判的、以及四段底稿 */
+/* 选中一个 agent，整条 Assessment 带都换掉：
+   左边从共识环换成这个 agent 的名片，右边从进度换成它的底稿。
+   只换右边会让左边那个环变成一块跟当前视图无关的装饰。 */
+function arunAgentPane(box){
+  const i=RISK_AGENTS.findIndex(x=>x.n===ASEL);
+  const a=RISK_AGENTS[i]; if(!a){ASEL=null;return arunRender()}
+  const run=ARUNS.find(r=>r.agents&&r.agents.length);
+  const voted=run&&run.done ? String(a.v||'') : '';
+  const cls=/note/i.test(voted)?'note':(/^pass/i.test(voted)?'pass':'');
+  const ev=a.ev||{};
+
+  const top=document.getElementById('agtop');
+  if(top){
+    top.innerHTML=`<button class="agback" type="button">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10 3.5 5.5 8l4.5 4.5"/></svg>Back</button>
+      <span class="agth">Agent profile</span>`;
+    top.hidden=false;
+    top.querySelector('.agback').onclick=arunAgentBack;
+  }
+
+  /* profile 不借「环 + 进度」那副左右骨架——环栏收起，整块自己排版：
+     横向名片头（徽记·名字·判定章·来源），下面才按有没有跑过分内容。
+     竖版名片挤在 26% 的窄条里，右边一句话守着一大片空地，怎么排都不匀。 */
+  const ring=document.getElementById('arring');
+  if(ring){ring.innerHTML=''; ring.hidden=true;}
+
+  const tags=(ev.checks||[]).map(([k])=>`<span class="agtag">${k}</span>`).join('');
+  const measures=tags?`<h4 class="afsec">What it measures</h4><div class="agtags">${tags}</div>`:'';
+  /* 两段式：上半是它的固定档案（谁、量什么——不随支付变），
+     一条分隔线，下半是它在这一笔里干了啥。工作记录不再折叠——
+     点进 profile 就是来看全部的，让人再点一次「展开」是多余的一道门。 */
+  /* 图形层：每行一枚状态点（表过态才点亮）；值是百分比的读数画一条量条——
+     「92%」有了刻度感，一排表格里眼睛先落在它身上 */
+  const chk=(ev.checks||[]).map(([k,v])=>{
+    const pct=/^(\d+(?:\.\d+)?)%$/.exec(String(v));
+    return `<div class="agck">
+      <i class="agdot${voted?'':' dim'}"></i><span>${k}</span><b>${v}</b>
+      ${pct?`<i class="agmeter"><b style="width:${Math.min(100,+pct[1])}%"></b></i>`:''}
+    </div>`}).join('');
+  const full=afEvid(ev,{skipChecks:true});
+  box.innerHTML=`<div class="agpage ${cls}">
+    <header class="agph2">
+      <span class="agcav">${agentGlyph(i)}</span>
+      <div class="agid">
+        <b class="agpn">${a.n.replace(/ Agent$/,'')}</b>
+        <span class="agpr">${a.d}</span>
+      </div>
+      ${voted?`<span class="ardvv">${voted}</span>`
+              :`<span class="agpidle">${run&&!run.done?'checking':'standing by'}</span>`}
+      ${run&&ev.pull?`<span class="agsrc">${ev.pull}${ev.rec?` · <b class="num">${ev.rec.toLocaleString()}</b> records`:''}</span>`:''}
+    </header>
+    ${run
+      ? `${tags?`<div class="agmline"><span>Measures</span>${
+          (ev.checks||[]).map(([k])=>k).join(' · ')}</div>`:''}
+        <div class="agsep" aria-hidden="true"></div>`
+      : `${measures?`<div class="agmeasure">${measures}</div>`:''}
+        <div class="agsep" aria-hidden="true"></div>`}
+    <section class="agwork">
+      ${run
+        ? `<h4 class="afsec">On this payment</h4>
+           ${voted?`<p class="agpm">${a.m}</p>`:''}
+           ${chk?`<div class="agcks">${chk}</div>`:''}
+           ${full||''}`
+        : `<div class="asby">Standing by</div>`}
+    </section>
+  </div>`;
+}
+function arunAgentBack(){
+  ASEL=null;
+  const top=document.getElementById('agtop'); if(top)top.hidden=true;
+  arunRingRestore(); renderRoster(!!AFJOB); arunRender();
+}
+
+const STEP_ICON={done:'✓', run:'', wait:''};
+/* 渐隐随内容走：滚得动才亮，滚到底就收——常亮的遮罩会被当成装饰而不是线索 */
+/* 三个可能的滚动盒（证据列 / 维度列 / 上下排时的整条），各自报各自还能不能滚。
+   不滚的那个 scrollHeight==clientHeight，自然不会亮。 */
+function asMore(){
+  const b=document.getElementById('afruns'), w=b&&b.parentElement;
+  if(b&&w&&w.classList.contains('aswrap'))
+    w.classList.toggle('more', b.scrollHeight-b.scrollTop-b.clientHeight>8);
+  [document.getElementById('arring'),document.querySelector('.assplit')].forEach(e=>{
+    if(e)e.classList.toggle('more', e.scrollHeight-e.scrollTop-e.clientHeight>8);
+  });
+}
+function arunRender(){
+  const box=document.getElementById('afruns'); if(!box)return;
+  setTimeout(asMore,0);
+  if(!box.dataset.sbound){box.dataset.sbound='1'; box.addEventListener('scroll',asMore)}
+  const sp=document.querySelector('.assplit');
+  if(sp&&!sp.dataset.sbound){sp.dataset.sbound='1'; sp.addEventListener('scroll',asMore)}
+  /* 选中了某个 agent，就把进度那一列换成它的底稿。
+     环不动——它是这一笔的落点，跟看哪个 agent 无关。 */
+  if(ASEL){ arunAgentPane(box); return; }
+  const top=document.getElementById('agtop'); if(top)top.hidden=true;
+  const layB=document.getElementById('right').classList.contains('lay-b');
+  if(!ARUNS.length){
+    /* 步骤条是固定的四步，空态就该先摆出来——用户能提前知道会经历什么，
+     　而不是看一句「什么都没跑」 */
+    const skel=RUN_STEPS.assess.map(([k,n])=>
+      `<div class="arstep wait"><span class="arsi"><i></i></span>
+        <div class="arsm"><div class="arst"><b>${n}</b></div></div></div>`).join('');
+    box.innerHTML=layB
+      /* B 的空态保持主从骨架：右面板不空着，先把「会发生什么」说清楚 */
+      ? `<div class="arun open aidle"><div class="arsteps">${skel}</div>
+          <div class="ardock"><div class="asby">Standing by</div></div></div>`
+      : `<div class="arun open aidle"><div class="arsteps">${skel}</div>
+          <div class="afempty">Start a payment and these fill in, step by step.</div></div>`;
+    return;
+  }
+  /* 展开的那一条重画整条进度；其余收成一行 */
+  const open=new Set([...box.querySelectorAll('.arstep.open')].map(e=>e.dataset.sk));
+  box.innerHTML=ARUNS.map((r,ri)=>{
+    const head=`<button class="arhead${r.open?' on':''}" data-run="${r.id}">
+        <span class="arhi ${r.flag?'flag':(r.done?'ok':'run')}"></span>
+        <span class="arht"><b>${r.subject}</b><i>${arunSummary(r)}</i></span>
+        <time>${afAgo(r.t)}</time>
+        <span class="archev" aria-hidden="true">⌄</span>
+      </button>`;
+    if(!r.open)return `<div class="arun">${head}</div>`;
+    /* B 版式：右栏常驻详情。没点过就默认跟着「最新有详情的一步」走。
+       必须先算——下面 steps 的选中态要引用它 */
+    let dock=layB?r.steps.find(st=>st.detail&&open.has(r.id+':'+st.k)):null;
+    if(layB&&!dock)
+      dock=[...r.steps].reverse().find(st=>st.detail&&st.st!=='wait')||null;
+    const steps=r.steps.map((st,i)=>{
+      const canOpen=!!st.detail;
+      const on=open.has(r.id+':'+st.k)||(layB&&dock&&dock.k===st.k);
+      return `<div class="arstep ${st.st}${on?' open':''}" data-sk="${r.id}:${st.k}">
+        <span class="arsi"><i>${STEP_ICON[st.st]||''}</i></span>
+        <div class="arsm">
+          <div class="arst"${canOpen?' role="button" tabindex="0"':''}>
+            <b>${st.n}</b>
+            ${st.line?`<span class="arsl">${st.line}</span>`:''}
+            ${canOpen?'<span class="arsx" aria-hidden="true">⌄</span>':''}
+          </div>
+          ${st.vis||''}
+          ${canOpen&&!layB?`<div class="arsd">${st.detail}</div>`:''}
+        </div>
+      </div>`}).join('');
+    return `<div class="arun open">${head}<div class="arsteps">${steps}</div>${
+      dock?`<div class="ardock">${dock.detail}</div>`:''}</div>`;
+  }).join('');
+
+  box.querySelectorAll('[data-run]').forEach(b=>b.onclick=()=>{
+    const r=ARUNS.find(x=>x.id===b.dataset.run); if(!r)return;
+    const was=r.open; ARUNS.forEach(x=>x.open=false); r.open=!was; arunRender();
+  });
+  /* agent 行点谁跳谁的 profile——跟点下面候命排同一条路 */
+  box.querySelectorAll('.ardv[role="button"]').forEach(r=>{
+    const go=()=>{ASEL=r.dataset.ag; renderRoster(!!AFJOB); arunRender();};
+    r.onclick=e=>{e.stopPropagation(); go()};
+    r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();go()}};
+  });
+  const readMode=()=>{const sp=document.querySelector('.assplit');
+    if(sp)sp.classList.toggle('reading', !!box.querySelector('.arstep.open'));
+    setTimeout(asMore,0);};
+  box.querySelectorAll('.arst[role="button"]').forEach(t=>{
+    const row=t.closest('.arstep');
+    /* A：读详情时环让位（详情是来读的，环是来瞟的）。
+       B：详情停靠在横条下，一次只开一格，重画一遍把抽屉端出来。 */
+    const tog=()=>{
+      if(layB){
+        const was=row.classList.contains('open');
+        box.querySelectorAll('.arstep.open').forEach(e=>e.classList.remove('open'));
+        if(!was)row.classList.add('open');
+        arunRender(); return;
+      }
+      row.classList.toggle('open'); readMode();
+    };
+    t.onclick=tog;
+    t.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tog()}};
+  });
+  readMode();
+}
+function arunSummary(r){
+  if(r.flag)return r.flag;
+  if(!r.done){const d=r.steps.filter(x=>x.st==='done').length;
+    return `step ${Math.min(d+1,r.steps.length)} of ${r.steps.length}`}
+  const cons=r.steps.find(x=>x.k==='cons');
+  return cons&&cons.line?cons.line:'done';
+}
+
+/* 相对时间会过期，一分钟刷一次就够——不必为「12s → 13s」重绘整栏 */
+setInterval(()=>{
+  document.querySelectorAll('#affeed .afrow').forEach((r,i)=>{
+    const e=AFEED[i], t=r.querySelector('time'); if(e&&t)t.textContent=afAgo(e.t);
+  });
+},15000);
 
 /* ───── 右栏（右→中→左 单向联动） ───── */
 /* 右栏只装「已经启动、还没结束」的。已排期是未来才发生的，不属于进行中，
    它在账户页的「定时付款」里有归属，这里只留一行入口。 */
 function renderAssets(){
-  document.getElementById('alist').innerHTML=ASSETS.map(a=>{
+  const _al=document.getElementById('alist'); if(!_al)return;
+  _al.innerHTML=ASSETS.map(a=>{
     const v=(a.avail+a.escrow)*a.fx;
     return `<div class="arow">
       <span class="acoin" style="background:hsl(${COIN_HUE[a.coin]??200} 45% 40%)">${a.coin.slice(0,1)}</span>
@@ -3519,48 +5269,27 @@ function renderAssets(){
         <em>${SHOW_BAL?'≈$'+Math.round(v).toLocaleString():'•••'}${a.escrow?` <span class="aesc">${SHOW_BAL?a.escrow.toLocaleString():'•'} locked</span>`:''}</em></span>
     </div>`}).join('');
 }
-function renderRight(){
-  /* Active 已删——那批事在左栏 Tasks。右栏只剩 Scheduled（常设规则）与 Recent */
-  const sched=ITEMS.filter(i=>i.g==='sched');
-  document.getElementById('c-sched').textContent=sched.length;
-  document.getElementById('rlist').innerHTML = sched.length
-    ? sched.map(i=>`<button class="qcard" data-cp="${i.cp||''}">
-        <span class="qtop"><span class="qtag">${i.what}</span><span class="qwhen num">${i.when||''}</span></span>
-        <span class="qbot"><span class="qwho">${i.who}</span><span class="qamt num">$${(i.amt||0).toLocaleString()}</span></span>
-      </button>`).join('')
-    : `<div class="rempty">Nothing scheduled</div>`;
-  document.querySelectorAll('#rlist .qcard').forEach(b=>b.onclick=()=>{
-    if(b.dataset.cp){selected=b.dataset.cp;renderLeft();renderStrip()}
-    switchView('chat');
-  });
-}
+/* renderRight 已退役：#rlist 随老右栏一起删了 */
 
 
-/* 右栏收起 / 展开。收起后左下角是唯一入口——两个按钮共用一个状态 */
+/* 左栏折叠：展开态按钮在行尾(#lfoldx)，折叠态它占 logo 的位(#lfold)。
+   两个按钮一个状态，状态记在 main.lout 上，偏好写 localStorage。 */
 (()=>{
-  const M=document.querySelector('main'), on=document.getElementById('rtoggle'), off=document.getElementById('rhide');
-  const KEY='atara-right';
+  const M=document.querySelector('main');
+  const KEY='atara-left';
   const paint=out=>{
-    M.classList.toggle('rout',out);
-    on.classList.toggle('off',out);
-    on.setAttribute('aria-expanded',String(!out));
-    on.title=out?'Open panel':'Close panel';
+    M.classList.toggle('lout',out);
     try{localStorage.setItem(KEY,out?'1':'0')}catch(e){}
+    /* 星盘画布的宽度跟着栏宽变，改宽的这个动作负责叫它重画——
+       这套环境里 ResizeObserver 不触发，只能谁改谁负责 */
+    document.querySelectorAll('canvas').forEach(c=>c._refit&&c._refit());
   };
   let init=false; try{init=localStorage.getItem(KEY)==='1'}catch(e){}
   paint(init);
-  on.onclick=()=>paint(!M.classList.contains('rout'));
-  off.onclick=()=>paint(true);
-  /* 账户页自己就是一块仪表盘，右栏在那儿说的是同一件事（总额/资产/定期）。
-     进这一页临时收起右栏，把宽度让给模块网格；离开时还原用户自己的偏好。
-     临时收起不写 localStorage——它不是用户的选择 */
-  window.railForView=v=>{
-    const acct=v==='rules';
-    if(acct){M.classList.add('rout');on.classList.add('off');on.setAttribute('aria-expanded','false')}
-    else{let pref=false;try{pref=localStorage.getItem(KEY)==='1'}catch(e){}
-      M.classList.toggle('rout',pref);on.classList.toggle('off',pref);
-      on.setAttribute('aria-expanded',String(!pref))}
-  };
+  ['lfoldx','lfold'].forEach(id=>{
+    const b=document.getElementById(id);
+    if(b)b.onclick=()=>paint(!M.classList.contains('lout'));
+  });
 })();
 
 /* 余额卡 3D 倾斜 + 光泽（转译自 21st.dev be-ui-tilt-card，去掉 React/motion 依赖）。
@@ -3584,8 +5313,6 @@ function renderRight(){
   });
 })();
 
-/* ── Field 校验（组件契约 §3A：非法值必须报错，禁止静默忽略） ── */
-const AMT_MAX=999999999;
 function validAmt(raw){
   /* 只剥千分位与货币符号——负号、字母原样留给 Number 判死 */
   const v=Number(String(raw).trim().replace(/[,，¥$\s]/g,''));
@@ -4072,7 +5799,9 @@ function startEscrow(){
       <button class="thgo" data-chatfor="${cp.id}">${avSpan(cp.name)}Message ${cp.name} ›</button>`};
   SESSIONS.push(sess); ACTIVE=sess; THREAD=null; setHead(sess);
   snap.sess=sid; snap.tk=sess;
-  taskUpsert(sid,{title:`Transfer ${escAmtTxt(snap.amt,snap.coin)} to ${cp.name}`, st:'run', sess:sid});
+  /* kind 一起存：右栏的订单状态要说「在等什么」，那得知道这单挂的是哪种条件 */
+  taskUpsert(sid,{title:`Transfer ${escAmtTxt(snap.amt,snap.coin)} to ${cp.name}`,
+    st:'run', sess:sid, kind:condKind(snap), cpid:cp.id, amt:snap.amt});
   renderLeft(); setLTab('ai'); setPlaceholder();
   /* 播报只说增量——条件文本在卡上已经写了一次，这里再抄一遍就是第三份拷贝 */
   tpost(sess,'Order created · funds locked in escrow');
@@ -4341,6 +6070,8 @@ function runReleaseConsensus(){
   /* 放行也开一整块共识面板——与交易前同一套环+星座+证据层，
      只是问题换了：不是「这人可不可信」，是「条件到底成没成立」 */
   const list=releaseAgents(snap);
+  /* escrow 里对手方存在 snap.cp（整个联系人对象），不是 id —— 直接取名字 */
+  AF_SUBJ=(snap.cp&&snap.cp.name)||'Release';
   const t=thinking([],[],()=>{
     if(escrow!==snap)return;                    /* 中途被撤/被顶掉就别放了 */
     snap.consDone=true;
@@ -4533,17 +6264,37 @@ function consensusRing(canvas, agents, startDelay, stepMs, score, center){
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const total=N*stepMs;                                    /* 扫满一圈的时长 */
 
-  function tick(k,on,warn){
+  /* 刻度不再是「亮/不亮」两态，而是带热度：
+       glow —— 刚被扫描头扫过的余辉，往回衰减十几根，拖出彗尾
+       burst —— 这一扇区的票刚落地时整扇区的绽放
+     两个热度都只加长度、线宽和辉光，不改颜色——颜色是语义（通过/存疑），
+     热度是时间，两件事不能混在一个通道里说。 */
+  function tick(k,on,warn,glow,burst){
     const a=tickAngle(k), r=seed(k);
-    const len=13+r*9;                                      /* 声纹式长短差（固定 seed，不闪） */
-    const rIn=R1+(on?0:4), rOut=R1+len+(on?5:0);
-    g.strokeStyle=on?(warn?C.warn:C.acc):C.hair;
+    const heat=Math.max(glow||0,burst||0);
+    const len=13+r*9+heat*8;                               /* 声纹式长短差（固定 seed，不闪） */
+    /* 画布半径只有 110：热度加长后的刻度要 clamp，不然画出边被平切一刀 */
+    const rIn=R1+(on?0:4), rOut=Math.min(108, R1+len+(on?5:0));
+    const col=on?(warn?C.warn:C.acc):C.hair;
+    g.strokeStyle=col;
     g.globalAlpha=on?1:.55;
-    g.lineWidth=on?1.6:1;
+    g.lineWidth=on?1.6+heat*1.4:1;
+    if(on&&heat>.02){ g.shadowBlur=14*heat; g.shadowColor=col; }
     g.beginPath();
     g.moveTo(cx+Math.cos(a)*rIn,  cy+Math.sin(a)*rIn);
     g.lineTo(cx+Math.cos(a)*rOut, cy+Math.sin(a)*rOut);
-    g.stroke(); g.globalAlpha=1;
+    g.stroke();
+    g.shadowBlur=0; g.globalAlpha=1;
+  }
+  /* 中心底光：随投票进度加深的一圈弥散光。它不是装饰——
+     「越查越亮」本身就是进度，看一眼亮度就知道跑到哪了 */
+  function core(prog){
+    if(prog<=0)return;
+    const gr=g.createRadialGradient(cx,cy,0,cx,cy,R1+6);
+    gr.addColorStop(0,C.acc); gr.addColorStop(1,'transparent');
+    g.globalAlpha=.12*prog; g.fillStyle=gr;
+    g.beginPath(); g.arc(cx,cy,R1+6,0,Math.PI*2); g.fill();
+    g.globalAlpha=1;
   }
   function threshold(){                                    /* 共识门槛 6/7 票：实体三角标 + 短线 */
     const a=a0+Math.PI*2*(6/7);
@@ -4579,11 +6330,13 @@ function consensusRing(canvas, agents, startDelay, stepMs, score, center){
     g.fillStyle=C.ink;
     g.fillText(String(done?score:Math.round(score*n/N)), cx, cy);
     g.font='500 9.5px Inter,system-ui,sans-serif'; g.fillStyle=C.mute;
-    g.fillText('Trust score · higher is safer', cx, cy+15);
+    g.fillText('Trust Gate · higher is safer', cx, cy+15);
     g.font='500 10px Inter,system-ui,sans-serif'; g.fillStyle=done?C.mute:C.faint;
     g.fillText(done?`✓ ${N}/${N} agree`:`${n}/${N} agents voted`, cx, cy+30);
   }
   function needle(a){
+    /* 扫描头自己也要发光，否则彗尾最亮的地方反而是尾巴 */
+    g.shadowBlur=12; g.shadowColor=C.acc;
     g.strokeStyle=C.ink; g.lineWidth=1.4;
     g.beginPath();
     g.moveTo(cx+Math.cos(a)*(R1-10), cy+Math.sin(a)*(R1-10));
@@ -4591,24 +6344,41 @@ function consensusRing(canvas, agents, startDelay, stepMs, score, center){
     g.stroke();
     g.fillStyle=C.ink;
     g.beginPath(); g.arc(cx+Math.cos(a)*(R2+8), cy+Math.sin(a)*(R2+8), 2.6, 0, 7); g.fill();
+    g.shadowBlur=0;
   }
   function ripple(rr,alpha){
     g.strokeStyle=C.acc; g.globalAlpha=alpha; g.lineWidth=1;
     g.beginPath(); g.arc(cx,cy,rr,0,Math.PI*2); g.stroke(); g.globalAlpha=1;
   }
+  const TAIL=15, BURST=per*.55;                            /* 彗尾长度、绽放衰减跨度（单位：刻度） */
   function frame(prog,rip){                                /* prog: 0..1 扫描进度; rip: 涟漪 0..1 */
     g.clearRect(0,0,CSS,CSS);
     const litTo=prog*TICKS;
+    core(prog);
+    /* 亮着的刻度走加法混合：叠在一起才会真的越叠越亮，
+       source-over 只会互相盖住，辉光就糊成一块死白 */
     for(let k=0;k<TICKS;k++){
       if(inGap(k))continue;
-      const sec=sectorOf(k);
-      tick(k, k<litTo, agents[sec].v!=='Pass');   /* Pass=强调色，note/flag=warn 色 */
+      const sec=sectorOf(k), on=k<litTo;
+      /* 余辉：离扫描头越近越亮，往回十五根衰减到零。
+         只在扫描进行中有——定格后还亮着，最后一扇区就永远「在加载」 */
+      const glow=(on&&prog<1)?Math.max(0,1-(litTo-k)/TAIL):0;
+      /* 绽放：这一扇区最后一根被扫过的那一刻，整扇区一起亮一下 */
+      const since=litTo-(sec+1)*per;
+      const burst=(on&&prog<1&&since>=0&&since<BURST)?1-since/BURST:0;
+      const hot=on&&(glow>.02||burst>.02);
+      if(hot)g.globalCompositeOperation='lighter';
+      tick(k, on, agents[sec].v!=='Pass', glow, burst);   /* Pass=强调色，note/flag=warn 色 */
+      if(hot)g.globalCompositeOperation='source-over';
     }
     threshold();
     const votes=Math.min(N, Math.floor(prog*N + 1e-6));
     if(prog>=1){ centre(N,true); if(rip>0&&rip<1) ripple(R2+14+rip*26, .5*(1-rip)); }
     else { centre(votes,false); needle(tickAngle(litTo)); }
   }
+  /* 空态：画一帧「还没开始」的样子就收手，不起循环。
+     startDelay 传 null 即可——只有 consensusRing 认这个约定 */
+  if(startDelay===null){ frame(0,0); return; }
   if(reduce){ frame(1,1); return; }
   const t0=performance.now()+startDelay;
   (function loop(now){
@@ -4626,29 +6396,60 @@ function consensusRing(canvas, agents, startDelay, stepMs, score, center){
    节奏（她拍的）：十几秒的完整叙事——唤醒 → 交流（边转边长出连线、脉冲往来）
    → 逐票（每票 ~1s，票脉冲飞向中心核）→ 全网亮一次锁定。
    与左侧共识环共用投票时间轴。Canvas 2D；freezeAt 定格调试；reduced-motion 画终态。 */
-function consensusNet(canvas, agents, base, voteStep, freezeAt){
+function consensusNet(canvas, agents, base, voteStep, freezeAt, idle, hOpt){
   const DPR=Math.min(2,window.devicePixelRatio||1);
-  const W=Math.max(360,canvas.parentElement?.clientWidth?Math.min(560,canvas.parentElement.clientWidth-250):460);
-  const H=292;
-  canvas.style.width=W+'px'; canvas.style.height=H+'px';
-  canvas.width=W*DPR; canvas.height=H*DPR;
-  const g=canvas.getContext('2d'); g.scale(DPR,DPR);
+  /* 竖排之后这块占满父宽（原来减 250 是给并排的环让位）。下限 300，
+     再窄轨道就贴到边上了 */
+  /* 同一张画布要在「待命 / 开工」之间来回换，旧的 rAF 循环必须作废，
+     否则两个循环同时往一张画布上画，帧会互相盖 */
+  const gen=(canvas._gen=(canvas._gen||0)+1);
+  const alive=()=>canvas.isConnected && canvas._gen===gen;
+  const measure=()=>Math.max(300,Math.min(560,canvas.parentElement?.clientWidth||460));
+  let W=measure();
+  /* 高度可传。轨道倍率不按 H/292 那样等比缩——那样图会白白留一圈空。
+     直接按「可用高度反推最外圈半径」：外圈直径 2×106×SC 加上标签留的 44，
+     正好填满 H。默认（不传 H）保持原样，跑起来那张不受影响。 */
+  const H=hOpt||292;
+  const SC=hOpt ? Math.max(.6,Math.min(1.3,(H-44)/212)) : 1;
+  const g=canvas.getContext('2d');
+  const fit=()=>{
+    canvas.style.width=W+'px'; canvas.style.height=H+'px';
+    canvas.width=W*DPR; canvas.height=H*DPR;
+    g.setTransform(1,0,0,1,0,0); g.scale(DPR,DPR);   /* 改 canvas.width 会重置变换 */
+  };
+  fit();
   const css=getComputedStyle(document.documentElement);
   const C={ink:css.getPropertyValue('--ink').trim(), mute:css.getPropertyValue('--mute').trim(),
            faint:css.getPropertyValue('--faint-2').trim(), acc:css.getPropertyValue('--accent').trim(),
            warn:css.getPropertyValue('--warn').trim(), hair:css.getPropertyValue('--line-strong').trim(),
+           green:css.getPropertyValue('--green').trim(),
            paper:css.getPropertyValue('--paper').trim()};
-  const N=agents.length, cx=W/2, cy=H/2;
+  /* cx 跟着栏宽走：左栏折叠 / 展开会改右栏宽度，画布得重新量、重新画，
+     否则停在旧宽度上——展开时比容器还宽就横向溢出了。
+     不用 ResizeObserver：它和 rAF 一样绑在渲染生命周期上，标签页不合成时根本不触发。
+     改由「改变栏宽的那个动作」直接调 refit——谁改的谁负责重画，确定性的。 */
+  const N=agents.length; let cx=W/2; const cy=H/2;
+  const reduceNet=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let lastT=0;
+  /* 公转时间与相位时间分家：相位（谁醒了、连线长到哪、投没投票）要能定格，
+     公转不能——一定格就得靠别的手段制造运动，折返就是这么来的。
+     ORB_T 不为 null 时，节点位置只认它。 */
+  let ORB_T=null;
+  canvas._refit=()=>{
+    const nw=measure(); if(nw===W)return;
+    W=nw; cx=W/2; fit(); draw(lastT);   /* 改 canvas.width 会清空画布，必须补一帧 */
+  };
+  addEventListener('resize',()=>canvas._refit&&canvas._refit());
   /* 时间表：唤醒 → 交流 → 投票 → 锁定 */
   const T={wake:1400, talk:4600, voteStep, votes:N*voteStep};
   T.voteStart=T.talk;  T.lockAt=T.voteStart+T.votes;  T.end=T.lockAt+900;
   const rnd=i=>{const x=Math.sin(i*93.7+41.3)*43758.5;return x-Math.floor(x)};
   /* 三圈正圆轨道；节点带各自的公转角速度（内快外慢，其中一圈反向） */
-  const ORB=[{r:44,w:.00052},{r:76,w:-.00034},{r:106,w:.00022}];
+  const ORB=[{r:44*SC,w:.00052},{r:76*SC,w:-.00034},{r:106*SC,w:.00022}];
   const RING_OF=[1,2,0,2,1,2,0];                    /* 分圈模式，节点少时取模复用 */
   const nodes=agents.map((a,i)=>{
     const o=ORB[RING_OF[i%RING_OF.length]];
-    return {a, o, r:8+rnd(i+2)*5,
+    return {a, o, r:(8+rnd(i+2)*5)*Math.max(.72,SC),
       a0:rnd(i+11)*Math.PI*2,
       born:200+i*170};
   });
@@ -4670,6 +6471,7 @@ function consensusNet(canvas, agents, base, voteStep, freezeAt){
   }
   const ease=x=>1-Math.pow(1-x,3);
   function draw(t){
+    lastT=t;
     g.clearRect(0,0,W,H);
     /* 正圆虚线轨道 */
     g.setLineDash([2,4]); g.strokeStyle=C.hair; g.lineWidth=1; g.globalAlpha=.9;
@@ -4677,22 +6479,68 @@ function consensusNet(canvas, agents, base, voteStep, freezeAt){
     g.setLineDash([]); g.globalAlpha=1;
     const done=t>=T.end;
     const tt=done?T.end:t;                          /* 终态后停止公转 */
-    const P=nodes.map(n=>npos(n,Math.max(0,tt)));
+    const OT=ORB_T!=null?ORB_T:Math.max(0,tt);
+    const P=nodes.map(n=>npos(n,OT));
     /* 节点命中区暴露给点击层（CSS 像素坐标，与 offsetX/Y 同系） */
     canvas._hits=nodes.map((n,i)=>({i, x:P[i].x, y:P[i].y, r:n.r}));
     canvas._done=done;
-    /* 连线：出生后 500ms 淡入；两端都出票后转强调色 */
-    edges.forEach(({e:[i,j],born})=>{
-      if(tt<born)return;
-      const a=Math.min(1,(tt-born)/500);
+    /* 待命时不画连线、不画脉冲、不画中心核——「候命」就是几个球在各自轨道上飘。
+       等真开工，连线、票脉冲、中心核一起长出来，那个对比本身就是信息。 */
+    /* 一条线的颜色 = 这条链路上两个 agent 对上没对上：
+       都没表态→暗；一头表了→强调色；两头都通过→绿；任一头有异议→警示。
+       颜色在这里是结论，不是装饰——扫一眼整张网就知道有没有人不同意。 */
+    const edgeCol=(i,j)=>{
       const vi=tt>=T.voteStart+i*voteStep, vj=tt>=T.voteStart+j*voteStep;
-      g.strokeStyle=(vi&&vj)?C.acc:C.hair;
-      g.globalAlpha=a*((vi&&vj)?.55:.5); g.lineWidth=1;
-      g.beginPath(); g.moveTo(P[i].x,P[i].y); g.lineTo(P[j].x,P[j].y); g.stroke();
+      if(!vi&&!vj)return {c:C.hair,a:.45};
+      if((vi&&agents[i].v!=='Pass')||(vj&&agents[j].v!=='Pass'))return {c:C.warn,a:.62};
+      if(vi&&vj)return {c:C.green,a:.5};
+      return {c:C.acc,a:.5};
+    };
+    if(!idle) edges.forEach(({e:[i,j],born})=>{
+      if(tt<born)return;
+      /* 「突然接通」：线从一端长到另一端，260ms 走完，末端带一个亮头。
+         原来是整条线一起淡入——那是渐显，不是接上。 */
+      const k=reduceNet?1:Math.min(1,(tt-born)/260);
+      const ec=edgeCol(i,j);
+      const hx=P[i].x+(P[j].x-P[i].x)*k, hy=P[i].y+(P[j].y-P[i].y)*k;
+      g.strokeStyle=ec.c; g.globalAlpha=ec.a; g.lineWidth=1;
+      g.beginPath(); g.moveTo(P[i].x,P[i].y); g.lineTo(hx,hy); g.stroke();
+      if(k<1){
+        g.globalCompositeOperation='lighter';
+        g.globalAlpha=1; g.fillStyle=C.acc; g.shadowBlur=9; g.shadowColor=C.acc;
+        g.beginPath(); g.arc(hx,hy,2.3,0,Math.PI*2); g.fill();
+        g.shadowBlur=0; g.globalCompositeOperation='source-over';
+      }
     });
     g.globalAlpha=1;
+    /* 常驻数据流：每条连线上有一个光点匀速往返地跑。
+       原来的 msgs 是离散事件（谁跟谁说了一句），这个是「链路活着」的底噪，
+       两者叠加才像一张真的在传数据的网。 */
+    if(!idle && !done && !reduceNet) {
+      g.globalCompositeOperation='lighter';
+      edges.forEach(({e:[i,j],born},k)=>{
+        if(tt<born+260)return;
+        const ph=((tt-born)/2600+k*.137)%1;
+        const kk=ph<.5?ph*2:2-ph*2;                     /* 0→1→0 往返，端点处自然减速 */
+        const ec=edgeCol(i,j);                          /* 光点跟线同色：它运的就是这条链路的结论 */
+        const x=P[i].x+(P[j].x-P[i].x)*kk, y=P[i].y+(P[j].y-P[i].y)*kk;
+        g.globalAlpha=.6; g.fillStyle=ec.c;
+        g.shadowBlur=7; g.shadowColor=ec.c;
+        g.beginPath(); g.arc(x,y,1.6,0,Math.PI*2); g.fill();
+        /* 到站：信息抵达那一头时溅一圈。没有这一下，光点只是在滑，
+           有了这一下，才读得出「送到了」。 */
+        let near=0, tgt=-1;
+        if(ph<.5 && kk>.88){near=(kk-.88)/.12; tgt=j}
+        else if(ph>=.5 && kk<.12){near=(.12-kk)/.12; tgt=i}
+        if(near>0){
+          g.strokeStyle=ec.c; g.globalAlpha=.55*near; g.lineWidth=1.2;
+          g.beginPath(); g.arc(P[tgt].x,P[tgt].y,nodes[tgt].r+2+(1-near)*7,0,Math.PI*2); g.stroke();
+        }
+      });
+      g.shadowBlur=0; g.globalAlpha=1; g.globalCompositeOperation='source-over';
+    }
     /* 交流脉冲 */
-    if(!done) msgs.forEach(m=>{
+    if(!done && !idle) msgs.forEach(m=>{
       const mt=(t-m.t0)/m.dur; if(mt<0||mt>1)return;
       const ed=edges[m.ei]; if(t<ed.born+300)return;
       let [i,j]=ed.e; if(m.flip){const q=i;i=j;j=q}
@@ -4726,14 +6574,34 @@ function consensusNet(canvas, agents, base, voteStep, freezeAt){
       if(voted&&!done){const pk=(tt-vAt)/380; if(pk<1) rr*=1+.28*Math.sin(Math.min(1,pk)*Math.PI);}
       g.fillStyle=voted?(warn?C.warn:C.ink):C.faint;
       g.globalAlpha=voted?1:.9;
+      /* 出票瞬间辉光最强，之后落到一层底光——「表过态」和「还在看」一眼分得开 */
+      if(voted&&!reduceNet){
+        const fresh=Math.max(0,1-(tt-vAt)/900);
+        g.shadowBlur=7+fresh*16; g.shadowColor=warn?C.warn:C.acc;
+      }
       g.beginPath(); g.arc(P[i].x,P[i].y,rr,0,Math.PI*2); g.fill();
-      g.globalAlpha=1;
+      g.shadowBlur=0; g.globalAlpha=1;
       /* 名字随节点走；票落后名字下多一行 */
-      g.font='600 9.5px Inter,system-ui,sans-serif'; g.textAlign='center';
+      g.font='600 9.5px Inter,system-ui,sans-serif';
       g.fillStyle=voted?C.ink:C.mute;
-      g.fillText(n.a.n, P[i].x, P[i].y+rr+13);   /* 出票只换颜色，不写票字 */
+      /* 名字顺着「圆心 → 节点」的方向往外放，并去掉 Agent 后缀：
+         窄栏里一律压在节点正下方 + 全名，七个标签会叠成一团 */
+      const dx=P[i].x-cx, dy=P[i].y-cy, dl=Math.hypot(dx,dy)||1;
+      const ox=dx/dl*(rr+9), oy=dy/dl*(rr+9);
+      const txt=n.a.n.replace(/ Agent$/,'');
+      let al = ox>6?'left' : ox<-6?'right' : 'center', lx=P[i].x+ox;
+      /* 外圈节点朝外放会顶出画布——超边就把标签翻到节点内侧 */
+      const tw=g.measureText(txt).width;
+      if(al==='left'  && lx+tw>W-4){al='right'; lx=P[i].x-ox}
+      if(al==='right' && lx-tw<4)  {al='left';  lx=P[i].x-ox}
+      if(al==='center')lx=Math.min(W-tw/2-4,Math.max(tw/2+4,lx));
+      g.textAlign=al;
+      /* 纵向同样要夹：最顶最底的节点朝外放标签会探出画布被裁半截 */
+      const ly=Math.min(H-4,Math.max(10,P[i].y+oy+(oy>0?9:0)));
+      g.fillText(txt, lx, ly);
     });
-    /* 中心共识核：实心，收一票长一格；锁定后描一圈 + ✓ */
+    /* 中心共识核：实心，收一票长一格；锁定后描一圈 + ✓。待命时没有核 */
+    if(idle) return;
     const nv=Math.max(0,Math.min(N, t<T.voteStart?0:Math.floor((t-T.voteStart)/voteStep)+1));
     const cr=6+(done?N:nv)*.85;
     g.fillStyle=C.ink; g.beginPath(); g.arc(cx,cy,cr,0,Math.PI*2); g.fill();
@@ -4748,12 +6616,28 @@ function consensusNet(canvas, agents, base, voteStep, freezeAt){
     }
   }
   if(freezeAt!=null){ draw(freezeAt); return; }
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches){ draw(T.end+1); return; }
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){ draw(idle?T.wake+600:T.end+1); return; }
+  /* 待命模式：相位定格在「都醒了、还没开始表态」，公转时间独自匀速向前，永不折返。
+     原来是让整个时间轴在两点之间来回弹（0→1→0），节点转一段就倒着转回去——
+     真实的轨道没有这种运动，一眼就假。
+     IDLE_RATE 把角速度压到 0.4：候命是背景，慢到几乎察觉不出在动才对。 */
+  if(idle){
+    const IDLE_RATE=.4, settled=T.voteStart-400;
+    const t0=performance.now();
+    (function loop(now){
+      if(!alive())return;
+      ORB_T=settled+(now-t0)*IDLE_RATE;
+      draw(settled);
+      requestAnimationFrame(loop);
+    })(performance.now());
+    return;
+  }
   const t0=performance.now()+base;
   (function loop(now){
+    if(!alive())return;
     const t=now-t0;
     draw(t);
-    if(t<T.end && canvas.isConnected) requestAnimationFrame(loop);
+    if(t<T.end) requestAnimationFrame(loop);
     else draw(T.end+1);
   })(performance.now());
 }
@@ -4884,12 +6768,35 @@ function thinking(steps, chips, done, verdict, agents){
      </div>
      <div class="thbody"><div class="thin">
        <div class="thsteps"></div><div class="chips"></div>
-       ${agents?'<div class="thagx"><canvas class="thring" width="220" height="220" aria-label="Multi-agent consensus ring"></canvas><canvas class="thnet" aria-label="Agents exchanging signals before consensus"></canvas>'+(agents.gates?'<div class="thgates"></div>':'')+'<div class="thcons"></div></div><div class="agdoss"></div>':''}
+       ${agents?'<div class="thagx"><canvas class="thring" width="200" height="200" aria-label="Multi-agent consensus ring"></canvas>'+(agents.gates?'<div class="thgates"></div>':'')+'<div class="thcons"></div></div>':''}
        ${verdict?'<div class="thverd"></div>':''}
      </div></div>`;
-  const log=document.getElementById('log');
-  document.getElementById('empty')?.remove();
-  log.prepend(el);
+  /* 2026-08-26 这块面板整体移到右栏：中栏留给「跟人沟通 + 订单状态」，
+     AI 那一套（环 / 星座 / 闸门 / 结论）全在右栏，和下面的流水是同一件事的两种粒度。
+     右栏一次只留一块——上一笔的可视化留着没意义，它的结论已经沉进流水里了。 */
+  /* 面板本体不再上屏：它讲的东西已经被上面的进度条逐步讲完了，
+     再挂一份完整面板就是同一件事说两遍。留在文档流外面只为让原有逻辑
+     （标签、共识行、闸门行、结论带）继续跑，它们是进度条的数据源。 */
+  const host=document.getElementById('afpanel');
+  host.innerHTML=''; host.appendChild(el); host.hidden=true;
+  el.classList.add('inrail');
+
+  /* 右栏流水与这块面板同一条时间轴。标签是调用方在 thinking() 返回后才写的
+     （'Assessing counterparty' 之类），所以推迟一拍再读，否则拿到的是默认值 'Reading'。
+     用 setTimeout 不用 rAF：后台标签页会把 rAF 节流到不触发，流水就只剩条目没有批次头。 */
+  setTimeout(()=>{
+    const label=el.querySelector('.thlabel').textContent;
+    /* 'Reading' 是面板还没拿到标签时的占位字，不是这一批的主题——
+       别让占位字漏出来当标题。真主题优先取调用方放下的对手方名字。 */
+    const subj=AF_SUBJ||(label&&label!=='Reading'?label:'This payment');
+    afStart(label, agents?agents.list.length:0, subj);
+    if(agents){
+      const kind=agents.gates?'release':'assess';
+      arunStart(kind, AFJOB.subject, agents.list);
+      /* 不带 line：主题已经写在批次头上了，第一步再抄一遍就是同一个词并排两次 */
+      arunStep('read',{st:'done'});
+    }
+  }, 0);
 
   const t0=performance.now();
   const tick=setInterval(()=>{
@@ -4899,6 +6806,7 @@ function thinking(steps, chips, done, verdict, agents){
 
   const sw=el.querySelector('.thsteps'), cw=el.querySelector('.chips');
   steps.forEach((s,i)=>setTimeout(()=>{
+    afPush({kind:'step', title:s.k, line:s.v});
     const d=document.createElement('div');
     d.className='thstep run';
     d.innerHTML=`<span class="tk">◇</span><span>${s.k}</span><span class="tv">${s.v||''}</span>`;
@@ -4910,6 +6818,7 @@ function thinking(steps, chips, done, verdict, agents){
     const b=document.createElement('span');
     b.className='chip'; b.innerHTML=`<b>${c.n}</b>${c.d?' · '+c.d:''}`;
     cw.appendChild(b);
+    afPush({kind:'tool', title:c.n, line:c.d||'tool run'});
     setTimeout(()=>b.classList.add('ok'),260);
   }, steps.length*190 + i*90));
 
@@ -4920,9 +6829,57 @@ function thinking(steps, chips, done, verdict, agents){
   const agBase=steps.length*190 + chips.length*90 + 400;
   const agDone=AG_TALK + agN*AG_STEP + 900;
   if(agents){
+    /* ── 进度：拉证据 ── 一句结论，详情收进折叠 */
+    setTimeout(()=>arunStep('pull',{st:'run',line:'reading sources…'}), agBase+200);
+    setTimeout(()=>{
+      const rec=agents.list.reduce((a,x)=>a+(x.ev?.rec||0),0);
+      /* 源要去重：七个 agent 各报各的 srcN，直接相加会把同一个登记处数好几遍 */
+      const seen=new Map();
+      agents.list.forEach(a=>(a.ev?.srcs||[]).forEach(x=>{if(!seen.has(x.n))seen.set(x.n,x)}));
+      const src=seen.size;
+      /* 来源十几条，竖排单列在这个视口里要滚很久——包一层 ardcols 自动分列 */
+      const rows=`<div class="ardcols">${[...seen.values()].map(x=>
+        `<div class="ards"><b>${x.n}</b><em>${x.d}</em></div>`).join('')}</div>`;
+      arunStep('pull',{st:'done', line:`${src} sources · ${rec.toLocaleString()} records`,
+        detail:rows});
+      arunStep('check',{st:'run', line:`0 of ${agents.list.length}`});
+    }, agBase+AG_TALK-200);
+
+    /* 每票一条，偏移与环上的刻度一致——右栏和面板讲的是同一件事的同一时刻 */
+    agents.list.forEach((a,i)=>setTimeout(()=>{
+      afPush({kind:'agent', title:a.n, v:a.v, line:a.m,
+        meta:a.ev?`${a.ev.pull} · ${a.ev.rec} records`:a.d, ev:a.ev});
+      const n=i+1, tot=agents.list.length;
+      const objected=agents.list.slice(0,n).filter(x=>!/^pass/i.test(String(x.v||'')));
+      if(n<tot){arunStep('check',{st:'run', line:`${n} of ${tot}`}); return}
+      /* 全票到齐：结论只报「有没有人不同意」，七条 PASS 收进折叠 */
+      const notes=agents.list.filter(x=>/note/i.test(String(x.v||'')));
+      const line=objected.length ? `${objected.length} objected`
+               : notes.length   ? `${tot} of ${tot} cleared · ${notes.length} with a note`
+                                : `${tot} of ${tot} cleared`;
+      if(objected.length&&ARUN)ARUN.flag=`${objected.length} objected`;
+      /* 每个 agent 一行，点开是它自己的底稿（查了哪儿 / 查到什么 / 跑了哪些检查 / 原始记录）。
+         这四段的数据一直都在 RISK_AGENTS[i].ev 里，只是重构进度条时把通向它的路走丢了。 */
+      /* 每行是通往该 agent profile 的门，不在原地展开——完整底稿 profile 里有，
+         原地再放一份是同一份材料摆两处 */
+      arunStep('check',{st:'done', line, detail:agents.list.map(x=>{
+        const v=String(x.v||''), cls=/note/i.test(v)?'note':(/^pass/i.test(v)?'pass':'flag');
+        return `<div class="ardv ${cls} can" data-ag="${x.n}" role="button" tabindex="0">
+            <b>${x.n.replace(/ Agent$/,'')}</b>
+            <span class="ardvv">${v}</span>
+            <span class="ardvx" aria-hidden="true">›</span>
+            <em>${x.m}</em>
+          </div>`}).join('')});
+    }, agBase+AG_TALK+i*AG_STEP));
     consensusRing(el.querySelector('.thring'), agents.list, agBase+AG_TALK, AG_STEP, agents.sc, agents.center);
-    consensusNet(el.querySelector('.thnet'), agents.list, agBase, AG_STEP);
-    agentEvidence(el, agents, agBase, AG_TALK, AG_STEP);
+    /* 右栏顶部同一只环、同一条时间轴：交流期结束开始扫，每票一格。
+       传的是 agents.list 本身——上一版我只传了名字，v 被剥掉，
+       环里 `v!=='Pass'` 恒真，整圈就成了 warn 的黄色 */
+    arunRing(agents.list, agBase+AG_TALK, AG_STEP, agents.sc, agents.center, agents.gates);
+    /* 星座不在这儿画了：常驻的那张在 Agent status 模块里（待命模式），
+       同一份阵容画两遍是重复。这块面板只讲这一笔的信任分、闸门和结论。 */
+    /* agentEvidence（7 个 tab + 底稿）停用：同一份证据现在按 agent 落在下面的流水条目里，
+       tab 与流水两条路读同一份数据是重复，右栏也放不下。函数保留，未挂载。 */
     /* 放行闸门：一条一行，实测值对阈值。放行是这几条的 AND，一条不过就不放 */
     if(agents.gates){
       const gw=el.querySelector('.thgates');
@@ -4931,12 +6888,31 @@ function thinking(steps, chips, done, verdict, agents){
           +`<em>${x.got}</em><span>needs ${x.need}</span></div>`).join('');
       [...gw.querySelectorAll('.thg')].forEach((r,i)=>setTimeout(()=>{
         r.classList.add('ok'); r.querySelector('i').textContent='✓';
+        const x=agents.gates[i];
+        afPush({kind:'gate', title:x.n, v:'Met', line:`measured ${x.got} · needs ${x.need}`});
+        /* 闸门这一步用环：N 个闸门 = 环上 N 段，一条不过就不放。
+           实测值对阈值列在环下面——这是我们和「给意见」最不一样的地方 */
+        const g=agents.gates, n=i+1;
+        arunStep('gates',{st:n===g.length?'done':'run',
+          line:n===g.length?`${g.length} of ${g.length} hold`:`${n} of ${g.length}`,
+          detail:n===g.length?g.map(y=>
+            `<div class="ardg"><b>${y.n}</b><span class="num">${y.got}</span><em>needs ${y.need}</em></div>`
+          ).join(''):null});
       }, agBase+AG_TALK+agN*AG_STEP+240+i*260));
     }
     setTimeout(()=>{
       const r=document.createElement('div'); r.className='tha cons';
       r.innerHTML=`<span class="tk">◆</span><b>${agents.cons.txt}</b>`;
       el.querySelector('.thcons').appendChild(r);
+      afPush({kind:'cons', title:'Consensus reached', line:agents.cons.txt});
+      /* 共识这一步：评估型给信任分环，放行型给一句落点 */
+      const isRel=!!agents.gates;
+      /* 放行型的落点要写结果，不是写机制。agents.cons.txt 那句
+         「一条不成立就不放」是在解释 AND 语义，挂在「Released」后面自相矛盾 */
+      arunStep('cons',{st:'done',
+        line:isRel?'funds released · written to both records'
+                  :agents.cons.txt.replace(/^Consensus\s+/,'')});
+      arunEnd();
     }, agBase + agDone + 100);
   }
   /* 结论不是第七条证据 —— 它是这张面板的落点,单独一带,分数用与挂单卡同一个环 */
@@ -4957,6 +6933,7 @@ function thinking(steps, chips, done, verdict, agents){
   const total=steps.length*190 + chips.length*90 + (agN?400+agDone+400:0) + (verdict?900:420);
   setTimeout(()=>{
     clearInterval(tick);
+    afStop();
     el.classList.add('done');
     /* 带共识可视化的面板不自动收起——证据层（轨迹行/节点底稿）就在里面等着被点 */
     if(!agents) el.classList.remove('open');
@@ -5031,6 +7008,7 @@ function showOrder(o){
   document.getElementById('composer').classList.remove('show');
   /* 与命令/动作面板同一条链：多 agent 共识动画 → 结论消息 → 订单卡。
      三个入口一个面板——旧的五行评估卡曾在这里漏网 */
+  AF_SUBJ=o.name;   /* 右栏这一批的主题：这笔是跟谁做的 */
   const t=thinking([],[], ()=>consensusThenDeal(()=>{
     openDeal(o.side==='sell'?'buy':'sell', Math.round(o.qty*o.px), o);
     openThread(o, D);
@@ -5206,13 +7184,26 @@ function openAct(k){
        /* 同一套组合器,默认不同:OTC 预填标准组合「凭证∧双方确认」,条件单从空集起步 */
        conds:k==='cond'?[]:[{t:'evidence',p:{proof:'Bank receipt'}},{t:'approve',p:{who:'Both sides confirm'}}],
        timeout:'14 days',
-       fiat:'CNY', peer:(k==='cond'&&THREAD)?THREAD.name:(CPS[0]?.name||''),
+       /* 在某个人的会话里打开任一入口，对手方就是这个人——入口才有宾语 */
+       fiat:'CNY', peer:THREAD?THREAD.name:(CPS[0]?.name||''),
        /* When 默认 Immediately——普通转账就是条件槽为空的退化情形，想要保障改这一行 */
        cond:'Immediately', cp:{...CTPL['Immediately'].defs},
        why:k==='cond'?'Supplier balance':null};
   if(d.unit==='coin'&&!heldCoins().includes(ACT.coin)) ACT.coin=heldCoins()[0]||'USDT';
   document.querySelectorAll('#actions .act').forEach(b=>b.classList.toggle('on',b.dataset.act===k));
   paintAct();
+  /* 点胶囊也要把输入框弹成大框——它就是这个动作的工作面。
+     必须在 paintAct() 之后：条件行还没画出来时量到的自然高度是个空框 */
+  if(typeof sayMini==='function')sayMini(false);
+}
+function closeActCollapse(){
+  /* 关掉面板、输入框又是空的，就没有理由继续占着大框。
+     这里不看焦点在不在框里——「关掉」本身就是用户说完事了 */
+  setTimeout(()=>{
+    if(typeof sayMini!=='function')return;
+    if(ACT||PARSING||$free.value.trim())return;
+    sayMini(true);
+  },80);
 }
 function closeAct(){
   if(typeof RV!=='undefined'&&RV)closeReview();
@@ -5220,6 +7211,7 @@ function closeAct(){
   const bar=document.getElementById('abar'); bar.hidden=true; bar.innerHTML='';
   document.querySelectorAll('#actions .act').forEach(b=>b.classList.remove('on'));
   syncSend();
+  closeActCollapse();
 }
 function paintAct(){
   const bar=document.getElementById('abar');
@@ -5592,7 +7584,8 @@ const stamp=n=>{const h=(9+Math.floor(n/4))%24, m=(n*13)%60;
    在此之前所有流程（买单 / 卖家入驻 / 句子解析）都往同一个 #log 里 prepend，
    于是「点了 Buy 再去成为商家」会把入驻表单叠在交易卡上面——两件不相干的事共用一段对话。 */
 let ACTIVE=null;   /* 当前在屏的会话：task 或 chat */
-/* 任务/会话页把三个入口收进 + ——一屏里内容比入口重要；空态还回来 */
+/* 只有工单页把三个入口收进 + ——那种页面内容比入口重要。
+   跟人的对话相反：给这个人转账是这里最该做的事，入口必须直接摆着，+ 不出现。 */
 function tuckActions(on){
   const say=document.getElementById('say');
   say.classList.toggle('tucked',!!on);
@@ -5606,7 +7599,7 @@ document.getElementById('actplus').onclick=()=>{
 };
 function setHead(sess){
   const h=document.getElementById('thhead');
-  tuckActions(!!sess);
+  tuckActions(!!sess && sess.kind!=='chat');
   if(!sess){h.classList.remove('show');return}
   h.innerHTML=sess.headHTML; h.classList.add('show');
   h.querySelector('[data-open]')?.addEventListener('click',ev=>{
@@ -5633,7 +7626,7 @@ function newSession(){
   stashSession();
   closeAct();   /* 新会话不带残留的动作面板——交易池点 Buy 曾把上一次选中的 Conditional order 带进来 */
   document.getElementById('log').innerHTML=
-    '<div id="empty"><h3>What would you like to settle?</h3></div>';
+'<div id="empty"><h3>What would you like to settle?</h3></div>';
   document.getElementById('composer').classList.remove('show');
   SELLER.el=null;
   const f=document.getElementById('free'); f.value='';
@@ -5672,7 +7665,7 @@ function openThread(o,d){
   ACTIVE=task; THREAD=null; setHead(task);
   D.th=null; D.tk=task;
   selected=null;
-  taskUpsert('t-'+o.peer,{title:`${d.side==='buy'?'Buy':'Sell'} ${d.u.toLocaleString()} ${d.coin}`,
+  taskUpsert('t-'+o.peer,{kind:'otc', title:`${d.side==='buy'?'Buy':'Sell'} ${d.u.toLocaleString()} ${d.coin}`,
     st:'you', sess:'t-'+o.peer});
   renderLeft(); setLTab('ai');
   tpost(task,`Order opened with ${o.name} · this task is part of the trade record`);
@@ -5735,6 +7728,158 @@ function ensureChat(peer){
   reply(`Hi — this is ${m.name}. The order is on the card; ask me anything about the transfer.`, 900, chat);
   return chat;
 }
+/* ══ 熟人网络 ══
+   通讯录里的人不一定成交过，所以不能走 ensureChat（那条路要求先有 task）。
+   这条是给"认识的人"用的：开一段会话，头部常驻一个付款入口。 */
+function openContact(id){
+  const c=CPS.find(x=>x.id===id); if(!c)return;
+  let chat=SESSIONS.find(x=>x.kind==='chat'&&x.id===id);
+  if(!chat){
+    const frag=document.createDocumentFragment();
+    const box=document.createElement('div');
+    box.id='thread'; box.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';
+    frag.append(box);
+    const pend=c.state==='pending';
+    chat={id, kind:'chat', peer:id, name:c.name, sc:c.ifr, el:box, n:0, stash:frag,
+      headHTML:`${avSpan(c.name,'thav')}
+        <span class="thwho"><b>${c.name}</b><span>${c.rel} · ${c.atr}${
+          pend?' · invite pending':` · ${c.deals} settled together`}</span></span>
+`};
+    SESSIONS.push(chat);
+  }
+  restoreSession(id); switchView('chat'); selected=id; renderLeft();
+}
+
+/* ══ Contacts 页（主区）══ 名册回答"我认识谁"；收件箱在左栏回答"谁在跟我说话" */
+function renderContactsPage(){
+  const body=document.getElementById('cpbody'); if(!body)return;
+  const ok=CPS.filter(c=>c.state!=='pending');
+  const pend=CPS.filter(c=>c.state==='pending');
+  const row=c=>`
+    <div class="ctrow" data-id="${c.id}">
+      ${avSpan(c.name,'ctav')}
+      <span class="ctn"><em>${c.name}</em><i>${c.rel} · ${c.atr}</i></span>
+      <span class="ctled num">${c.deals?`${c.deals} settled${c.net?` · net ${c.net>0?'+':'−'}$${Math.abs(c.net).toLocaleString()}`:''}`:'No trades yet'}</span>
+      <span class="ctacts">
+        <button class="btn btn-primary btn-sm" data-pay="${c.id}">Send money</button>
+        <button class="btn btn-secondary btn-sm" data-msg="${c.id}">Message</button>
+      </span>
+    </div>`;
+  body.innerHTML=
+    (ok.length?`<div class="ctcard">${ok.map(row).join('')}</div>`
+      :`<div class="mkempty">No contacts yet — add someone to pay them.</div>`)
+    +(pend.length?`<div class="lsec" style="margin-top:22px">Waiting for them to accept</div>
+      <div class="ctcard pend">${pend.map(c=>`
+        <div class="ctrow pend" data-id="${c.id}">
+          ${avSpan(c.name,'ctav')}
+          <span class="ctn"><em>${c.name}</em><i>${c.rel} · ${c.atr}</i></span>
+          <span class="ctled">Invite sent</span>
+        </div>`).join('')}</div>`:'');
+  body.querySelectorAll('[data-pay]').forEach(b=>b.onclick=e=>{
+    e.stopPropagation(); openContact(b.dataset.pay); payContact(b.dataset.pay)});
+  body.querySelectorAll('[data-msg]').forEach(b=>b.onclick=e=>{
+    e.stopPropagation(); openContact(b.dataset.msg)});
+  body.querySelectorAll('.ctrow:not(.pend)').forEach(r=>r.onclick=()=>openContact(r.dataset.id));
+}
+
+/* 会话里直接付款：把动作面板开到条件单，收款人预填成这位联系人，
+   条件按关系标签预填（给供应商默认要凭证，给客户默认立即） */
+function payContact(id){
+  const c=CPS.find(x=>x.id===id); if(!c)return;
+  openAct('cond');
+  ACT.peer=c.name;
+  ACT.conds=(REL_COND[c.rel]||[]).map(x=>({t:x.t,p:{...x.p}}));
+  ACT.why=c.rel==='Supplier'?'Supplier balance':'Transfer';
+  paintAct();
+  document.getElementById('free')?.focus();
+}
+
+/* 添加联系人。三条路都落到同一个结果：一条待对方接受的邀请。
+   双向确认是硬要求——联系人直接关联收款关系，单向可加就是攻击面。 */
+function openAddContact(){
+  openModal('Add contact',
+   `<div class="acx">
+      <div class="acseg" role="tablist">
+        <button class="acs on" data-ac="id" role="tab">By ATR ID</button>
+        <button class="acs" data-ac="link" role="tab">Invite link</button>
+        <button class="acs" data-ac="past" role="tab">From past trades</button>
+      </div>
+      <div id="acbody"></div>
+    </div>`,
+   ()=>{
+     const body=document.getElementById('acbody');
+     const paint=mode=>{
+       if(mode==='id') body.innerHTML=
+         `<label class="acf"><span>Their ATR ID</span>
+            <input id="ac-id" placeholder="ATR-XXXXXX" autocomplete="off"></label>
+          <label class="acf"><span>Relationship</span>
+            <div class="acchips" id="ac-rel">${RELS.map((r,i)=>
+              `<button type="button" class="acchip${i===0?' on':''}" data-rel="${r}">${r}</button>`).join('')}</div></label>
+          <label class="acf"><span>Note <em>optional</em></span>
+            <input id="ac-note" placeholder="Sent with the request" autocomplete="off"></label>
+          <p class="acnote">They have to accept before you can pay them. Your ATR ID is <b class="num">${PROFILE.id}</b>.</p>
+          <div class="acfoot"><span class="acerr" id="ac-err"></span>
+            <button class="btn btn-primary" id="ac-go">Send request</button></div>`;
+       if(mode==='link') body.innerHTML=
+         `<p class="acnote">Anyone who opens this link and signs up is added to your contacts automatically — and you to theirs.</p>
+          <div class="aclink"><span class="num" id="ac-url">atara.loka.cash/i/${PROFILE.id.slice(4)}</span>
+            <button class="btn btn-secondary btn-sm" id="ac-copy">Copy</button></div>
+          <p class="acnote">The link carries who invited them, nothing else.</p>`;
+       if(mode==='past') body.innerHTML=
+         `<p class="acnote">People you have settled with but never added.</p>
+          <div class="aclist">${POOL.filter(o=>!o.mine&&!CPS.some(c=>c.name===o.name)).slice(0,4).map(o=>
+            `<button class="acrow" data-past="${o.name}">${avSpan(o.name,'cpav')}
+               <span class="n"><em>${o.name}</em><i>${o.deals} trades · ${o.disp} disputes</i></span>
+               <span class="acgo">Add</span></button>`).join('')}</div>`;
+       bindBody(mode);
+     };
+     const bindBody=mode=>{
+       if(mode==='id'){
+         document.querySelectorAll('#ac-rel .acchip').forEach(b=>b.onclick=()=>{
+           document.querySelectorAll('#ac-rel .acchip').forEach(x=>x.classList.remove('on'));
+           b.classList.add('on')});
+         document.getElementById('ac-go').onclick=()=>{
+           const v=document.getElementById('ac-id').value.trim().toUpperCase();
+           const err=document.getElementById('ac-err');
+           if(!/^ATR-[A-Z0-9]{6}$/.test(v)){err.textContent='An ATR ID looks like ATR-8F42C1';return}
+           if(v===PROFILE.id){err.textContent='That is your own ID';return}
+           if(CPS.some(c=>c.atr===v)){err.textContent='Already in your contacts';return}
+           const rel=document.querySelector('#ac-rel .acchip.on').dataset.rel;
+           addContact(v,rel);
+         };
+       }
+       if(mode==='link') document.getElementById('ac-copy').onclick=e=>{
+         navigator.clipboard?.writeText('https://'+document.getElementById('ac-url').textContent);
+         e.currentTarget.textContent='Copied';
+       };
+       if(mode==='past') document.querySelectorAll('[data-past]').forEach(b=>b.onclick=()=>{
+         const o=POOL.find(x=>x.name===b.dataset.past);
+         addContact('ATR-'+o.peer.slice(1), 'Client', o.name, o.deals);
+       });
+     };
+     document.querySelectorAll('.acs').forEach(b=>b.onclick=()=>{
+       document.querySelectorAll('.acs').forEach(x=>x.classList.remove('on'));
+       b.classList.add('on'); paint(b.dataset.ac);
+     });
+     paint('id');
+   });
+}
+/* 新联系人一律先进 pending：对方没点头之前，不能给他付款 */
+function addContact(atr, rel, name, deals){
+  const id='c'+(CPS.length+1);
+  const nm=name||('New contact '+atr.slice(4,8));
+  CPS.push({id, name:nm, type:'person', net:0, ifr:null, deals:deals||0,
+            atr, rel, since:'today', state:'pending'});
+  closeModal(); switchView('contacts');
+  toast(`Request sent to ${nm} — they have to accept before you can pay them`);
+  /* 演示：对方稍后接受 */
+  setTimeout(()=>{
+    const c=CPS.find(x=>x.id===id); if(!c)return;
+    c.state=null; renderContactsPage();
+    toast(`${c.name} accepted — you can pay each other now`);
+  }, 6000);
+}
+
 function openChatFor(peer){
   const chat=ensureChat(peer); if(!chat) return;
   restoreSession(peer);
@@ -5751,6 +7896,7 @@ function tpost(sess,text){
   el.className='msg sys'; el.innerHTML=`<span class="bub">${text}</span>`;
   sess.el.appendChild(el);
   if(el.isConnected) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  touchChat(sess,text);
 }
 function syncChats(){
   CHATS.length=0;
@@ -5761,12 +7907,10 @@ function setPlaceholder(){
   f.placeholder=THREAD
     ? `Message ${THREAD.name} — ask about the account, timing or documents`
     : 'Describe a payment — try \u201CBuy 5,000 USDT with CNY\u201D or \u201CPay Huachuang 3,000 on delivery\u201D';
-  /* 聊天是对人的语境：Buy/Sell 面向市场，没有宾语，藏掉；
-     Transfer 与条件支付本来就是「A 向 B」的动作，留下（银行文档 §4.1 句法） */
-  const chat=!!THREAD;
-  document.querySelectorAll('#actions .act').forEach(b=>{
-    b.hidden = chat && (b.dataset.act==='buy'||b.dataset.act==='sell');
-  });
+  /* 三个入口在人际会话里全部保留。原先藏掉 Buy/Sell 是因为它们没有宾语，
+     现在改成有宾语：在谁的会话里打开，对手方就预填成谁（见 openAct）。 */
+  document.querySelectorAll('#actions .act').forEach(b=>{b.hidden=false});
+  if(typeof syncPlaceholderPill==='function')syncPlaceholderPill();
 }
 function say(who,text,t=THREAD){
   const THREAD=t; if(!THREAD) return;
@@ -5777,6 +7921,7 @@ function say(who,text,t=THREAD){
     : `<span class="bub">${text}</span><span class="mt">${stamp(THREAD.n++)}</span>`;
   THREAD.el.appendChild(el);
   if(el.isConnected) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(who!=='sys') touchChat(THREAD, who==='me'?'You: '+text:text);
   return el;
 }
 /* 对手方是人，不是接口——先「正在输入」再出话，静默几秒回一条才像真的 */
@@ -5788,7 +7933,8 @@ function reply(text,delay=1400,th=THREAD){
     t.className='msg them';
     t.innerHTML=`<span class="bub">${text}</span><span class="mt">${stamp(THREAD.n++)}</span>`;
     if(t.isConnected) t.scrollIntoView({behavior:'smooth',block:'nearest'});
-    else{THREAD.unread=(THREAD.unread||0)+1; renderLeft();}
+    else{THREAD.unread=(THREAD.unread||0)+1;}
+    touchChat(THREAD,text);
   }, delay);
 }
 /* 对方不读整句，只挑关键词回——演示版够用，接后端时整个换掉 */
@@ -6633,13 +8779,62 @@ function syncRight(){
   const g={match:'me',s1:'them',s3:'me',s4:'them',s5:null}[D.step];
   const what={match:'Confirm',s1:'Escrow',s3:'Pay',s4:'Verify receipt'}[D.step];
   if(g)ITEMS.unshift({g,who:'OTC '+D.peer,what,cp:null,otc:true});
-  renderRight();
 }
 
 /* 原右栏 Active 的演示待办移进左栏 Tasks（事都在左栏）——无会话，仅展示 */
 ITEMS.filter(i=>i.g==='me'||i.g==='them').forEach(i=>
   TASKS.push({id:'seed-'+TASKS.length, title:i.desc||i.what, st:i.g==='me'?'you':'run', sess:null, seed:i}));
-renderLeft();renderRight();renderSentence();renderFilter();renderPool();
+/* 播种两段会话：收件箱空着没法演示，也不符合"已经在用"的账面。
+   内容与左侧种子任务同一个故事线（华创的元件订单、采购 agent 的询价） */
+(function seedChats(){
+  const mk=(cpId,msgs)=>{
+    const c=CPS.find(x=>x.id===cpId);
+    const frag=document.createDocumentFragment();
+    const box=document.createElement('div');
+    box.id='thread'; box.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';
+    frag.append(box);
+    const chat={id:c.id, kind:'chat', peer:c.id, name:c.name, sc:c.ifr, el:box, n:0, stash:frag,
+      headHTML:`${avSpan(c.name,'thav')}
+        <span class="thwho"><b>${c.name}</b><span>${c.rel} · ${c.atr} · ${c.deals} settled together</span></span>`};
+    msgs.forEach(([who,text])=>{
+      const el=document.createElement('div');
+      el.className='msg '+who;
+      el.innerHTML=`<span class="bub">${text}</span><span class="mt">${stamp(chat.n++)}</span>`;
+      box.appendChild(el);
+    });
+    const last=msgs[msgs.length-1];
+    chat.last=(last[0]==='me'?'You: ':'')+last[1].slice(0,48);
+    SESSIONS.push(chat); return chat;
+  };
+  const hc=mk('hc',[
+    ['them','The components shipped this morning — tracking number is on the order.'],
+    ['me','Got it. I will confirm as soon as they clear inspection.'],
+    ['them','Invoice is uploaded too, same reference.']]);
+  hc.lastAt=Date.now()-9e5;  hc.lastT='09:41'; hc.unread=1;
+  const pa=mk('pa',[
+    ['them','Collected three quotes for the fasteners. Lowest lands at $1,840 with a 9-day lead.'],
+    ['me','Take the 9-day one if the supplier passes screening.']]);
+  pa.lastAt=Date.now()-32e5; pa.lastT='08:57';
+})();
+/* 右栏首绘：空栏不能是第一印象。播种上一笔已结算付款的三条检查，
+   与 History 里最新那条流水同一笔——不是凭空造的活动 */
+(function seedFeed(){
+  const r=RECS[0]; if(!r)return;
+  const pick=n=>RISK_AGENTS.find(a=>a.n.startsWith(n));
+  [['Sanctions',0],['Provenance',1],['Identity',2]].forEach(([n,k])=>{
+    const a=pick(n); if(!a)return;
+    AFEED.push({id:'seed-'+n, t:Date.now()-(k*46+18)*60000, kind:'agent',
+      run:0, runName:`${r.w} · ${r.a}`,
+      title:a.n, v:a.v, line:a.m, ev:a.ev});
+  });
+  AFEED.push({id:'seed-cons', t:Date.now()-(3*46)*60000, kind:'cons',
+    run:0, runName:`${r.w} · ${r.a}`,
+    title:'Consensus reached', line:`Released · ${r.a}`});
+})();
+afRender(); afLive(false); renderRight3(); arunRender(); arunIdle();
+/* 首屏就是折叠态——静止的输入框只是入口 */
+sayMini(true);
+renderLeft();renderSentence();renderFilter();renderPool();
 renderBalance();renderTypes();
 document.getElementById('rn').textContent=CARDS.length;
 </script>
