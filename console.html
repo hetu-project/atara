@@ -2234,6 +2234,9 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .agph2{display:flex;align-items:center;gap:var(--sp-3);
   padding-bottom:var(--sp-3);margin-bottom:var(--sp-4);
   border-bottom:1px solid var(--hairline-2)}
+/* 档案组内不画线：名片头底线 + 分隔线夹着一行 Measures，两条线挤成夹心。
+   组内靠留白，组界只留 .agsep 一条。 */
+.agpage:has(.agmline) .agph2{border-bottom:0;padding-bottom:0;margin-bottom:var(--sp-2)}
 .agid{min-width:0;display:flex;flex-direction:column;gap:2px}
 /* 标识后面垫一团同色弥散光：线稿单摆在空白里就是「很普通」，
    有了这层光它才像一枚徽记。颜色继承判定色——通过是绿、存疑是琥珀。 */
@@ -2257,7 +2260,7 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .agcks{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
   gap:0 var(--sp-6)}
 /* 两列 grid 里行序左右交错，用兄弟选择器画线会让两列顶行一深一浅——每行都带 */
-.agck{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--sp-2);padding:5px 0;
+.agck{position:relative;display:flex;align-items:baseline;gap:0 var(--sp-2);padding:5px 0;
   font-size:var(--rt-body);box-shadow:0 -1px 0 var(--hairline-2)}
 .agck span{flex:1;min-width:0;color:var(--mute)}
 .agck b{flex:none;font-weight:600;color:var(--ink);text-align:right}
@@ -2272,10 +2275,15 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .agdot{flex:none;width:6px;height:6px;border-radius:999px;background:var(--green);
   align-self:center}
 .agdot.dim{background:var(--faint-2)}
-/* 百分比读数的量条：3px，一眼读出「92 在满格里的位置」 */
-.agmeter{flex-basis:100%;height:3px;margin:2px 0 3px 14px;border-radius:2px;
-  background:var(--hairline-2);overflow:hidden}
-.agmeter b{display:block;height:100%;border-radius:2px;background:var(--accent)}
+/* 百分比读数的量条 = 这一行自己的底线：绝对定位压在 hairline 的位置上，
+   行高一丝不动——两列 grid 的行线才对得齐 */
+.agmeter{position:absolute;left:14px;right:0;bottom:0;height:2px;border-radius:1px;
+  background:var(--hairline-2);overflow:hidden;pointer-events:none}
+.agmeter b{display:block;height:100%;border-radius:1px;background:var(--accent);
+  transform-origin:left;animation:meterin .6s cubic-bezier(.2,0,0,1) both}
+/* 入场从 0 长到实测值：一次性的入场叙事，scaleX 走合成器不抖 */
+@keyframes meterin{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media (prefers-reduced-motion:reduce){.agmeter b{animation:none}}
 .agwork>.afsec{margin:0 0 var(--sp-3)}
 .agwork>.afev{display:grid;margin:var(--sp-4) 0 0;padding:0;background:none;box-shadow:none;
   gap:0 var(--sp-4);grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
@@ -4922,13 +4930,15 @@ const RUN_STEPS={
 };
 const ARUNS=[];                 /* 最新在前 */
 let ASEL=null;                  /* 候命排里选中的 agent —— 选中时右侧切成它的底稿 */
+let ACTX=null;                  /* 当前上下文会话 id —— 右栏只讲这个会话的评估 */
 let ARUN=null;
 function arunStart(kind,subject,agents){
   ARUN={id:'r'+(ARUNS.length+1)+'-'+Math.round(performance.now()), kind, subject,
-        t:Date.now(), agents:agents||[], open:true,
+        t:Date.now(), agents:agents||[], open:true, sess:null,
         steps:RUN_STEPS[kind].map(([k,n])=>({k,n,st:'wait',line:'',detail:null}))};
   ARUNS.forEach(r=>r.open=false);
-  ARUNS.unshift(ARUN); if(ARUNS.length>8)ARUNS.length=8;
+  ARUNS.unshift(ARUN); if(ARUNS.length>20)ARUNS.length=20;
+  ACTX=null;                     /* 新批次还没绑订单，右栏先跟着它走 */
   /* 主语兜底：有些入口没设过 AF_SUBJ，subject 会退成面板标签「Reading」，
      那样中栏会写成「Assessing Reading」——先挡掉 */
   const who=(!subject||/^reading$/i.test(subject)||/counterparty|condition/i.test(subject))
@@ -5032,6 +5042,8 @@ let LAST_RING=null;             /* 环最后一次画的参数——从 agent �
 function arunRing(agents, delay, stepMs, score, center, gates){
   const host=document.getElementById('arring'); if(!host)return;
   LAST_RING={agents, stepMs, score, center, gates};
+  /* 环参数存进当前批次——切回这个订单时要按它还原定格帧 */
+  if(ARUN)ARUN.ring=LAST_RING;
   /* 闸门跟着环一起摆出来：实测值对阈值，一条不过就不放。
      这是我们和「给个意见」最不一样的地方，不该只在折叠里 */
   /* 有闸门的时候环缩一号：环 220 + 闸门 ~80 塞不进这一栏，
@@ -5161,7 +5173,10 @@ function arunRender(){
   if(ASEL){ arunAgentPane(box); return; }
   const top=document.getElementById('agtop'); if(top)top.hidden=true;
   const layB=document.getElementById('right').classList.contains('lay-b');
-  if(!ARUNS.length){
+  /* 上下文过滤：绑定了会话就只讲它的批次；
+     自由态（首页/新单）只讲现场跑出来的，预置的历史不冒出来充数 */
+  const RUNS=ACTX?ARUNS.filter(r=>r.sess===ACTX):ARUNS.filter(r=>!r.seeded);
+  if(!RUNS.length){
     /* 步骤条是固定的四步，空态就该先摆出来——用户能提前知道会经历什么，
      　而不是看一句「什么都没跑」 */
     const skel=RUN_STEPS.assess.map(([k,n])=>
@@ -5177,7 +5192,7 @@ function arunRender(){
   }
   /* 展开的那一条重画整条进度；其余收成一行 */
   const open=new Set([...box.querySelectorAll('.arstep.open')].map(e=>e.dataset.sk));
-  box.innerHTML=ARUNS.map((r,ri)=>{
+  box.innerHTML=RUNS.map((r,ri)=>{
     const head=`<button class="arhead${r.open?' on':''}" data-run="${r.id}">
         <span class="arhi ${r.flag?'flag':(r.done?'ok':'run')}"></span>
         <span class="arht"><b>${r.subject}</b><i>${arunSummary(r)}</i></span>
@@ -5802,6 +5817,9 @@ function startEscrow(){
   /* kind 一起存：右栏的订单状态要说「在等什么」，那得知道这单挂的是哪种条件 */
   taskUpsert(sid,{title:`Transfer ${escAmtTxt(snap.amt,snap.coin)} to ${cp.name}`,
     st:'run', sess:sid, kind:condKind(snap), cpid:cp.id, amt:snap.amt});
+  /* 评估先跑、订单后开：开单这一刻把最近的批次拴到这个会话上，
+     以后切回这个订单，右栏就能按它还原 */
+  ARUNS.filter(r=>!r.sess).forEach(r=>r.sess=sid);
   renderLeft(); setLTab('ai'); setPlaceholder();
   /* 播报只说增量——条件文本在卡上已经写了一次，这里再抄一遍就是第三份拷贝 */
   tpost(sess,'Order created · funds locked in escrow');
@@ -6875,7 +6893,9 @@ function thinking(steps, chips, done, verdict, agents){
     /* 右栏顶部同一只环、同一条时间轴：交流期结束开始扫，每票一格。
        传的是 agents.list 本身——上一版我只传了名字，v 被剥掉，
        环里 `v!=='Pass'` 恒真，整圈就成了 warn 的黄色 */
-    arunRing(agents.list, agBase+AG_TALK, AG_STEP, agents.sc, agents.center, agents.gates);
+    /* 排到 setTimeout(0)：arunStart 也在 0ms 队列里且注册得更早——
+       同步调用会把环参数挂到上一批次上，切单还原时就找不到这一批的环 */
+    setTimeout(()=>arunRing(agents.list, agBase+AG_TALK, AG_STEP, agents.sc, agents.center, agents.gates),0);
     /* 星座不在这儿画了：常驻的那张在 Agent status 模块里（待命模式），
        同一份阵容画两遍是重复。这块面板只讲这一笔的信任分、闸门和结论。 */
     /* agentEvidence（7 个 tab + 底稿）停用：同一份证据现在按 agent 落在下面的流水条目里，
@@ -7645,9 +7665,37 @@ function restoreSession(id){
   selected = t.kind==='chat' ? t.peer : null;
   setLTab(t.kind==='chat' ? 'ppl' : 'ai');   /* 左栏跟着视图走并选中对应行 */
   renderLeft(); setPlaceholder();
+  assessSync(t);
   log.scrollTop=log.scrollHeight;
 }
 const SESSIONS=[];
+
+/* Assessment 跟着当前会话走：这个会话有自己的批次就把它端上来
+   （批次列表只显示它的，环按它的定格帧还原）；没有就回空态——
+   右栏说的必须是你正看着的这单，而不是全局最近跑的那一次。 */
+function assessSync(sess){
+  if(AFJOB)return;                       /* 正在跑的评估不打断 */
+  ASEL=null;
+  const top=document.getElementById('agtop'); if(top)top.hidden=true;
+  /* 聊天会话本身没批次：跟人聊 Harbor Desk，右栏该讲的是你和 Harbor 那单的评估。
+     按同一对手方把 task 会话的批次也认进来。 */
+  const ids=new Set(sess?[sess.id]:[]);
+  if(sess&&sess.kind==='chat'){
+    SESSIONS.filter(x=>x.kind==='task'&&x.peer===sess.peer).forEach(x=>ids.add(x.id));
+    TASKS.filter(x=>x.cpid===sess.peer||(x.seed&&x.seed.cp)===sess.peer)
+         .forEach(x=>ids.add(x.sess||x.id));
+  }
+  const mine=sess?ARUNS.filter(r=>ids.has(r.sess)):[];
+  ACTX = sess ? sess.id : null;
+  if(mine.length){
+    ARUNS.forEach(r=>r.open=false); mine[0].open=true;
+    if(mine[0].ring){const L=mine[0].ring;
+      arunRing(L.agents,-(L.agents.length*L.stepMs+2000),L.stepMs,L.score,L.center,L.gates);
+    } else arunIdle();
+    AFLAST=mine[0].id;
+  } else { arunIdle(); AFLAST=null; }
+  renderRoster(false); arunRender();
+}
 
 function openThread(o,d){
   const log=document.getElementById('log');
@@ -7667,6 +7715,8 @@ function openThread(o,d){
   selected=null;
   taskUpsert('t-'+o.peer,{kind:'otc', title:`${d.side==='buy'?'Buy':'Sell'} ${d.u.toLocaleString()} ${d.coin}`,
     st:'you', sess:'t-'+o.peer});
+  /* 这条链的评估批次同样在开单瞬间认领——task 的会话 id 是 't-'+peer */
+  ARUNS.filter(r=>!r.sess).forEach(r=>r.sess=task.id);
   renderLeft(); setLTab('ai');
   tpost(task,`Order opened with ${o.name} · this task is part of the trade record`);
   setPlaceholder();
@@ -7694,6 +7744,7 @@ function openSeedTask(t){
       <button class="thgo" data-chatfor="${cp.id}">${avSpan(cp.name)}Message ${cp.name} ›</button>`};
   SESSIONS.push(sess);
   ACTIVE=sess; THREAD=null; setHead(sess);
+  assessSync(sess);   /* 种子订单没跑过评估：右栏照实回空态，不挂别人的结论 */
   tpost(sess, t.st==='you'
     ? `Waiting on your approval · open since ${i.when||'today'}`
     : `Waiting on ${cp.name} · the condition has not been met yet (${i.when||''})`);
@@ -8784,6 +8835,37 @@ function syncRight(){
 /* 原右栏 Active 的演示待办移进左栏 Tasks（事都在左栏）——无会话，仅展示 */
 ITEMS.filter(i=>i.g==='me'||i.g==='them').forEach(i=>
   TASKS.push({id:'seed-'+TASKS.length, title:i.desc||i.what, st:i.g==='me'?'you':'run', sess:null, seed:i}));
+
+/* 种子订单的历史评估：这些单既然开着，开单前必然过过 Trust Gate。
+   给每单合成一条已完成的批次（分数=对手方履约分，底稿=七个 agent 的静态档案），
+   切到哪单，右栏就能端出哪单的评估——没有这份历史，切换联动无从感知。 */
+TASKS.forEach((t,ti)=>{
+  const cp=CPS.find(c=>c.id===(t.seed&&t.seed.cp||t.cpid)); if(!cp)return;
+  const sc=cp.ifr;
+  const seen=new Map();
+  RISK_AGENTS.forEach(a=>(a.ev?.srcs||[]).forEach(x=>{if(!seen.has(x.n))seen.set(x.n,x)}));
+  const rec=RISK_AGENTS.reduce((a,x)=>a+(x.ev?.rec||0),0);
+  const srcRows=`<div class="ardcols">${[...seen.values()].map(x=>
+    `<div class="ards"><b>${x.n}</b><em>${x.d}</em></div>`).join('')}</div>`;
+  const agRows=RISK_AGENTS.map(x=>{
+    const v=String(x.v||''), cls=/note/i.test(v)?'note':'pass';
+    return `<div class="ardv ${cls} can" data-ag="${x.n}" role="button" tabindex="0">
+        <b>${x.n.replace(/ Agent$/,'')}</b><span class="ardvv">${v}</span>
+        <span class="ardvx" aria-hidden="true">›</span><em>${x.m}</em></div>`}).join('');
+  const notes=RISK_AGENTS.filter(x=>x.v!=='Pass').length;
+  ARUNS.push({id:'seedrun-'+ti, kind:'assess', subject:cp.name, sess:t.sess||t.id, seeded:true,
+    t:Date.now()-3600e3*(ti+1), done:true, open:false, agents:RISK_AGENTS,
+    ring:{agents:RISK_AGENTS, stepMs:1050, score:sc, center:null, gates:null},
+    steps:[
+      {k:'read', n:'Read the order', st:'done', line:cp.name, detail:null},
+      {k:'pull', n:'Collected evidence', st:'done',
+        line:`${seen.size} sources · ${rec.toLocaleString()} records`, detail:srcRows},
+      {k:'check', n:'Agent checks', st:'done',
+        line:`7 of 7 cleared${notes?` · ${notes} with a note`:''}`, detail:agRows},
+      {k:'cons', n:'Consensus', st:'done',
+        line:'7/7 agree · needs 6 of 7 — approved', detail:null},
+    ]});
+});
 /* 播种两段会话：收件箱空着没法演示，也不符合"已经在用"的账面。
    内容与左侧种子任务同一个故事线（华创的元件订单、采购 agent 的询价） */
 (function seedChats(){
