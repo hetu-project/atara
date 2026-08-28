@@ -22,31 +22,119 @@
    源码里。存的是 SHA-256 而不是明文，把"看一眼源码"抬高到"跑一遍字典"，
    但拦不住肯动手的人。真要控制访问得在服务端做（Cloudflare Access / Basic Auth）。
    它挡的是顺着落地页点进来的人和搜索引擎。 */
-:root[data-locked] body>*:not(#gate){display:none!important}
+/* 未登录 = 能看不能动：台面照常渲染，个人区（会话列表）收起，
+   动手（Buy/Sell/开聊）那一下才弹登录模态 */
+:root[data-locked] #tasksec,:root[data-locked] #tasklist{display:none!important}
+:root[data-locked] #right{display:none!important}
 #gate{display:none;position:fixed;inset:0;z-index:9999;padding:24px;
   align-items:center;justify-content:center;
-  background:var(--bg);                       /* 台面被藏起来了，底下没东西可透 */
-  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
-:root[data-locked] #gate{display:flex}
+  background:radial-gradient(130% 130% at 50% 42%,
+    color-mix(in srgb,var(--bg) 42%,transparent),
+    color-mix(in srgb,var(--bg) 74%,transparent));
+  -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px)}
+#gate.open{display:flex}
+/* 形变：触发按钮 → 弹窗 → 账户位，同一个名字接力 */
+::view-transition-group(gate-card){animation-duration:.46s;animation-timing-function:cubic-bezier(.22,1,.28,1)}
+::view-transition-old(gate-card),::view-transition-new(gate-card){height:100%;object-fit:cover;overflow:clip}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.3s}
+/* 无 VT 时的入场兜底 */
+#gate.open.novt .gatebox{animation:gboxin .26s var(--ease)}
+@keyframes gboxin{from{opacity:0;transform:translateY(10px) scale(.98)}}
+/* 方法行逐行落位：30ms 一档，动静在节奏不在幅度 */
+#gate.open .gmrow{animation:gmin .38s var(--ease) backwards}
+#gate.open .gmrow:nth-child(2){animation-delay:35ms}
+#gate.open .gmrow:nth-child(3){animation-delay:70ms}
+#gate.open .gmrow:nth-child(4){animation-delay:105ms}
+#gate.open .gmrow:nth-child(5){animation-delay:140ms}
+@keyframes gmin{from{opacity:0;transform:translateY(6px)}}
 /* 与通用模态同一套语言：居中卡片、r-panel、overlay 阴影 */
-.gatebox{width:100%;max-width:352px;display:flex;flex-direction:column;gap:14px;
-  padding:26px 26px 22px;background:var(--paper);
-  border-radius:var(--r-panel);box-shadow:var(--sh-overlay)}
-.gatemark{display:flex;align-items:center;gap:7px;font-size:16px;font-weight:600;
-  letter-spacing:-.02em;color:var(--ink)}
-.gatemark i{width:8px;height:8px;border-radius:2px;background:var(--blue);display:block}
-.gatebox h1{font-size:20px;font-weight:400;letter-spacing:-.01em;color:var(--ink);margin:2px 0 0;
-  font-family:Newsreader,Georgia,serif}
+.gatebox{position:relative;width:100%;max-width:420px;display:flex;flex-direction:column;gap:16px;
+  padding:32px 28px 22px;background:var(--paper);
+  border-radius:var(--r-panel);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 7%,transparent),
+    inset 0 1px 0 color-mix(in srgb,var(--paper) 60%,#fff 8%),
+    0 32px 80px -20px rgba(0,0,0,.55), var(--sh-overlay)}
+/* 品牌时刻居中：一枚有分量的标识 + 衬线大标题，副文案一句收 */
+.glogo{width:56px;height:56px;margin:0 auto;border-radius:16px;background:var(--blue);
+  display:grid;place-items:center;
+  box-shadow:inset 0 1px 0 #ffffff3d, 0 10px 24px -10px color-mix(in srgb,var(--blue) 55%,transparent)}
+.glogo i{width:16px;height:16px;border-radius:4px;background:#fff;display:block}
+.gatebox h1{font-size:25px;font-weight:400;letter-spacing:-.01em;color:var(--ink);
+  margin:-2px 0 0;text-align:center;font-family:Newsreader,Georgia,serif}
 .gatebox p{font-size:13px;line-height:1.6;color:var(--mute);margin:0}
+.gsub{text-align:center;margin-top:-12px!important}
 .gateform{display:flex;gap:8px}
-#gatekey{flex:1;min-width:0;height:38px;padding:0 12px;border-radius:var(--r-control);
+.gateform input{flex:1;min-width:0;height:38px;padding:0 12px;border-radius:var(--r-control);
   border:1px solid var(--line-strong);background:var(--paper);color:var(--ink);
   font:inherit;font-size:14px;letter-spacing:.02em}
-#gatekey::placeholder{color:var(--placeholder)}
-#gatekey:focus{outline:2px solid var(--accent);outline-offset:1px}
+.gateform input::placeholder{color:var(--placeholder)}
+.gateform input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.gateform .btn{flex:none}
+.gmail{position:relative}
+.gmail input{width:100%;height:48px;padding:0 56px 0 15px;border-radius:12px;
+  border:1px solid var(--line-strong);background:var(--paper);color:var(--ink);
+  font:inherit;font-size:14px}
+.gmail input::placeholder{color:var(--placeholder)}
+.gmail input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.gmail .btn{position:absolute;right:6px;top:6px;bottom:6px;width:40px;padding:0;
+  border-radius:8px;display:grid;place-items:center;font-size:15px}
 .gateerr{color:var(--warn);min-height:0}
 .gateerr:empty{display:none}
 .gatefoot{font-size:12px;color:var(--faint)}
+.gclose{position:absolute;top:14px;right:14px;width:28px;height:28px;border:0;border-radius:8px;
+  background:transparent;color:var(--mute);font-size:14px;cursor:pointer;display:grid;place-items:center}
+.gclose:hover{background:var(--card);color:var(--ink)}
+.gclose:focus-visible{outline:2px solid var(--accent)}
+/* 连接页：钱包列表借 OpenSea 的形——方法列表 + 邮箱兜底，邀请码退到页脚当门禁 */
+.gatebox{max-width:400px}
+.gmlist{display:flex;flex-direction:column;border:1px solid var(--line-strong);
+  border-radius:12px;overflow:hidden}
+.gmrow{display:flex;align-items:center;gap:13px;padding:15px 16px;border:0;
+  background:var(--paper);color:var(--ink);font:inherit;text-align:left;cursor:pointer;
+  transition:background var(--dur-fast) var(--ease)}
+.gmrow+.gmrow{border-top:1px solid var(--line)}
+.gmrow:hover{background:var(--card)}
+.gmrow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.gmi{flex:none;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
+  color:#fff;font-size:15px;font-weight:600;
+  transition:transform var(--dur-fast) var(--ease)}
+.gmrow:hover .gmi{transform:translateY(-1px)}
+.gmi-pk{background:var(--blue)}
+.gmtxt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.gmtxt b{font-size:14.5px;font-weight:600}
+.gmtxt em{font-style:normal;font-size:12px;color:var(--mute)}
+.gmst{flex:none;font-size:11.5px;color:var(--mute);padding:4px 10px;border-radius:7px;background:var(--card)}
+.gmst.on{color:var(--blue);background:transparent}
+.gdiv{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--faint)}
+.gdiv::before,.gdiv::after{content:'';flex:1;height:1px;background:var(--line)}
+#gstage{display:flex;flex-direction:column;align-items:center;gap:10px;
+  padding:26px 8px;text-align:center;min-height:150px;justify-content:center}
+#gstage[hidden]{display:none}
+#gstage b{font-size:14.5px;font-weight:600;color:var(--ink)}
+#gstage em{font-style:normal;font-size:12.5px;line-height:1.6;color:var(--mute);max-width:280px}
+#gstage .gback{margin-top:6px}
+#gstage input{height:38px;padding:0 12px;border-radius:var(--r-control);width:min(240px,100%);
+  border:1px solid var(--line-strong);background:var(--paper);color:var(--ink);
+  font:inherit;font-size:14px;text-align:center}
+#gstage input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.gpkring{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;
+  font-size:22px;color:var(--blue);border:2px solid var(--blue);
+  animation:gpk 1.3s var(--ease) infinite}
+@keyframes gpk{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 0 8px color-mix(in srgb,var(--blue) 14%,transparent)}}
+.gspin{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line-strong);
+  border-top-color:var(--blue);animation:gsp .8s linear infinite}
+@keyframes gsp{to{transform:rotate(360deg)}}
+.gok{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--good,#22a06b) 14%,transparent);color:var(--good,#22a06b);font-size:17px}
+.gsoc{width:100%;border:1px solid var(--line-strong);border-radius:12px}
+.gerr2{color:var(--warn);font-size:12.5px;min-height:0}
+.gerr2:empty{display:none}
+.nasign{display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 8px;text-align:center}
+.nasign b{font-size:14.5px;color:var(--ink)}
+.nasign em{font-style:normal;font-size:12.5px;color:var(--mute);max-width:300px;line-height:1.6}
+.gshake{animation:gsh .4s}
+@keyframes gsh{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+@media (prefers-reduced-motion:reduce){.gpkring,.gspin{animation:none}}
 :root{
   /* ── 与主题无关 ── */
   --r-chip: 6px; --r-control: 8px; --r-card: 10px; --r-panel: 16px;
@@ -452,6 +540,7 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
 .view.on{display:flex}
 #v-chat{max-width:none}
 .vhead{flex:none;padding:6px 0 22px}
+.vhead.vhrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .vhead h2{font-family:var(--serif);font-size:28px;font-weight:400;letter-spacing:-.3px;line-height:1.2;color:var(--ink)}
 .vhead p{font-size:14px;line-height:1.5;color:var(--faint);margin-top:7px;max-width:66ch}
 .vbody{flex:1;overflow-y:auto;min-height:0}
@@ -728,6 +817,10 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
 .asplit b{font-size:17px;font-weight:600;color:var(--ink)}
 .asplit .ad{display:block;font-size:12px;color:var(--faint);margin-top:var(--sp-1);line-height:1.45}
 .aacts{display:flex;gap:var(--sp-2);flex-wrap:wrap}
+.wadr{display:flex;align-items:baseline;gap:var(--sp-2);margin-top:2px;flex-wrap:wrap}
+.wadr code{font-size:12.5px;color:var(--mute)}
+.wadr .lnk{font-size:12px}
+.wadr .ad{font-size:12px;color:var(--mute)}
 .aacts .rbtn{padding:var(--sp-2) var(--sp-4);border:1px solid var(--hairline);border-radius:999px;background:var(--canvas)}
 .aacts .rbtn:hover{border-color:var(--accent);background:var(--blue-wash)}
 
@@ -764,7 +857,7 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
 .ccface.back{transform:rotateY(180deg);background:hsl(var(--ch) 40% 21%)}
 .card.off .ccface{background:var(--card);color:var(--mute)}
 /* 背面：条件列表 */
-.ccb{display:flex;flex-direction:column;gap:9px;font-size:11.5px;line-height:1.5;color:#ffffffc4}
+.ccb{display:flex;flex-direction:column;gap:7px;font-size:11.5px;line-height:1.5;color:#ffffffc4}
 .ccb .ccbrow{display:flex;gap:8px}
 .ccb .ccbk{flex:none;width:74px;color:#ffffff8a}
 .ccb b{font-weight:600;color:#fff}
@@ -845,7 +938,7 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
 .pfcard{background:var(--paper);border-radius:var(--r-card);box-shadow:var(--ring);overflow:hidden}
 /* 固定首列宽度让 Your turn / Waiting 两种状态的金额落在同一列；
    末列留空也占位，有按钮没按钮的行金额都对齐 */
-.pfrow{display:grid;grid-template-columns:96px minmax(0,1fr) auto 84px;
+.pfrow{display:grid;grid-template-columns:200px minmax(0,1fr) auto 84px;
   align-items:center;gap:14px;padding:15px 18px;cursor:pointer}
 .pfrow + .pfrow{border-top:1px solid var(--hairline)}
 .pfrow:hover{background:var(--canvas)}
@@ -854,6 +947,9 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
 .pfst i{width:7px;height:7px;border-radius:999px;background:var(--green);flex:none}
 .pfrow.you .pfst{color:var(--ink);font-weight:500}
 .pfrow.you .pfst i{background:var(--warn);box-shadow:0 0 0 3px var(--warn-wash)}
+.pfrow.disp .pfst{color:#d0574d;font-weight:500}
+.pfrow.disp .pfst i{background:#d0574d;box-shadow:0 0 0 3px #d0574d24}
+.pfrow.auto .pfst i{background:var(--accent)}
 .pfn{display:flex;flex-direction:column;gap:3px;min-width:0;line-height:1.35}
 .pfn em{font-style:normal;font-size:13.5px;font-weight:500;color:var(--ink);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -863,6 +959,68 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
 .pfact{display:flex;justify-content:flex-end}
 .pfempty{padding:26px 18px;font-size:13px;color:var(--faint);
   background:var(--paper);border-radius:var(--r-card);box-shadow:var(--ring)}
+/* Payments 两个 tab 共用一种卡：右栏 rocard 的放大版 */
+.pbar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.pbar .btn{margin-left:auto}
+.pgrid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
+  gap:var(--sp-3);align-content:start}
+.pcard{display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-width:0;
+  padding:20px 22px 16px;text-align:left;border:0;cursor:pointer;
+  background:var(--paper);border-radius:var(--r-panel);box-shadow:var(--ring);
+  transition:background var(--dur-fast) var(--ease)}
+.pcard:hover{background:var(--card)}
+.pcard:focus-visible{outline:var(--focus-w) solid var(--focus-c);outline-offset:2px}
+.pcard .roc-st{width:100%;font-size:12.5px}
+.pcard .roc-big{font-size:34px;align-self:flex-start;padding:0}
+.pcard-t{font-size:13.5px;color:var(--mute);width:100%;line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* 托管进度：三个点一条线，当前那一步点亮并写字 */
+.ptrack{display:flex;align-items:center;gap:6px;width:100%;padding:2px 0 1px;
+  font-size:11.5px;color:var(--faint-2)}
+.ptrack i{width:6px;height:6px;border-radius:999px;flex:none;background:var(--line-strong)}
+.ptrack i.done{background:var(--faint-2)}
+.ptrack i.now{background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+.ptrack em{font-style:normal;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ptrack em.now{color:var(--ink);font-weight:500}
+.pcard.disp .ptrack i.now{background:#d0574d;box-shadow:0 0 0 3px #d0574d24}
+.pcard.disp .ptrack em.now{color:#d0574d}
+.pcard-f{display:flex;align-items:center;gap:8px;width:100%;min-width:0;
+  margin-top:2px;padding-top:12px;border-top:1px solid var(--hairline)}
+.pcard-f .btn,.pcard-f .lnk{margin-left:auto;flex:none}
+.pcard-f a.btn{text-decoration:none}
+/* 已结束台账：一张表。列宽定死，金额与状态各成一列，扫得下来 */
+.led{display:flex;flex-direction:column;background:var(--paper);
+  border-radius:var(--r-card);box-shadow:var(--ring);overflow:hidden}
+.ledr{display:grid;grid-template-columns:88px 132px minmax(0,1fr) 104px 104px 68px;
+  align-items:center;gap:16px;padding:13px 18px}
+.ledr+.ledr{border-top:1px solid var(--hairline)}
+.ledr:not(.ledh):hover{background:var(--canvas)}
+.ledh{padding-block:9px;background:var(--canvas);
+  font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--faint-2)}
+.ledh .r{text-align:right}
+.ledd{font-size:12.5px;color:var(--mute);white-space:nowrap}
+.ledd em{font-style:normal;color:var(--faint-2);margin-left:6px}
+.ledw{font-size:13.5px;font-weight:500;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ledt{font-size:13px;color:var(--mute);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.leda{text-align:right;font-size:13.5px;font-weight:600;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.leds{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--mute)}
+.leds i{width:6px;height:6px;border-radius:999px;flex:none;background:var(--green)}
+.leds.neg{color:#d0574d}
+.leds.neg i{background:#d0574d}
+.lede{font-size:12.5px;text-align:right}
+.pcard.you .roc-st{color:var(--ink);font-weight:500}
+.pcard.you .roc-st i{background:var(--warn);box-shadow:0 0 0 3px var(--warn-wash)}
+.pcard.them .roc-st i,.pcard.auto .roc-st i{background:var(--accent)}
+.pcard.disp .roc-st{color:#d0574d}
+.pcard.disp .roc-st i{background:#d0574d;box-shadow:0 0 0 3px #d0574d24}
+.pcard.fin{cursor:default}
+.pcard.fin:hover{background:var(--paper)}
+.pcard.rel .roc-st i{background:var(--green)}
+.pcard.ref .roc-st{color:#d0574d}
+.pcard.ref .roc-st i{background:#d0574d}
 
 .hbar{display:flex;align-items:center;gap:12px;margin-bottom:18px}
 .hfils{display:flex;gap:4px;flex-wrap:wrap}
@@ -1239,6 +1397,9 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
   color:var(--ink);font:inherit;font-size:13px;font-weight:500;cursor:pointer;
   transition:border-color var(--dur-fast) var(--ease)}
 .cplink:hover{border-color:var(--blue)}
+/* 合并后订单卡就在对方的聊天里，Chat › 跳转已删——这枚只剩展示职能 */
+.cplink.still{cursor:default;border-color:transparent;padding-left:0}
+.cplink.still:hover{border-color:transparent}
 .cpgo{font-size:11px;font-weight:500;color:var(--accent)}
 .thgo .cpav{width:17px;height:17px;font-size:9px;margin-right:2px}
 
@@ -1276,6 +1437,9 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
 /* 买卖流的三大块(共识面板/结论消息/订单卡)之间拉开——8px 的聊天间距在这里太挤 */
 #log>.think,#log>.deal{margin-block:10px}
 #log>.msg{margin-block:8px}
+/* 结论卡是评估的收尾、订单卡是下一件事的开头——两件事之间要一口气的留白 */
+.msg.sys:has(.asscard){margin-bottom:18px}
+.asscard+*, .msg:has(.asscard)+.deal{margin-top:18px}
 /* 结论长文按「阅读」排版,不按「聊天」排版:占满正文宽（左右留白是浪费的）,
    字号行距向文章看齐——它是一篇分析,不是一句话 */
 .msg.long{max-width:100%;align-self:stretch}
@@ -2012,6 +2176,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .roc-st i{width:6px;height:6px;border-radius:999px;flex:none;background:var(--faint-2)}
 .rocard.you .roc-st i{background:var(--warn);box-shadow:0 0 0 3px var(--warn-wash)}
 .rocard.them .roc-st i{background:var(--accent)}
+.rocard.disp .roc-st{color:#d0574d}
+.rocard.disp .roc-st i{background:#d0574d}
 .roc-st time{margin-left:auto;flex:none;font-size:var(--rt-meta);font-weight:var(--rt-meta-w);color:var(--faint-2)}
 
 /* 订单描述已删。卡上只剩状态 + 人 + 金额 + 动作 */
@@ -2390,6 +2556,109 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
   .assplit{flex-direction:column}
   .assplit>#arring{flex:none;align-self:center}
 }
+
+/* 撮合卡：先挑人再评估。主选自动继续，备选可点 */
+.matchcard{max-width:560px;padding:11px 14px;border-radius:var(--r-card);
+  background:var(--paper);box-shadow:var(--ring)}
+.mcl{display:flex;align-items:center;gap:8px;font-size:var(--rt-body);color:var(--mute)}
+.mcl b{color:var(--ink)}
+.mcspin{flex:none;width:8px;height:8px;border-radius:999px;background:var(--accent);
+  animation:afpulse 1.2s var(--ease) infinite}
+.mcs{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.mcs[hidden]{display:none}
+.mcand{display:flex;align-items:center;gap:8px;padding:7px 12px 7px 8px;
+  border:1px solid var(--hairline);border-radius:10px;background:none;cursor:pointer;
+  text-align:left;transition:border-color var(--dur-fast) var(--ease)}
+.mcand:hover{border-color:var(--line-strong)}
+.mcand.on{border-color:var(--accent)}
+.mcand:disabled{cursor:default;opacity:.55}
+.mcand.on:disabled{opacity:1}
+.mcand .cpav{width:24px;height:24px;font-size:10px}
+.mcn{display:flex;flex-direction:column;gap:1px}
+.mcn b{font-size:var(--rt-body);font-weight:500;color:var(--ink);line-height:1.2}
+.mcn em{font-style:normal;font-size:var(--rt-meta);color:var(--faint)}
+
+/* 评估结论卡：头部结论 + 四行维度摘要，点头部展开全文 */
+.asscard{max-width:560px;padding:11px 14px;border-radius:var(--r-card);
+  background:var(--paper);box-shadow:var(--ring)}
+.aschead{display:flex;align-items:center;gap:12px;width:100%;
+  border:0;background:none;padding:0;cursor:pointer;text-align:left;font:inherit}
+.ascsc{flex:none;font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--green)}
+.ascm{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ascm b{font-size:var(--rt-body);font-weight:600;color:var(--ink)}
+.ascm span{font-size:var(--rt-meta);color:var(--faint);line-height:1.4}
+.ascx{flex:none;color:var(--faint-2);font-size:var(--rt-icon);
+  transition:transform var(--dur-fast) var(--ease)}
+.asscard.open .ascx{transform:rotate(180deg);color:var(--accent)}
+.ascsum{margin-top:10px;padding-top:9px;border-top:1px solid var(--hairline-2);
+  display:flex;flex-direction:column;gap:5px}
+.ascsum[hidden]{display:none}   /* hidden 只有默认权重，上面的 flex 会压掉它 */
+.ascr{display:flex;align-items:baseline;gap:8px;font-size:var(--rt-body);line-height:1.45}
+.ascr i{flex:none;width:5px;height:5px;border-radius:999px;background:var(--green);
+  align-self:center}
+.ascr span{flex:none;font-weight:500;color:var(--ink)}
+.ascr em{font-style:normal;color:var(--mute);min-width:0}
+.asscard .ascbody{margin-top:10px;padding-top:9px;border-top:1px solid var(--hairline-2);
+  font-size:var(--rt-body);color:var(--mute);line-height:1.55}
+.asscard .ascbody b{color:var(--ink)}
+.asscard .ascbody ul{margin:8px 0;padding-left:18px}
+.asscard .ascbody li{margin:4px 0}
+.asscard .ascbody .bnote{color:var(--warn)}
+.ascfull{font-size:var(--rt-body);color:var(--mute);line-height:1.55;max-width:60ch}
+.ascfull b{color:var(--ink)}
+.ascfull ul{margin:8px 0;padding-left:18px}
+.ascfull li{margin:4px 0}
+.ascfull .bnote{color:var(--warn)}
+
+/* 卖方确认弹窗的入金方式切换：钱包签名 or 外部钱包打合约地址 */
+.fvia{display:flex;gap:6px;justify-content:center;margin:12px 0 0}
+#confirm .faddr .famono{font-size:11px}
+
+/* 买方确认弹窗里的「你将怎么付」预告：这是承诺书，不是收银台 */
+.psorder{display:flex;flex-direction:column;gap:7px;margin:14px 0 2px;
+  padding-top:12px;border-top:1px solid var(--hairline-2);text-align:left}
+.psorder div{display:flex;gap:12px;align-items:baseline}
+.psorder dt{flex:0 0 92px;font-size:var(--rt-meta);color:var(--faint)}
+.psorder dd{margin:0;flex:1;font-size:var(--rt-body);color:var(--mute);line-height:1.5}
+.psorder dd b{color:var(--ink)}
+
+/* 对方入金的观察窗（OTC s1）：复用入金卡那套状态行 */
+.eswin{margin:2px 0 10px;padding:10px 12px;border-radius:var(--r-card);
+  background:var(--canvas);display:flex;flex-direction:column;gap:7px}
+.esok{color:var(--green);font-weight:500}
+.esaddr{margin-left:auto;display:inline-flex;align-items:center;gap:6px}
+.esbtn{padding:2px 7px;border:0;border-radius:6px;cursor:pointer;
+  background:var(--paper);color:var(--ink);font-size:11px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.esbtn:hover{background:var(--card)}
+.esxp{flex:none;color:var(--faint);text-decoration:none;font-size:12px;line-height:1;
+  padding:2px 4px;border-radius:4px}
+.esxp:hover{color:var(--accent);background:var(--card)}
+.fal .esxp{margin-left:auto}
+.fal .esxp+.btn,.fal .esxp+button{margin-left:0}
+
+/* ── 入金卡：非托管的第一拍 ── */
+.fund{max-width:520px;padding:14px 16px;border-radius:var(--r-card);
+  background:var(--paper);box-shadow:var(--ring)}
+.fund .fh{display:block;font-size:14px;font-weight:600;color:var(--ink)}
+.fund .fp{margin:4px 0 12px;font-size:var(--rt-body);color:var(--mute);line-height:1.5}
+.fund .fbtns{display:flex;gap:8px;flex-wrap:wrap}
+.fsig{margin:2px 0 8px;font-size:var(--rt-body);color:var(--green)}
+.fconf{display:flex;align-items:center;gap:8px;font-size:var(--rt-body);color:var(--mute)}
+.fconf .num{color:var(--ink)}
+.fconf i{width:8px;height:8px;border-radius:999px;background:var(--accent);
+  animation:afpulse 1.2s var(--ease) infinite}
+.fconf i.ok{background:var(--green);animation:none}
+.faddr{display:flex;flex-direction:column;gap:8px}
+.fal{display:flex;align-items:center;gap:8px;font-size:var(--rt-meta);color:var(--faint)}
+.fal .btn{margin-left:auto}
+.fal b{margin-left:auto;color:var(--ink);font-size:var(--rt-body)}
+.famono{display:block;padding:9px 11px;border-radius:6px;background:var(--canvas);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--ink);
+  word-break:break-all;user-select:all}
+.fwait{display:flex;align-items:center;gap:8px;font-size:var(--rt-body);color:var(--faint)}
+.fwait i{width:8px;height:8px;border-radius:999px;background:var(--warn);
+  animation:afpulse 1.4s var(--ease) infinite}
 
 /* 段首那条分隔不需要上边线和上留白——它上面就是「Live」标题，没有要分开的东西 */
 .affeed .afdiv:first-child{margin-top:0;padding-top:0;border-top:0}
@@ -2841,16 +3110,47 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 <div id="ftoast" role="status" aria-live="polite"></div>
 <div id="gate" role="dialog" aria-modal="true" aria-labelledby="gatetitle">
   <div class="gatebox">
-    <span class="gatemark"><i aria-hidden="true"></i>Atara</span>
-    <h1 id="gatetitle">Private preview</h1>
-    <p>This console is not public yet. Enter the invite code you were given to continue.</p>
-    <form class="gateform" id="gateform">
-      <input id="gatekey" type="password" autocomplete="off" autocapitalize="off"
-             spellcheck="false" placeholder="Invite code" aria-label="Invite code">
-      <button class="btn btn-primary" type="submit">Continue</button>
-    </form>
+    <button class="gclose" aria-label="Close and keep browsing">✕</button>
+    <span class="glogo" aria-hidden="true"><i></i></span>
+    <h1 id="gatetitle">Connect to Atara</h1>
+    <p class="gsub">Your wallet is your account.</p>
+    <div id="gmethods">
+      <div class="gmlist">
+        <button class="gmrow" data-gm="create">
+          <span class="gmi gmi-pk">✦</span>
+          <span class="gmtxt"><b>Create a wallet</b></span>
+          <span class="gmst on">Recommended</span>
+        </button>
+        <button class="gmrow" data-gm="mm">
+          <span class="gmi" style="background:#E2761B">M</span>
+          <span class="gmtxt"><b>MetaMask</b></span><span class="gmst">Installed</span>
+        </button>
+        <button class="gmrow" data-gm="okx">
+          <span class="gmi" style="background:#000;box-shadow:0 0 0 1px var(--line-strong) inset">O</span>
+          <span class="gmtxt"><b>OKX Wallet</b></span><span class="gmst">Installed</span>
+        </button>
+        <button class="gmrow" data-gm="wc">
+          <span class="gmi" style="background:#3B99FC">W</span>
+          <span class="gmtxt"><b>WalletConnect</b></span>
+        </button>
+        <button class="gmrow" data-gm="imp">
+          <span class="gmi" style="background:var(--card);box-shadow:0 0 0 1px var(--line-strong) inset">🗝</span>
+          <span class="gmtxt"><b>Import an existing wallet</b></span>
+        </button>
+      </div>
+      <div class="gdiv"><span>or</span></div>
+      <button class="gmrow gsoc" data-gm="google">
+        <span class="gmi" style="background:#fff"><svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span>
+        <span class="gmtxt"><b>Continue with Google</b></span>
+      </button>
+      <form class="gmail" id="gmailform">
+        <input id="gmail-i" type="email" autocomplete="email" spellcheck="false"
+               placeholder="Continue with email" aria-label="Email">
+        <button class="btn btn-primary" type="submit" aria-label="Continue with email">→</button>
+      </form>
+    </div>
+    <div id="gstage" hidden></div>
     <p class="gateerr" id="gateerr" role="alert"></p>
-    <p class="gatefoot">No code? Write to <a href="mailto:hello@loka.cash" class="lnk">hello@loka.cash</a>.</p>
   </div>
 </div>
 <div id="app">
@@ -2881,8 +3181,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
       <button class="luser" id="luserbtn" aria-haspopup="menu" aria-expanded="false">
         <span class="lav">D</span>
         <span class="lutxt">
-          <em class="lun">demo@atara.example</em>
-          <em class="lsub">Personal account · <span class="num" id="rn"></span> cards</em>
+          <em class="lun" id="lun">Demo</em>
+          <em class="lsub">Personal account · <span class="num" id="rn"></span> allowances</em>
         </span>
       </button>
       <button class="sayic" id="themebtn" title="Toggle theme" aria-label="Toggle theme"></button>
@@ -2965,7 +3265,7 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
    </div>
 
    <div class="view" id="v-contacts">
-     <div class="vhead">
+     <div class="vhead vhrow">
        <h2>Contacts</h2>
        <button class="btn btn-secondary" id="cpadd"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg>Add contact</button>
      </div>
@@ -2998,7 +3298,7 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
    <div class="view" id="v-recs">
      <div class="vhead">
        <h2>Payments</h2>
-       <p>Every payment you have started. Live ones sit at the top until they settle.</p>
+       <p>The full view behind Order status — disputes stay in progress until they resolve.</p>
      </div>
      <div class="vbody" id="recsbody"></div>
    </div>
@@ -3079,13 +3379,13 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
    rel 关系标签不是装饰：它决定新建条件单时预填哪套释放条件（见 REL_COND）。 */
 const CPS=[
  {id:'hc', name:'Huachuang',   type:'firm',  net:-3000, ifr:91, deals:12,
-  atr:'ATR-4C19B7', rel:'Supplier', since:'Mar 2025'},
+  atr:'TQ5n7Y…zaU8k', rel:'Supplier', since:'Mar 2025'},
  {id:'kj', name:'Kenji M.',   type:'person',net: 1200, ifr:97, deals:31,
-  atr:'ATR-9D02E5', rel:'Client',   since:'Nov 2024'},
+  atr:'0x8f3a…0b21c', rel:'Client',   since:'Nov 2024'},
  {id:'ar', name:'Aria Studio',type:'firm',  net:  650, ifr:88, deals:6,
-  atr:'ATR-2F73A8', rel:'Supplier', since:'Jun 2026'},
+  atr:'TWc3rM…f9dQx', rel:'Supplier', since:'Jun 2026'},
  {id:'pa', name:'Procurement agent', type:'agent', net:0, ifr:95, deals:58,
-  atr:'ATR-7B41D0', rel:'My agent', since:'Feb 2026'},
+  atr:'TYv8pK…d2mHs', rel:'My agent', since:'Feb 2026'},
 ];
 /* 关系决定默认条件：给供应商付款默认要凭证 + 我确认；给客户或自己的 agent 默认立即 */
 const REL_COND={
@@ -3104,6 +3404,7 @@ let ITEMS=[
  {g:'them', who:'Aria Studio',what:'Deliver',        desc:'Waiting on final design files',                    amt:6500,   when:'1h ago',  cp:'ar'},
  {g:'them', who:'Huachuang',  what:'Ship',           desc:'Waiting on shipment and logistics number',         amt:3000,   when:'5h ago',  cp:'hc'},
  {g:'them', who:'Procurement agent', what:'Quoting', desc:'Agent is collecting quotes from three suppliers',   amt:2000,   when:'1d ago',  cp:'pa'},
+ {g:'me',   who:'OTC D118611', what:'Dispute',       desc:'Disputed — their receipt does not match the transfer', amt:5400, when:'3h ago', cp:null, disp:true},
  {g:'sched',who:'Rent',       what:'1st monthly',    desc:'Recurring transfer, runs without asking',           amt:8000,   when:'in 12d',  cp:null},
  {g:'sched',who:'Procurement agent', what:'API budget · weekly', desc:'Agent draws against its weekly budget', amt:2000, when:'in 3d',   cp:'pa'},
  {g:'sched',who:'Phone',      what:'5th monthly',    desc:'Recurring transfer, runs without asking',           amt:200,    when:'in 16d',  cp:null},
@@ -3191,13 +3492,13 @@ let CARDS=[
   note:'Hitting the limit stops autopay, not incoming funds'},
  {id:'pa', name:'Procurement agent', kind:'agent',
   cycle:'weekly', quota:2000, used:340, per:500, wl:'3  verified providers', tpl:'On delivery · 7-day window',
-  ifr:95, on:true, note:'Over-limit returns for your approval'},
+  exp:'Oct 31, 2026', ifr:95, on:true, note:'Over-limit returns for your approval'},
  {id:'da', name:'Data agent', kind:'agent',
   cycle:'monthly', quota:800, used:612, per:200, wl:'2  data sources', tpl:'On successful call',
-  ifr:99, on:true, note:'High frequency, low ceiling'},
+  exp:'Sep 30, 2026', ifr:99, on:true, note:'High frequency, low ceiling'},
  {id:'ta', name:'Travel agent', kind:'agent',
   cycle:'monthly', quota:5000, used:0, per:1500, wl:'Platform merchants only', tpl:'On ticketing · refundable',
-  ifr:null, on:false, note:'Set an allowlist before enabling'},
+  exp:'Not set', ifr:null, on:false, note:'Set an allowlist before enabling'},
 ];
 /* 余额与本周额度合成一块：都是「我的钱和我对钱的支配」，分在对角线两端要来回看 */
 /* 余额默认隐藏——公共场合打开控制台不该把余额直接摊在屏幕上 */
@@ -3331,6 +3632,11 @@ function renderStrip(){
 }
 
 /* ───── 工作面切换：导航项进去拿东西，拿完回到对话完成 ───── */
+/* 右栏只陪对话：Assessment/订单看板讲的是交易过程，Discover、Contacts、
+   Payments、账户页各自有整页内容，右栏在那儿只是占宽度的旁观者 */
+window.railForView=v=>{
+  document.querySelector('main').classList.toggle('rout', v!=='chat');
+};
 function switchView(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
   document.querySelectorAll('.nav[data-v]').forEach(x=>x.classList.toggle('on',x.dataset.v===v));
@@ -3410,11 +3716,12 @@ document.getElementById('lkpw').addEventListener('keydown',e=>{
 });
 document.getElementById('lkout').onclick=()=>{
   try{sessionStorage.removeItem('atara-gate')}catch(_){}
-  location.href='index.html';
+  location.href='console.html';
 };
 (()=>{
   const lu=document.getElementById('luserbtn'), row=document.querySelector('.luserrow');
   lu.onclick=()=>{
+    if(document.documentElement.dataset.locked){openLogin(null,lu);return}
     const ex=document.getElementById('umenu');
     if(ex){ex.remove();lu.setAttribute('aria-expanded','false');return}
     const m=document.createElement('div'); m.id='umenu'; m.className='ddmenu umenu'; m.setAttribute('role','menu');
@@ -3431,7 +3738,7 @@ document.getElementById('lkout').onclick=()=>{
     const avst=PROFILE.img?`style="background-image:url(${PROFILE.img});background-size:cover;background-position:center"`:'';
     m.innerHTML=
       `<div class="umhead"><span class="umav" ${avst}>${PROFILE.img?'':ini}</span>`
-     +`<span><b>${PROFILE.name}</b><em>${PROFILE.email}</em></span></div>`
+     +`<span><b>${PROFILE.name}</b><em class="num">${WALLET_ADDR.slice(0,6)}…${WALLET_ADDR.slice(-4)}</em></span></div>`
      +`<button class="umitem" role="menuitem" data-m="profile">${ico.user}Profile</button>`
      +`<button class="umitem" role="menuitem" data-m="settings">${ico.gear}Settings</button>`
      +`<div class="umsep"></div>`
@@ -3440,9 +3747,9 @@ document.getElementById('lkout').onclick=()=>{
     row.appendChild(m); lu.setAttribute('aria-expanded','true');
     m.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{
       m.remove();lu.setAttribute('aria-expanded','false');
-      if(b.dataset.m==='logout'){   /* 退出 = 交还邀请门票，回落地页 */
+      if(b.dataset.m==='logout'){   /* 退出 = 回到未登录的控制台：能看不能动 */
         try{sessionStorage.removeItem('atara-gate')}catch(_){}
-        location.href='index.html'; return;
+        location.href='console.html'; return;
       }
       if(b.dataset.m==='lock'){ lockSession(); return }
       openAcct(b.dataset.m)});
@@ -3469,7 +3776,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',e=>{
 /* 余额区已改平铺，不再整块可点——跳转入口在「In escrow」的 View 和左下账户行 */
 /* ───── Prompt Bar 交互：@ 引用对手方 · 条件选择 · 发送 ───── */
 const $free=document.getElementById('free'), $at=document.getElementById('atpanel');
-const fire=()=>{if(PARSING)return; if(ACT)return runAct();
+const fire=()=>{if(requireLogin())return; if(PARSING)return; if(ACT)return runAct();
   $free.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))};
 document.getElementById('send').onclick=fire;
 
@@ -3601,6 +3908,7 @@ $free.addEventListener('keydown',e=>{
   else if(e.key==='Escape'){closeAt()}
 });
 document.getElementById('plusbtn').onclick=()=>{
+  if(requireLogin())return;
   switchView('chat');
   const t=thinking([{k:'Accepts',v:'Bank receipts, contracts, documents'}],[{n:'ocr-verify'}]);
   setTimeout(()=>t.el.classList.add('open'),t.total+80);
@@ -3610,6 +3918,7 @@ document.getElementById('micbtn').onclick=e=>{
   e.currentTarget.setAttribute('aria-pressed',on);
 };
 document.getElementById('newchat').onclick=()=>{
+  if(requireLogin())return;
   switchView('chat'); newSession(); selected=null; renderLeft(); renderStrip();
   document.getElementById('free').focus();
 };
@@ -3628,11 +3937,11 @@ let dk='otc';
 function renderTypes(){
   document.getElementById('dtypes').innerHTML=DISCOVER.map(t=>
     `<button class="dt ${dk===t.k?'on':''} ${t.on?'':'soon'}" data-k="${t.k}" aria-selected="${dk===t.k}">${t.n}</button>`).join('')+`<button class="dt-cta" id="bemaker">${
-    SELLER.approved?'Post an offer →':
+    SELLER.approved?'Create a listing →':
     (SELLER.kycDone&&!SELLER.kycOk)||(SELLER.done&&!SELLER.approved)?'Under review…':
-    SELLER.kycOk?'Set up listing →':'Become a seller →'}</button>`;
+    SELLER.kycOk?'Set up listing →':'Become a maker →'}</button>`;
   document.querySelectorAll('.dt').forEach(b=>b.onclick=()=>{dk=b.dataset.k;renderTypes();paintDiscover()});
-  document.getElementById('bemaker').onclick=openSeller;   /* openSeller 内部按状态分流;tab 行重绘会换元素,绑定必须跟着重挂 */
+  document.getElementById('bemaker').onclick=()=>{if(requireLogin(openSeller))return; openSeller()};   /* openSeller 内部按状态分流;tab 行重绘会换元素,绑定必须跟着重挂 */
   paintDiscover();
 }
 function paintDiscover(){
@@ -3662,7 +3971,7 @@ function renderPool(){
     const sym=FIAT_SYM(o.fiat);
     return `<button class="od${o.mine?' odmine':''}" data-o="${o.id}">
       <div class="od-h">
-        <span class="od-peer">${o.name}<i class="od-id num">${o.peer}</i>${o.mine?'<i class="od-known">Your offer</i>':o.known?'<i class="od-known">Traded before</i>':''}</span>
+        <span class="od-peer">${o.name}<i class="od-id num">${o.peer}</i>${o.mine?`<i class="od-known">Your listing · ${o.side==='sell'?'selling':'buying'}</i>`:o.known?'<i class="od-known">Traded before</i>':''}</span>
         <span class="od-ai ${o.sc>=85?'hi':o.sc<70?'lo':''}" style="--p:${o.sc}" title="AI risk score — priced from settlement history, fund provenance and dispute record">
           <span class="od-ring">
             <svg viewBox="0 0 44 44" aria-hidden="true">
@@ -3706,6 +4015,7 @@ function renderPool(){
   document.querySelectorAll('.od').forEach(b=>b.onclick=()=>{
     const o=POOL.find(x=>x.id===b.dataset.o);
     if(o.mine){unlistOffer(o.id);return}   /* 自己的单不进购买流程，点了就是下架 */
+    if(requireLogin(()=>{switchView('chat');showOrder(o)},b))return;
     switchView('chat');
     showOrder(o);
   });
@@ -3734,9 +4044,10 @@ function renderFilter(){
 /* ───── 账户页：总账户 · 授权卡 · 定时付款 ───── */
 /* 芯片纹样：让「卡」这个说法在视觉上落地。操作按钮配图标——
    一排纯文字 ghost 按钮谁也不会去点 */
-const CHIP='<svg class="cchip" width="21" height="15" viewBox="0 0 22 16" fill="none" stroke="currentColor" stroke-width="1.1" aria-hidden="true">'
- +'<rect x=".6" y=".6" width="20.8" height="14.8" rx="2.8"/>'
- +'<path d="M7 .8v2.6a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V.8M7 15.2v-2.6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2.6M.8 8h6.2M15 8h6.2"/></svg>';
+/* 闸门而不是芯片：这张不是卡，是一道限额的门——和评估环的 Trust Gate 同一个词 */
+const CHIP='<svg class="cchip" width="21" height="15" viewBox="0 0 22 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true">'
+ +'<path d="M2.8 15.2V9.2a8.2 8.2 0 0 1 16.4 0v6"/>'
+ +'<path d="M6.9 15.2v-3.6M11 15.2v-5.8M15.1 15.2v-3.6"/></svg>';
 const I_PEN='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.2 2.3a1.4 1.4 0 0 1 2 2L5.6 11.9l-2.9.7.7-2.9 7.8-7.4Z"/></svg>';
 const I_CLK='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></svg>';
 const I_PWR='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4.6"/><path d="M4.6 4.5a5 5 0 1 0 6.8 0"/></svg>';
@@ -3789,7 +4100,7 @@ function cardHTML(c){
             <span>To <b>${c.wl}</b></span>
           </div>
           <div class="ccfoot"><span class="ccn">${c.name}</span>
-            ${c.ifr!=null?`<span class="ccy num" title="Share of commitments fulfilled as declared">Fulfilment ${c.ifr}</span>`:`<span class="ccy num">${Math.round(pct)}% used</span>`}</div>
+            ${c.ifr!=null?`<span class="ccy num" title="Share of commitments fulfilled as declared">Fulfilment ${c.ifr}</span>`:''}</div>
         </div>
         <div class="ccface back">
           <div class="cctop"><span class="cctag" style="margin-left:0">Conditions</span></div>
@@ -3798,6 +4109,8 @@ function cardHTML(c){
             <div class="ccbrow"><span class="ccbk">Recipients</span><b>${c.wl}</b></div>
             ${win?`<div class="ccbrow"><span class="ccbk">Window</span><b class="${inWindow()?'':'dim'}">${win}</b></div>`:''}
             <div class="ccbrow"><span class="ccbk">Per payment</span><b class="num">${per?cur+per.toLocaleString()+suf:'Any amount'}</b></div>
+            ${c.exp?`<div class="ccbrow"><span class="ccbk">Expires</span><b>${c.exp}</b></div>`:''}
+            <div class="ccbrow"><span class="ccbk">Enforced</span><b>${c.me?'Policy · co-signer checks':'On-chain · by the contract'}</b></div>
           </div>
           <div class="ccfoot"><span class="ccn">${c.name}</span>
             <span class="ccy">${c.note}</span></div>
@@ -3811,11 +4124,10 @@ function cardHTML(c){
         <i></i><span>${r.name}</span></button>`).join('')}
     </div>
     <div class="cinfo">
-      <div class="cnote">${c.note}</div>
       <div class="cfoot">
-        <span class="cacts"><button class="btn btn-ghost btn-sm" data-p="flip">${I_FLIP}<span class="fliplbl">${CARD_FLIP?'Front':'Conditions'}</span></button>${c.me
-          ? `<button class="btn btn-ghost btn-sm" data-p="per">${I_PEN}Edit limit</button><button class="btn btn-ghost btn-sm" data-p="win">${I_CLK}Edit window</button>`
-          : `<button class="btn btn-ghost btn-sm" data-p="cq:${c.id}">${I_PEN}Edit limit</button><button class="btn btn-${c.on?'danger':'ghost'} btn-sm" data-p="tg:${c.id}">${I_PWR}${c.on?'Disable':'Enable'}</button>`}</span>
+        <span class="cacts"><button class="btn btn-ghost btn-sm" data-p="flip">${I_FLIP}<span class="fliplbl">${CARD_FLIP?'Front':'Conditions'}</span></button><button class="btn btn-ghost btn-sm" data-p="edit:${c.id}">${I_PEN}Edit</button>${c.me
+          ? ``
+          : `<button class="btn btn-${c.on?'danger':'ghost'} btn-sm" data-p="tg:${c.id}">${I_PWR}${c.on?'Revoke':'Re-issue'}</button>`}</span>
       </div>
     </div>
   </div>`;
@@ -3913,12 +4225,12 @@ function openDeposit(){
         <div class="qr" aria-hidden="true">${Array.from({length:64},(_,i)=>
           `<i class="${((i*7+i%5+DEP.coin.length+DEP.net.length)%3)?'':'on'}"></i>`).join('')}</div>
         <div class="depmeta">
-          <span class="sfl">Deposit address</span>
+          <span class="sfl">Your wallet address</span>
           <code id="depaddr">${depAddr(DEP.coin,DEP.net)}</code>
           <button class="btn btn-sm" id="depcopy">Copy</button>
         </div>
       </div>
-      <p class="rnote">Receives <b>${DEP.coin}</b> on <b>${DEP.net}</b> only.<i class="info" tabindex="0" data-tip="Assets sent on the wrong asset or network cannot be recovered. On-chain deposits credit automatically — no receipt needed. Fiat does not go here: it settles peer-to-peer between buyer and seller, and we only verify the receipt.">i</i></p>`;
+      <p class="rnote">Your own address — funds land in your wallet, not with us. Receives <b>${DEP.coin}</b> on <b>${DEP.net}</b> only.<i class="info" tabindex="0" data-tip="Assets sent on the wrong asset or network cannot be recovered. Arrivals show up as soon as the chain confirms them. Fiat does not go here: it settles bank-to-bank between buyer and seller, and we only verify the receipt.">i</i></p>`;
     document.getElementById('mbody').innerHTML=html;
     bind();
   };
@@ -3931,7 +4243,7 @@ function openDeposit(){
       e.target.textContent='Copied'; setTimeout(()=>e.target.textContent='Copy',1400);
     };
   };
-  openModal('Deposit',' ',draw);
+  openModal('Receive',' ',draw);
 }
 
 /* ── 提取：四步（照 User Guide p10-14，五种出金统一四步，末步 Support File 强制）── */
@@ -3943,7 +4255,7 @@ function openWithdraw(){
     const asset=WD.addr ? (ASSETS.find(a=>a.coin===coinOfNet(WD.addr.net))||ASSETS[0]) : ASSETS[0];
     let form='';
     if(st===0) form=PAYEES.chain.length
-      ? `<div class="sf" id="wd-addr"><span class="sfl">Withdraw to a registered address</span>
+      ? `<div class="sf" id="wd-addr"><span class="sfl">Send to a registered address</span>
           <div class="wlist">${PAYEES.chain.map(c=>`
             <button class="wrow${WD.addr&&WD.addr.id===c.id?' on':''}" data-wa="${c.id}">
               <span class="wnet">${c.net}</span>
@@ -4017,10 +4329,10 @@ function openWithdraw(){
       if(a.coin===FUNDS.coin){FUNDS.avail=a.avail; renderBalance()}
       const ref=WD.addr.ref, amt=WD.amt, coin=asset.coin;
       closeModal(); renderRules();
-      toast(`Withdrawal submitted: ${amt} ${coin} → ${ref} — broadcasting after review`);
+      toast(`Signed: ${amt} ${coin} → ${ref} — broadcasting from your wallet`);
     };
   };
-  openModal('Withdraw',' ',draw);
+  openModal('Send',' ',draw);
 }
 function coinOfNet(net){const a=ASSETS.find(x=>x.net===net); return a?a.coin:'USDT'}
 function wdValid(){
@@ -4204,7 +4516,114 @@ function depAddr(coin,net){
   for(let i=0;i<(net==='TRON'?33:net==='BTC'?38:40);i++) out+=abc[(seed*(i+7)+i*13)%36];
   return out;
 }
+const WALLET_ADDR=depAddr('USDT','TRON');
+/* 登录方式决定限额怎么签发：atara = 账户策略层；ext = 对支出合约的 approve */
+let WALLET_KIND='atara';
+try{WALLET_KIND=sessionStorage.getItem('atara-wkind')||'atara'}catch(_){}
+function setWalletKind(k){WALLET_KIND=k;try{sessionStorage.setItem('atara-wkind',k)}catch(_){}}
+/* 身份就是地址：左下角的账户位显示地址而不是邮箱——邮箱只是通知渠道。
+   未登录时这里就是登录入口 */
+function paintLun(){
+  const e=document.getElementById('lun'); if(!e)return;
+  const sub=e.parentElement.querySelector('.lsub');
+  if(document.documentElement.dataset.locked){
+    e.textContent='Sign in';
+    if(sub)sub.textContent='';
+  }else{
+    e.innerHTML=`Demo · <span class="num">${WALLET_ADDR.slice(0,6)}…${WALLET_ADDR.slice(-4)}</span>`;
+    if(sub)sub.innerHTML=`Personal account · <span class="num" id="rn">${CARDS.length}</span> allowances`;
+  }
+}
+paintLun();
 
+/* ── 开/改额度共用：先定规则，再按钱包类型签发——Atara 钱包写进账户策略，外部钱包走 approve ── */
+const SPEND_ADDR=depAddr('SPEND','TRON');
+const NA={};
+function openAllowanceModal(card){
+  const isEdit=!!card, me=!!(card&&card.me);
+  if(isEdit) Object.assign(NA,{
+    name: me?'Me':card.name,
+    per: String(me?RULES.perDeal:(card.per||'')),
+    quota: String(me?budget:card.quota),
+    cycle: (card.cycle||'weekly').includes('month')?'monthly':'weekly',
+    exp: card.exp||'Not set',
+    wl: card.wl||'Any',
+  });
+  else Object.assign(NA,{name:'New agent',per:'500',quota:'2000',cycle:'weekly',exp:'90 days',wl:'Verified providers'});
+  /* 当前值不在预设里就把它挂进选项，选中态落在原值上 */
+  const expOpts=[...new Set([NA.exp&&!['30 days','90 days','Not set'].includes(NA.exp)?NA.exp:null,'30 days','90 days','Not set'].filter(Boolean))];
+  const wlOpts=[...new Set([NA.wl&&!['Any','Verified providers','Set later'].includes(NA.wl)?NA.wl:null,'Any','Verified providers','Set later'].filter(Boolean))];
+  const ext=WALLET_KIND==='ext';
+  const draw=()=>{
+    document.getElementById('mbody').innerHTML=`
+      <div class="sf"><span class="sfl">Spender</span>
+        <input type="text" id="na-name" value="${NA.name}" autocomplete="off" spellcheck="false" ${me?'disabled':''}></div>
+      <div class="sf"><span class="sfl">Per payment (USDT)</span>
+        <input type="text" id="na-per" value="${NA.per}" inputmode="numeric"></div>
+      <div class="sf"><span class="sfl">Window total (USDT)</span>
+        <input type="text" id="na-quota" value="${NA.quota}" inputmode="numeric">
+        <div class="sfchips">${['weekly','monthly'].map(c=>
+          `<button type="button" class="sfchip${NA.cycle===c?' on':''}" data-nc="${c}">${c}</button>`).join('')}</div></div>
+      <div class="sf"><span class="sfl">Expires</span>
+        <div class="sfchips">${expOpts.map(x=>
+          `<button type="button" class="sfchip${NA.exp===x?' on':''}" data-ne="${x}">${x}</button>`).join('')}</div></div>
+      <div class="sf"><span class="sfl">Recipients</span>
+        <div class="sfchips">${wlOpts.map(x=>
+          `<button type="button" class="sfchip${NA.wl===x?' on':''}" data-nw="${x}">${x}</button>`).join('')}</div></div>
+      <p class="rnote">${ext
+        ?`Your wallet approves this cap to the Atara spending contract <b class="num">${SPEND_ADDR.slice(0,6)}…${SPEND_ADDR.slice(-4)}</b> — enforced on-chain, revoke any time.`
+        :'Signing writes this rule into your account contract — enforced on-chain, revoking takes effect next block.'}</p>
+      <div class="dfoot"><span class="dnote" id="na-err"></span>
+        <button class="btn btn-primary" id="na-go">${ext?'Approve in wallet':'Sign with passkey'}</button></div>`;
+    const read=()=>{NA.name=document.getElementById('na-name').value.trim()||'New agent';
+      NA.per=document.getElementById('na-per').value; NA.quota=document.getElementById('na-quota').value;};
+    document.querySelectorAll('#mbody [data-nc]').forEach(x=>x.onclick=()=>{read();NA.cycle=x.dataset.nc;draw()});
+    document.querySelectorAll('#mbody [data-ne]').forEach(x=>x.onclick=()=>{read();NA.exp=x.dataset.ne;draw()});
+    document.querySelectorAll('#mbody [data-nw]').forEach(x=>x.onclick=()=>{read();NA.wl=x.dataset.nw;draw()});
+    document.getElementById('na-go').onclick=()=>{
+      read();
+      const per=parseInt((NA.per+'').replace(/[^\d]/g,''),10)||0,
+            quota=parseInt((NA.quota+'').replace(/[^\d]/g,''),10)||0;
+      if(!per||!quota||per>quota){
+        document.getElementById('na-err').textContent=
+          !per||!quota?'Amounts must be above 0':'Per payment cannot exceed the window total';
+        return;
+      }
+      issue(per,quota);
+    };
+  };
+  const issue=(per,quota)=>{
+    const expDate=NA.exp==='Not set'?'Not set'
+      :['30 days','90 days'].includes(NA.exp)
+        ?new Date(Date.now()+(NA.exp==='30 days'?30:90)*864e5)
+          .toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+        :NA.exp;
+    const body=document.getElementById('mbody');
+    body.innerHTML=`<div class="nasign">${ext
+      ?`<span class="gspin"></span><b>Waiting for your wallet</b>
+         <em>Sign the approve — ${quota.toLocaleString()} USDT to ${SPEND_ADDR.slice(0,6)}…${SPEND_ADDR.slice(-4)}. Nothing moves now; it only sets the cap.</em>`
+      :`<span class="gpkring">✦</span><b>Touch ID</b>
+         <em>Signing the policy update on your account contract.</em>`}</div>`;
+    setTimeout(()=>{
+      body.innerHTML=`<div class="nasign"><span class="gok">✓</span><b>${isEdit?(ext?'Allowance updated':'Policy updated'):(ext?'Allowance granted':'Policy live')}</b>
+        <em>${me?'You':NA.name} can spend up to ${per.toLocaleString()} USDT per payment · ${quota.toLocaleString()} ${NA.cycle} · enforced on-chain.</em></div>`;
+      if(isEdit){
+        if(me){RULES.perDeal=per; budget=quota;}
+        else Object.assign(card,{per,quota,cycle:NA.cycle,exp:expDate,wl:NA.wl==='Set later'?'Not set':NA.wl});
+        if(!me)CARD_ACTIVE=card.id;
+      }else{
+        const id='n'+(CARDS.length+1);
+        CARDS.push({id,name:NA.name,kind:'agent',cycle:NA.cycle,
+          quota,used:0,per,wl:NA.wl==='Set later'?'Not set':NA.wl,tpl:'Not set',exp:expDate,ifr:null,on:true,
+          note:ext?'Backed by an on-chain allowance — Revoke cancels the approve':'Written into your account contract — revoking takes effect next block'});
+        CARD_ACTIVE=id;
+      }
+      setTimeout(()=>{closeModal();renderRules();renderBalance();
+        toast(isEdit?`Allowance updated — ${NA.name}`:`Allowance issued to ${NA.name}`)},1200);
+    },1700);
+  };
+  openModal(isEdit?'Edit allowance':'New allowance',' ',draw);
+}
 function renderRulesPage(){
   const sched=ITEMS.filter(i=>i.g==='sched');
   const live=CARDS.filter(c=>c.on).length;
@@ -4224,8 +4643,9 @@ function renderRulesPage(){
         <div class="pidmain">
           <div class="pnrow"><span class="pname">${PROFILE.name}</span>
             <button class="pedit" data-p="rename" title="Rename" aria-label="Edit nickname">${I_PEN}</button></div>
-          <div class="pmeta"><span>${PROFILE.email}</span>·<span class="pidno num">${PROFILE.id}</span>
-            <button class="pcopy" data-p="copyid" title="Copy ID" aria-label="Copy account ID">${I_COPY}</button></div>
+          <div class="pmeta"><span class="num" title="Your wallet address is your account">${WALLET_ADDR.slice(0,6)}…${WALLET_ADDR.slice(-4)}</span>
+            <button class="pcopy" data-p="copyid" title="Copy address" aria-label="Copy wallet address">${I_COPY}</button>
+            ${PROFILE.email?`·<span title="Notification email — codes and notices, not a login">${PROFILE.email}</span>`:''}</div>
         </div>
         <div class="pstat">
           <b>Personal account</b>
@@ -4237,30 +4657,35 @@ function renderRulesPage(){
   const secProfile=`
     <div class="pgrid pg-a">
       <section class="pmod">
-        <div class="pmh"><h4>Balance</h4>
-          <span class="ad num">${ASSETS.length} assets · in USD</span></div>
+        <div class="pmh"><h4>Wallet</h4>
+          <span class="ad">Non-custodial</span></div>
         <div class="atot"><b class="av num">$${Math.round(cnyAvail+cnyEsc).toLocaleString()}</b></div>
+
         <div class="aalloc" title="Available vs in escrow">
           <i class="aa-av" style="width:${(cnyAvail/(cnyAvail+cnyEsc||1)*100).toFixed(1)}%"></i>
           <i class="aa-es" style="width:${(cnyEsc/(cnyAvail+cnyEsc||1)*100).toFixed(1)}%"></i>
         </div>
         <div class="asplit">
-          <div><span class="al">Available</span><b class="num">$${Math.round(cnyAvail).toLocaleString()}</b>
-            <span class="ad">${live} cards share it</span></div>
-          <div><span class="al">In escrow</span><b class="num">$${Math.round(cnyEsc).toLocaleString()}</b>
+          <div><span class="al">In your wallet</span><b class="num">$${Math.round(cnyAvail).toLocaleString()}</b></div>
+          <div><span class="al">In escrow contracts</span><b class="num">$${Math.round(cnyEsc).toLocaleString()}</b>
             <span class="ad">${FUNDS.escrowN} trades locked · <a href="#" class="lnk" data-p="goto-recs">View ›</a></span></div>
         </div>
-        <div class="aacts"><button class="btn btn-secondary" data-p="godep">Deposit</button><button class="btn btn-secondary" data-p="gowd">Withdraw</button><button class="btn btn-secondary" data-p="gopay">Recipients</button></div>
+        <div class="aacts"><button class="btn btn-secondary" data-p="godep">Receive</button><button class="btn btn-secondary" data-p="gowd">Send</button><button class="btn btn-secondary" data-p="gopay">Addresses</button></div>
       </section>
       <section class="pmod">
-        <div class="pmh"><h4>Cards · ${CARDS.length}</h4>
-          <button class="btn btn-ghost btn-sm" data-p="newcard">+ New card</button></div>
+        <div class="pmh"><h4>Allowances<i class="info" tabindex="0" data-tip="A spending rule your wallet signed — the contract enforces spender, per-payment cap, window total and expiry; revoking takes effect next block. Your own limit is a policy layer — co-signers refuse anything over it.">i</i></h4>
+          <button class="btn btn-ghost btn-sm" data-p="newcard">+ New allowance</button></div>
         ${cardHTML(CARDS.find(c=>c.id===CARD_ACTIVE)||CARDS[0])}
       </section>
     </div>`;
   const secSettings=`
     <div class="rsec"><h3>Security</h3>
       <div class="seclist">
+        <div class="secrow">
+          <span class="seci">🗝</span>
+          <span class="sectxt"><b>Wallet keys</b><em>Non-custodial — your passkeys sign, we never hold them · recovery kit not backed up</em></span>
+          <button class="btn btn-secondary" data-p="bakkey">Back up</button>
+        </div>
         <div class="secrow">
           <span class="seci">🔑</span>
           <span class="sectxt"><b>Passkeys</b><em id="pklist">Touch ID · MacBook Pro · added Aug 12</em></span>
@@ -4292,7 +4717,7 @@ function renderRulesPage(){
     <div class="pmh"><h4>Assets · ${ASSETS.length}</h4>
       <button class="h3go" data-p="goto-recs">Statement ${I_GO}</button></div>
     <!--ASSETS-->
-    <p class="rnote">Digital assets only — <b>fiat never enters the account</b>.<i class="info" tabindex="0" data-tip="The fiat leg of an OTC trade settles bank-to-bank between the two parties. We verify the receipt but never hold the funds. Every card spends this same balance — there is no second wallet.">i</i></p>`;
+    <p class="rnote">Digital assets only — <b>fiat never enters the account</b>.<i class="info" tabindex="0" data-tip="The fiat leg of an OTC trade settles bank-to-bank between the two parties. We verify the receipt but never hold the funds. Every allowance spends this same balance — there is no second wallet.">i</i></p>`;
   const paneAuto=`
     <div class="rcard flat">${sched.map(i=>
       `<div class="rrow"><span class="rk">${i.who}</span>
@@ -4398,20 +4823,22 @@ function bindRulesPage(){
     if(p==='rename'){renameProfile();return}
     if(p==='avatar'){openAvatar(b);return}
     if(p==='copyid'){
-      const ok=()=>toast('Account ID copied');
-      try{navigator.clipboard?.writeText(PROFILE.id).then(ok,()=>toast(PROFILE.id))}
-      catch(_){toast(PROFILE.id)}
+      const ok=()=>toast('Address copied');
+      try{navigator.clipboard?.writeText(WALLET_ADDR).then(ok,()=>toast(WALLET_ADDR))}
+      catch(_){toast(WALLET_ADDR)}
+      return;
+    }
+    if(p==='copyaddr'){
+      try{navigator.clipboard?.writeText(WALLET_ADDR).then(()=>toast('Wallet address copied'),()=>toast(WALLET_ADDR))}
+      catch(_){toast(WALLET_ADDR)}
       return;
     }
     if(p==='godep'){openDeposit();return}
     if(p==='gowd'){openWithdraw();return}
+    if(p==='bakkey'){toast('Recovery kit — demo build, nothing to export');return}
     if(p==='gopay'){openPayees();return}
-    if(p==='newcard'){
-      CARDS.push({id:'n'+CARDS.length,name:'New agent card',kind:'agent',cycle:'weekly',
-        quota:1000,used:0,per:200,wl:'Not set',tpl:'Not set',ifr:null,on:false,
-        note:'Set an allowlist before enabling'});
-      renderRules();return;
-    }
+    if(p==='newcard'){openAllowanceModal();return}
+    if(p.startsWith('edit:')){openAllowanceModal(CARDS.find(x=>x.id===p.slice(5)));return}
     if(p.startsWith('tg:')){
       const c=CARDS.find(x=>x.id===p.slice(3));c.on=!c.on;renderRules();return;
     }
@@ -4460,68 +4887,99 @@ const RECS=[
 /* ══ History ══ 结算流水是一份台账，不是一叠卡片。
    一天一个小标题、一笔一行、金额右对齐成一列——能纵向比大小才叫台账。
    （旧版按日期切成 rsec + rcard，每组常常只有一笔，卡壳比内容还高） */
-let RECFILT='all';
+let RECFILT='all', PFILT='all', PTAB='live';
 const recParts=r=>{const i=r.d.indexOf(' ');
   return i<0?{day:r.d,time:''}:{day:r.d.slice(0,i),time:r.d.slice(i+1)}};
 const recDay=d=>d==='today'?'Today':d;
 function renderRecs(){
-  /* 这一页是「订单的家」：在飞的付款在上（能动手的排最前），已结算台账在下。
-     节奏是刻意的——上面一块纸卡、密、可点；空 48px；下面平铺台账，退到底色上。
-     结算状态筛选器归 Settled 那一段，不放页顶：筛选器不该比内容先被看见。 */
+  /* 一页两个 tab：进行中 / 已结束。同一种卡片语言——右栏 Order status 的卡放大一号，
+     争议是进行中的二级状态（红），终态只有 Released / Refunded。 */
 
-  /* ── 上：在飞 ── */
-  const rank={you:0,run:1};
-  const live=TASKS.filter(t=>t.st!=='done').sort((a,b)=>rank[a.st]-rank[b.st]);
-  const liveHTML = live.length
-    ? `<div class="pfcard">`+live.map(t=>{
-        const i=t.seed||{}, cp=CPS.find(c=>c.id===i.cp);
-        const you=t.st==='you';
-        const sub=[cp?cp.name:(i.who||''), i.when||''].filter(Boolean).join(' · ');
-        return `<div class="pfrow${you?' you':''}" data-live="${t.id}" role="button" tabindex="0">
-          <span class="pfst"><i></i>${you?'Your turn':'Waiting'}</span>
-          <span class="pfn"><em>${t.title}</em>${sub?`<i>${sub}</i>`:''}</span>
-          <span class="pfamt num">${i.amt?'$'+i.amt.toLocaleString():''}</span>
-          <span class="pfact">${you?`<button class="btn btn-primary btn-sm" data-open="${t.id}">Open</button>`:''}</span>
-        </div>`}).join('')+`</div>`
-    : `<div class="pfempty">Nothing in flight. Every payment you start shows up here until it settles.</div>`;
+  /* ── 进行中 ── */
+  const rows=TASKS.filter(t=>t.st!=='done').map(t=>({t,st:orderState(t)}));
+  const rank={you:0,disp:1,them:2,auto:2};
+  rows.sort((a,b)=>(rank[a.st[0]]??2)-(rank[b.st[0]]??2));
+  const sets={all:rows,
+    you: rows.filter(r=>r.st[0]==='you'),
+    wait:rows.filter(r=>r.st[0]==='them'||r.st[0]==='auto'),
+    disp:rows.filter(r=>r.st[0]==='disp')};
+  if(!sets[PFILT])PFILT='all';
+  const pchip=(k,lb)=>`<button class="hfil${PFILT===k?' on':''}" data-pf="${k}"${
+    sets[k].length?'':' disabled'}>${lb}<b class="num">${sets[k].length}</b></button>`;
+  /* 托管三步：钱进合约 → 条件成立 → 放款。争议把第三步换成复核，
+     不是新增一段流程——争议就发生在放款判定这一步上 */
+  const trackOf=tone=>{
+    const at = tone==='disp' ? 2 : 1;
+    const steps=[['Funded',0],[tone==='you'?'Your call':'Condition',1],
+                 [tone==='disp'?'In review':'Release',2]];
+    return `<span class="ptrack">${steps.map(([lb,ix])=>
+      `<i class="${ix<at?'done':ix===at?'now':''}"></i><em class="${ix===at?'now':''}">${lb}</em>`).join('')}</span>`;
+  };
+  const liveCard=({t,st})=>{
+    const i=t.seed||{}, cp=CPS.find(c=>c.id===i.cp);
+    const [tone,label]=st;
+    const who=cp?cp.name:(i.who||'');
+    const dir=(tone==='you'||tone==='disp')?'out':'in';
+    const act=tone==='you'?'Open' : tone==='disp'?'Review' : '';
+    return `<div class="pcard ${tone}" data-live="${t.id}" role="button" tabindex="0">
+      <span class="roc-st"><i></i>${label}<time>${i.when||''}</time></span>
+      ${i.amt?`<b class="roc-big num ${dir}">${dir==='out'?'−':'+'}$${(+i.amt).toLocaleString()}</b>`
+             :`<b class="roc-big none">—</b>`}
+      <span class="pcard-t">${t.title}</span>
+      ${trackOf(tone)}
+      <span class="pcard-f">${who?avSpan(who,'roc-av'):''}${who?`<span class="roc-who">${who}</span>`:''}
+        ${act?`<button class="btn btn-${tone==='disp'?'secondary':'primary'} btn-sm" data-open="${t.id}">${act}</button>`:''}</span>
+    </div>`};
+  const livePane=
+    `<div class="pbar"><div class="hfils">${pchip('all','All')}${pchip('you','Needs you')}${
+        pchip('wait','Waiting')}${pchip('disp','Disputed')}</div></div>`
+    +(sets[PFILT].length
+      ? `<div class="pgrid2">${sets[PFILT].map(liveCard).join('')}</div>`
+      : `<div class="pfempty">${PFILT==='all'
+          ?'Nothing in progress. Every order you start shows up here until it closes.'
+          :'Nothing in this state right now.'}</div>`);
 
-  /* ── 下：已结算台账 ── */
+  /* ── 已结束 ── */
   const counts={all:RECS.length,
     Released:RECS.filter(r=>r.s==='Released').length,
-    Refunded:RECS.filter(r=>r.s==='Refunded').length,
-    Disputed:RECS.filter(r=>r.s==='Disputed').length};
+    Refunded:RECS.filter(r=>r.s==='Refunded').length};
+  if(!(RECFILT in counts))RECFILT='all';
   const list=RECFILT==='all'?RECS:RECS.filter(r=>r.s===RECFILT);
-  const by={}; list.forEach(r=>{const {day}=recParts(r); (by[day]=by[day]||[]).push(r)});
   const chip=(k,n)=>`<button class="hfil${RECFILT===k?' on':''}" data-rf="${k}"${
     n===0&&k!=='all'?' disabled':''}>${k==='all'?'All':k}<b class="num">${n}</b></button>`;
+  /* 结束的单子是台账：一张表，一笔一行，每列各司其职。
+     日期不再切成一堆小标题——四笔配四个标题，隔断比内容还高 */
+  const donePane=
+    `<div class="pbar"><div class="hfils">${chip('all',counts.all)}${chip('Released',counts.Released)}${
+        chip('Refunded',counts.Refunded)}</div>
+      <button class="btn btn-ghost btn-sm">Export</button></div>`
+    +(list.length
+      ? `<div class="led">
+          <div class="ledr ledh"><span>Date</span><span>Counterparty</span><span>Order</span>
+            <span class="r">Amount</span><span>Outcome</span><span></span></div>`
+        +list.map(r=>{
+          const {day,time}=recParts(r);
+          return `<div class="ledr">
+            <span class="ledd num">${day}<em>${time||''}</em></span>
+            <span class="ledw">${r.w}</span>
+            <span class="ledt">${r.t}</span>
+            <span class="leda num">${r.a}</span>
+            <span class="leds${r.s!=='Released'?' neg':''}"><i></i>${r.s}</span>
+            <a href="#" class="lede lnk">Evidence</a>
+          </div>`}).join('')+`</div>`
+      : `<div class="pfempty">No ${RECFILT.toLowerCase()} settlements yet.</div>`)
+    +`<p class="rnote">Every settlement keeps an evidence pack.<i class="info" tabindex="0" data-tip="Terms agreed, review report, escrow record and the evidence release was based on.">i</i></p>`;
 
   document.getElementById('recsbody').innerHTML=
-    `<div class="psec"><h3>In flight</h3>${live.length?`<span class="pcount num">${live.length}</span>`:''}</div>`
-    + liveHTML
-    + `<div class="psec settled">
-         <h3>Settled</h3>
-         <div class="hfils">${chip('all',counts.all)}${chip('Released',counts.Released)}${
-           chip('Refunded',counts.Refunded)}${chip('Disputed',counts.Disputed)}</div>
-         <button class="btn btn-ghost btn-sm">Export</button>
-       </div>`
-    + (list.length?`<div class="hlist">`+Object.entries(by).map(([day,rs])=>
-        `<div class="hday">${recDay(day)}</div>`+rs.map(r=>{
-          const {time}=recParts(r);
-          const neg=r.s!=='Released';
-          /* 对手方和事由同格：中栏窄的时候两个弹性列会互相挤成一个字母 */
-          return `<div class="hrow">
-            <span class="htime num">${time||'—'}</span>
-            <span class="hwho">${r.w}<em>${r.t}</em></span>
-            <span class="hamt num">${r.a}</span>
-            <span class="hst${neg?' neg':''}"><i></i>${r.s}</span>
-            <a href="#" class="hev lnk">Evidence</a>
-          </div>`}).join('')).join('')+`</div>`
-      : `<div class="hempty">No ${RECFILT.toLowerCase()} settlements yet.</div>`)
-    + `<p class="rnote">Every settlement keeps an evidence pack.<i class="info" tabindex="0" data-tip="Terms agreed, review report, escrow record and the evidence release was based on.">i</i></p>`;
+    `<div class="atabs" role="tablist">
+       <button class="atab ${PTAB==='live'?'on':''}" role="tab" aria-selected="${PTAB==='live'}" data-pt="live">In progress · <b class="num">${rows.length}</b></button>
+       <button class="atab ${PTAB==='fin'?'on':''}" role="tab" aria-selected="${PTAB==='fin'}" data-pt="fin">Closed · <b class="num">${RECS.length}</b></button>
+     </div>`
+    +(PTAB==='live'?livePane:donePane);
 
-  document.querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>{
-    RECFILT=b.dataset.rf; renderRecs();
-  });
+  document.querySelectorAll('[data-pt]').forEach(b=>b.onclick=()=>{PTAB=b.dataset.pt; renderRecs()});
+  document.querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>{RECFILT=b.dataset.rf; renderRecs()});
+  document.querySelectorAll('[data-pf]').forEach(b=>b.onclick=()=>{PFILT=b.dataset.pf; renderRecs()});
   const go=id=>{
     const t=TASKS.find(x=>x.id===id); if(!t)return;
     if(t.sess){restoreSession(t.sess)} else if(t.seed){openSeedTask(t)}
@@ -4560,6 +5018,7 @@ const OSTATE={
 };
 function orderState(t){
   const i=t.seed||{};
+  if(i.disp) return ['disp','In dispute — reviewing evidence'];
   if(t.kind && OSTATE[t.kind]) return t.st==='you' ? OSTATE.approve : OSTATE[t.kind];
   const w=(i.what||'').toLowerCase();
   if(/approve/.test(w))        return OSTATE.approve;
@@ -4602,7 +5061,7 @@ function renderRoOrders(){
         const [tone,label]=orderState(t);
         /* 方向：轮到你的是要付出去的钱（−），等对方的是要进来的（+）。
            金额是这张卡的主角——扫一排卡就是扫「进出各多少」 */
-        const dir=tone==='you'?'out':'in';
+        const dir=(tone==='you'||tone==='disp')?'out':'in';
         return `<button class="rocard ${tone}" data-ro="${t.id}">
           <span class="roc-st"><i></i>${label}</span>
           ${amt?`<b class="roc-big num ${dir}">${dir==='out'?'−':'+'}$${(+amt).toLocaleString()}</b>`
@@ -4985,7 +5444,7 @@ function arunRingReset(){arunIdle()}
    跟右栏那条完整进度的分工：这里是对话流里的一瞥，右栏是留档。 */
 let THK=null;
 function thinkStart(label){
-  const log=document.getElementById('log'); if(!log)return;
+  const log=(ACTIVE&&ACTIVE.el)||document.getElementById('log'); if(!log)return;
   thinkClear();
   /* 评估一开始就撤掉空态标题：界面在提交那一刻就切进对话态，
      输入框落到底部、轨迹接在上面。等结论出来才变，中间那十几秒是干等 */
@@ -5421,6 +5880,7 @@ document.getElementById('free').addEventListener('keydown',e=>{
   if(e.key!=='Enter')return;
   if(e.shiftKey)return;              /* Shift+Enter 换行，Enter 发送 */
   e.preventDefault();
+  if(requireLogin(()=>document.getElementById('free').focus()))return;
   if(PARSING)return;
   if(ACT){runAct();return}
   const q=e.target.value;if(!q.trim())return;
@@ -5441,6 +5901,11 @@ document.getElementById('free').addEventListener('keydown',e=>{
         : /验收|approv|accept|确认/i.test(q)?'When I confirm'
         : /每月|monthly|recurring|日放/i.test(q)?'On a date' : 'Immediately';
   e.target.value='';syncSend();autogrow();
+  /* 对手方解析出来了就先进他的线程——评估过程属于这段关系的记录 */
+  if(S.cp&&!S.guessed.cp){
+    ensureThread(S.cp.id,{name:S.cp.name, sc:S.cp.ifr, deals:S.cp.deals});
+    restoreSession(S.cp.id);
+  }
   /* 解析：推理轨迹逐条点亮 → 成句弹卡（生命周期阶段 1 → 2） */
   thinking(
     [{k:'Counterparty',v:S.guessed.cp?'Needs you':S.cp.name},
@@ -5629,8 +6094,9 @@ function requireVerify(why, bodyHTML, cb, opts){
   pr.style.display=PAY_LIST.length?'':'none';
   document.getElementById('psopts').classList.remove('open');
   if(PAY_LIST.length)paintPay(); else document.getElementById('psopts').innerHTML='';
-  /* 付款默认走 Passkey。支付密码是没有 Passkey 时的退路，不摆在这一屏 */
-  document.getElementById('cok').innerHTML=PK_LABEL;
+  /* 动资金的签名走 Passkey；纯承诺类确认（接单）不动钱，普通按钮就够 */
+  document.getElementById('cok').innerHTML=o.plain||PK_LABEL;
+  document.getElementById('cok').dataset.plain=o.plain?'1':'';
   PENDING_VERIFY=cb;
   document.getElementById('confirm').classList.add('show');
 }
@@ -5643,9 +6109,10 @@ document.getElementById('cok').onclick=ev=>{
   if(b.classList.contains('busy'))return;
   b.classList.add('busy');
   const orig=b.innerHTML;
-  b.innerHTML='<span class="pkpulse"></span>Waiting for Touch ID…';
+  const plain=b.dataset.plain==='1';
+  b.innerHTML=plain?'<span class="pkpulse"></span>Confirming…':'<span class="pkpulse"></span>Waiting for Touch ID…';
   setTimeout(()=>{
-    b.innerHTML='✓ Verified';
+    b.innerHTML=plain?'✓ Confirmed':'✓ Verified';
     setTimeout(()=>{
       document.getElementById('confirm').classList.remove('show');
       b.classList.remove('busy'); b.innerHTML=orig;
@@ -5660,16 +6127,19 @@ document.getElementById('cno').onclick=()=>{document.getElementById('confirm').c
    条件单唯一重要的信息是「现在轮到谁、下一步发生什么」。 */
 const CSTAGE={
  now:[
+   ['fund','Fund escrow',    'you',   'choose how to pay'],
    ['lock','Funds locked',   'you',   ''],
    ['cons','Release consensus','atara','5 checks'],
    ['rel', 'Released',       'atara', '']],
  approve:[
+   ['fund','Fund escrow',    'you',   'choose how to pay'],
    ['lock','Funds locked',   'you',   ''],
    ['deliv','Their delivery','peer',  'they mark it delivered'],
    ['mine','Your confirmation','you', 'nothing releases without you'],
    ['cons','Release consensus','atara','5 checks'],
    ['rel', 'Released',       'atara', '']],
  evidence:[
+   ['fund','Fund escrow',    'you',   'choose how to pay'],
    ['lock','Funds locked',   'you',   ''],
    ['deliv','Their evidence','peer',  'they upload the proof'],
    ['mine','Your window',    'you',   'silence releases it'],
@@ -5677,11 +6147,13 @@ const CSTAGE={
    ['rel', 'Released',       'atara', '']],
  /* API data 编译到 On a date 主分支，但它等的是指标够不够，不是等日子 */
  data:[
+   ['fund','Fund escrow',    'you',   'choose how to pay'],
    ['lock','Funds locked',   'you',   ''],
    ['deliv','Waiting on the metric','api','the source has to hit your target'],
    ['cons','Release consensus','atara','5 checks'],
    ['rel', 'Released',       'atara', '']],
  time:[
+   ['fund','Fund escrow',    'you',   'choose how to pay'],
    ['lock','Funds locked',   'you',   ''],
    ['deliv','Waiting for the date','clock',''],
    ['cons','Release consensus','atara','5 checks'],
@@ -5708,14 +6180,15 @@ function paintEscrow(){
   const snap=escrow; if(!snap||!snap.card)return;
   const st=snap.stage, card=snap.card;
   const who=(cstages(snap).find(x=>x[0]===st)||[])[2];
-  const badge={lock:'Escrowed',deliv:'Waiting',mine:'Your turn',cons:'Verifying',
+  const badge={fund:'Fund it',lock:'Escrowed',deliv:'Waiting',mine:'Your turn',cons:'Verifying',
                rel:'Released',cancel:'Cancelled',dispute:'In review'}[st]||'Waiting';
   const done=st==='rel'||st==='cancel';
-  card.className='deal'+(st==='mine'?' mine':'')+(done?' done':'');
+  card.className='deal'+(st==='mine'||st==='fund'?' mine':'')+(done?' done':'');
   const amt=escAmtTxt(snap.amt,snap.coin);
   /* NEXT：一句话，主语是「谁」 */
   const k=condKind(snap);
   const next={
+    fund:  `Pay into the escrow contract — from your Atara wallet or any wallet you hold. Nothing starts until the contract holds it.`,
     lock:  k==='now'
       ? `Funds are locked. Releasing now — the condition is already met.`
       : `Funds are locked in escrow. Nothing moves until every condition is met.`,
@@ -5745,7 +6218,7 @@ function paintEscrow(){
         <span class="dsub">${badge}${timer?' · '+timer:''}</span>
       </div>
       <dl class="dpay">
-        <div><dt>Counterparty</dt><dd><button class="cplink" data-chatfor="${snap.cp.id}">${avSpan(snap.cp.name)}${snap.cp.name}<span class="cpgo">Chat ›</span></button></dd></div>
+        <div><dt>Counterparty</dt><dd><span class="cplink still">${avSpan(snap.cp.name)}${snap.cp.name}</span></dd></div>
         <div><dt>Release condition</dt><dd>${snap.condText}${
           snap.fallback&&st!=='rel'&&st!=='cancel'
             /* 兜底用大白话，不用「unresolved」这种谁也读不懂的词 */
@@ -5781,9 +6254,9 @@ let ESCN=0;
 function startEscrow(){
   document.getElementById('composer').classList.remove('show');
   if(escrow)releaseEscrow(true);   /* 前一笔还挂着就按放款收口，两张单不共用一个状态机 */
-  /* 一张工单 = 一笔 order。新命令永远开新会话——工单是凭证，
-     有终态后只读，不许后来的订单叠进旧记录 */
-  newSession();
+  /* 只有当前挂着别人的会话才收起。裸屏（评估刚在上面跑完）不许 newSession——
+     它会把无归属的评估痕迹直接清掉，随后 adoptOrphans 就没得收养了 */
+  if(ACTIVE && ACTIVE.id!==(S.cp&&S.cp.id)) newSession(); else closeAct();
   document.getElementById('empty')?.remove();
   const condText=S.condText||(CTPL[S.cond]?CTPL[S.cond].text(CTPL[S.cond].defs):S.cond);
   const snap={cp:S.cp,amt:S.amt,coin:S.coin,why:S.why,cond:S.cond,condText,
@@ -5795,36 +6268,102 @@ function startEscrow(){
 
   /* 执行面板：与买单卡同一套（徽标 → 主数字 → KV → 下一步 → 动作），
      条件单提交后要看的就是「这单走到哪一步、现在轮到谁」 */
-  snap.stage='lock';
+  snap.stage='fund';
   const card=document.createElement('div');
   card.className='deal mine';
-  document.getElementById('log').prepend(card);
   snap.card=card;
-  paintEscrow();
 
   /* 注册成工单：会话 + 左栏 Tasks 行 + 播报流，与交易任务同构 */
   ESCN++; const sid='esc-'+ESCN, cp=S.cp;
-  const feed=document.createElement('div'); feed.className='tfeed';
-  document.getElementById('log').appendChild(feed);
-  const sess={id:sid, kind:'task', peer:cp.id, el:feed, n:0, stash:null,
-    mk:{peer:cp.name, name:cp.name, side:'pay', u:snap.amt, coin:'USD', fiat:'USD', ccy:'USD',
-        sc:cp.ifr, deals:cp.deals, rate:cp.ifr},
-    headHTML:`${avSpan(cp.name,'thav')}
-      <span class="thwho"><b>Transfer ${escAmtTxt(snap.amt,snap.coin)} to ${cp.name}</b><span>Task · ${cp.name}</span></span>
-      <button class="thgo" data-chatfor="${cp.id}">${avSpan(cp.name)}Message ${cp.name} ›</button>`};
-  SESSIONS.push(sess); ACTIVE=sess; THREAD=null; setHead(sess);
-  snap.sess=sid; snap.tk=sess;
+  const sess=ensureThread(cp.id,{name:cp.name, sc:cp.ifr, deals:cp.deals});
+  sess.mk=sess.mk||{peer:cp.name, name:cp.name, side:'pay', u:snap.amt, coin:'USD', fiat:'USD', ccy:'USD',
+        sc:cp.ifr, deals:cp.deals, rate:cp.ifr};
+  adoptOrphans(sess);                   /* 评估痕迹别丢在裸屏上 */
+  snap.sess=sess.id; snap.tk=sess;
+  sess.el.appendChild(card);           /* 工单卡是线程里的一条消息 */
+  paintEscrow();
   /* kind 一起存：右栏的订单状态要说「在等什么」，那得知道这单挂的是哪种条件 */
   taskUpsert(sid,{title:`Transfer ${escAmtTxt(snap.amt,snap.coin)} to ${cp.name}`,
-    st:'run', sess:sid, kind:condKind(snap), cpid:cp.id, amt:snap.amt});
-  /* 评估先跑、订单后开：开单这一刻把最近的批次拴到这个会话上，
-     以后切回这个订单，右栏就能按它还原 */
-  ARUNS.filter(r=>!r.sess).forEach(r=>r.sess=sid);
-  renderLeft(); setLTab('ai'); setPlaceholder();
+    st:'run', sess:sess.id, kind:condKind(snap), cpid:cp.id, amt:snap.amt});
+  /* 评估先跑、订单后开：开单这一刻把最近的批次拴到这条线程上 */
+  ARUNS.filter(r=>!r.sess).forEach(r=>r.sess=sess.id);
+  restoreSession(sess.id); setPlaceholder();
   /* 播报只说增量——条件文本在卡上已经写了一次，这里再抄一遍就是第三份拷贝 */
-  tpost(sess,'Order created · funds locked in escrow');
+  tpost(sess,'Order created · the escrow contract is waiting for your deposit');
   paintEscrow();
+  fundEscrow(snap,sess);
+}
 
+/* ── 入金：非托管的第一拍。钱不进平台，直接进 escrow 合约——
+   两条路：内置钱包签名转入，或用户自己的钱包对合约地址打款。
+   两条路殊途同归：链上确认数走满，合约拿到钱，订单才进下一站。 ── */
+const ESCROW_ADDR={USDT:'TXk4mQeq9pVv7NcGL2sYAtaraEsc7hxKD', USDC:'0x5eC4a9Fb2d31AtaraEscrow40b8f21c9aD1',
+                   BTC:'bc1qatara3escrow7xk2m9wq4', ETH:'0x5eC4a9Fb2d31AtaraEscrow40b8f21c9aD1'};
+const ESCROW_NET={USDT:'TRON',USDC:'Ethereum',BTC:'Bitcoin',ETH:'Ethereum'};
+const ESCROW_XP=coin=>(({TRON:'https://tronscan.org/#/address/',
+  Ethereum:'https://etherscan.io/address/', Bitcoin:'https://mempool.space/address/'
+})[ESCROW_NET[coin]||'TRON'])||'https://tronscan.org/#/address/';
+function fundEscrow(snap,sess){
+  const amt=escAmtTxt(snap.amt,snap.coin);
+  const el=document.createElement('div');
+  el.className='msg sys';
+  el.innerHTML=`<div class="fund">
+    <b class="fh">Fund the escrow · <span class="num">${amt}</span></b>
+    <p class="fp">Straight into the contract — Atara never holds it. Release needs the condition to clear.</p>
+    <div class="fbtns">
+      <button class="btn btn-primary btn-sm" data-fw="in">Pay from your Atara wallet</button>
+      <button class="btn btn-secondary btn-sm" data-fw="ext">From an external wallet</button>
+    </div>
+    <div class="fbody"></div>
+  </div>`;
+  sess.el.appendChild(el);
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  const body=el.querySelector('.fbody'), btns=el.querySelector('.fbtns');
+  const confirmTicks=(pre)=>{
+    btns.remove();
+    let c=0, N=6;
+    body.innerHTML=`${pre||''}<div class="fconf"><i></i><span>Confirming on-chain · <b class="num">0/${N}</b></span></div>`;
+    const tick=setInterval(()=>{
+      c++;
+      const b=body.querySelector('.fconf b'); if(b)b.textContent=`${c}/${N}`;
+      if(c>=N){
+        clearInterval(tick);
+        body.querySelector('.fconf').innerHTML=`<i class="ok"></i><span>Escrowed · ${N}/${N} confirmations</span>`;
+        snap.stage='lock'; paintEscrow();
+        tpost(sess,`Escrow funded · ${amt} locked in the contract`);
+        startPhases(snap);
+      }
+    },420);
+  };
+  el.querySelector('[data-fw="in"]').onclick=()=>{
+    requireVerify(
+      `${amt} moves from your wallet into the escrow contract. It comes back if the order is cancelled before the condition clears.`,
+      '', ()=>confirmTicks(`<div class="fsig">✓ Signed · broadcast to ${ESCROW_NET[snap.coin]||'the network'}</div>`),
+      {title:'Sign the deposit', amt:amtParts?amtParts(snap.amt,snap.coin):null, amtUsd:usdOf(snap.amt,snap.coin),
+       fund:'From your Atara wallet — non-custodial, you hold the keys'});
+  };
+  el.querySelector('[data-fw="ext"]').onclick=()=>{
+    const addr=ESCROW_ADDR[snap.coin]||ESCROW_ADDR.USDT, net=ESCROW_NET[snap.coin]||'TRON';
+    body.innerHTML=`<div class="faddr">
+      <div class="fal"><span>Contract address · ${net} only</span>
+        <a class="esxp" href="${ESCROW_XP(snap.coin)+addr}" target="_blank" rel="noopener" title="View on explorer">↗</a>
+        <button class="btn btn-ghost btn-sm" data-fcopy>Copy</button></div>
+      <code class="famono">${addr}</code>
+      <div class="fal"><span>Amount</span><b class="num">${amt}</b></div>
+      <div class="fwait"><i></i>Waiting for your transfer…</div>
+    </div>`;
+    body.querySelector('[data-fcopy]').onclick=ev=>{
+      try{navigator.clipboard.writeText(addr)}catch(_){}
+      ev.currentTarget.textContent='Copied';
+    };
+    /* demo：几秒后模拟链上扫到这笔转账；真实实现是监听合约的入金事件 */
+    setTimeout(()=>{
+      if(escrow!==snap)return;
+      confirmTicks(`<div class="fsig">✓ Transfer detected · tx 0x8f42…3a2c</div>`);
+    },3200);
+  };
+}
+function startPhases(snap){
   /* 阶段推进。撤销窗口关掉之后才进条件等待——
      原来的绿条把「撤销窗口」写成了「放款倒计时」，这两件事必须分开说 */
   snap.iv=setInterval(()=>{
@@ -6760,12 +7299,49 @@ function consensusSummary(list,cons,sc){
 }
 /* 共识动画 → 结论消息 → 订单卡，三步的编排 */
 function consensusThenDeal(openIt,sc){
-  const t=sellerMsg('them typing','typing…');
-  setTimeout(()=>{
-    t.className='msg them long';
-    t.innerHTML=`<span class="bub">${consensusSummary(RISK_AGENTS,RISK_CONS,sc)}</span>`;
-  },900);
-  setTimeout(openIt, 3200);
+  /* 长篇结论不冒充对方的聊天气泡——对话里落一张紧凑的结论卡，
+     全文放进右栏 Consensus 步骤的详情（默认选中；点左边其他步骤看各步内容） */
+  const notes=RISK_AGENTS.filter(a=>a.v!=='Pass');
+  /* 摘要行：四个维度各取结论的第一个分句——比一行标题厚，比全文薄。
+     全文折在卡里，点头部展开；右栏 Consensus 详情里也有一份。 */
+  const g=nm=>RISK_AGENTS.find(a=>a.n.startsWith(nm));
+  const first=a=>String(a&&a.m||'').split(/ — |; /)[0];
+  const sumRows=[['Counterparty',first(g('Identity'))],['Funds',first(g('Provenance'))],
+                 ['Compliance',first(g('Sanctions'))],['Market',first(g('Pricing'))]]
+    .filter(x=>x[1])
+    .map(([k,v])=>`<div class="ascr"><i></i><span>${k}</span><em>${v}</em></div>`).join('');
+  const el=document.createElement('div');
+  el.className='msg sys';
+  el.innerHTML=`<div class="asscard">
+      <button class="aschead" type="button" aria-expanded="false">
+        <span class="ascsc num">${sc||90}</span>
+        <div class="ascm">
+          <b>Trust Gate ${sc||90} · ${RISK_CONS.ok}/${RISK_CONS.total} agree — clear to proceed</b>
+          <span>${notes.length
+            ? `${notes.length} note${notes.length>1?'s':''} · ${notes.map(a=>a.n.replace(' Agent','')).join(', ')} — recorded on the order, not blocking`
+            : 'All seven clean — nothing recorded'}</span>
+        </div>
+        <span class="ascx" aria-hidden="true">⌄</span>
+      </button>
+      <div class="ascsum">${sumRows}</div>
+      <div class="ascbody" hidden>${consensusSummary(RISK_AGENTS,RISK_CONS,sc)}</div>
+    </div>`;
+  const hd=el.querySelector('.aschead');
+  hd.onclick=()=>{
+    const open=el.firstElementChild.classList.toggle('open');
+    hd.setAttribute('aria-expanded',String(open));
+    el.querySelector('.ascbody').hidden=!open;
+    el.querySelector('.ascsum').hidden=open;
+  };
+  ((ACTIVE&&ACTIVE.el)||document.getElementById('log')).appendChild(el);
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  arunStep('cons',{detail:
+    `<div class="ascfull">${consensusSummary(RISK_AGENTS,RISK_CONS,sc)}</div>`});
+  /* 结论落地，右栏详情面板切到 Consensus——「默认展示结论，点其他步骤看各步内容」 */
+  document.querySelectorAll('#afruns .arstep.open').forEach(e=>e.classList.remove('open'));
+  document.querySelector('#afruns .arstep[data-sk$=":cons"]')?.classList.add('open');
+  arunRender();
+  setTimeout(openIt, 1600);
 }
 
 /* ───── Thinking：把「解析中…」换成可展开的推理轨迹 ───── */
@@ -6972,7 +7548,7 @@ function thinking(steps, chips, done, verdict, agents){
    与单向支付的关键差别：条件不是用户从模板里选的，而是协议固定的保证，
    所以它在句子里是陈述句，不是可点的槽位。
    ═══════════════════════════════════════════════════════════════ */
-const RATE=7.31, DEMO_T={s1:7, s3:24, s4:4};  // demo timing (real: 30min / 4h / 2h)
+const RATE=7.31, DEMO_T={s1:10, s3:24, s4:4};  // demo timing (real: 30min / 4h / 2h)
 let D=null;
 
 function tryOTC(q){
@@ -6987,18 +7563,49 @@ function tryOTC(q){
   if(!(v>0))return false;
 
   document.getElementById('composer').classList.remove('show');
-  /* 元数据（金额/撮合方式）订单卡上都有——这张面板只讲风险共识 */
-  thinking(
-    [],
-    [],
-    ()=>consensusThenDeal(()=>{
-      openDeal(buy?'buy':'sell',Math.round(v));
-      /* 命令路径与池子路径同一条链：任务会话、播报、撤销一个不少 */
-      openThread({peer:D.peer,name:D.name,sc:D.score,deals:D.deals,rate:D.rate},D);
-      D.el.scrollIntoView({behavior:'smooth',block:'nearest'})},90),
-    null, {list:RISK_AGENTS, cons:RISK_CONS, sc:90}
-  );
+  matchThenAssess(buy, Math.round(v));
   return true;
+}
+
+/* ── 快捷交易的撮合拍：先从池子里挑人，再对挑中的人评估。
+   直接跳评估是逻辑倒置——对手方还没出现，评的是谁？
+   主选 3 秒后自动继续（快捷不打断），旁边给两个备选，想换的人来得及点。 ── */
+function matchThenAssess(buy, v, pre){
+  const side=buy?'sell':'buy';          /* 我买，就在卖家的挂单里挑 */
+  const cands=pre||POOL.filter(o=>o.side===side&&!o.mine).sort((a,b)=>b.sc-a.sc).slice(0,3);
+  if(!cands.length){toast('No live offers on that side right now');return}
+  document.getElementById('empty')?.remove();
+  const host=(ACTIVE&&ACTIVE.el)||document.getElementById('log');
+  const el=document.createElement('div'); el.className='msg sys';
+  el.innerHTML=`<div class="matchcard">
+      <div class="mcl"><i class="mcspin"></i>Matching a counterparty — scanning ${POOL.length} live offers for ${buy?'a buy of':'a sale of'} $${v.toLocaleString()}…</div>
+      <div class="mcs" hidden></div>
+    </div>`;
+  host.appendChild(el);
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  setTimeout(()=>{
+    if(!el.isConnected)return;
+    el.querySelector('.mcl').innerHTML=
+      `Matched · best record first — assessing <b>${cands[0].name}</b> in 3s, or pick another`;
+    const box=el.querySelector('.mcs'); box.hidden=false;
+    box.innerHTML=cands.map((o,i)=>`<button type="button" class="mcand${i?'':' on'}" data-mi="${i}">
+        ${avSpan(o.name)}
+        <span class="mcn"><b>${o.name}</b><em>score ${o.sc} · ${o.deals} trades · ${o.px} ${o.fiat}/${o.coin}</em></span>
+      </button>`).join('');
+    let done=false, tm;
+    const go=o=>{
+      if(done)return; done=true; clearTimeout(tm);
+      el.querySelector('.mcl').innerHTML=`Matched · <b>${o.name}</b> — running the assessment`;
+      box.querySelectorAll('.mcand').forEach(b=>{
+        b.disabled=true;
+        b.classList.toggle('on', cands[+b.dataset.mi]===o);
+      });
+      /* 选定了人，走池子点单同一条链：进线程 → 评估 → 结论卡 → 订单卡 */
+      showOrder(Object.assign({}, o, {qty:v/(o.px||1), px:o.px||1}));
+    };
+    box.querySelectorAll('[data-mi]').forEach(b=>b.onclick=()=>go(cands[+b.dataset.mi]));
+    tm=setTimeout(()=>go(cands[0]), 3000);
+  }, 1500);
 }
 
 function openDeal(side,fiat,o){
@@ -7018,13 +7625,17 @@ function openDeal(side,fiat,o){
      from:o? 'From pool' : 'Matched to your amount',
      docs:o? o.docs : null, ccy:o? o.fiat : 'CNY', nets:o? o.nets : null};
   D.el=document.createElement('div');D.el.className='deal';
-  document.getElementById('log').appendChild(D.el);   /* 对话流:最新的在最下面 */
+  ((ACTIVE&&ACTIVE.el)||document.getElementById('log')).appendChild(D.el);   /* 对话流:最新的在最下面 */
   document.getElementById('empty')?.remove();
   paintDeal();
 }
 /* 从大厅点一笔单：对方卖我就买，直接进成交确认 —— 与"说一句话"汇流到同一个状态机 */
 function showOrder(o){
-  newSession();   /* 每笔买单起一段自己的对话 */
+  /* 先进这个人的线程，评估在对话里当着面跑——痕迹和结论都留在线程里。
+     匹配卡若还躺在裸屏上（快捷交易路径），先收养再切换 */
+  const th=ensureThread(o.peer,{name:o.name, sc:o.sc, deals:o.deals});
+  adoptOrphans(th);
+  restoreSession(o.peer);
   document.getElementById('composer').classList.remove('show');
   /* 与命令/动作面板同一条链：多 agent 共识动画 → 结论消息 → 订单卡。
      三个入口一个面板——旧的五行评估卡曾在这里漏网 */
@@ -7548,41 +8159,186 @@ function runAct(force){
     return;
   }
   finish();
-  const o=fits.sort((x,y)=>y.sc-x.sc)[0];
-  const fiatAmt = asCoin ? Math.round(a.amt*o.px) : a.amt;
-  newSession();
-  thinking([],[],
-    ()=>consensusThenDeal(()=>{
-      openDeal(a.k, fiatAmt, o); openThread(o, D);
-      D.el.scrollIntoView({behavior:'smooth',block:'nearest'})},o.sc),
-    null, {list:RISK_AGENTS, cons:RISK_CONS, sc:o.sc});
+  const ranked=fits.sort((x,y)=>y.sc-x.sc).slice(0,3);
+  const fiatAmt = asCoin ? Math.round(a.amt*(ranked[0].px||1)) : a.amt;
+  /* 先撮合再评估：与命令路径同一拍——列出筛过金额与限额的前三名，
+     3 秒自动用最优的，想换的人来得及点 */
+  matchThenAssess(a.k==='buy', fiatAmt, ranked);
 }
-document.querySelectorAll('#actions .act').forEach(b=>b.onclick=()=>openAct(b.dataset.act));
+document.querySelectorAll('#actions .act').forEach(b=>b.onclick=()=>{
+  if(requireLogin(()=>openAct(b.dataset.act),b))return;
+  openAct(b.dataset.act);
+});
 
+/* ───── 登录门：requireLogin 在各入口早于 GATE IIFE 被引用，转发器先立起来 ───── */
+function requireLogin(after,src){
+  if(!document.documentElement.dataset.locked) return false;
+  if(window.openLogin) openLogin(after,src);
+  return true;
+}
 /* ───── 邀请码：比对摘要而不是明文，见样式表里那段说明 ───── */
-const GATE_SHA='71298716e654dd5291d9d8a322c9195e551a68b5bd214c5716d9a66cfef3439e';
 (function(){
-  const form=document.getElementById('gateform'); if(!form) return;
-  const key=document.getElementById('gatekey'), err=document.getElementById('gateerr');
-  if(document.documentElement.dataset.locked) setTimeout(()=>key.focus(),60);
-  const sha=async t=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',
-    new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,'0')).join('');
-  form.onsubmit=async e=>{
-    e.preventDefault();
-    const v=key.value.trim().toLowerCase();
-    if(!v) return;
-    /* 只在 https / localhost 下有 crypto.subtle。别的情况直接说进不去，
-       不要静默放行——放行才是真的没门。 */
-    if(!crypto.subtle){err.textContent='This page must be served over HTTPS to check the code.';return}
-    if(await sha(v)===GATE_SHA){
+  const err=document.getElementById('gateerr');
+  const methods=document.getElementById('gmethods'), stage=document.getElementById('gstage');
+  if(!methods) return;
+  const gate=document.getElementById('gate');
+  let after=null;
+  const box=gate.querySelector('.gatebox');
+  const noMotion=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
+  window.openLogin=(fn,src)=>{
+    after=fn||null;
+    const open=()=>gate.classList.add('open');
+    gate.classList.remove('novt');
+    if(document.startViewTransition && src instanceof HTMLElement && !noMotion()){
+      /* 名字接力：旧状态在触发按钮上，新状态在卡片上——浏览器把一个变成另一个 */
+      src.style.viewTransitionName='gate-card';
+      const vt=document.startViewTransition(()=>{
+        src.style.viewTransitionName='';
+        box.style.viewTransitionName='gate-card';
+        open();
+      });
+      vt.ready.catch(()=>{}); vt.updateCallbackDone.catch(()=>{});
+      vt.finished.finally(()=>{box.style.viewTransitionName='';}).catch(()=>{});
+    }else{
+      gate.classList.add('novt');
+      open();
+    }
+    setTimeout(()=>{document.querySelector('#gmethods .gmrow')?.focus()},60);
+  };
+  document.querySelector('.gclose').onclick=()=>{gate.classList.remove('open'); after=null;};
+  gate.addEventListener('keydown',e=>{if(e.key==='Escape'){gate.classList.remove('open');after=null;}});
+  const enter=()=>{
+    const done=()=>{
       try{sessionStorage.setItem('atara-gate','1')}catch(_){}
       delete document.documentElement.dataset.locked;
-      err.textContent=''; key.value='';
-      document.getElementById('free')?.focus();
-    }else{
-      err.textContent='That code is not valid.';
-      key.select();
-    }
+      gate.classList.remove('open');
+      if(typeof paintLun==='function')paintLun();
+      const fn=after; after=null;
+      if(fn)setTimeout(fn,150);
+      else document.getElementById('free')?.focus();
+    };
+    const lu=document.getElementById('luserbtn');
+    if(document.startViewTransition && lu && !noMotion()){
+      /* 身份落座：卡片缩进账户位，台面在同一次过渡里醒过来 */
+      box.style.viewTransitionName='gate-card';
+      const vt=document.startViewTransition(()=>{
+        box.style.viewTransitionName='';
+        done();
+        lu.style.viewTransitionName='gate-card';
+      });
+      vt.ready.catch(()=>{}); vt.updateCallbackDone.catch(()=>{});
+      vt.finished.finally(()=>{lu.style.viewTransitionName='';}).catch(()=>{});
+    }else done();
+  };
+  const show=h=>{methods.hidden=true; stage.hidden=false; stage.innerHTML=h;
+    stage.querySelectorAll('.gaddr').forEach(scrambleIn);};
+  const scrambleIn=el=>{
+    if(noMotion())return;
+    const fin=el.textContent, abc='abcdefghjkmnpqrstuvwxyz23456789';
+    let t0=null; const dur=650;
+    const tick=ts=>{t0=t0??ts; const q=Math.min(1,(ts-t0)/dur);
+      const keep=Math.ceil(fin.length*q);
+      el.textContent=fin.slice(0,keep)+[...fin.slice(keep)].map(c=>/[…· ]/.test(c)?c:abc[Math.random()*abc.length|0]).join('');
+      if(q<1)requestAnimationFrame(tick); else el.textContent=fin;};
+    requestAnimationFrame(tick);
+  };
+  const back=()=>{stage.hidden=true; stage.innerHTML=''; methods.hidden=false;};
+  const backBtn='<button class="btn btn-ghost btn-sm gback" data-gback>Back</button>';
+  const doneThen=(h,ms)=>{show(h); setTimeout(enter,ms);};
+  const addrShort=()=>{const a=(typeof WALLET_ADDR==='string')?WALLET_ADDR:'TQ5n7Yc2eK';
+    return a.slice(0,6)+'…'+a.slice(-4);};
+  const FLOWS={
+    create(){
+      show(`<span class="gpkring">✦</span><b>Touch ID</b>
+        <em>Creating your wallet — the key is minted inside this device and never leaves it.</em>${backBtn}`);
+      setTimeout(()=>doneThen(`<span class="gok">✓</span><b>Wallet created</b>
+        <em><b class="gaddr num">${addrShort()}</b> · secured by your passkey. Back it up later under Settings › Wallet keys.</em>`,1100),1600);
+    },
+    wallet(name){
+      show(`<span class="gspin"></span><b>Waiting for ${name}</b>
+        <em>Approve the connection, then sign the one-line message — the signature proves the address is yours. Nothing is spent.</em>${backBtn}`);
+      setTimeout(()=>doneThen(`<span class="gok">✓</span><b>0x8f3a…21c connected</b>
+        <em>Signature verified — this address is now your account.</em>`,1000),1700);
+    },
+    google(){
+      /* 演示用的授权窗：只有选账号，没有任何凭据输入——真实实现是 OAuth 跳转 */
+      const w=window.open('','atara-google','width=420,height=560,menubar=no,toolbar=no');
+      const finish=()=>doneThen(`<span class="gok">✓</span><b>Signed in with Google</b>
+        <em><b class="gaddr num">${addrShort()}</b> · wallet created for you — add a passkey under Settings › Wallet keys.</em>`,1100);
+      if(!w){
+        show(`<span class="gspin"></span><b>Waiting for Google</b>
+          <em>Popup blocked — allow popups, or wait: continuing with the demo account.</em>${backBtn}`);
+        setTimeout(finish,1600); return;
+      }
+      w.document.write(`<!doctype html><title>Choose an account — demo</title>
+        <body style="margin:0;font:14px/1.5 Roboto,Arial,sans-serif;background:#fff;color:#202124;display:flex;justify-content:center">
+        <div style="width:100%;max-width:360px;padding:44px 24px">
+          <div style="display:flex;justify-content:center;margin-bottom:14px">
+            <svg width="36" height="36" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          </div>
+          <h1 style="font-size:22px;font-weight:400;text-align:center;margin:0 0 4px">Choose an account</h1>
+          <p style="text-align:center;color:#5f6368;margin:0 0 24px">to continue to <b style="color:#1a73e8">Atara</b></p>
+          <button id="pick" style="display:flex;align-items:center;gap:14px;width:100%;padding:12px 16px;border:1px solid #dadce0;border-radius:10px;background:#fff;font:inherit;cursor:pointer;text-align:left">
+            <span style="width:34px;height:34px;border-radius:50%;background:#1a73e8;color:#fff;display:grid;place-items:center;font-weight:500">D</span>
+            <span><b style="display:block;font-weight:500">Demo</b><span style="color:#5f6368">demo@gmail.com</span></span>
+          </button>
+          <button id="cancel" style="margin-top:18px;border:0;background:none;color:#1a73e8;font:inherit;cursor:pointer;padding:8px 6px">Cancel</button>
+          <p style="margin-top:28px;font-size:12px;color:#9aa0a6;text-align:center">Demo build — a simulated window. No real Google sign-in happens here.</p>
+        </div>
+        <script>
+          document.getElementById('pick').onclick=()=>{window.opener&&window.opener.postMessage('atara-google-ok','*');window.close()};
+          document.getElementById('cancel').onclick=()=>{window.opener&&window.opener.postMessage('atara-google-cancel','*');window.close()};
+        <\/script>`);
+      show(`<span class="gspin"></span><b>Waiting for Google</b>
+        <em>Pick an account in the popup — a wallet is created for you behind it, keys on this device.</em>${backBtn}`);
+      const onMsg=e=>{
+        if(e.data==='atara-google-ok'){removeEventListener('message',onMsg);finish();}
+        if(e.data==='atara-google-cancel'){removeEventListener('message',onMsg);back();}
+      };
+      addEventListener('message',onMsg);
+    },
+    imp(){
+      show(`<b>Import an existing wallet</b>
+        <em>Paste a seed phrase or private key. It is used on this device only — demo build, anything non-empty works.</em>
+        <input id="gimp-i" type="password" placeholder="12 or 24 words" autocomplete="off">
+        <button class="btn btn-primary" id="gimp-go">Import</button>${backBtn}`);
+      const i=document.getElementById('gimp-i'); i.focus();
+      const go=()=>{if(!i.value.trim())return i.focus();
+        doneThen(`<span class="gok">✓</span><b>Wallet restored</b>
+          <em><b class="gaddr num">${addrShort()}</b> · add a passkey so you can stop typing that phrase.</em>`,1000);};
+      document.getElementById('gimp-go').onclick=go;
+      i.onkeydown=e=>{if(e.key==='Enter')go()};
+    },
+    email(addr){
+      show(`<b>Check your inbox</b>
+        <em>We sent a 6-digit code to <b>${addr}</b> — demo build, any 6 digits work.</em>
+        <input id="gcode-i" inputmode="numeric" maxlength="6" placeholder="······" autocomplete="one-time-code">${backBtn}`);
+      const i=document.getElementById('gcode-i'); i.focus();
+      i.oninput=()=>{
+        if(i.value.replace(/\D/g,'').length<6) return;
+        try{if(typeof PROFILE==='object')PROFILE.email=addr;}catch(_){}
+        doneThen(`<span class="gok">✓</span><b>Wallet created for you</b>
+          <em><b class="gaddr num">${addrShort()}</b> · the email is only for codes and notices — add a passkey to hold the key yourself.</em>`,1100);
+      };
+    },
+  };
+  stage.addEventListener('click',e=>{if(e.target.closest('[data-gback]'))back();});
+  document.querySelectorAll('#gmethods .gmrow').forEach(b=>b.onclick=()=>{
+    err.textContent='';
+    const m=b.dataset.gm;
+    setWalletKind(m==='create'||m==='google'?'atara':'ext');
+    if(m==='create')FLOWS.create();
+    else if(m==='imp')FLOWS.imp();
+    else if(m==='google')FLOWS.google();
+    else FLOWS.wallet({mm:'MetaMask',okx:'OKX Wallet',wc:'your wallet (scan the QR)'}[m]||'the wallet');
+  });
+  document.getElementById('gmailform').onsubmit=e=>{
+    e.preventDefault();
+    const v=document.getElementById('gmail-i').value.trim();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){err.textContent='That does not look like an email address.';return}
+    err.textContent='';
+    setWalletKind('atara');
+    FLOWS.email(v);
   };
 })();
 
@@ -7654,6 +8410,7 @@ function newSession(){
 }
 function restoreSession(id){
   const t=SESSIONS.find(x=>x.id===id); if(!t) return;
+  if(ACTIVE&&ACTIVE.id===id){assessSync(t);return}   /* 已在这条线程里：无事可做 */
   stashSession();
   const log=document.getElementById('log');
   if(t.stash) log.appendChild(t.stash);
@@ -7701,24 +8458,19 @@ function openThread(o,d){
   const log=document.getElementById('log');
   /* 只建任务会话。聊天不自动生成——对话是用户的选择，不是开单的副产品。
      点任务头或卡片上的对手方，才建立聊天（ensureChat）。 */
-  const feed=document.createElement('div');
-  feed.className='tfeed'; log.appendChild(feed);
-  const task={id:'t-'+o.peer, kind:'task', peer:o.peer, el:feed, n:0, stash:null,
-    mk:{peer:o.peer, name:o.name, side:d.side, u:d.u, coin:d.coin, fiat:d.fiat, ccy:d.ccy||'CNY',
-        sc:o.sc, deals:o.deals, rate:o.rate},
-    headHTML:`${avSpan(o.name,'thav')}
-      <span class="thwho"><b>${d.side==='buy'?'Buy':'Sell'} ${d.u.toLocaleString()} ${d.coin}</b><span>Task · with ${o.name} · AI score ${o.sc}</span></span>
-      <button class="thgo" data-chatfor="${o.peer}">${avSpan(o.name)}Message ${o.name} ›</button>`};
-  SESSIONS.push(task);
-  ACTIVE=task; THREAD=null; setHead(task);
-  D.th=null; D.tk=task;
-  selected=null;
+  const task=ensureThread(o.peer,{name:o.name, sc:o.sc, deals:o.deals});
+  task.mk={peer:o.peer, name:o.name, side:d.side, u:d.u, coin:d.coin, fiat:d.fiat, ccy:d.ccy||'CNY',
+        sc:o.sc, deals:o.deals, rate:o.rate};
+  /* 订单卡就是线程里的一条消息：从屏幕流搬进对手方线程，然后把线程端上来。
+     评估若发生在裸屏（命令路径：对手方评估后才匹配出来），痕迹一并收养 */
+  adoptOrphans(task);
+  task.el.appendChild(D.el);
+  D.th=task; D.tk=task;
   taskUpsert('t-'+o.peer,{kind:'otc', title:`${d.side==='buy'?'Buy':'Sell'} ${d.u.toLocaleString()} ${d.coin}`,
-    st:'you', sess:'t-'+o.peer});
-  /* 这条链的评估批次同样在开单瞬间认领——task 的会话 id 是 't-'+peer */
+    st:'you', sess:o.peer});
   ARUNS.filter(r=>!r.sess).forEach(r=>r.sess=task.id);
-  renderLeft(); setLTab('ai');
-  tpost(task,`Order opened with ${o.name} · this task is part of the trade record`);
+  restoreSession(o.peer);
+  tpost(task,`Order opened with ${o.name} · this thread is part of the trade record`);
   setPlaceholder();
 }
 /* 种子工单（从右栏 Active 移来的条件支付演示）：点开现场建任务视图。
@@ -7734,17 +8486,12 @@ function openSeedTask(t){
     <span>${i.desc||i.what} · <span class="who">${cp.name}</span></span>
     <span class="amt num">$${(i.amt||0).toLocaleString()}</span>
     ${t.st==='you'?`<button class="btn btn-primary" data-approve="1" style="margin-left:12px;flex:none">Approve</button>`:''}`;
-  const feed=document.createElement('div'); feed.className='tfeed';
-  log.append(card,feed);
-  const sess={id:t.id, kind:'task', peer:cp.id, el:feed, n:0, stash:null,
-    mk:{peer:cp.name, name:cp.name, side:'buy', u:i.amt||0, coin:'USD',
-        fiat:'USD', ccy:'USD', sc:cp.ifr, deals:cp.deals, rate:cp.ifr},
-    headHTML:`${avSpan(cp.name,'thav')}
-      <span class="thwho"><b>${(i.desc||i.what).slice(0,52)}</b><span>Task · with ${cp.name} · fulfilment ${cp.ifr}%</span></span>
-      <button class="thgo" data-chatfor="${cp.id}">${avSpan(cp.name)}Message ${cp.name} ›</button>`};
-  SESSIONS.push(sess);
-  ACTIVE=sess; THREAD=null; setHead(sess);
-  assessSync(sess);   /* 种子订单没跑过评估：右栏照实回空态，不挂别人的结论 */
+  const sess=ensureThread(cp.id,{name:cp.name, sc:cp.ifr, deals:cp.deals});
+  sess.mk=sess.mk||{peer:cp.name, name:cp.name, side:'buy', u:i.amt||0, coin:'USD',
+        fiat:'USD', ccy:'USD', sc:cp.ifr, deals:cp.deals, rate:cp.ifr};
+  sess.el.append(card,document.createElement('div'));
+  taskUpsert(t.id,{sess:cp.id});
+  restoreSession(cp.id);
   tpost(sess, t.st==='you'
     ? `Waiting on your approval · open since ${i.when||'today'}`
     : `Waiting on ${cp.name} · the condition has not been met yet (${i.when||''})`);
@@ -7759,26 +8506,37 @@ function openSeedTask(t){
 }
 
 /* 首次点击才建聊天：关联订单卡 + 空消息流 + 对方的开场白 */
-function ensureChat(peer){
+/* 一个对手方 = 一条线程。聊天消息、订单卡、系统播报全在这一条流里——
+   「订单空间」和「跟人聊天」不再是两个房间。
+   info 用于线程还不存在时带入名片数据（来自挂单或 CPS）。 */
+/* 把裸屏（无归属会话）上的内容搬进线程——评估轨迹、结论卡、订单卡都算数。
+   不搬的话，切线程时 stashSession 会把无主内容直接清掉，历史就飞了。 */
+function adoptOrphans(sess){
+  if(ACTIVE) return;                    /* 有归属就轮不到收养 */
+  const log=document.getElementById('log');
+  [...log.children].forEach(c=>{ if(c.id!=='empty') sess.el.appendChild(c) });
+}
+function ensureThread(peer, info, greet){
   let chat=SESSIONS.find(x=>x.kind==='chat'&&x.id===peer);
   if(chat) return chat;
-  const task=SESSIONS.find(x=>x.kind==='task'&&x.peer===peer);
-  const m=task?.mk; if(!m) return null;
-  /* 不再放关联订单卡——会话头常驻可见，订单入口收进头部按钮，一条杠说完 */
+  const cp=CPS.find(c=>c.id===peer)||{};
+  const m=info||{};
+  const name=m.name||cp.name||String(peer);
+  const sc=m.sc??cp.ifr??'—', deals=m.deals??cp.deals??'—';
   const frag=document.createDocumentFragment();
   const box=document.createElement('div');
   box.id='thread'; box.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';
   frag.append(box);
-  chat={id:peer, kind:'chat', peer, name:m.name, sc:m.sc, el:box, n:0, stash:frag,
-    headHTML:`${avSpan(m.name,'thav')}
-      <span class="thwho"><b>${m.name}</b><span>${m.peer} · ${m.deals} trades · ${m.rate}% completion · AI score ${m.sc}</span></span>
-      <button class="thgo" data-open="t-${peer}">${m.side==='buy'?'Buy':'Sell'} ${m.u.toLocaleString()} ${m.coin} ›</button>`};
+  chat={id:peer, kind:'chat', peer, name, sc, el:box, n:0, stash:frag,
+    headHTML:`${avSpan(name,'thav')}
+      <span class="thwho"><b>${name}</b><span>${deals} trades · score ${sc}</span></span>`};
   SESSIONS.push(chat);
-  if(D&&D.peer===peer) D.th=chat;
+  if(typeof D!=='undefined'&&D&&D.peer===peer) D.th=chat;
   syncChats(); renderLeft();
-  reply(`Hi — this is ${m.name}. The order is on the card; ask me anything about the transfer.`, 900, chat);
+  if(greet) reply(`Hi — this is ${name}. Ask me anything about the order or the transfer.`, 900, chat);
   return chat;
 }
+function ensureChat(peer){return ensureThread(peer,null,!SESSIONS.find(x=>x.kind==='chat'&&x.id===peer))}
 /* ══ 熟人网络 ══
    通讯录里的人不一定成交过，所以不能走 ensureChat（那条路要求先有 task）。
    这条是给"认识的人"用的：开一段会话，头部常驻一个付款入口。 */
@@ -7810,9 +8568,8 @@ function renderContactsPage(){
     <div class="ctrow" data-id="${c.id}">
       ${avSpan(c.name,'ctav')}
       <span class="ctn"><em>${c.name}</em><i>${c.rel} · ${c.atr}</i></span>
-      <span class="ctled num">${c.deals?`${c.deals} settled${c.net?` · net ${c.net>0?'+':'−'}$${Math.abs(c.net).toLocaleString()}`:''}`:'No trades yet'}</span>
+      <span class="ctled num">${c.deals?`${c.deals} settled`:'No trades yet'}</span>
       <span class="ctacts">
-        <button class="btn btn-primary btn-sm" data-pay="${c.id}">Send money</button>
         <button class="btn btn-secondary btn-sm" data-msg="${c.id}">Message</button>
       </span>
     </div>`;
@@ -7826,8 +8583,6 @@ function renderContactsPage(){
           <span class="ctn"><em>${c.name}</em><i>${c.rel} · ${c.atr}</i></span>
           <span class="ctled">Invite sent</span>
         </div>`).join('')}</div>`:'');
-  body.querySelectorAll('[data-pay]').forEach(b=>b.onclick=e=>{
-    e.stopPropagation(); openContact(b.dataset.pay); payContact(b.dataset.pay)});
   body.querySelectorAll('[data-msg]').forEach(b=>b.onclick=e=>{
     e.stopPropagation(); openContact(b.dataset.msg)});
   body.querySelectorAll('.ctrow:not(.pend)').forEach(r=>r.onclick=()=>openContact(r.dataset.id));
@@ -7851,8 +8606,7 @@ function openAddContact(){
   openModal('Add contact',
    `<div class="acx">
       <div class="acseg" role="tablist">
-        <button class="acs on" data-ac="id" role="tab">By ATR ID</button>
-        <button class="acs" data-ac="link" role="tab">Invite link</button>
+        <button class="acs on" data-ac="find" role="tab">By name or address</button>
         <button class="acs" data-ac="past" role="tab">From past trades</button>
       </div>
       <div id="acbody"></div>
@@ -7860,22 +8614,10 @@ function openAddContact(){
    ()=>{
      const body=document.getElementById('acbody');
      const paint=mode=>{
-       if(mode==='id') body.innerHTML=
-         `<label class="acf"><span>Their ATR ID</span>
-            <input id="ac-id" placeholder="ATR-XXXXXX" autocomplete="off"></label>
-          <label class="acf"><span>Relationship</span>
-            <div class="acchips" id="ac-rel">${RELS.map((r,i)=>
-              `<button type="button" class="acchip${i===0?' on':''}" data-rel="${r}">${r}</button>`).join('')}</div></label>
-          <label class="acf"><span>Note <em>optional</em></span>
-            <input id="ac-note" placeholder="Sent with the request" autocomplete="off"></label>
-          <p class="acnote">They have to accept before you can pay them. Your ATR ID is <b class="num">${PROFILE.id}</b>.</p>
-          <div class="acfoot"><span class="acerr" id="ac-err"></span>
-            <button class="btn btn-primary" id="ac-go">Send request</button></div>`;
-       if(mode==='link') body.innerHTML=
-         `<p class="acnote">Anyone who opens this link and signs up is added to your contacts automatically — and you to theirs.</p>
-          <div class="aclink"><span class="num" id="ac-url">atara.loka.cash/i/${PROFILE.id.slice(4)}</span>
-            <button class="btn btn-secondary btn-sm" id="ac-copy">Copy</button></div>
-          <p class="acnote">The link carries who invited them, nothing else.</p>`;
+       if(mode==='find') body.innerHTML=
+         `<label class="acf"><span>Name or address</span>
+            <input id="ac-q" placeholder="Search a name, or paste an address" autocomplete="off" spellcheck="false"></label>
+          <div class="aclist" id="ac-res"><p class="acnote">Names are public — addresses are not. They accept before you can pay them.</p></div>`;
        if(mode==='past') body.innerHTML=
          `<p class="acnote">People you have settled with but never added.</p>
           <div class="aclist">${POOL.filter(o=>!o.mine&&!CPS.some(c=>c.name===o.name)).slice(0,4).map(o=>
@@ -7885,40 +8627,56 @@ function openAddContact(){
        bindBody(mode);
      };
      const bindBody=mode=>{
-       if(mode==='id'){
-         document.querySelectorAll('#ac-rel .acchip').forEach(b=>b.onclick=()=>{
-           document.querySelectorAll('#ac-rel .acchip').forEach(x=>x.classList.remove('on'));
-           b.classList.add('on')});
-         document.getElementById('ac-go').onclick=()=>{
-           const v=document.getElementById('ac-id').value.trim().toUpperCase();
-           const err=document.getElementById('ac-err');
-           if(!/^ATR-[A-Z0-9]{6}$/.test(v)){err.textContent='An ATR ID looks like ATR-8F42C1';return}
-           if(v===PROFILE.id){err.textContent='That is your own ID';return}
-           if(CPS.some(c=>c.atr===v)){err.textContent='Already in your contacts';return}
-           const rel=document.querySelector('#ac-rel .acchip.on').dataset.rel;
-           addContact(v,rel);
+       if(mode==='find'){
+         const q=document.getElementById('ac-q'), res=document.getElementById('ac-res');
+         const hint='<p class="acnote">Names are public — addresses are not. They accept before you can pay them.</p>';
+         const addrRe=/^(T[1-9A-Za-z]{10,40}|0x[0-9a-fA-F]{6,40}|bc1[0-9a-z]{8,60})$/;
+         q.focus();
+         q.oninput=()=>{
+           const raw=q.value.trim(), v=raw.toLowerCase();
+           if(!raw){res.innerHTML=hint;return}
+           /* 贴的是地址：出一行「发请求」；打的是名字：搜用户 */
+           if(addrRe.test(raw)){
+             if(raw===WALLET_ADDR){res.innerHTML='<p class="acnote">That is your own address.</p>';return}
+             const short=raw.length>13?raw.slice(0,6)+'…'+raw.slice(-5):raw;
+             if(CPS.some(c=>c.atr===short)){res.innerHTML='<p class="acnote">Already in your contacts.</p>';return}
+             res.innerHTML=`<button class="acrow" data-addr>${avSpan(short,'cpav')}
+               <span class="n"><em class="num">${short}</em><i>New contact by address</i></span>
+               <span class="acgo">Send request</span></button>`;
+             res.querySelector('[data-addr]').onclick=()=>addContact(short,'Client');
+             return;
+           }
+           if(/^(0x|bc1|T[1-9])/.test(raw)&&raw.length>7&&!/\s/.test(raw)){
+             res.innerHTML='<p class="acnote">Keep typing — the full address is needed.</p>';return}
+           const hits=POOL.filter(o=>!o.mine && o.name.toLowerCase().includes(v)
+             && !CPS.some(c=>c.name===o.name)).slice(0,6);
+           res.innerHTML=hits.length
+             ? hits.map(o=>`<button class="acrow" data-pick="${o.name}">${avSpan(o.name,'cpav')}
+                 <span class="n"><em>${o.name}</em><i>${o.deals} trades · score ${o.sc}</i></span>
+                 <span class="acgo">Add</span></button>`).join('')
+             : '<p class="acnote">No one by that name yet.</p>';
+           res.querySelectorAll('[data-pick]').forEach(x=>x.onclick=()=>{
+             const o=POOL.find(y=>y.name===x.dataset.pick);
+             addContact(depAddr(o.name,'TRON').slice(0,6)+'…'+depAddr(o.name,'TRON').slice(-5), 'Client', o.name, o.deals);
+           });
          };
        }
-       if(mode==='link') document.getElementById('ac-copy').onclick=e=>{
-         navigator.clipboard?.writeText('https://'+document.getElementById('ac-url').textContent);
-         e.currentTarget.textContent='Copied';
-       };
        if(mode==='past') document.querySelectorAll('[data-past]').forEach(b=>b.onclick=()=>{
          const o=POOL.find(x=>x.name===b.dataset.past);
-         addContact('ATR-'+o.peer.slice(1), 'Client', o.name, o.deals);
+         addContact(depAddr(o.name,'TRON').slice(0,6)+'…'+depAddr(o.name,'TRON').slice(-5), 'Client', o.name, o.deals);
        });
      };
      document.querySelectorAll('.acs').forEach(b=>b.onclick=()=>{
        document.querySelectorAll('.acs').forEach(x=>x.classList.remove('on'));
        b.classList.add('on'); paint(b.dataset.ac);
      });
-     paint('id');
+     paint('find');
    });
 }
 /* 新联系人一律先进 pending：对方没点头之前，不能给他付款 */
 function addContact(atr, rel, name, deals){
   const id='c'+(CPS.length+1);
-  const nm=name||('New contact '+atr.slice(4,8));
+  const nm=name||('New contact '+atr.slice(0,6));
   CPS.push({id, name:nm, type:'person', net:0, ifr:null, deals:deals||0,
             atr, rel, since:'today', state:'pending'});
   closeModal(); switchView('contacts');
@@ -8023,21 +8781,31 @@ function paintDeal(){
   const over=D.step==='s5'||D.step==='dead';
   D.el.className='deal'+(mine?' mine':'')+(over?' done':'');
 
-  const badge={match:'Pending',s1:'Waiting',s3:'Your turn',s4:'Verifying',s5:'Done',dead:'Timed out'}[D.step];
-  const line={
-    match:`${D.side==='buy'?'Buy':'Sell'} ${u} for <b class="amt">${money}</b> · <span class="peer">${D.peer}</span>`,
-    s1:`${D.side==='buy'?'Buy':'Sell'} ${u} for <b class="amt">${money}</b> · counterparty funding escrow`,
+  const sellSide=D.side!=='buy';
+  const badge={match:'Pending',s1:sellSide?'Escrowing':'Waiting',
+               s3:sellSide?'Waiting':'Your turn',s4:'Verifying',s5:'Done',dead:'Timed out'}[D.step];
+  const line=(sellSide?{
+    /* 卖方视角：s1 是你的币上链锁定，s3 是等对方打法币 */
+    match:`Sell ${u} for <b class="amt">${money}</b> · <span class="peer">${D.peer}</span>`,
+    s1:`Sell ${u} for <b class="amt">${money}</b> · your coins locking into escrow`,
+    s3:`Waiting on their <b class="amt">${money}</b> · your ${u} is safe in escrow`,
+    s4:`Verifying their receipt · <b class="amt">${money}</b> reported sent`,
+    s5:`<b class="amt">${money}</b> received · performance written back to score <a href="#" class="pkg lnk">Evidence ›</a>`,
+    dead:`Their payment window missed · your ${u} returned from escrow, their default recorded`
+  }:{
+    match:`Buy ${u} for <b class="amt">${money}</b> · <span class="peer">${D.peer}</span>`,
+    s1:`Buy ${u} for <b class="amt">${money}</b> · verifying their escrow`,
     s3:`Your turn — pay <b class="amt">${money}</b> · their ${u} is in escrow`,
     s4:`Verifying receipt · <b class="amt">${money}</b> sent`,
     s5:`<b class="amt">${u}</b> credited · performance written back to score <a href="#" class="pkg lnk">Evidence ›</a>`,
     dead:`Payment window missed · their ${u} was returned, recorded as a default`
-  }[D.step];
+  })[D.step];
   const cd=D.secs>0?`⏱ ${Math.floor(D.secs/60)}:${String(D.secs%60).padStart(2,'0')}`:'';
 
   /* 对手方那几行在每个阶段都长一样 —— 抽出来,
      顺带把原来浮在状态行右边那个 peer 按钮取消掉,资料回到它该在的地方 */
   const peerRows=()=>`
-    <div><dt>Counterparty</dt><dd><button class="cplink" data-chatfor="${D.peer}">${avSpan(D.name)}${D.name}<span class="cpgo">Chat ›</span></button></dd></div>
+    <div><dt>Counterparty</dt><dd><span class="cplink still">${avSpan(D.name)}${D.name}</span></dd></div>
     <div><dt>Track record</dt><dd>${D.deals} trades · ${D.disp} disputes · score ${D.score}</dd></div>
     ${D.docs?`<div><dt>Documents</dt><dd class="dpay-docs">${docChips(D)}</dd></div>`:''}
     ${D.ccy?`<div><dt>Settles in</dt><dd><span class="flg">${flag(D.ccy)}</span>${D.ccy} — ${FIAT_NAME(D.ccy)}</dd></div>`:''}`;
@@ -8064,7 +8832,7 @@ function paintDeal(){
           <button class="btn btn-primary" data-a="go">Confirm</button>
         </div>
       </div>`;
-  }else if(D.step==='s3'){
+  }else if(D.step==='s3'&&!sellSide){
     /* 与 match 卡同构：主数字 → KV 组 → 说明句 → 动作行。
        卡号与附言是要抄进银行 App 的，给复制按钮而不是让人手抄。 */
     inner=`${steps(idx)}
@@ -8074,6 +8842,7 @@ function paintDeal(){
           <span class="dsub">to the account below, then upload the receipt</span>
         </div>
         <dl class="dpay">
+          <div><dt>Escrow</dt><dd><span class="esok">✓ ${D.u.toLocaleString()} ${D.coin} locked</span><span class="dmono">tx 0x3d9c…71f4 · 6/6 confirmations</span></dd></div>
           <div><dt>Bank</dt><dd>${BANKS_BY_CCY[D.ccy]?.[0]||'Registered bank'}<span class="dmono">${BANKS_BY_CCY[D.ccy]?.[1]||'**** **** 1148'}</span>
             <button class="cpbtn" data-copy="${(BANKS_BY_CCY[D.ccy]?.[1]||'1148').replace(/\*/g,'0')}" title="Copy account number" aria-label="Copy account number">Copy</button></dd></div>
           <div><dt>Name</dt><dd>Matches the registered counterparty<i class="info" tabindex="0" data-tip="The receiving name has been checked against the counterparty's verified registration. A mismatch would block release.">i</i></dd></div>
@@ -8090,14 +8859,50 @@ function paintDeal(){
   }else{
     /* 等待与终态也要能打开 —— 用户在这几步是闲着的,
        恰恰是最想回头核对对手方的时候。没有动作,所以不出按钮行。 */
-    const head={
-      s1:  [`Waiting on ${D.peer}`,          'They fund escrow before you send anything'],
+    const head=(sellSide?{
+      s1:  ['Locking your coins',            D.fundVia==='ext'
+              ?'From your external wallet — detection is automatic'
+              :'Signed from your wallet · confirming on-chain'],
+      s3:  [`Waiting on ${D.peer}`,          `They send ${money} to your registered account, then upload the receipt`],
+      s4:  ['Verifying their receipt',       'Amount, reference and sender name are checked against the escrow'],
+      s5:  [`${money} received`,             'Escrow released to them · performance written back to both records'],
+      dead:['Their payment window missed',   `Your ${u} came back from escrow · their miss recorded`]
+    }:{
+      s1:  ['Verifying their escrow',        'Locked when they listed — binding it to this order'],
       s4:  ['Verifying your receipt',        'Amount, reference and sender name are checked against the escrow'],
       s5:  [`${u} credited`,                 'Settled in full · performance written back to their score'],
       dead:['Payment window missed',         `Their ${u} was returned and the miss recorded against your score`]
-    }[D.step];
+    })[D.step];
+    /* 对方入金的观察窗：等待 → 检测到转账 → 确认数递增 → 已锁定。
+       买家这一步等的就是「钱真的进合约了」这个证据，给他看链上的过程，
+       而不是一根干等的倒计时。 */
+    const esWin=()=>{
+      if(D.step!=='s1')return '';
+      const e=DEMO_T.s1-D.secs;                       /* 已经过的秒数 */
+      const addr=ESCROW_ADDR[D.coin]||ESCROW_ADDR.USDT;
+      const short=addr.slice(0,6)+'…'+addr.slice(-4);
+      const row = sellSide
+        ? (e<3 ? (D.fundVia==='ext'
+              ?`<div class="fwait"><i></i>Watching the contract for your transfer…</div>`
+              :`<div class="fwait"><i></i>Signed · broadcasting your deposit…</div>`)
+          : e<4 ? `<div class="fsig">✓ Transfer ${D.fundVia==='ext'?'detected':'broadcast'} · tx 0x3d9c…71f4</div>`
+          : (DEMO_T.s1-e)>1
+          ? `<div class="fconf"><i></i><span>Confirming on-chain · <b class="num">${Math.min(6,e-3)}/6</b></span></div>`
+          : `<div class="fconf"><i class="ok"></i><span>Escrowed · ${D.u.toLocaleString()} ${D.coin} locked in the contract</span></div>`)
+        /* 买方：币在挂单时已锁，这里只是查锁仓、绑订单——两拍，瞬时感 */
+        : (e<2 ? `<div class="fwait"><i></i>Checking the listing lock…</div>`
+          : e<3.5 ? `<div class="fsig">✓ ${D.u.toLocaleString()} ${D.coin} locked since listing · tx 0x3d9c…71f4</div>`
+          : `<div class="fconf"><i class="ok"></i><span>Bound to this order · ${D.ref||'D118796'}</span></div>`);
+      return `<div class="eswin">
+        <div class="fal"><span>Escrow contract · ${ESCROW_NET[D.coin]||'TRON'}</span>
+          <span class="esaddr"><button type="button" class="esbtn num" data-copy="${addr}" title="Copy address">${short}</button><a class="esxp" href="${ESCROW_XP(D.coin)+addr}" target="_blank" rel="noopener" title="View on explorer" onclick="event.stopPropagation()">↗</a></span></div>
+        ${row}</div>`;
+    };
     const mech={
-      s1:  'Nothing leaves your account at this step. If they never fund, the trade closes with no exposure to you.',
+      s1:  sellSide
+        ? 'Your coins sit in the escrow contract — not with Atara, not with them. They release only when the buyer\'s payment clears verification.'
+        : 'Locked at listing, bound to your order now. If the binding fails, the trade closes — no exposure to you.',
+      s3:  'Your coins stay locked while they pay. If the window lapses, escrow returns them to you automatically.',
       s4:  'Release is automatic once the receipt matches. Neither side can hold the funds back.',
       s5:  'The evidence pack is the settlement record — receipt, escrow release and both signatures.',
       dead:'Their funds returned to them automatically — nothing was held. The miss stays on your record and lowers the price you are quoted next time.'
@@ -8112,6 +8917,7 @@ function paintDeal(){
           ${peerRows()}
           <div><dt>Amount</dt><dd>${u} · ${money}</dd></div>
         </dl>
+        ${esWin()}
         <p class="dmech">${mech}</p>
         ${D.step==='s5'?'<div class="dfoot"><a href="#" class="pkg lnk">Evidence ›</a></div>'
           :D.step==='s1'?'<div class="dfoot"><a href="#" class="lnk ecancel" data-a="cancel">Cancel order</a></div>':''}
@@ -8143,7 +8949,8 @@ function paintDeal(){
   D.el.querySelectorAll('[data-copy]').forEach(b=>b.onclick=ev=>{
     ev.preventDefault(); ev.stopPropagation();
     navigator.clipboard?.writeText(b.dataset.copy);
-    b.textContent='Copied'; setTimeout(()=>b.textContent='Copy',1400);
+    const orig=b.dataset.orig||(b.dataset.orig=b.textContent);
+    b.textContent='Copied'; setTimeout(()=>b.textContent=orig,1400);
   });
   D.el.querySelectorAll('[data-a]').forEach(b=>b.onclick=ev=>{
     ev.preventDefault();
@@ -8157,16 +8964,58 @@ function paintDeal(){
       requireVerify(
         usd>lim?`$${usd.toLocaleString()} exposure is above the limit for this counterparty ($${lim.toLocaleString()})`:'',
         D.side==='buy'
-          ?`Buy <b>${D.u.toLocaleString()} ${D.coin}</b> from <b>${D.name}</b>. Their coins lock in escrow before you pay.`
-          :`Sell <b>${D.u.toLocaleString()} ${D.coin}</b> to <b>${D.name}</b> for <b class="num">${fmtMoney(D.fiat,D.ccy)}</b>. Your coins lock in escrow first.`,
+          /* 买入的确认是接单承诺，不是付款——此刻不动一分钱。
+             对方的币在挂单时就锁进合约了，确认后只是把锁仓绑到这笔订单。
+             预告压成短语：读的人只需要三个事实，不需要三个句子。 */
+          ?`Buy <b>${D.u.toLocaleString()} ${D.coin}</b> from <b>${D.name}</b>. Their coins are already escrowed — locked when they listed.
+            <dl class="psorder">
+              <div><dt>You pay</dt><dd><b class="num">${fmtMoney(D.fiat,D.ccy)}</b> · bank transfer, outside Atara</dd></div>
+              <div><dt>Their account</dt><dd>${BANKS_BY_CCY[D.ccy]?.[0]||'Registered bank'} · full details on the next step</dd></div>
+              <div><dt>Window</dt><dd>4 h · missing it marks your record</dd></div>
+            </dl>`
+          :`Sell <b>${D.u.toLocaleString()} ${D.coin}</b> to <b>${D.name}</b> for <b class="num">${fmtMoney(D.fiat,D.ccy)}</b>. Your coins lock in escrow first.
+            <div class="fvia">
+              <button type="button" class="sfchip on" data-fv="wallet">Atara wallet</button>
+              <button type="button" class="sfchip" data-fv="ext">External wallet</button>
+            </div>
+            <div class="fviabody"></div>`,
         ()=>advance('s1'),
         Object.assign(
           D.side==='buy'
-            /* 买入：你出法币，钱从你自己的账户直付卖家 */
-            ?{amt:{v:D.fiat.toLocaleString(), u:FIAT_SYM(D.ccy), pos:'pre'}, fund:fundLine(D.ccy)}
-            /* 卖出：你出币，从可用余额锁进托管 */
-            :{amt:amtParts(D.u,D.coin), fund:`From your available ${D.coin} balance — locks straight into escrow`},
+            ?{title:'Confirm order', pay:[], plain:'Confirm order',
+              amt:{v:D.fiat.toLocaleString(), u:FIAT_SYM(D.ccy), pos:'pre'}}
+            /* 卖出：你出币——passkey 即签名，币从你的非托管钱包直接进 escrow 合约 */
+            :{amt:amtParts(D.u,D.coin), fund:`Signs the deposit from your Atara wallet — straight into the escrow contract, not to Atara`},
           {amtUsd:usd}));
+    }
+    if(a==='go'&&D.side!=='buy'){
+      /* 入金方式二选一：Atara 钱包 = 卡片 + passkey 签名；
+         外部钱包 = 只给合约地址（不摆卡片），按钮变「已打款」，到账链上自动检测 */
+      D.fundVia=D.fundVia||'wallet';
+      const paintVia=v=>{
+        D.fundVia=v;
+        document.querySelectorAll('#confirm [data-fv]').forEach(x=>x.classList.toggle('on',x.dataset.fv===v));
+        const pr=document.getElementById('pspayrow');
+        if(pr)pr.style.display=v==='wallet'?'':'none';
+        const bd=document.querySelector('#confirm .fviabody');
+        const addr=ESCROW_ADDR[D.coin]||ESCROW_ADDR.USDT;
+        bd.innerHTML=v==='wallet'?'':`<div class="faddr" style="text-align:left;margin-top:10px">
+            <div class="fal"><span>Contract address · ${ESCROW_NET[D.coin]||'TRON'} only</span>
+              <a class="esxp" href="${ESCROW_XP(D.coin)+addr}" target="_blank" rel="noopener" title="View on explorer">↗</a>
+              <button type="button" class="btn btn-ghost btn-sm" data-fcopy>Copy</button></div>
+            <code class="famono">${addr}</code>
+            <div class="fal"><span>Amount</span><b class="num">${D.u.toLocaleString()} ${D.coin}</b></div>
+            <div class="fwait" style="margin-top:2px"><i></i>Send from any wallet — we watch the contract, detection is automatic</div>
+          </div>`;
+        bd.querySelector('[data-fcopy]')?.addEventListener('click',ev=>{
+          try{navigator.clipboard.writeText(addr)}catch(_){}
+          ev.currentTarget.textContent='Copied';});
+        const ok=document.getElementById('cok');
+        if(v==='ext'){ok.innerHTML='I\u2019ve sent it'; ok.dataset.plain='1';}
+        else{ok.innerHTML=PK_LABEL; ok.dataset.plain='';}
+      };
+      document.querySelectorAll('#confirm [data-fv]').forEach(x=>x.onclick=()=>paintVia(x.dataset.fv));
+      paintVia(D.fundVia);
     }
     if(a==='paid') advance('s4');
     if(a==='cancel') cancelDeal();
@@ -8175,7 +9024,9 @@ function paintDeal(){
 }
 function steps(i){
   /* 与托管卡同一套轨道语言：站名 + 当前站 ETA，不再是无名细条 */
-  const ST=[['Matched',''],['Escrow funded','~2 min'],['Your transfer','4 h window'],['Verify & release','~2 min']];
+  const ST=(typeof D!=='undefined'&&D&&D.side!=='buy')
+    ?[['Matched',''],['Escrow funded','~2 min'],['Their transfer','4 h window'],['Verify & release','~2 min']]
+    :[['Matched',''],['Escrow verified','seconds'],['Your transfer','4 h window'],['Verify & release','~2 min']];
   return '<div class="erail" style="padding:0 20px 14px">'+ST.map(([n,eta],k)=>
     `<span class="es ${k<i?'done':k===i?'now':''}"><i></i>${n}${k===i&&eta?' · '+eta:''}</span>`).join('')+'</div>';
 }
@@ -8202,20 +9053,32 @@ function advance(to){
   if(D.th) taskUpsert('t-'+D.th.peer,{st:{s1:'run',s3:'you',s4:'run',s5:'done',dead:'done'}[to]||'run'});
   /* 状态变化在会话里留痕——争议时这条线程就是证据链的一部分 */
   const th=D.th, tk=D.tk;
-  ({s1:  ()=>{tpost(tk,`You confirmed · waiting on ${tk?.mk?.name} to fund escrow`)},
-    s3:  ()=>{tpost(tk,'Escrow funded — the coins are locked. Your turn to send the bank transfer.');
-              reply('Escrow is funded. Send it whenever you are ready and drop the receipt here.',1500,D.th||ensureChat(tk?.peer))},
-    s4:  ()=>{tpost(tk,'Receipt uploaded · the platform is verifying it against the escrow')},
-    s5:  ()=>{tpost(tk,'Verified and released · settlement complete');
-              reply('Received, thanks. Good doing business — ping me next time.',1600,D.th||ensureChat(tk?.peer))},
-    dead:()=>{tpost(tk,'Payment window missed · escrow returned to the counterparty')}
+  const sside=D.side!=='buy';
+  ({s1:  ()=>{tpost(tk, sside?(D.fundVia==='ext'
+                              ?'Order confirmed · watching the contract for your deposit'
+                              :'You signed the deposit · your coins are confirming into escrow')
+                            :'You confirmed · verifying the escrow they locked at listing')},
+    s3:  ()=>{ if(sside){
+                tpost(tk,`Escrow funded · 6/6 confirmations — your coins are locked. Waiting on ${tk?.mk?.name}'s bank transfer.`);
+                reply('Coins are in escrow, I can see it on-chain. Sending the transfer now.',1500,D.th||ensureChat(tk?.peer));
+              } else {
+                tpost(tk,'Escrow verified · their coins were locked at listing, now bound to this order. Your turn to send the bank transfer.');
+                reply('Escrow is bound to the order. Send it whenever you are ready and drop the receipt here.',1500,D.th||ensureChat(tk?.peer));
+              }},
+    s4:  ()=>{tpost(tk, sside?'They uploaded a receipt · the platform is verifying it against the escrow'
+                             :'Receipt uploaded · the platform is verifying it against the escrow')},
+    s5:  ()=>{tpost(tk, sside?'Verified · escrow released to them, their payment is yours':'Verified and released · settlement complete');
+              reply(sside?'Coins landed, thanks. Smooth one.':'Received, thanks. Good doing business — ping me next time.',1600,D.th||ensureChat(tk?.peer))},
+    dead:()=>{tpost(tk, sside?'Their payment window missed · escrow returned your coins':'Payment window missed · escrow returned to the counterparty')}
   }[to]||(()=>{}))();
-  /* 轮到我时自动展开；等待与终态默认收起，但用户随时可以点开 */
-  D.open=(to==='s3');
+  /* 轮到我和对方入金时自动展开——入金那一步有链上过程可看（观察窗），
+     收着就等于没做；其余等待与终态默认收起 */
+  D.open=(D&&D.side!=='buy')?(to==='s1'):(to==='s3'||to==='s1');
   syncRight();
 
   if(to==='s1'||to==='s4'){
-    D.secs=DEMO_T[to];
+    /* 买方的 s1 是查已有锁仓，瞬时；卖方的 s1 是真上链，走确认数 */
+    D.secs=(to==='s1'&&!sside)?5:DEMO_T[to];
     paintDeal();
     D.iv=setInterval(()=>{
       D.secs--;
@@ -8225,11 +9088,12 @@ function advance(to){
     return;
   }
   if(to==='s3'){
-    D.secs=DEMO_T.s3;paintDeal();
+    D.secs=sside?10:DEMO_T.s3; paintDeal();
     D.el.scrollIntoView({behavior:'smooth',block:'nearest'});
     D.iv=setInterval(()=>{
       D.secs--;
-      if(D.secs<=0){clearInterval(D.iv);advance('dead')}
+      /* 买方视角：窗口内没打钱是你违约；卖方视角：对方在打钱，demo 里总会到 */
+      if(D.secs<=0){clearInterval(D.iv);advance(sside?'s4':'dead')}
       else paintDeal();
     },1000);
     return;
@@ -8256,7 +9120,7 @@ const SELLER={
   /* 提交与审核是两个状态：kycDone=身份已提交, kycOk=身份审过;
      done=挂单配置已提交, approved=配置审过（此后才能挂单） */
   kycDone:false, kycOk:false, done:false, approved:false, _timer:null,
-  d:{kind:'Individual', k:{}, dir:'', coins:[], lo:'', hi:'', nets:[], rails:[], pricing:'Float', spread:'0.8', agree:false}
+  d:{kind:'Individual', k:{}, dir:[], coins:[], lo:'', hi:'', nets:[], rails:[], pricing:'Float', spread:'0.8', fixed:'', agree:false}
 };
 
 /* 字段类型：text 文本 / date 日期 / pick 单选 chips / multi 多选 chips / sign 签名确认 / upload 上传占位 */
@@ -8334,8 +9198,8 @@ const kycSteps=()=>SELLER.d.kind==='Corporate'?KYC_CORP:KYC_IND;
 
 /* ── 挂单配置（能力级，与 KYC 分开）── */
 const LISTING_STEPS=[
- {t:'Listing setup', lead:'Your limits appear on your public offer card.'},
- {t:'Confirm', lead:'Once approved you can post offers.'},
+ {t:'Listing setup', lead:'Your limits appear on your public listing card.'},
+ {t:'Confirm', lead:'Once approved you can post listings — buying, selling, or both.'},
 ];
 
 
@@ -8380,15 +9244,21 @@ function sellerBind(){
     el.oninput=e=>{d.k[k]=e.target.value; e.target.closest('.sf').classList.remove('bad')};
   });
   /* 挂单配置 */
-  body.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{d.dir=b.dataset.dir;SELLER.badId='';paintMaker()});
+  body.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{
+    const v=b.dataset.dir, i=d.dir.indexOf(v);
+    i<0?d.dir.push(v):d.dir.splice(i,1);
+    SELLER.badId=''; paintMaker();});
   const rdd=body.querySelector('[data-raildd]');
   if(rdd) rdd.onclick=()=>openRailMenu(rdd,d);
   body.querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>{
     d.spread=body.querySelector('#s-spread')?.value.trim()??d.spread;
+    d.fixed=body.querySelector('#s-fixed')?.value.trim()??d.fixed;
     d.pricing=b.dataset.pr==='Fixed rate'?'Fixed':'Float'; SELLER.badId=''; paintMaker();});
   /* oninput 即时提交——chip 点击会整卡重渲染,change 等失焦就来不及了 */
   const sp=body.querySelector('#s-spread');
   if(sp) sp.oninput=e=>{d.spread=e.target.value.trim()};
+  const fx=body.querySelector('#s-fixed');
+  if(fx) fx.oninput=e=>{d.fixed=e.target.value.trim()};
   body.querySelectorAll('[data-coin]').forEach(b=>b.onclick=()=>{
     const v=b.dataset.coin, i=d.coins.indexOf(v); i<0?d.coins.push(v):d.coins.splice(i,1); SELLER.badId=''; paintMaker();});
   body.querySelectorAll('[data-net]').forEach(b=>b.onclick=()=>{
@@ -8415,7 +9285,7 @@ function sellerValid(){
   }
   /* 挂单配置 */
   if(S.step===0){
-    if(!d.dir) return bad('sf-dir');
+    if(!d.dir.length) return bad('sf-dir');
     if(!d.coins.length) return bad('sf-coins');
     const lo=Number(String(d.lo).replace(/[,，\s]/g,'')), hi=Number(String(d.hi).replace(/[,，\s]/g,''));
     if(!Number.isFinite(lo)||!Number.isFinite(hi)||lo<=0||hi<=0||lo>hi) return bad('sf-limit');
@@ -8425,6 +9295,10 @@ function sellerValid(){
       const sp=parseFloat(String(d.spread).replace(/[%\s]/g,''));
       if(!Number.isFinite(sp)||sp<-5||sp>5) return bad('sf-pricing');
       d.spread=sp;
+    } else {
+      const fx=parseFloat(String(d.fixed).replace(/[,，\s]/g,''));
+      if(!Number.isFinite(fx)||fx<=0) return bad('sf-pricing');
+      d.fixed=fx;
     }
     if(!d.rails.length) return bad('sf-rails');
   }
@@ -8470,7 +9344,7 @@ function paintMaker(){
   } else {
     if(S.step===0) form=`
       <div class="sf" id="sf-dir"><span class="sfl">Side</span>
-        <div class="sfchips">${chips(['Sell crypto','Buy crypto','Both'],[d.dir],'dir')}</div>
+        <div class="sfchips">${chips(['Sell crypto','Buy crypto'],d.dir,'dir')}</div>
         <span class="err">Select a side</span></div>
       <div class="sf" id="sf-coins"><span class="sfl">Assets</span>
         <div class="sfchips">${chips(['USDT','USDC','BTC','ETH'],d.coins,'coin')}</div>
@@ -8491,8 +9365,10 @@ function paintMaker(){
           ? `<div class="sfrow" style="margin-top:8px">
               <input type="text" id="s-spread" value="${d.spread}" inputmode="decimal" placeholder="0.8" style="max-width:110px">
               <span style="font-size:12px;color:var(--faint)">% over index — e.g. USDT/CNY index ${FX_IDX.CNY} → you quote ${(FX_IDX.CNY*(1+(parseFloat(d.spread)||0)/100)).toFixed(2)}</span></div>`
-          : `<span style="display:block;margin-top:8px;font-size:12px;color:var(--faint)">You set the exact rate on each offer you post.</span>`}
-        <span class="err">Enter a spread between −5 and 5</span></div>
+          : `<div class="sfrow" style="margin-top:8px">
+              <input type="text" id="s-fixed" value="${d.fixed}" inputmode="decimal" placeholder="${FX_IDX.CNY}" style="max-width:110px">
+              <span style="font-size:12px;color:var(--faint)">CNY per USDT — index is ${FX_IDX.CNY} right now</span></div>`}
+        <span class="err">${d.pricing==='Float'?'Enter a spread between −5 and 5':'Enter your rate — a positive number'}</span></div>
       <div class="sf sfrel" id="sf-rails"><span class="sfl">Payment rails — where counterparties send fiat</span>
         <button type="button" class="sfdd" data-raildd><span data-raildd-l>${
           d.rails.length?`${d.rails.length} selected — ${d.rails.slice(0,3).join(' · ')}${d.rails.length>3?' + '+(d.rails.length-3)+' more':''}`:'Choose banks and rails…'}</span><i>⌄</i></button>
@@ -8500,11 +9376,11 @@ function paintMaker(){
     if(S.step===1) form=`
       <dl class="sfsum">
         <div><dt>Entity</dt><dd>${d.kind}${d.k.surname?' · '+d.k.surname+d.k.firstname:(d.k.company?' · '+d.k.company:'')}</dd></div>
-        <div><dt>Side</dt><dd>${d.dir}</dd></div>
+        <div><dt>Side</dt><dd>${d.dir.join(' · ')}</dd></div>
         <div><dt>Assets</dt><dd>${d.coins.join(' · ')}</dd></div>
         <div><dt>Limits</dt><dd class="num">${Number(d.lo).toLocaleString()} – ${Number(d.hi).toLocaleString()} CNY</dd></div>
         <div><dt>Networks</dt><dd>${d.nets.join(' · ')}</dd></div>
-        <div><dt>Pricing</dt><dd>${d.pricing==='Float'?`Index ${d.spread>=0?'+':''}${d.spread}%`:'Fixed per offer'}</dd></div>
+        <div><dt>Pricing</dt><dd>${d.pricing==='Float'?`Index ${d.spread>=0?'+':''}${d.spread}%`:`Fixed · ${d.fixed}`}</dd></div>
         <div><dt>Rails</dt><dd>${d.rails.join(' · ')}</dd></div>
       </dl>
       <div class="sf" id="sf-agree" style="margin-top:14px">
@@ -8576,7 +9452,7 @@ let OFFN=0;
 const OFF={side:'',coin:'',net:'',fiat:'',px:'',qty:'',min:''};
 function openOffer(){
   const d=SELLER.d;
-  const sides=d.dir==='Both'?['Sell crypto','Buy crypto']:[d.dir];
+  const sides=d.dir.length?d.dir:['Sell crypto','Buy crypto'];
   OFF.side=OFF.side||sides[0];
   OFF.coin=d.coins.includes(OFF.coin)?OFF.coin:d.coins[0];
   const nets=d.nets.filter(n=>(NETS_OF[OFF.coin]||[]).includes(n));
@@ -8593,7 +9469,7 @@ function openOffer(){
     const sell=OFF.side==='Sell crypto';
     const chips=(list,sel,k)=>list.map(x=>
       `<button type="button" class="sfchip${sel===x?' on':''}" data-ok="${k}" data-ov="${x}">${x}</button>`).join('');
-    openModal('Post an offer',`
+    openModal('Create a listing',`
       <div class="sf"><span class="sfl">Side</span><div class="sfchips">${chips(sides,OFF.side,'side')}</div></div>
       <div class="sf"><span class="sfl">Asset</span><div class="sfchips">${chips(d.coins,OFF.coin,'coin')}</div>
         ${sell?`<span class="ad num" style="font-size:11.5px;color:var(--faint)">${availOf(OFF.coin).toLocaleString()} ${OFF.coin} available — locks into escrow while listed</span>`:''}</div>
@@ -8602,12 +9478,12 @@ function openOffer(){
       <div class="sf" id="of-px"><span class="sfl">Your rate · ${FIAT_SYM(OFF.fiat)} per ${OFF.coin}</span>
         <input type="text" id="ofpx" inputmode="decimal" value="${OFF.px||quoteOf(OFF.fiat)}" placeholder="${quoteOf(OFF.fiat)}">
         <span style="display:block;margin-top:5px;font-size:11.5px;color:var(--faint)" class="num">Index ${idxOf(OFF.fiat).toLocaleString()}${
-          d.pricing==='Float'?` · your float ${d.spread>=0?'+':''}${d.spread}% → ${quoteOf(OFF.fiat).toLocaleString()}`:' · fixed pricing — quote your own rate'}</span>
+          d.pricing==='Float'?` · your float ${d.spread>=0?'+':''}${d.spread}% → ${quoteOf(OFF.fiat).toLocaleString()}`:` · your fixed rate ${(+d.fixed||0).toLocaleString()}`}</span>
         <span class="err">Enter a rate</span></div>
       <div class="sf" id="of-qty"><span class="sfl">Size · ${OFF.coin}</span>
         <input type="text" id="ofqty" inputmode="decimal" value="${OFF.qty}" placeholder="Quantity"><span class="err">${sell?'More than you hold':'Enter a quantity'}</span></div>
       <div class="sf" id="of-min"><span class="sfl">Minimum per trade · ${OFF.fiat}</span>
-        <input type="text" id="ofmin" inputmode="numeric" value="${OFF.min}" placeholder="Min lot"><span class="err">Must be below the offer total</span></div>
+        <input type="text" id="ofmin" inputmode="numeric" value="${OFF.min}" placeholder="Min lot"><span class="err">Must be below the listing total</span></div>
       <div class="dfoot" style="margin-top:14px">
         <button class="btn btn-primary" id="ofgo">Review &amp; post</button>
       </div>`,()=>{
@@ -8630,7 +9506,7 @@ function openOffer(){
         OFF.px=px;OFF.qty=qty;OFF.min=min;
         closeModal();
         /* 卖单锁币 = 资金动作，走同一个 Passkey 强确认；买单只是承诺，一句摘要即可 */
-        requireVerify(sell?'Posting locks funds into escrow':'Posting a public offer',
+        requireVerify(sell?'Posting locks funds into escrow':'Posting a public listing',
           `List <b class="num">${qty.toLocaleString()} ${OFF.coin}</b> ${sell?'for sale':'wanted'} at `+
           `<b class="num">${FIAT_SYM(OFF.fiat)}${px.toLocaleString()}</b> · min lot `+
           `<b class="num">${FIAT_SYM(OFF.fiat)}${min.toLocaleString()}</b>${sell?'. Funds stay locked until filled or unlisted.':'.'}`,
@@ -8661,7 +9537,7 @@ function postOffer(){
   /* 看自己的单：切到与之对应的那一侧（买家视角） */
   mkSide=sell?'buy':'sell'; mkFilter='All'; mkFiat='';
   switchView('market'); renderFilter(); renderPool();
-  toast(sell?`Listed — ${OFF.qty.toLocaleString()} ${OFF.coin} locked in escrow`:'Offer posted');
+  toast(sell?`Listed — ${OFF.qty.toLocaleString()} ${OFF.coin} locked in escrow`:'Listed — your buying terms are public');
 }
 function unlistOffer(id){
   const i=POOL.findIndex(o=>o.id===id); if(i<0)return;
@@ -8673,7 +9549,7 @@ function unlistOffer(id){
     renderBalance();renderAssets();
   }
   POOL.splice(i,1); renderPool();
-  toast(o.side==='sell'?`Unlisted — ${o.qty.toLocaleString()} ${o.coin} unlocked`:'Offer removed');
+  toast(o.side==='sell'?`Unlisted — ${o.qty.toLocaleString()} ${o.coin} unlocked`:'Listing removed');
 }
 
 /* 提交回执 · 对话式：这是个对话产品，提交不是「表单变成状态卡」，
@@ -8683,7 +9559,7 @@ function sellerMsg(who,html){
   const el=document.createElement('div');
   el.className='msg '+who;
   el.innerHTML=`<span class="bub">${html}</span>`;
-  document.getElementById('log').appendChild(el);
+  ((ACTIVE&&ACTIVE.el)||document.getElementById('log')).appendChild(el);
   el.scrollIntoView({behavior:'smooth',block:'nearest'});
   return el;
 }
@@ -8696,10 +9572,10 @@ function receiptCard(kind){
     ? kycSteps().filter(st=>st.fields.length).map(st=>
         [st.t, st.fields.map(f=>[f.l,val(d.k[f.k])||'—'])])
     : [['Listing configuration',[
-        ['Side',d.dir],['Assets',d.coins.join(' · ')],
+        ['Side',d.dir.join(' · ')],['Assets',d.coins.join(' · ')],
         ['Limits',Number(d.lo).toLocaleString()+' – '+Number(d.hi).toLocaleString()+' CNY'],
         ['Networks',d.nets.join(' · ')],
-        ['Pricing',d.pricing==='Float'?`Index ${d.spread>=0?'+':''}${d.spread}%`:'Fixed per offer'],
+        ['Pricing',d.pricing==='Float'?`Index ${d.spread>=0?'+':''}${d.spread}%`:`Fixed · ${d.fixed}`],
         ['Payment rails',d.rails.join(' · ')]]]];
   const nf = groups.reduce((a,[,rows])=>a+rows.length,0);
   const detail =
@@ -8724,13 +9600,13 @@ function receiptCard(kind){
     const m=sellerMsg('them',
       kyc?`✓ Identity verified. Next: configure what you sell — assets, limits, pricing and payment rails.
            <span class="rgo"><button class="btn btn-primary btn-sm" data-rgo="cfg">Set up listing →</button></span>`
-         :`✓ Listing approved. You can post offers from the Trade page whenever you're ready.
-           <span class="rgo"><button class="btn btn-primary btn-sm" data-rgo="offer">Post an offer →</button></span>`);
+         :`✓ Listing approved. You can post from the Discover page whenever you're ready.
+           <span class="rgo"><button class="btn btn-primary btn-sm" data-rgo="offer">Create a listing →</button></span>`);
     m.querySelector('[data-rgo]').onclick=ev=>{
       ev.currentTarget.dataset.rgo==='cfg'?openSeller():openOffer()};
     setTimeout(()=>m.scrollIntoView({behavior:'smooth',block:'end'}),80);  /* 按钮要整个滚进可视区 */
     renderTypes();
-    toast(kyc?'Identity approved':'Listing approved — you can post offers now');
+    toast(kyc?'Identity approved':'Listing approved — you can post now');
   },6000);
 }
 
@@ -8784,7 +9660,7 @@ function demoFill(){
       else d.k[f.k]=DEMO_TXT[f.k]||'Demo';
     }));
   }else{
-    if(!d.dir)d.dir='Both';
+    if(!d.dir.length)d.dir=['Sell crypto','Buy crypto'];
     if(!d.coins.length)d.coins=['USDT','BTC'];
     if(!d.lo)d.lo='1000'; if(!d.hi)d.hi='50000';
     if(!d.nets.length)d.nets=['TRON','ETH'];
@@ -8795,7 +9671,7 @@ function demoFill(){
   toast('Sample data filled — keep clicking Next');
 }
 
-const sellerBlank=()=>({kind:'Individual',k:{},dir:'',coins:[],lo:'',hi:'',nets:[],rails:[],pricing:'Float',spread:'0.8',agree:false});
+const sellerBlank=()=>({kind:'Individual',k:{},dir:[],coins:[],lo:'',hi:'',nets:[],rails:[],pricing:'Float',spread:'0.8',fixed:'',agree:false});
 function openSeller(){
   switchView('chat');
   document.getElementById('composer').classList.remove('show');
@@ -8918,7 +9794,9 @@ afRender(); afLive(false); renderRight3(); arunRender(); arunIdle();
 sayMini(true);
 renderLeft();renderSentence();renderFilter();renderPool();
 renderBalance();renderTypes();
-document.getElementById('rn').textContent=CARDS.length;
+/* 未登录的起点是市场：能看的东西在这儿，下单页留给登录后 */
+if(document.documentElement.dataset.locked)switchView('market');
+{const rn=document.getElementById('rn'); if(rn)rn.textContent=CARDS.length;}
 </script>
 </body>
 </html>
