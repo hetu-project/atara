@@ -4967,8 +4967,7 @@ function renderRecs(){
             <span class="leds${r.s!=='Released'?' neg':''}"><i></i>${r.s}</span>
             <a href="#" class="lede lnk">Evidence</a>
           </div>`}).join('')+`</div>`
-      : `<div class="pfempty">No ${RECFILT.toLowerCase()} settlements yet.</div>`)
-    +`<p class="rnote">Every settlement keeps an evidence pack.<i class="info" tabindex="0" data-tip="Terms agreed, review report, escrow record and the evidence release was based on.">i</i></p>`;
+      : `<div class="pfempty">No ${RECFILT.toLowerCase()} settlements yet.</div>`);
 
   document.getElementById('recsbody').innerHTML=
     `<div class="atabs" role="tablist">
