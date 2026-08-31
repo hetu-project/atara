@@ -6369,7 +6369,18 @@ function paintEscrow(){
     foot.innerHTML=`<a href="#" class="pkg lnk">Evidence ›</a>`;
   else foot.remove();
   foot.querySelector?.('[data-ecancel]')?.addEventListener('click',ev=>{ev.preventDefault();cancelEscrow()});
-  foot.querySelector?.('[data-eok]')?.addEventListener('click',ev=>{ev.preventDefault();releaseEscrow()});
+  foot.querySelector?.('[data-eok]')?.addEventListener('click',ev=>{
+    ev.preventDefault();
+    /* 「我确认」是条件成立的依据，不是一个前端动画的开关——
+       必须报给后端，由它跑放行共识再放款。 */
+    if(snap.oid&&!OFFLINE){
+      const btn=ev.currentTarget; btn.disabled=true;
+      api.post('/orders/'+snap.oid+'/confirm')
+        .catch(e=>{btn.disabled=false; apiFail(e,'Could not confirm')});
+      return;
+    }
+    releaseEscrow();
+  });
   foot.querySelector?.('[data-edispute]')?.addEventListener('click',ev=>{ev.preventDefault();disputeEscrow()});
   card.querySelectorAll('[data-chatfor]').forEach(b=>b.onclick=ev=>{
     ev.preventDefault(); openChatFor(b.dataset.chatfor);
@@ -7933,6 +7944,16 @@ async function fetchAssessment(offerId){
   try{ return await api.get('/offers/'+offerId+'/assessment') }catch(_){ return null }
 }
 
+/* 把后端的票翻成右栏那套 agent 行的形状。名字与措辞都用后端给的——
+   前端再编一份文案，两边就会各说各的。 */
+function agentsFromAssessment(a){
+  if(!a||!a.votes)return null;
+  return a.votes.map((v,i)=>({
+    n:v.agent, v:v.verdict==='pass'?'pass':'flag', m:v.note,
+    ev:[v.note], k:RISK_AGENTS[i]?RISK_AGENTS[i].k:'chk'+i,
+  }));
+}
+
 function showOrder(o){
   /* 先进这个人的线程，评估在对话里当着面跑——痕迹和结论都留在线程里。
      匹配卡若还躺在裸屏上（快捷交易路径），先收养再切换 */
@@ -7943,11 +7964,17 @@ function showOrder(o){
   /* 与命令/动作面板同一条链：多 agent 共识动画 → 结论消息 → 订单卡。
      三个入口一个面板——旧的五行评估卡曾在这里漏网 */
   AF_SUBJ=o.name;   /* 右栏这一批的主题：这笔是跟谁做的 */
+  /* 票先去后端拿；拿到了就用它画，拿不到（离线）再退回本地名单 */
+  fetchAssessment(o.id).then(a=>{
+    const list=agentsFromAssessment(a);
+    if(list&&list.length)o._agents=list;
+    if(a)o._cons={ok:a.passed,total:a.total,need:a.threshold,txt:a.summary};
+  });
   const t=thinking([],[], ()=>consensusThenDeal(()=>{
     openDeal(o.side==='sell'?'buy':'sell', Math.round(o.qty*o.px), o);
     openThread(o, D);
     D.el.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }, o.sc), null, {list:RISK_AGENTS, cons:RISK_CONS, sc:o.sc});
+  }, o.sc), null, {list:o._agents||RISK_AGENTS, cons:o._cons||RISK_CONS, sc:o.sc});
   t.el.querySelector('.thlabel').textContent='Assessing counterparty';
   setTimeout(()=>{const l=t.el.querySelector('.thlabel'); if(l)l.textContent='Assessed'}, t.total);
 }
@@ -9454,9 +9481,34 @@ async function dealReceipt(){
   if(OFFLINE||!D||!D.oid){ advance('s4'); return }
   const d=D;
   try{
-    await api.post('/orders/'+D.oid+'/receipt',{file_ref:'bank-receipt-'+D.ref+'.pdf'});
+    /* 放款依据是这份银行凭证，所以它必须真的存在——
+       编一个 file_ref 交上去，等于让「核验回执」核验一个空气。 */
+    const ref=await pickAndUpload('Upload the bank receipt');
+    if(!ref)return;
+    await api.post('/orders/'+D.oid+'/receipt',{file_ref:ref});
     if(D===d){ D.step='s4'; paintDeal(); }
   }catch(e){ apiFail(e,'Could not upload the receipt') }
+}
+
+/* 选文件 → POST /uploads → 拿 file_ref。取消就返回空，调用方别往下走。 */
+function pickAndUpload(label){
+  return new Promise(resolve=>{
+    const inp=document.createElement('input');
+    inp.type='file'; inp.accept='image/*,application/pdf'; inp.style.display='none';
+    document.body.appendChild(inp);
+    inp.onchange=async()=>{
+      const f=inp.files&&inp.files[0]; inp.remove();
+      if(!f)return resolve('');
+      const fd=new FormData(); fd.append('file',f);
+      try{
+        const r=await req('POST','/uploads',fd);
+        toast(label+' — '+f.name+' attached');
+        resolve(r.file_ref);
+      }catch(e){ apiFail(e,'Upload failed'); resolve('') }
+    };
+    inp.oncancel=()=>{inp.remove(); resolve('')};
+    inp.click();
+  });
 }
 
 /* 轮询成交单。站点顺序由后端的 state 决定，前端不再自己跑计时器——
@@ -10342,10 +10394,12 @@ async function hydrateOffers() {
 }
 
 async function hydrateCatalog() {
-  const [fi, co] = await Promise.all([
+  const [fi, co, it] = await Promise.all([
     api.get('/catalog/fiats').catch(() => null),
     api.get('/catalog/conditions').catch(() => null),
+    api.get('/catalog/intents').catch(() => null),
   ]);
+  if (it && it.intents) fill(INTENTS, it.intents);
   if (fi && fi.corridors) {
     fill(FIATS, fi.corridors.map(g => ({
       g: g.group, list: (g.assets || []).map(a => [a.code, a.name, a.symbol]),
