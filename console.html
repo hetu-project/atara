@@ -262,7 +262,7 @@ main{position:relative;display:grid;
   grid-template-columns:var(--lw) minmax(0,1fr) minmax(0,1fr);
   grid-template-rows:minmax(0,1fr);
   height:100%;min-height:0;overflow:hidden;--lw:268px}
-main.rout{grid-template-columns:var(--lw) 1fr 0}
+main.rout,main.rfold{grid-template-columns:var(--lw) 1fr 0}
 main.lout{--lw:68px}
 /* 窄屏先让中栏活下来——对话比旁观机器干活重要 */
 @media (max-width:1440px){main{grid-template-columns:var(--lw) minmax(0,1fr) minmax(0,1.08fr)}}
@@ -270,7 +270,7 @@ main.lout{--lw:68px}
 /* 面板保持自身宽度，列宽归零时向右滑出被 main 裁掉——比压缩内容干净。
    visibility 是兜底：列宽动画在部分浏览器不支持，但收起后必须真的不可见、不可点 */
 #right{width:100%;max-width:1040px;justify-self:end;transition:opacity var(--dur-fast) var(--ease)}
-main.rout #right{visibility:hidden;opacity:0;pointer-events:none}
+main.rout #right,main.rfold #right{visibility:hidden;opacity:0;pointer-events:none}
 
 /* 左栏顶部品牌区 · 与官网 index.html 的 .brand-mark 完全同构（十字 + 三点），点击回官网 */
 .lbrandrow{display:flex;align-items:center;gap:8px;padding:14px 12px 10px 12px;flex:none}
@@ -341,6 +341,27 @@ main.lout .lbrandrow{justify-content:center;gap:0;padding:14px 0 10px}
 main.lout .lbrand{gap:0}
 main.lout .lbrandrow .sayic{margin:0}
 
+/* 收起按钮：跟左栏那颗同一颗图标。站在标题前面，但静止时不占位——
+   否则 Assessment 会比下面的 Order status 缩进一截，两个模块标题就对不齐了 */
+.rfoldx{width:0;height:26px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+  border:0;border-radius:var(--r-control);background:none;color:var(--faint);cursor:pointer;
+  opacity:0;overflow:hidden;margin-right:calc(-1 * var(--sp-2));
+  transition:width var(--dur-fast) var(--ease),opacity var(--dur-fast) var(--ease),
+    margin var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.rmh:hover .rfoldx,.rfoldx:focus-visible{width:26px;opacity:1;margin-right:0}
+.rfoldx:hover{background:var(--card);color:var(--ink)}
+.rfoldx svg{flex:none}
+/* 收起后的重开入口：一颗灯 + 一个词。灯亮着就是它在干活 */
+.rshow{position:fixed;top:16px;right:20px;z-index:30;
+  display:inline-flex;align-items:center;gap:8px;padding:6px 10px;
+  border:0;border-radius:var(--r-control);background:none;
+  color:var(--mute);font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;
+  transition:color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.rshow[hidden]{display:none}
+.rshow:hover{color:var(--ink);background:var(--card)}
+.rshow i{width:6px;height:6px;border-radius:999px;flex:none;background:var(--faint-2)}
+.rshow.live i{background:var(--green);animation:afpulse 1.6s var(--ease) infinite}
+.rshow.live{color:var(--ink)}
 /* 右栏重开拉手：只在收起时露出，贴右缘 */
 .redge{position:absolute;top:50%;right:0;transform:translateY(-50%);
   width:20px;height:60px;display:none;align-items:center;justify-content:center;
@@ -573,6 +594,13 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
 .mkamt input::placeholder{color:var(--placeholder);font-weight:400}
 .mkamt em{font-style:normal;font-size:11px;color:var(--faint);flex:none}
 .mkempty{grid-column:1/-1;padding:40px 16px;text-align:center;font-size:13px;color:var(--faint)}
+/* 自己的挂单收在账户页：货架上只留「Your listing」标记和下架，管理在 Profile */
+.mylist{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-content:start}
+.lsempty{display:flex;flex-direction:column;align-items:center;gap:14px;padding:34px 16px 30px;text-align:center}
+.lsempty p{font-size:13px;line-height:1.7;color:var(--faint);max-width:44ch;margin:0}
+.mkmt{grid-column:1/-1;display:flex;align-items:center;gap:6px;margin:0 0 2px;
+  font-size:12.5px;color:var(--mute)}
+.mkmt b{color:var(--ink);font-weight:600}
 .mkfilter{display:flex;gap:4px}
 /* 法币入口 + 选择器 */
 .mkfiat{display:flex;align-items:center;gap:6px;height:28px;padding:0 10px;
@@ -1014,6 +1042,7 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
 .pcard.you .roc-st{color:var(--ink);font-weight:500}
 .pcard.you .roc-st i{background:var(--warn);box-shadow:0 0 0 3px var(--warn-wash)}
 .pcard.them .roc-st i,.pcard.auto .roc-st i{background:var(--accent)}
+a.dspx{color:#d0574d}
 .pcard.disp .roc-st{color:#d0574d}
 .pcard.disp .roc-st i{background:#d0574d;box-shadow:0 0 0 3px #d0574d24}
 .pcard.fin{cursor:default}
@@ -1322,6 +1351,10 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
   margin-bottom:8px;padding:0 2px 9px;background:none;
   border-radius:0;box-shadow:none;border-bottom:1px solid var(--hairline)}
 #thhead.show{display:flex}
+/* 平台会话：Atara 的方块标识，跟人的头像一眼分得开 */
+.deskav{background:var(--blue)!important;border-radius:8px!important;
+  display:flex;align-items:center;justify-content:center}
+.deskav i{width:34%;height:34%;border-radius:2px;background:#fff;display:block}
 .thav{width:22px;height:22px;flex:none;border-radius:999px;background:var(--card);
   display:flex;align-items:center;justify-content:center;
   font-size:10px;font-weight:600;color:var(--mute)}
@@ -1338,6 +1371,12 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
   background:var(--card);color:var(--ink);white-space:pre-wrap;word-break:break-word}
 .msg.me .bub{background:var(--blue);color:#fff}
 .msg .mt{font-size:11px;color:var(--faint-2);padding:0 3px}
+/* 对方消息：头像贴在气泡左下角，时间跟着气泡缩进 */
+.mrow{display:flex;align-items:flex-end;gap:8px;min-width:0}
+.mav{width:24px;height:24px;flex:none;border-radius:999px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:9.5px;font-weight:600;letter-spacing:.02em}
+.msg.them .mt{padding-left:35px}
 /* 系统播报不是谁说的话，是发生了什么——居中、不带气泡 */
 .msg.sys{align-self:center;align-items:center;max-width:100%}
 .msg.sys .bub{background:transparent;padding:4px 12px;font-size:12px;color:var(--faint);text-align:center}
@@ -2122,8 +2161,17 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
   62%{transform:scale(.955,1.06) translateY(-.8px)}}
 @keyframes geyescan{0%,42%{transform:translateX(-1.4px)}
   50%,92%{transform:translateX(1.4px)}100%{transform:translateX(-1.4px)}}
+/* 摸到谁谁醒：不管它在队列里排第几，hover 时回血 + 动起来。
+   队列语义管的是「谁在真干活」，hover 管的是「你在看谁」，两回事 */
+.ragp:hover .ragav,.ragp:focus-visible .ragav{filter:none;opacity:1}
+.ragp:hover .ragav .gart,.ragp:focus-visible .ragav .gart{animation:gsquash 1.5s var(--ease) infinite}
+.ragp:hover .ragav .geyes,.ragp:focus-visible .ragav .geyes{animation:geyescan 1.7s ease-in-out infinite}
+/* profile 里那张脸一直活着——比工作时慢一档，是呼吸不是干活 */
+.agcav .gart,.agcav .geyes{transform-box:fill-box;transform-origin:center}
+.agcav .gart{animation:gsquash 2.8s var(--ease) infinite}
+.agcav .geyes{animation:geyescan 3.6s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){
-  .ragav .gart,.ragav .geyes{animation:none!important}
+  .ragav .gart,.ragav .geyes,.agcav .gart,.agcav .geyes{animation:none!important}
 }
 .ragt{display:flex;flex-direction:column;gap:1px;line-height:1.25}
 .ragt b{font-size:var(--rt-body);font-weight:var(--rt-body-w);color:var(--mute);white-space:nowrap}
@@ -2397,6 +2445,11 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 /* 整页一个骨架：名片头横排（徽记 · 名字 · 判定章 · 来源），内容在其下分栏。
    身份横着排是 profile 的常规读法——名字挨着脸，不是脸压着名字。 */
 .agpage{padding:2px var(--sp-4) var(--sp-4);animation:agfadeup .24s var(--ease) both}
+/* 没跑过就是没跑过：留身份与「它量什么」，不摆任何读数 */
+.agnone{display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:34px 16px;text-align:center}
+.agnone b{font-size:13.5px;font-weight:600;color:var(--mute)}
+.agnone em{font-style:normal;font-size:12.5px;line-height:1.65;color:var(--faint);max-width:38ch}
 .agph2{display:flex;align-items:center;gap:var(--sp-3);
   padding-bottom:var(--sp-3);margin-bottom:var(--sp-4);
   border-bottom:1px solid var(--hairline-2)}
@@ -2980,6 +3033,20 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 #mx{margin-left:auto}
 .mbody{flex:1;overflow-y:auto;min-height:0;padding:6px 24px 22px}
 .mbody .rsec{margin-bottom:20px}
+/* 一句话一个动作的小对话框：方一点，居中，关闭只靠角上的 ✕ */
+.mcard.msq{max-width:372px;text-align:center}
+.msq .mhead{position:relative;justify-content:center;padding:34px 30px 10px}
+.msq .mhead h3{font-size:19px}
+.msq #mx{position:absolute;right:12px;top:12px;margin:0}
+.msq .mbody{padding:4px 30px 32px}
+.msq .acnote{margin:0;color:var(--mute);font-size:13px;line-height:1.7}
+.msq .sqi{width:60px;height:60px;margin:0 auto 18px;border-radius:18px;
+  display:grid;place-items:center;color:var(--accent);
+  background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.msq .sqi svg{width:28px;height:28px}
+.msq .dfoot{display:block;margin-top:24px}
+.msq .dfoot .btn{height:42px}
+.msq .dfoot .btn{width:100%;justify-content:center}
 
 /* ══ 账户页 · 资产 / 入金 / 出金 / 收款账户 ══ */
 /* 安全设置区：与账户区同一族的行式卡 */
@@ -3232,11 +3299,11 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
         <div class="psamt" id="psamt"></div>
         <div class="psfor" id="cbody"></div>
         <div class="psrows" id="pspayrow">
-          <span class="pslab">Pay with</span>
-          <div class="pscard"><button class="pscd" id="pspay" aria-expanded="false" aria-label="Choose how to pay"></button></div>
+          <span class="pslab">Spend under</span>
+          <div class="pscard"><button class="pscd" id="pspay" aria-expanded="false" aria-label="Choose which allowance"></button></div>
           <span class="psfund" id="psfund" hidden></span>
-          <button class="pschg" id="pschg" hidden>Change card<i>⌄</i></button>
-          <div class="psopts" id="psopts" role="listbox" aria-label="Cards"></div>
+          <button class="pschg" id="pschg" hidden>Change allowance<i>⌄</i></button>
+          <div class="psopts" id="psopts" role="listbox" aria-label="Allowances"></div>
         </div>
         <button class="btn btn-primary psok" id="cok"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 1.8a4.5 4.5 0 0 1 4.5 4.5c0 2.6-.7 5-2 7"/><path d="M8 4.4a1.9 1.9 0 0 1 1.9 1.9c0 2.3-.6 4.5-1.7 6.4M5.6 3.2A4.5 4.5 0 0 0 3.5 6.3M4.2 8.6c0 1.9-.4 3.5-1 4.9M6.1 7.1c.1 2.7-.4 5-1.3 6.9"/></svg> Confirm with passkey</button>
       </div>
@@ -3310,6 +3377,7 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
        资金全貌（余额 / 资产 / 定期 / 流水）在账户页 Profile 里，不在这条栏上重复。 -->
   <!-- 右栏三块：① 轮到你的订单 ② AI 战绩与待命阵容 ③ 实时共识流水。
        左中是「你在跟谁谈」，右边是「机器替你查到了什么」，各占一半。 -->
+  <button class="rshow" id="rshow" type="button" hidden><i></i>Assessment</button>
   <aside id="right" aria-label="Assessment and agent status">
     <!-- 栏顶不再挂标题：三块模块各自有名字，再挂一个总标题会跟模块名重复 -->
     <div class="rgrid" id="rgrid">
@@ -3334,7 +3402,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 
       <!-- ③ 实时动态 -->
       <section class="rmod" id="rm-feed">
-        <div class="rmh"><h3>Assessment</h3>
+        <div class="rmh"><button class="rfoldx" id="rfoldx" type="button" title="Collapse panel" aria-label="Collapse panel"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.6"/><path d="M9.8 3v10"/></svg></button>
+          <h3>Assessment</h3>
           <span class="aflive" id="aflive"><i></i><em>idle</em></span>
           <button class="laybtn" id="laybtn" type="button" title="Switch layout" aria-label="Switch layout">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
@@ -3597,13 +3666,13 @@ function renderLeft(){
      订单流的入口后续挪去右栏；通讯录在主区 v-contacts。
      排序按最近活动，最新的在最上面——收件箱的唯一正确顺序 */
   const chats=SESSIONS.filter(x=>x.kind==='chat')
-    .sort((a,b)=>(b.lastAt||0)-(a.lastAt||0));
+    .sort((a,b)=>(b.desk?1:0)-(a.desk?1:0) || (b.lastAt||0)-(a.lastAt||0));
   document.getElementById('tasksec').hidden=!chats.length;
   document.getElementById('tasklist').innerHTML=chats.map(c=>{
     const on=ACTIVE&&ACTIVE.id===c.id;
     const un=c.unread||0;
     return `<button class="cp chatrow${on?' on':''}" data-chat="${c.id}">
-      ${avSpan(c.name,'cpav')}
+      ${c.desk?'<span class="cpav deskav" aria-hidden="true"><i></i></span>':avSpan(c.name,'cpav')}
       <span class="n"><em>${c.name}</em><i>${c.last||''}</i></span>
       <span class="chmeta">${c.lastT?`<time>${c.lastT}</time>`:''}${
         un?`<span class="v dot unread num">${un}</span>`:''}</span>
@@ -3636,6 +3705,7 @@ function renderStrip(){
    Payments、账户页各自有整页内容，右栏在那儿只是占宽度的旁观者 */
 window.railForView=v=>{
   document.querySelector('main').classList.toggle('rout', v!=='chat');
+  syncRShow();
 };
 function switchView(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
@@ -3647,7 +3717,12 @@ function switchView(v){
   if(v==='contacts')renderContactsPage();
 }
 document.getElementById('cpadd').onclick=openAddContact;
-document.querySelectorAll('.nav[data-v]').forEach(b=>b.onclick=()=>switchView(b.dataset.v));
+document.querySelectorAll('.nav[data-v]').forEach(b=>b.onclick=()=>{
+  /* Contacts / Payments 里全是「你的东西」——没登录就不该先跳过去再谈 */
+  const v=b.dataset.v;
+  if((v==='contacts'||v==='recs') && requireLogin(()=>switchView(v),b)) return;
+  switchView(v);
+});
 
 /* ── 左下角账户入口：二级菜单，Profile（资金）/ Settings（安全） ── */
 let ACCT_MODE='profile';
@@ -3937,9 +4012,10 @@ let dk='otc';
 function renderTypes(){
   document.getElementById('dtypes').innerHTML=DISCOVER.map(t=>
     `<button class="dt ${dk===t.k?'on':''} ${t.on?'':'soon'}" data-k="${t.k}" aria-selected="${dk===t.k}">${t.n}</button>`).join('')+`<button class="dt-cta" id="bemaker">${
+    /* 这颗按钮只反映「做不做 maker」这件事的状态。身份核验是账户级的，
+       吃单的人也会做——不能因为他核验过了，就把挂单配置摆成他的待办 */
     SELLER.approved?'Create a listing →':
-    (SELLER.kycDone&&!SELLER.kycOk)||(SELLER.done&&!SELLER.approved)?'Under review…':
-    SELLER.kycOk?'Set up listing →':'Become a maker →'}</button>`;
+    SELLER.done?'Under review…':'Become a maker →'}</button>`;
   document.querySelectorAll('.dt').forEach(b=>b.onclick=()=>{dk=b.dataset.k;renderTypes();paintDiscover()});
   document.getElementById('bemaker').onclick=()=>{if(requireLogin(openSeller))return; openSeller()};   /* openSeller 内部按状态分流;tab 行重绘会换元素,绑定必须跟着重挂 */
   paintDiscover();
@@ -4015,10 +4091,52 @@ function renderPool(){
   document.querySelectorAll('.od').forEach(b=>b.onclick=()=>{
     const o=POOL.find(x=>x.id===b.dataset.o);
     if(o.mine){unlistOffer(o.id);return}   /* 自己的单不进购买流程，点了就是下架 */
-    if(requireLogin(()=>{switchView('chat');showOrder(o)},b))return;
-    switchView('chat');
-    showOrder(o);
+    const open=()=>{switchView('chat');showOrder(o)};
+    if(requireLogin(open,b))return;
+    /* 先问身份再切视图：否则用户先被甩进一个空对话，弹窗才追上来 */
+    if(requireKyc(open))return;
+    open();
   });
+}
+/* 我的挂单：锁了多少、挂什么价、最小成交多少——外加下架。
+   放在账户页而不是货架上：这是「我的东西」，跟余额和额度一类 */
+function myListingsHTML(){
+  const mine=POOL.filter(o=>o.mine);
+  if(!mine.length){
+    /* 空态不是句号，是入口：能挂就给挂单的门，不能挂就给入驻的门 */
+    const review=SELLER.done&&!SELLER.approved;
+    const [txt,btn]=SELLER.approved
+      ? ['Nothing listed right now. Post an offer and the coins lock into escrow until it fills.',
+         '<button class="btn btn-primary btn-sm" data-p="newlisting">Create a listing →</button>']
+      : review
+        ? ['Your trading terms are under review — you can post once they clear.','']
+        : ['Listings are how makers put their own price in the pool. Get approved once, then post whenever you like.',
+           '<button class="btn btn-primary btn-sm" data-p="gomaker">Become a maker →</button>'];
+    return `<div class="lsempty"><p>${txt}</p>${btn}</div>`;
+  }
+  const locked={};
+  mine.filter(o=>o.side==='sell').forEach(o=>locked[o.coin]=(locked[o.coin]||0)+o.qty);
+  const lockTxt=Object.entries(locked).map(([c,v])=>`${v.toLocaleString()} ${c}`).join(' · ');
+  return `<div class="mylist"><div class="mkmt">${mine.length} listing${mine.length>1?'s':''} live${
+      lockTxt?` · <b>${lockTxt}</b> locked in the escrow contract`:''}</div>`
+    +mine.map(o=>{
+      const sym=FIAT_SYM(o.fiat), sell=o.side==='sell';
+      return `<div class="od odmine" data-mine="${o.id}">
+        <div class="od-h">
+          <span class="od-peer">${sell?'Selling':'Buying'} ${o.coin}<i class="od-known">${o.net}</i></span>
+        </div>
+        <div class="od-px"><b class="num">${sym}${o.px.toLocaleString()}</b><em>per ${o.coin}</em></div>
+        <dl class="od-kv">
+          <div><dt>Size</dt><dd class="num">${o.qty.toLocaleString()} ${o.coin}</dd></div>
+          <div><dt>Value</dt><dd class="num">${sym}${Math.round(o.qty*o.px).toLocaleString()}</dd></div>
+          <div><dt>Min lot</dt><dd class="num">${sym}${o.min.toLocaleString()}</dd></div>
+          <div><dt>Locked</dt><dd>${sell?'In escrow contract':'Not until filled'}</dd></div>
+        </dl>
+        <div class="od-f">
+          <span class="od-disp ok">Live in the pool</span>
+          <span class="od-cta" data-p="unlist:${o.id}">Unlist</span>
+        </div>
+      </div>`}).join('')+`</div>`;
 }
 function renderFilter(){
   const fs=['All','USDT','USDC','BTC','ETH'];
@@ -4179,9 +4297,10 @@ const fmtAmt=n=>n<1?n.toFixed(4).replace(/0+$/,'').replace(/\.$/,''):n.toLocaleS
 })();
 
 let MODAL_LAST=null;
-function openModal(title,html,bind){
+function openModal(title,html,bind,cls){
   const M=document.getElementById('modal');
   MODAL_LAST=document.activeElement;
+  M.querySelector('.mcard').className='mcard'+(cls?' '+cls:'');
   document.getElementById('mtitle').textContent=title;
   document.getElementById('mbody').innerHTML=html;
   M.hidden=false;
@@ -4489,7 +4608,7 @@ function openPayees(){
         </div>`).join('')}
       </div>
       <button class="btn btn-sm" id="addbank">+ Add bank account</button>
-      <p class="rnote">Each card records whether it is yours.<i class="info" tabindex="0" data-tip="Ownership and relationship to the account holder are recorded for anti-money-laundering review — they identify nominee arrangements.">i</i></p>
+      <p class="rnote">Each account records whether it is yours.<i class="info" tabindex="0" data-tip="Ownership and relationship to the account holder are recorded for anti-money-laundering review — they identify nominee arrangements.">i</i></p>
     </div>
     <div class="rsec" style="margin-bottom:4px"><h3>Crypto addresses</h3>
       <div class="plist">
@@ -4625,7 +4744,6 @@ function openAllowanceModal(card){
   openModal(isEdit?'Edit allowance':'New allowance',' ',draw);
 }
 function renderRulesPage(){
-  const sched=ITEMS.filter(i=>i.g==='sched');
   const live=CARDS.filter(c=>c.on).length;
   document.getElementById('rn').textContent=CARDS.length;
   /* 总账户是**全币种**折算合计——不能只算 USDT，否则和下面的资产明细对不上 */
@@ -4711,19 +4829,20 @@ function renderRulesPage(){
   /* 资产 / 自动扣款 / 交易动态改成三个分栏：三段内容各自都不多，
      并排会把页面拉长，叠着又都长一个样——分栏是这里唯一说得通的收纳 */
   const dotOf=s=>s==='Released'?'':s==='Refunded'?' ref':' dis';
-  const TABS=[['assets','Assets'],['auto',`Auto payment · ${sched.length}`],['act','Activity']];
+  const nmine=POOL.filter(o=>o.mine).length;
+  const TABS=[['assets','Assets'],
+    ['listings',`Listings${nmine?' · '+nmine:''}`],
+    ['act','Activity']];
   const tab=TABS.some(t=>t[0]===ACCT_TAB)?ACCT_TAB:'assets';
   const paneAssets=`
     <div class="pmh"><h4>Assets · ${ASSETS.length}</h4>
       <button class="h3go" data-p="goto-recs">Statement ${I_GO}</button></div>
     <!--ASSETS-->
     <p class="rnote">Digital assets only — <b>fiat never enters the account</b>.<i class="info" tabindex="0" data-tip="The fiat leg of an OTC trade settles bank-to-bank between the two parties. We verify the receipt but never hold the funds. Every allowance spends this same balance — there is no second wallet.">i</i></p>`;
-  const paneAuto=`
-    <div class="rcard flat">${sched.map(i=>
-      `<div class="rrow"><span class="rk">${i.who}</span>
-        <span class="rd"><span class="stag">${i.what}</span></span>
-        <button class="btn btn-ghost btn-sm">${I_PAUSE}Pause</button></div>`).join('')}</div>
-    <p class="rnote">Runs on schedule, reversible during the escrow window.</p>`;
+  const paneListings=`
+    <div class="pmh"><h4>Your listings</h4>
+      ${SELLER.approved?'<button class="btn btn-ghost btn-sm" data-p="newlisting">+ New listing</button>':''}</div>
+    ${myListingsHTML()}`;
   const paneAct=`
     <div class="pmh"><h4>Recent</h4>
       <button class="h3go" data-p="goto-recs">View all ${I_GO}</button></div>
@@ -4738,7 +4857,7 @@ function renderRulesPage(){
       <div class="atabs" role="tablist">${TABS.map(([k,n])=>
         `<button class="atab ${k===tab?'on':''}" role="tab" aria-selected="${k===tab}"
           data-p="tab:${k}">${n}</button>`).join('')}</div>
-      <section class="pmod">${tab==='assets'?paneAssets:tab==='auto'?paneAuto:paneAct}</section>
+      <section class="pmod">${tab==='assets'?paneAssets:tab==='listings'?paneListings:paneAct}</section>
     </div>`;
   return ACCT_MODE==='settings'
     ? `<div class="rgroup">${secSettings}</div>`
@@ -4814,6 +4933,9 @@ function bindRulesPage(){
     if(p==='goto-recs'){switchView('recs');return}
     if(p.startsWith('pick:')){CARD_ACTIVE=p.slice(5);renderRules();return}
     if(p.startsWith('tab:')){ACCT_TAB=p.slice(4);renderRules();return}
+    if(p==='newlisting'){openOffer();return}
+    if(p==='gomaker'){openSeller();return}
+    if(p.startsWith('unlist:')){unlistOffer(p.slice(7));return}
     if(p==='flip'){
       CARD_FLIP=!CARD_FLIP;
       document.querySelector('.ccard')?.classList.toggle('flip',CARD_FLIP);
@@ -4920,7 +5042,7 @@ function renderRecs(){
     const [tone,label]=st;
     const who=cp?cp.name:(i.who||'');
     const dir=(tone==='you'||tone==='disp')?'out':'in';
-    const act=tone==='you'?'Open' : tone==='disp'?'Review' : '';
+    const act=tone==='you'?'Open' : tone==='disp'?'See the case' : '';
     return `<div class="pcard ${tone}" data-live="${t.id}" role="button" tabindex="0">
       <span class="roc-st"><i></i>${label}<time>${i.when||''}</time></span>
       ${i.amt?`<b class="roc-big num ${dir}">${dir==='out'?'−':'+'}$${(+i.amt).toLocaleString()}</b>`
@@ -5309,7 +5431,10 @@ function afStop(){AFLAST=AFJOB?AFJOB.id:AFLAST; AFJOB=null; afLive(false); afRen
 function afClearPanel(){const h=document.getElementById('afpanel');
   if(h){h.innerHTML=''; h.hidden=true}}
 function afLive(on){
-  const l=document.getElementById('aflive'); if(!l)return;
+  const l=document.getElementById('aflive');
+  /* 收起时那颗灯是这块面板唯一的信号：它跟面板内的状态同源 */
+  document.getElementById('rshow')?.classList.toggle('live',!!on);
+  if(!l)return;
   l.classList.toggle('on',!!on);
   l.querySelector('em').textContent=on?'live':'idle';
 }
@@ -5539,7 +5664,10 @@ function arunIdle(){
 function arunAgentPane(box){
   const i=RISK_AGENTS.findIndex(x=>x.n===ASEL);
   const a=RISK_AGENTS[i]; if(!a){ASEL=null;return arunRender()}
-  const run=ARUNS.find(r=>r.agents&&r.agents.length);
+  /* 与面板其余部分同一条口径（见 arunRender 里的 RUNS）：
+     当前订单没跑过，这个 agent 在这一笔上就没有结论——不能拿档案顶数 */
+  const scope=ACTX?ARUNS.filter(r=>r.sess===ACTX):ARUNS.filter(r=>!r.seeded);
+  const run=scope.find(r=>r.agents&&r.agents.length);
   const voted=run&&run.done ? String(a.v||'') : '';
   const cls=/note/i.test(voted)?'note':(/^pass/i.test(voted)?'pass':'');
   const ev=a.ev||{};
@@ -5598,7 +5726,8 @@ function arunAgentPane(box){
            ${voted?`<p class="agpm">${a.m}</p>`:''}
            ${chk?`<div class="agcks">${chk}</div>`:''}
            ${full||''}`
-        : `<div class="asby">Standing by</div>`}
+        : `<div class="agnone"><b>No reading yet</b>
+             <em>${a.n.replace(/ Agent$/,'')} runs when an order is opened. Its findings on that payment show up here.</em></div>`}
     </section>
   </div>`;
 }
@@ -5951,7 +6080,7 @@ const fundLine=ccy=>{
     ? `Paid from your ${any.bank} account ${any.no} (${any.ccy}) — your bank converts to ${ccy} on send`
     : `Paid from your registered ${ccy} account — bank to bank, never through Atara`;
 };
-/* 收银台的 Pay with = 这笔付款走哪张卡。
+/* 收银台的 Spend under = 这笔付款走哪条额度。
    我们的卡不是带卡号的银行卡，是一个额度窗口：周期上限 / 单笔上限 / 收款白名单 / 放行条件。
    所以卡面画的是窗口本身，并把这一笔在窗口里占掉的那一段直接画在进度条上。 */
 let PAY_LIST=[], PAY_I=0, PAY_AMT=0, PAY_FUND=null, PAY_WHY='';
@@ -6413,10 +6542,12 @@ function cancelEscrow(){
 /* 异议：窗口内提出 → 升级审查（L2），资金保持锁定。不是撤销也不是违约 */
 function disputeEscrow(){
   if(!escrow)return;
+  const snap=escrow;
   clearInterval(escrow.iv);
   escrow.stage='dispute'; paintEscrow();
-  tpost(escrow.tk,'You disputed within the window — escalated to review. Funds stay locked; the uploaded evidence and this record go with it.');
   if(escrow.sess)taskUpsert(escrow.sess,{st:'you'});
+  const cp=snap.cp||{};
+  openDispute({who:cp.name, amt:escAmtTxt(snap.amt,snap.coin), sess:snap.sess});
   escrow=null;
 }
 /* 放行共识：条件成立后、放款之前，agents 对「这笔是否照双方同意的合约执行」
@@ -7630,6 +7761,8 @@ function openDeal(side,fiat,o){
 }
 /* 从大厅点一笔单：对方卖我就买，直接进成交确认 —— 与"说一句话"汇流到同一个状态机 */
 function showOrder(o){
+  /* 身份先于一切：没核过身份就不该占用对手方的挂单，也不该白跑一次评估 */
+  if(requireKyc(()=>showOrder(o))) return;
   /* 先进这个人的线程，评估在对话里当着面跑——痕迹和结论都留在线程里。
      匹配卡若还躺在裸屏上（快捷交易路径），先收养再切换 */
   const th=ensureThread(o.peer,{name:o.name, sc:o.sc, deals:o.deals});
@@ -8169,6 +8302,29 @@ document.querySelectorAll('#actions .act').forEach(b=>b.onclick=()=>{
   openAct(b.dataset.act);
 });
 
+/* 右栏收起：与视图无关的用户偏好，所以另用一个类，不跟 rout（按视图隐藏）打架 */
+const RFOLD_KEY='atara-rfold';
+function syncRShow(){
+  const m=document.querySelector('main'), b=document.getElementById('rshow');
+  if(!m||!b)return;
+  b.hidden=!(m.classList.contains('rfold')&&!m.classList.contains('rout'));
+}
+function setRail(fold){
+  const m=document.querySelector('main');
+  m.classList.toggle('rfold',fold);
+  try{localStorage.setItem(RFOLD_KEY,fold?'1':'0')}catch(e){}
+  syncRShow();
+  /* 环形图的画布按栏宽画，宽度变了得叫它重画 */
+  document.querySelectorAll('canvas').forEach(c=>c._refit&&c._refit());
+}
+(()=>{
+  const fx=document.getElementById('rfoldx'), sh=document.getElementById('rshow');
+  if(!fx||!sh)return;
+  fx.onclick=()=>setRail(true);
+  sh.onclick=()=>setRail(false);
+  let init=false; try{init=localStorage.getItem(RFOLD_KEY)==='1'}catch(e){}
+  if(init)setRail(true); else syncRShow();
+})();
 /* ───── 登录门：requireLogin 在各入口早于 GATE IIFE 被引用，转发器先立起来 ───── */
 function requireLogin(after,src){
   if(!document.documentElement.dataset.locked) return false;
@@ -8536,6 +8692,22 @@ function ensureThread(peer, info, greet){
   return chat;
 }
 function ensureChat(peer){return ensureThread(peer,null,!SESSIONS.find(x=>x.kind==='chat'&&x.id===peer))}
+/* 平台自己的那条线程：入驻、审核、挂单配置都是跟 Atara 说话，
+   不挂在任何对手方名下。以前它写在裸 #log 里——没有入口、切走就没了。
+   现在它是一条正经会话：置顶、能点回来、历史留着。 */
+function ensureDesk(){
+  let d=SESSIONS.find(x=>x.id==='atara');
+  if(d) return d;
+  const frag=document.createDocumentFragment();
+  const box=document.createElement('div');
+  box.id='thread'; box.style.cssText='display:flex;flex-direction:column;gap:10px;width:100%';
+  frag.append(box);
+  d={id:'atara', kind:'chat', peer:'atara', name:'Atara AI', sc:'—', desk:true, el:box, n:0, stash:frag,
+    headHTML:`<span class="thav deskav" aria-hidden="true"><i></i></span>
+      <span class="thwho"><b>Atara AI</b><span>Verification and listing desk</span></span>`};
+  SESSIONS.push(d); renderLeft();
+  return d;
+}
 /* ══ 熟人网络 ══
    通讯录里的人不一定成交过，所以不能走 ensureChat（那条路要求先有 task）。
    这条是给"认识的人"用的：开一段会话，头部常驻一个付款入口。 */
@@ -8724,9 +8896,13 @@ function say(who,text,t=THREAD){
   const THREAD=t; if(!THREAD) return;
   const el=document.createElement('div');
   el.className='msg '+who;
+  /* 对方的话挂一张脸：这条线程是跟人聊，不是跟 AI 聊，头像比任何提示都省字 */
+  const nm=THREAD.mk?.name||THREAD.name||THREAD.id||'?';
   el.innerHTML=who==='sys'
     ? `<span class="bub">${text}</span>`
-    : `<span class="bub">${text}</span><span class="mt">${stamp(THREAD.n++)}</span>`;
+    : who.startsWith('them')
+      ? `<span class="mrow">${avSpan(nm,'mav')}<span class="bub">${text}</span></span><span class="mt">${stamp(THREAD.n++)}</span>`
+      : `<span class="bub">${text}</span><span class="mt">${stamp(THREAD.n++)}</span>`;
   THREAD.el.appendChild(el);
   if(el.isConnected) el.scrollIntoView({behavior:'smooth',block:'nearest'});
   if(who!=='sys') touchChat(THREAD, who==='me'?'You: '+text:text);
@@ -8739,7 +8915,9 @@ function reply(text,delay=1400,th=THREAD){
   setTimeout(()=>{
     if(!t) return;
     t.className='msg them';
-    t.innerHTML=`<span class="bub">${text}</span><span class="mt">${stamp(THREAD.n++)}</span>`;
+    const nm=THREAD.mk?.name||THREAD.name||THREAD.id||'?';
+    t.innerHTML=`<span class="mrow">${avSpan(nm,'mav')}<span class="bub">${text}</span></span>`+
+      `<span class="mt">${stamp(THREAD.n++)}</span>`;
     if(t.isConnected) t.scrollIntoView({behavior:'smooth',block:'nearest'});
     else{THREAD.unread=(THREAD.unread||0)+1;}
     touchChat(THREAD,text);
@@ -8852,6 +9030,7 @@ function paintDeal(){
         <p class="dmech">Miss the window and it returns to them, recorded as a default.<i class="info" tabindex="0" data-tip="Demo timing is compressed. The real payment window is four hours.">i</i></p>
         <div class="dfoot">
           <a href="#" class="lnk ecancel" data-a="cancel" style="margin-right:auto">Cancel order</a>
+          <a href="#" class="lnk dspx" data-a="dispute">Report a problem</a>
           <button class="btn btn-primary" data-a="paid">Upload receipt</button>
         </div>
       </div>`;
@@ -8919,7 +9098,8 @@ function paintDeal(){
         ${esWin()}
         <p class="dmech">${mech}</p>
         ${D.step==='s5'?'<div class="dfoot"><a href="#" class="pkg lnk">Evidence ›</a></div>'
-          :D.step==='s1'?'<div class="dfoot"><a href="#" class="lnk ecancel" data-a="cancel">Cancel order</a></div>':''}
+          :D.step==='s1'?'<div class="dfoot"><a href="#" class="lnk ecancel" data-a="cancel">Cancel order</a></div>'
+          :D.step==='s4'?'<div class="dfoot"><a href="#" class="lnk dspx" data-a="dispute">Report a problem</a></div>':''}
       </div>`;
   }
 
@@ -8955,6 +9135,9 @@ function paintDeal(){
     ev.preventDefault();
     const a=b.dataset.a;
     if(a==='go'){
+      /* 吃单方也要 KYC——法币腿是他打给对方银行账户的，付款人身份必须可识别。
+         但不在门口拦：先让他看完评估，到「确认」这一下才要求 */
+      if(requireKyc(()=>{const r=D&&D.el&&D.el.querySelector('[data-a="go"]'); r&&r.click();})) return;
       /* 资金安全校验与条件支付同一套分档：按美元敞口对上限（兑现率放宽后）比较 */
       const usd=Math.round(D.coin==='BTC'?D.u*93600:D.coin==='ETH'?D.u*3130:D.u);
       const lim=Math.round(RULES.perDeal*ifrWiden(D.score));
@@ -8987,39 +9170,46 @@ function paintDeal(){
             :{amt:amtParts(D.u,D.coin), fund:`Signs the deposit from your Atara wallet — straight into the escrow contract, not to Atara`},
           {amtUsd:usd}));
     }
-    if(a==='go'&&D.side!=='buy'){
-      /* 入金方式二选一：Atara 钱包 = 卡片 + passkey 签名；
-         外部钱包 = 只给合约地址（不摆卡片），按钮变「已打款」，到账链上自动检测 */
-      D.fundVia=D.fundVia||'wallet';
-      const paintVia=v=>{
-        D.fundVia=v;
-        document.querySelectorAll('#confirm [data-fv]').forEach(x=>x.classList.toggle('on',x.dataset.fv===v));
-        const pr=document.getElementById('pspayrow');
-        if(pr)pr.style.display=v==='wallet'?'':'none';
-        const bd=document.querySelector('#confirm .fviabody');
-        const addr=ESCROW_ADDR[D.coin]||ESCROW_ADDR.USDT;
-        bd.innerHTML=v==='wallet'?'':`<div class="faddr" style="text-align:left;margin-top:10px">
-            <div class="fal"><span>Contract address · ${ESCROW_NET[D.coin]||'TRON'} only</span>
-              <a class="esxp" href="${ESCROW_XP(D.coin)+addr}" target="_blank" rel="noopener" title="View on explorer">↗</a>
-              <button type="button" class="btn btn-ghost btn-sm" data-fcopy>Copy</button></div>
-            <code class="famono">${addr}</code>
-            <div class="fal"><span>Amount</span><b class="num">${D.u.toLocaleString()} ${D.coin}</b></div>
-            <div class="fwait" style="margin-top:2px"><i></i>Send from any wallet — we watch the contract, detection is automatic</div>
-          </div>`;
-        bd.querySelector('[data-fcopy]')?.addEventListener('click',ev=>{
-          try{navigator.clipboard.writeText(addr)}catch(_){}
-          ev.currentTarget.textContent='Copied';});
-        const ok=document.getElementById('cok');
-        if(v==='ext'){ok.innerHTML='I\u2019ve sent it'; ok.dataset.plain='1';}
-        else{ok.innerHTML=PK_LABEL; ok.dataset.plain='';}
-      };
-      document.querySelectorAll('#confirm [data-fv]').forEach(x=>x.onclick=()=>paintVia(x.dataset.fv));
-      paintVia(D.fundVia);
-    }
+    if(a==='go'&&D.side!=='buy') bindFundVia(D.coin, `${D.u.toLocaleString()} ${D.coin}`, D);
     if(a==='paid') advance('s4');
+    if(a==='dispute'){
+      openDispute({who:D.name, amt:`${D.u.toLocaleString()} ${D.coin} · ${fmtMoney(D.fiat,D.ccy||'CNY')}`,
+        sess:D.th&&D.th.id});
+      return;
+    }
     if(a==='cancel') cancelDeal();
     if(a==='drop'){D.el.remove();D=null;}
   });
+}
+/* 入金方式二选一：Atara 钱包 = 额度卡 + passkey 签名；
+   外部钱包 = 只给合约地址（不摆卡片），按钮变「已打款」，到账链上自动检测。
+   卖出接单和挂单锁币是同一件事，共用这一套 */
+function bindFundVia(coin, amtText, st){
+  st.fundVia=st.fundVia||'wallet';
+  const paint=v=>{
+    st.fundVia=v;
+    document.querySelectorAll('#confirm [data-fv]').forEach(x=>x.classList.toggle('on',x.dataset.fv===v));
+    const pr=document.getElementById('pspayrow');
+    if(pr)pr.style.display=v==='wallet'?'':'none';
+    const bd=document.querySelector('#confirm .fviabody'); if(!bd)return;
+    const addr=ESCROW_ADDR[coin]||ESCROW_ADDR.USDT;
+    bd.innerHTML=v==='wallet'?'':`<div class="faddr" style="text-align:left;margin-top:10px">
+        <div class="fal"><span>Contract address · ${ESCROW_NET[coin]||'TRON'} only</span>
+          <a class="esxp" href="${ESCROW_XP(coin)+addr}" target="_blank" rel="noopener" title="View on explorer">↗</a>
+          <button type="button" class="btn btn-ghost btn-sm" data-fcopy>Copy</button></div>
+        <code class="famono">${addr}</code>
+        <div class="fal"><span>Amount</span><b class="num">${amtText}</b></div>
+        <div class="fwait" style="margin-top:2px"><i></i>Send from any wallet — we watch the contract, detection is automatic</div>
+      </div>`;
+    bd.querySelector('[data-fcopy]')?.addEventListener('click',ev=>{
+      try{navigator.clipboard.writeText(addr)}catch(_){}
+      ev.currentTarget.textContent='Copied';});
+    const ok=document.getElementById('cok');
+    if(v==='ext'){ok.innerHTML='I\u2019ve sent it'; ok.dataset.plain='1';}
+    else{ok.innerHTML=PK_LABEL; ok.dataset.plain='';}
+  };
+  document.querySelectorAll('#confirm [data-fv]').forEach(x=>x.onclick=()=>paint(x.dataset.fv));
+  paint(st.fundVia);
 }
 function steps(i){
   /* 与托管卡同一套轨道语言：站名 + 当前站 ETA，不再是无名细条 */
@@ -9197,7 +9387,7 @@ const kycSteps=()=>SELLER.d.kind==='Corporate'?KYC_CORP:KYC_IND;
 
 /* ── 挂单配置（能力级，与 KYC 分开）── */
 const LISTING_STEPS=[
- {t:'Listing setup', lead:'Your limits appear on your public listing card.'},
+ {t:'What you trade', lead:'These terms bound every listing you post — no amounts yet.'},
  {t:'Confirm', lead:'Once approved you can post listings — buying, selling, or both.'},
 ];
 
@@ -9389,7 +9579,7 @@ function paintMaker(){
   }
 
 
-  const tag = S.phase==='kyc' ? (d.kind==='Corporate'?'Business verification':'Identity verification') : 'Listing setup';
+  const tag = S.phase==='kyc' ? (d.kind==='Corporate'?'Business verification':'Identity verification') : 'Trading terms';
   el.className='deal mine xopen';   /* 表单卡恒展开——展开与否是交易卡的概念，不是它的 */
   el.innerHTML=
     `<div class="row1"><span class="st">${tag}</span>
@@ -9431,8 +9621,129 @@ function paintMaker(){
   };
 }
 
+/* 身份核验是账户级的一次性动作，挂单方和吃单方共用同一套卡片。
+   通过之后自动接回用户原本要做的事，不把他丢在入驻流程里 */
+let KYC_AFTER=null;
+function requireKyc(after){
+  if(SELLER.kycOk) return false;
+  if(SELLER.kycDone){ /* 已提交、还在审 */
+    openModal('Identity check in review',
+      `<div class="sqi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.4 2"/></svg></div>
+       <p class="acnote">Your application is with the reviewer — usually cleared within one business day.</p>
+       <div class="dfoot">
+         <button class="btn btn-primary" data-k="go">See the application →</button>
+       </div>`,
+      ()=>{
+        document.getElementById('mbody').querySelector('[data-k="go"]').onclick=()=>{
+          closeModal(); ensureDesk(); restoreSession('atara'); switchView('chat'); renderLeft();
+        };
+      },'msq');
+    return true;
+  }
+  /* 不要把人默默甩到另一条线程去：在他所在的对话里说清楚为什么、
+     他点了头再跳。跳转本身不是提示 */
+  openModal('Verify your identity',
+    `<div class="sqi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.6 4.6 5.6v5.5c0 4.4 3 8.5 7.4 9.8 4.4-1.3 7.4-5.4 7.4-9.8V5.6Z"/><circle cx="12" cy="10" r="2.4"/><path d="M8.4 16.4a4 4 0 0 1 7.2 0"/></svg></div>
+     <p class="acnote">A one-time check before your first trade — the fiat leg goes bank to bank, so the payer has to be identifiable.</p>
+     <div class="dfoot">
+       <button class="btn btn-primary" data-k="go">Verify identity →</button>
+     </div>`,
+    ()=>{
+      document.getElementById('mbody').querySelector('[data-k="go"]').onclick=()=>{
+        closeModal(); KYC_AFTER=after||null; openSeller();
+      };
+    },'msq');
+  return true;
+}
+/* ══ 争议 ══
+   一期不接裁决系统：用户提交一份案卷，Atara 这边人工处理，结果回邮件。
+   界面上不假装有仲裁庭，但也不能让人无路可走——所以是一条能走完的工单流。 */
+let DSP_N=0;
+const DISPUTE_KINDS=['They say they did not receive it','Amount does not match',
+  'Paid to the wrong account','Goods or service not as agreed','Something else'];
+function openDispute(ctx){
+  if(requireLogin(()=>openDispute(ctx)))return;
+  openModal('Open a dispute',
+    `<div class="sqi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.4 2.6 20h18.8Z"/><path d="M12 9.6v4.2"/><circle cx="12" cy="16.8" r=".9" fill="currentColor" stroke="none"/></svg></div>
+     <p class="acnote">Funds stay locked while we look at it. You describe what happened, we review the record, and reply by email — usually within one business day.</p>
+     <div class="dfoot">
+       <button class="btn btn-primary" data-k="go">Open a case →</button>
+     </div>`,
+    ()=>{document.getElementById('mbody').querySelector('[data-k="go"]').onclick=()=>{
+      closeModal(); disputeForm(ctx||{});
+    };},'msq');
+}
+/* 表单是一张表，不是一段对话——用模态，人留在出事的那条线程里填。
+   案卷归档到 Atara AI 线程，但那是提交之后的事，由用户自己决定去不去看 */
+function disputeForm(ctx){
+  const D2={kind:DISPUTE_KINDS[0], text:'', file:'', ref:ctx.ref||('DSP-'+(1041+(++DSP_N)))};
+  const draw=()=>{
+    const el=document.getElementById('mbody');
+    el.innerHTML=`
+      <p class="acnote">${D2.ref}${ctx.who?' · '+ctx.who:''}${ctx.amt?' · '+ctx.amt:''}</p>
+      <p class="acnote">The order record, the escrow history and anything you upload go with the case.</p>
+      <div class="sf"><span class="sfl">What went wrong</span>
+        <div class="sfchips">${DISPUTE_KINDS.map(k=>
+          `<button type="button" class="sfchip${D2.kind===k?' on':''}" data-dk="${k}">${k}</button>`).join('')}</div></div>
+      <div class="sf" id="dsp-t"><span class="sfl">Details</span>
+        <input type="text" id="dsp-text" value="${D2.text}" placeholder="What happened, and when" autocomplete="off">
+        <span class="err">Tell us what happened</span></div>
+      <div class="sf">
+        <button type="button" class="sfup${D2.file?' ok':''}" id="dsp-up">
+          <span><b>Evidence <em style="font-style:normal;color:var(--faint)">optional</em></b><em>${D2.file||'Bank receipt, screenshot, chat export'}</em></span>
+          <span class="sfst">${D2.file?'Attached':'Attach'}</span></button></div>
+      <div class="dfoot">
+        <button class="btn btn-primary" id="dsp-go">Submit case</button>
+      </div>`;
+    el.querySelectorAll('[data-dk]').forEach(b=>b.onclick=()=>{
+      D2.text=el.querySelector('#dsp-text').value; D2.kind=b.dataset.dk; draw()});
+    el.querySelector('#dsp-up').onclick=()=>{
+      D2.text=el.querySelector('#dsp-text').value;
+      D2.file='receipt-'+D2.ref.toLowerCase()+'.pdf'; draw()};
+    el.querySelector('#dsp-go').onclick=()=>{
+      D2.text=el.querySelector('#dsp-text').value.trim();
+      if(!D2.text){el.querySelector('#dsp-t').classList.add('bad');
+        el.querySelector('#dsp-text').focus(); return}
+      submit();
+    };
+  };
+  const submit=()=>{
+    closeModal();
+    const desk=ensureDesk();
+    const el=document.createElement('div');
+    desk.el.appendChild(el);
+    el.className='deal xopen';
+    el.innerHTML=`<div class="row1"><span class="st">Dispute</span>
+        <span>${D2.ref} · submitted — with the Atara team</span></div>
+      <div class="open"><div class="openin"><div class="pad">
+        <dl class="sfsum">
+          <div><dt>Case</dt><dd class="num">${D2.ref}</dd></div>
+          ${ctx.who?`<div><dt>Counterparty</dt><dd>${ctx.who}</dd></div>`:''}
+          ${ctx.amt?`<div><dt>Amount</dt><dd class="num">${ctx.amt}</dd></div>`:''}
+          <div><dt>Reason</dt><dd>${D2.kind}</dd></div>
+          <div><dt>Evidence</dt><dd>${D2.file||'None attached'}</dd></div>
+        </dl>
+        <p class="rnote">Funds stay locked until the case closes. We reply to <b>${PROFILE.email||'your email'}</b> — usually within one business day.</p>
+      </div></div></div>`;
+    toast(`Dispute ${D2.ref} submitted — we will email you`);
+    /* 出事的那条线程里留一条播报，带一个「去看案卷」的入口——
+       跳不跳是用户的事，不是我们替他决定的 */
+    const th=ctx.sess&&SESSIONS.find(x=>x.id===ctx.sess);
+    if(th){
+      const m=document.createElement('div');
+      m.className='msg sys';
+      m.innerHTML=`<span class="bub">Dispute ${D2.ref} opened — funds stay locked while Atara reviews it. <a href="#" class="lnk" data-gocase>See the case ›</a></span>`;
+      th.el.appendChild(m);
+      m.querySelector('[data-gocase]').onclick=ev=>{ev.preventDefault();
+        restoreSession('atara'); switchView('chat');
+        setTimeout(()=>el.scrollIntoView({block:'center',behavior:'smooth'}),120);};
+      if(m.isConnected)m.scrollIntoView({block:'nearest',behavior:'smooth'});
+    }
+  };
+  openModal('Open a dispute',' ',draw);
+}
 /* ══ 挂单（单笔级）══
-   与 Listing setup 的边界：setup 是「我能卖什么」（能力级，审核一次），
+   与 Trading terms 的边界：terms 是「我能卖什么」（能力级，审核一次），
    这里是「这一单卖多少、什么价」（每次挂单都走）。选项范围由能力配置圈定。
    卖单挂出即锁币——买家看到的 Size 必须是真的锁在托管里的量。 */
 /* 收款渠道：按走廊分组的常用银行/轨道。渠道决定结算币种——
@@ -9451,6 +9762,14 @@ let OFFN=0;
 const OFF={side:'',coin:'',net:'',fiat:'',px:'',qty:'',min:''};
 function openOffer(){
   const d=SELLER.d;
+  /* 与身份核验、交易条款同一种载体：一张挂在 Atara AI 线程里的卡片。
+     好处不只是一致——挂完之后这张卡留在对话里，就是这笔挂单的记录 */
+  const desk=ensureDesk();
+  switchView('chat'); restoreSession('atara'); renderLeft();
+  if(!(OFF.el&&OFF.el.isConnected)){
+    OFF.el=document.createElement('div');
+    desk.el.appendChild(OFF.el);
+  }
   const sides=d.dir.length?d.dir:['Sell crypto','Buy crypto'];
   OFF.side=OFF.side||sides[0];
   OFF.coin=d.coins.includes(OFF.coin)?OFF.coin:d.coins[0];
@@ -9468,7 +9787,10 @@ function openOffer(){
     const sell=OFF.side==='Sell crypto';
     const chips=(list,sel,k)=>list.map(x=>
       `<button type="button" class="sfchip${sel===x?' on':''}" data-ok="${k}" data-ov="${x}">${x}</button>`).join('');
-    openModal('Create a listing',`
+    OFF.el.className='deal mine xopen';
+    OFF.el.innerHTML=`<div class="row1"><span class="st">Listing</span><span>New offer</span></div>
+      <div class="open"><div class="openin"><div class="pad">
+      <p class="sellm-lead">One offer with an amount and a price — posting it locks these coins into the escrow contract.</p>
       <div class="sf"><span class="sfl">Side</span><div class="sfchips">${chips(sides,OFF.side,'side')}</div></div>
       <div class="sf"><span class="sfl">Asset</span><div class="sfchips">${chips(d.coins,OFF.coin,'coin')}</div>
         ${sell?`<span class="ad num" style="font-size:11.5px;color:var(--faint)">${availOf(OFF.coin).toLocaleString()} ${OFF.coin} available — locks into escrow while listed</span>`:''}</div>
@@ -9485,8 +9807,10 @@ function openOffer(){
         <input type="text" id="ofmin" inputmode="numeric" value="${OFF.min}" placeholder="Min lot"><span class="err">Must be below the listing total</span></div>
       <div class="dfoot" style="margin-top:14px">
         <button class="btn btn-primary" id="ofgo">Review &amp; post</button>
-      </div>`,()=>{
-      const M=document.getElementById('mbody');
+      </div></div></div></div>`;
+    OFF.el.scrollIntoView({block:'nearest',behavior:'smooth'});
+    {
+      const M=OFF.el;
       M.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>{
         const k=b.dataset.ok;
         ['px','qty','min'].forEach(f=>OFF[f]=M.querySelector('#of'+f)?.value.trim()||OFF[f]);
@@ -9503,27 +9827,58 @@ function openOffer(){
         if(!(qty>0)||(sell&&qty>availOf(OFF.coin)))return bad('#of-qty');
         if(!(min>0)||min>qty*px)return bad('#of-min');
         OFF.px=px;OFF.qty=qty;OFF.min=min;
-        closeModal();
         /* 卖单锁币 = 资金动作，走同一个 Passkey 强确认；买单只是承诺，一句摘要即可 */
+        /* 挂单卖币和接单卖币是同一个动作——钱进同一个合约，
+           所以入金方式也得二选一，不能默认人人都有 Atara 钱包余额 */
         requireVerify(sell?'Posting locks funds into escrow':'Posting a public listing',
           `List <b class="num">${qty.toLocaleString()} ${OFF.coin}</b> ${sell?'for sale':'wanted'} at `+
           `<b class="num">${FIAT_SYM(OFF.fiat)}${px.toLocaleString()}</b> · min lot `+
-          `<b class="num">${FIAT_SYM(OFF.fiat)}${min.toLocaleString()}</b>${sell?'. Funds stay locked until filled or unlisted.':'.'}`,
-          postOffer,
+          `<b class="num">${FIAT_SYM(OFF.fiat)}${min.toLocaleString()}</b>${sell?'. Funds stay locked until filled or unlisted.':'.'}`+
+          (sell?`<div class="fvia">
+              <button type="button" class="sfchip on" data-fv="wallet">Atara wallet</button>
+              <button type="button" class="sfchip" data-fv="ext">External wallet</button>
+            </div>
+            <div class="fviabody"></div>`:''),
+          ()=>{postOffer(); offerPosted(sell,qty,px,min);},
           sell?{title:'Confirm listing', amt:amtParts(qty,OFF.coin), amtUsd:usdOf(qty,OFF.coin),
-                fund:`From your available ${OFF.coin} balance — stays locked until filled or unlisted`}
+                fund:`Signs the lock from your Atara wallet — straight into the escrow contract, not to Atara`}
               :{title:'Confirm listing', pay:[]});
+        if(sell) bindFundVia(OFF.coin, `${qty.toLocaleString()} ${OFF.coin}`, OFF);
       };
-    });
+    }
   };
   draw();
+}
+/* 挂完把表单换成回执：这张卡是这笔挂单在对话里的凭据 */
+function offerPosted(sell,qty,px,min){
+  if(!OFF.el)return;
+  const via=OFF.fundVia==='ext'?'External wallet → escrow contract':'Atara wallet · signed';
+  OFF.el.className='deal done xopen';
+  OFF.el.innerHTML=`<div class="row1"><span class="st">Listing</span><span>Posted</span></div>
+    <div class="open"><div class="openin"><div class="pad">
+      <dl class="sfsum">
+        <div><dt>Side</dt><dd>${OFF.side}</dd></div>
+        <div><dt>Size</dt><dd class="num">${qty.toLocaleString()} ${OFF.coin}</dd></div>
+        <div><dt>Rate</dt><dd class="num">${FIAT_SYM(OFF.fiat)}${px.toLocaleString()} per ${OFF.coin}</dd></div>
+        <div><dt>Min lot</dt><dd class="num">${FIAT_SYM(OFF.fiat)}${min.toLocaleString()}</dd></div>
+        ${sell?`<div><dt>Locked via</dt><dd>${via}</dd></div>`:''}
+      </dl>
+      <div class="dfoot" style="margin-top:12px">
+        <button class="btn btn-secondary btn-sm" data-a="mkt">View in Discover →</button>
+      </div>
+    </div></div></div>`;
+  OFF.el.querySelector('[data-a="mkt"]').onclick=()=>switchView('market');
+  OFF.el=null;   /* 下一次挂单开一张新卡，不覆盖这份记录 */
 }
 function postOffer(){
   const d=SELLER.d, sell=OFF.side==='Sell crypto';
   if(sell){
     const a=ASSETS.find(x=>x.coin===OFF.coin);
-    if(!a||a.avail<OFF.qty){toast('Not enough '+OFF.coin+' available');return}
-    a.avail=+(a.avail-OFF.qty).toFixed(6); a.escrow=+(a.escrow+OFF.qty).toFixed(6);
+    /* 外部钱包打进来的币从没在 Atara 钱包里待过：只增托管仓位，不动可用余额 */
+    const ext=OFF.fundVia==='ext';
+    if(!ext&&(!a||a.avail<OFF.qty)){toast('Not enough '+OFF.coin+' available');return}
+    if(!ext)a.avail=+(a.avail-OFF.qty).toFixed(6);
+    a.escrow=+(a.escrow+OFF.qty).toFixed(6);
     if(a.coin===FUNDS.coin){FUNDS.avail=a.avail;FUNDS.escrowed=a.escrow}
     renderBalance();renderAssets();
   }
@@ -9531,7 +9886,8 @@ function postOffer(){
   POOL.unshift({id:'my'+OFFN, mine:true,
     side:sell?'sell':'buy', coin:OFF.coin, net:OFF.net, nets:[OFF.net],
     docs:{kyc:1,pof:0,stm:0,poa:d.kind==='Corporate'?1:0,sow:0,chain:1},
-    qty:OFF.qty, px:OFF.px, name:PROFILE.name, peer:PROFILE.id, fiat:OFF.fiat,
+    qty:OFF.qty, px:OFF.px, name:PROFILE.name,
+    peer:WALLET_ADDR.slice(0,6)+'…'+WALLET_ADDR.slice(-4), fiat:OFF.fiat,
     sc:62, deals:0, disp:0, rate:null, rel:null, min:OFF.min, known:false});
   /* 看自己的单：切到与之对应的那一侧（买家视角） */
   mkSide=sell?'buy':'sell'; mkFilter='All'; mkFiat='';
@@ -9547,7 +9903,9 @@ function unlistOffer(id){
       if(a.coin===FUNDS.coin){FUNDS.avail=a.avail;FUNDS.escrowed=a.escrow}}
     renderBalance();renderAssets();
   }
-  POOL.splice(i,1); renderPool();
+  POOL.splice(i,1);
+  renderFilter(); renderPool();
+  if(document.getElementById('v-rules')&&!document.getElementById('v-rules').hidden) renderRules();
   toast(o.side==='sell'?`Unlisted — ${o.qty.toLocaleString()} ${o.coin} unlocked`:'Listing removed');
 }
 
@@ -9570,7 +9928,7 @@ function receiptCard(kind){
   const groups = kyc
     ? kycSteps().filter(st=>st.fields.length).map(st=>
         [st.t, st.fields.map(f=>[f.l,val(d.k[f.k])||'—'])])
-    : [['Listing configuration',[
+    : [['Trading terms',[
         ['Side',d.dir.join(' · ')],['Assets',d.coins.join(' · ')],
         ['Limits',Number(d.lo).toLocaleString()+' – '+Number(d.hi).toLocaleString()+' CNY'],
         ['Networks',d.nets.join(' · ')],
@@ -9585,27 +9943,30 @@ function receiptCard(kind){
      </details>`;
   /* ① 我方只留一句确认（表单是我填的，回执是平台开的——记录挂在回执上） */
   S.el?.remove(); S.el=null;
-  sellerMsg('me',`Submitted ${kyc?'identity verification':'listing configuration'}`);
+  sellerMsg('me',`Submitted ${kyc?'identity verification':'trading terms'}`);
   renderTypes();   /* CTA 立即进「审核中」态 */
   /* ② 平台回执：确认收到 + 可展开的完整提交记录 */
   const t=sellerMsg('them typing','typing…');
   setTimeout(()=>{
     t.className='msg them';
-    t.innerHTML=`<span class="bub">Received — your ${kyc?'identity application':'listing configuration'} is under review. Usually cleared within one business day <em style="font-style:normal;color:var(--faint)">(demo: seconds)</em>.${detail}</span>`;
+    t.innerHTML=`<span class="bub">Received — your ${kyc?'identity application':'trading terms'} are under review. Usually cleared within one business day <em style="font-style:normal;color:var(--faint)">(demo: seconds)</em>.${detail}</span>`;
   },1200);
   /* ③ 审核通过：平台再来一条，带下一步入口 */
   setTimeout(()=>{
     if(kyc){S.kycOk=true}else{S.approved=true}
+    const back=kyc&&KYC_AFTER;
+    if(back)KYC_AFTER=null;
     const m=sellerMsg('them',
-      kyc?`✓ Identity verified. Next: configure what you sell — assets, limits, pricing and payment rails.
-           <span class="rgo"><button class="btn btn-primary btn-sm" data-rgo="cfg">Set up listing →</button></span>`
-         :`✓ Listing approved. You can post from the Discover page whenever you're ready.
-           <span class="rgo"><button class="btn btn-primary btn-sm" data-rgo="offer">Create a listing →</button></span>`);
-    m.querySelector('[data-rgo]').onclick=ev=>{
-      ev.currentTarget.dataset.rgo==='cfg'?openSeller():openOffer()};
+      back?`✓ Identity verified — you can trade now.`
+      :kyc?`✓ Identity verified. Next: configure what you sell — assets, limits, pricing and payment rails.
+           <span class="rgo"><button class="btn btn-primary btn-sm" data-rgo="cfg">Set up trading terms →</button></span>`
+         :`✓ Terms approved — you can post listings now. A listing is one offer with an amount and a price; posting it locks those coins into the escrow contract.
+           <span class="rgo"><button class="btn btn-primary btn-sm" data-rgo="offer">Post your first listing →</button></span>`);
+    m.querySelector('[data-rgo]')?.addEventListener('click',ev=>{
+      ev.currentTarget.dataset.rgo==='cfg'?openSeller():openOffer()});
     setTimeout(()=>m.scrollIntoView({behavior:'smooth',block:'end'}),80);  /* 按钮要整个滚进可视区 */
     renderTypes();
-    toast(kyc?'Identity approved':'Listing approved — you can post now');
+    toast(kyc?'Identity approved — you can trade now':'Terms approved — you can post listings now');
   },6000);
 }
 
@@ -9679,11 +10040,13 @@ function openSeller(){
   SELLER.el=null;  /* 已经开着就别再开一张 */
   /* 审核中不允许重复提交——定位到对话里最后那条回执 */
   if((SELLER.kycDone&&!SELLER.kycOk)||(SELLER.done&&!SELLER.approved)){
+    ensureDesk(); restoreSession('atara'); renderLeft();
     const msgs=document.querySelectorAll('#log .msg');
     if(msgs.length){msgs[msgs.length-1].scrollIntoView({block:'center',behavior:'smooth'})}
     else toast('Your application is under review');
     return;
   }
+  /* 已通过：线程留着，进挂单表单 */
   if(SELLER.approved){openOffer();return}   /* 全部审过 = 该挂单了 */
   /* 身份审过才进挂单配置——KYC 是账户级的，不该每次挂单都重做一遍 */
   const phase=SELLER.kycOk?'listing':'kyc';
@@ -9691,10 +10054,15 @@ function openSeller(){
      换了阶段（核验完进挂单配置）才归零。 */
   if(SELLER.phase!==phase) SELLER.step=0;
   SELLER.phase=phase; SELLER.warn=''; SELLER.badId='';
-  /* 入驻是另一件事,不该接在别人的对话后面 */
-  newSession(); selected=null; renderLeft(); renderStrip();
-  SELLER.el=document.createElement('div');
-  document.getElementById('log').prepend(SELLER.el);
+  /* 入驻是另一件事,不该接在别人的对话后面——但也不能没人接着：进 Atara 线程 */
+  const desk=ensureDesk();
+  restoreSession('atara'); selected=null; renderLeft(); renderStrip();
+  /* 线程收进 stash 时节点 isConnected 为 false——那不是「没有卡」，
+     照旧新建就会叠出第二张一模一样的表单 */
+  if(!(SELLER.el&&SELLER.el.parentNode===desk.el)){
+    SELLER.el=document.createElement('div');
+    desk.el.appendChild(SELLER.el);
+  }
   document.getElementById('empty')?.remove();
   paintMaker();
 }
