@@ -2153,8 +2153,10 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .ragav svg{display:block;width:100%;height:100%;overflow:visible}
 .ragav .gart,.ragav .geyes{transform-box:fill-box;transform-origin:center}
 .ragp.idle .ragav,.ragp.queued .ragav{filter:grayscale(.7) brightness(.85);opacity:.62}
-.ragp.checking .ragav .gart{animation:gsquash 1.5s var(--ease) infinite}
-.ragp.checking .ragav .geyes{animation:geyescan 1.7s ease-in-out infinite}
+.ragp.reading .ragav .gart,.ragp.conferring .ragav .gart{animation:gsquash 1.5s var(--ease) infinite}
+.ragp.reading .ragav .geyes{animation:geyescan 1.7s ease-in-out infinite}
+/* 讨论时眼睛不再左右扫自己的资料，而是慢慢看向别人 */
+.ragp.conferring .ragav .geyes{animation:geyescan 2.9s ease-in-out infinite}
 .ragp.flag .ragav .geyes{transform:scaleY(1.28)}
 @keyframes gsquash{0%,100%{transform:scale(1,1) translateY(0)}
   38%{transform:scale(1.08,.9) translateY(.7px)}
@@ -2176,10 +2178,15 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .ragt{display:flex;flex-direction:column;gap:1px;line-height:1.25}
 .ragt b{font-size:var(--rt-body);font-weight:var(--rt-body-w);color:var(--mute);white-space:nowrap}
 .ragt i{font-style:normal;font-size:var(--rt-meta);color:var(--faint-2);white-space:nowrap}
-.ragp.checking .ragt b,.ragp.pass .ragt b,.ragp.note .ragt b,.ragp.flag .ragt b{color:var(--ink)}
+/* 结论是一个分，不是一个勾 */
+.ragp.pass .ragt i,.ragp.note .ragt i,.ragp.flag .ragt i{
+  font-variant-numeric:tabular-nums;font-weight:600;font-size:var(--rt-body);color:var(--ink)}
+.ragp.note .ragt i{color:var(--warn)}
+.ragp.flag .ragt i{color:#d0574d}
+.ragp.reading .ragt b,.ragp.conferring .ragt b,.ragp.pass .ragt b,.ragp.note .ragt b,.ragp.flag .ragt b{color:var(--ink)}
 .ragp.queued .ragt b{color:var(--mute)}
-.ragp.checking{background:var(--paper)}
-.ragp.checking .ragt i{color:var(--accent)}
+.ragp.reading,.ragp.conferring{background:var(--paper)}
+.ragp.reading .ragt i,.ragp.conferring .ragt i{color:var(--accent)}
 .ragp.queued{background:none}
 .ragp.pass .ragt i{color:var(--green)}
 .ragp.note .ragt i{color:var(--warn)}
@@ -4961,9 +4968,7 @@ function bindRulesPage(){
     if(p==='gopay'){openPayees();return}
     if(p==='newcard'){openAllowanceModal();return}
     if(p.startsWith('edit:')){openAllowanceModal(CARDS.find(x=>x.id===p.slice(5)));return}
-    if(p.startsWith('tg:')){
-      const c=CARDS.find(x=>x.id===p.slice(3));c.on=!c.on;renderRules();return;
-    }
+    if(p.startsWith('tg:')){revokeAllowance(CARDS.find(x=>x.id===p.slice(3)));return}
     if(p.startsWith('cq:')){
       const c=CARDS.find(x=>x.id===p.slice(3));
       const host=b.closest('.card').querySelector('.cq');
@@ -5315,25 +5320,35 @@ function agentGlyph(i){
    这里不另造一套状态机。 */
 function renderRoster(live){
   const el=document.getElementById('rs-roster'); if(!el)return;
-  const runId=AFJOB?AFJOB.id:AFLAST;
+  /* 结论跟着订单走，不跟着「刚才跑过没有」走：
+     先认当前批次，其次认这条会话已经跑完的那一批（AFLAST 在切换时会被清空，
+     单靠它，评估跑完切一下就把分数抹了） */
+  const ctxRun=ctxRuns().find(r=>r.agents&&r.agents.length);
+  const runId=AFJOB?AFJOB.id:(AFLAST||(ctxRun&&ctxRun.id));
+  /* AFEED 里没有这一批的票时（种子订单、切回历史订单），直接读批次自带的名单 */
+  const roster=(!AFJOB&&ctxRun&&ctxRun.done)?ctxRun.agents:null;
   /* 队头 = 第一个还没表态的。它是「正在查」的那一个，其余都在等 */
   const HEAD=RISK_AGENTS.findIndex(a=>
     !(runId&&AFEED.find(e=>e.run===runId&&e.kind==='agent'&&e.title===a.n)));
   el.innerHTML=RISK_AGENTS.map((a,i)=>{
     const short=a.n.replace(/ Agent$/,'');
     /* 只认当前这一批的票，上一笔的结论不该挂在这一笔的脸上 */
-    const voted=runId?AFEED.find(e=>e.run===runId&&e.kind==='agent'&&e.title===a.n):null;
+    const voted=(runId&&AFEED.find(e=>e.run===runId&&e.kind==='agent'&&e.title===a.n))
+      || (roster&&roster.find(x=>x.n===a.n)&&{v:(roster.find(x=>x.n===a.n)||{}).v})
+      || null;
     /* 票面有三档，别把「带备注的通过」写成「被拦下」——那是两回事：
        Pass / Pass · note（放行但记一笔）/ 其余才是真反对 */
     const v=voted?String(voted.v||''):'';
     /* 七个一起转圈没有信息量，只有疲劳——票本来就是一个一个落的，
        那就照实画：轮到谁谁转（checking），后面的静止排队（queued），
        表过态的封印（pass/note/flag）。眼睛只需要盯一个动的东西。 */
+    /* 出分之前所有人都在动：取数是各查各的，讨论是互相看——
+       没有「排队等着轮到我」这回事，那是上一版为了省动画编出来的 */
     const st = voted ? (/note/i.test(v) ? 'note' : (/^pass/i.test(v) ? 'pass' : 'flag'))
              : !live ? 'idle'
-             : (i===HEAD ? 'checking' : 'queued');
-    const txt={pass:'pass',note:'pass · note',flag:'objected',
-               checking:'checking',queued:'queued',idle:''}[st];
+             : (AGPHASE==='read' ? 'reading' : 'conferring');
+    const txt = voted ? (a.sc!=null?String(a.sc):'scored')
+              : {reading:'reading sources', conferring:'comparing notes', idle:''}[st]||'';
     return `<button type="button" class="ragp ${st}${ASEL===a.n?' sel':''}"
         data-agsel="${a.n}" aria-pressed="${ASEL===a.n}" title="${a.n} · ${a.d}">
       <span class="ragav">${agentGlyph(i)}</span>
@@ -5431,6 +5446,7 @@ function afStop(){AFLAST=AFJOB?AFJOB.id:AFLAST; AFJOB=null; afLive(false); afRen
 function afClearPanel(){const h=document.getElementById('afpanel');
   if(h){h.innerHTML=''; h.hidden=true}}
 function afLive(on){
+  if(!on)AGPHASE=null;
   const l=document.getElementById('aflive');
   /* 收起时那颗灯是这块面板唯一的信号：它跟面板内的状态同源 */
   document.getElementById('rshow')?.classList.toggle('live',!!on);
@@ -5514,6 +5530,7 @@ const RUN_STEPS={
 const ARUNS=[];                 /* 最新在前 */
 let ASEL=null;                  /* 候命排里选中的 agent —— 选中时右侧切成它的底稿 */
 let ACTX=null;                  /* 当前上下文会话 id —— 右栏只讲这个会话的评估 */
+let AGPHASE=null;               /* read → talk → （逐个出分）；空闲时为 null */
 let ARUN=null;
 function arunStart(kind,subject,agents){
   ARUN={id:'r'+(ARUNS.length+1)+'-'+Math.round(performance.now()), kind, subject,
@@ -5666,8 +5683,7 @@ function arunAgentPane(box){
   const a=RISK_AGENTS[i]; if(!a){ASEL=null;return arunRender()}
   /* 与面板其余部分同一条口径（见 arunRender 里的 RUNS）：
      当前订单没跑过，这个 agent 在这一笔上就没有结论——不能拿档案顶数 */
-  const scope=ACTX?ARUNS.filter(r=>r.sess===ACTX):ARUNS.filter(r=>!r.seeded);
-  const run=scope.find(r=>r.agents&&r.agents.length);
+  const run=ctxRuns().find(r=>r.agents&&r.agents.length);
   const voted=run&&run.done ? String(a.v||'') : '';
   const cls=/note/i.test(voted)?'note':(/^pass/i.test(voted)?'pass':'');
   const ev=a.ev||{};
@@ -6798,7 +6814,7 @@ function addLine(cls,label,snap){
    独立出票；同意率过阈值（≥90%【决策】）才算通过——单模型一言堂不可审计，
    分维度的票型既是判定依据也是给用户看的解释 */
 const RISK_AGENTS=[
- {n:'Identity Agent',  d:'KYC records · liveness',          v:'Pass',
+ {n:'Identity Agent', sc:94,  d:'KYC records · liveness',          v:'Pass',
   m:'government ID, liveness and account age reconcile across records',
   ev:{pull:'KYC registry · 6 records', rec:6, srcN:4,
     srcs:[{n:'Government ID registry',d:'document verified · 09:12 UTC'},
@@ -6814,7 +6830,7 @@ const RISK_AGENTS=[
          'status        ACTIVE · good standing','ubo[0]        L. Cheung  · 62%',
          'ubo[1]        M. Fong    · 38%','liveness      PASS score=0.94  2026-08-13',
          'id_match      0.92  (threshold 0.85)']}},
- {n:'Provenance Agent',d:'On-chain fund tracing',           v:'Pass',
+ {n:'Provenance Agent', sc:91,d:'On-chain fund tracing',           v:'Pass',
   m:'funds trace to a licensed-exchange withdrawal three hops back — no mixer or bridge exposure',
   ev:{pull:'on-chain trace · 4 hops · 3 chains', rec:47, srcN:3,
     srcs:[{n:'TRON full node',d:'blocks 71.2M–71.4M indexed'},
@@ -6834,7 +6850,7 @@ const RISK_AGENTS=[
          'tx  c93d…44e1  −18,826 USDC  TQ5n…aU8k → TWr8…kP2m',
          'tx  0f21…8b70  −18,826 USDC  TWr8…kP2m → escrow',
          'labels  binance:hot, otc_desk:verified   flags: none']}},
- {n:'Graph Agent',     d:'Address clustering · related parties', v:'Pass',
+ {n:'Graph Agent', sc:88,     d:'Address clustering · related parties', v:'Pass',
   m:'address cluster is isolated, no shared infrastructure with flagged accounts',
   ev:{pull:'cluster scan · 214 addresses', rec:214, srcN:2,
     srcs:[{n:'Co-spend clustering engine',d:'214 addresses resolved to 1 entity'},
@@ -6850,7 +6866,7 @@ const RISK_AGENTS=[
          'flagged_hits  0       nearest=4 hops (mixer:tornado)',
          'shared_cp     hc-shenzhen, kj-osaka, pb-manila',
          'sybil_score   0.03   (threshold 0.40)']}},
- {n:'Sanctions Agent', d:'Watchlists · PEP screening',      v:'Pass',
+ {n:'Sanctions Agent', sc:97, d:'Watchlists · PEP screening',      v:'Pass',
   m:'no hits across OFAC, UN or EU lists; jurisdiction clear',
   ev:{pull:'5 watchlists · 2 entities screened', rec:10, srcN:5,
     srcs:[{n:'OFAC SDN + consolidated',d:'0 hits · list of 2026-08-22'},
@@ -6869,7 +6885,7 @@ const RISK_AGENTS=[
          'un      0 hits   eu 0 hits   hmt 0 hits',
          'pep     0 matches  adverse_media 0 above 0.60',
          'jurisdiction  HK  restricted=false']}},
- {n:'Behavior Agent',  d:'Settlement history · disputes',   v:'Pass',
+ {n:'Behavior Agent', sc:86,  d:'Settlement history · disputes',   v:'Pass',
   m:'deep settlement history, zero disputes, median release under two minutes',
   ev:{pull:'settlement ledger · 124 trades', rec:124, srcN:2,
     srcs:[{n:'Platform settlement ledger',d:'124 completed trades · 18 months'},
@@ -6885,7 +6901,7 @@ const RISK_AGENTS=[
          'disputes     0     chargebacks 0',
          'cancels      1     (2026-04-02, buyer withdrew)',
          'with_you     3     last 2026-07-29  all released']}},
- {n:'Pricing Agent',   d:'Quote deviation vs index',        v:'Pass',
+ {n:'Pricing Agent', sc:90,   d:'Quote deviation vs index',        v:'Pass',
   m:'quote sits +0.5% over index — inside the normal band, no bait-pricing pattern',
   ev:{pull:'index feed · 5 venues', rec:5, srcN:5,
     srcs:[{n:'Venue mid prices',d:'5 venues · 30s snapshot'},
@@ -6904,7 +6920,7 @@ const RISK_AGENTS=[
          'dev       +0.50%   band ±1.20%   z=0.41',
          'hist_30d  41 quotes  median_spread 0.60%  reprice_events 0',
          'peers     12 live   best 7.30   worst 7.44']}},
- {n:'Velocity Agent',  d:'Frequency & size anomaly',        v:'Pass · note',
+ {n:'Velocity Agent', sc:74,  d:'Frequency & size anomaly',        v:'Pass · note',
   rz:'this is the largest ticket with this counterparty in 30 days. It is within your limit, so it is recorded on the order — not blocking',
   ev:{pull:'30-day pattern · 41 transfers', rec:41, srcN:2,
     srcs:[{n:'Your transfer log',d:'41 transfers · 30 days'},
@@ -7550,11 +7566,14 @@ function thinking(steps, chips, done, verdict, agents){
      环从投票期起步，与星座的票一一对齐 */
   const agN=agents?agents.list.length:0;
   const AG_STEP=1050, AG_TALK=4600;
+  /* 七个 agent 不是并排打勾：他们先各自取数，再互相交换依据，最后逐个出分。
+     三段在时间轴上一直存在（pull → talk → votes），这里把它说出来 */
+  const setPhase=ph=>{AGPHASE=ph; renderRoster(true)};
   const agBase=steps.length*190 + chips.length*90 + 400;
   const agDone=AG_TALK + agN*AG_STEP + 900;
   if(agents){
     /* ── 进度：拉证据 ── 一句结论，详情收进折叠 */
-    setTimeout(()=>arunStep('pull',{st:'run',line:'reading sources…'}), agBase+200);
+    setTimeout(()=>{arunStep('pull',{st:'run',line:'reading sources…'}); setPhase('read')}, agBase+200);
     setTimeout(()=>{
       const rec=agents.list.reduce((a,x)=>a+(x.ev?.rec||0),0);
       /* 源要去重：七个 agent 各报各的 srcN，直接相加会把同一个登记处数好几遍 */
@@ -7567,6 +7586,7 @@ function thinking(steps, chips, done, verdict, agents){
       arunStep('pull',{st:'done', line:`${src} sources · ${rec.toLocaleString()} records`,
         detail:rows});
       arunStep('check',{st:'run', line:`0 of ${agents.list.length}`});
+      setPhase('talk');
     }, agBase+AG_TALK-200);
 
     /* 每票一条，偏移与环上的刻度一致——右栏和面板讲的是同一件事的同一时刻 */
@@ -8585,18 +8605,30 @@ const SESSIONS=[];
 /* Assessment 跟着当前会话走：这个会话有自己的批次就把它端上来
    （批次列表只显示它的，环按它的定格帧还原）；没有就回空态——
    右栏说的必须是你正看着的这单，而不是全局最近跑的那一次。 */
-function assessSync(sess){
-  if(AFJOB)return;                       /* 正在跑的评估不打断 */
-  ASEL=null;
-  const top=document.getElementById('agtop'); if(top)top.hidden=true;
-  /* 聊天会话本身没批次：跟人聊 Harbor Desk，右栏该讲的是你和 Harbor 那单的评估。
-     按同一对手方把 task 会话的批次也认进来。 */
+/* 一条会话名下有哪些批次——聊天会话本身没批次，得把同一对手方的工单批次认进来。
+   这套口径三处在用（右栏同步、agent 名册、agent profile），只许有一份 */
+function runIdsOf(sess){
   const ids=new Set(sess?[sess.id]:[]);
   if(sess&&sess.kind==='chat'){
     SESSIONS.filter(x=>x.kind==='task'&&x.peer===sess.peer).forEach(x=>ids.add(x.id));
     TASKS.filter(x=>x.cpid===sess.peer||(x.seed&&x.seed.cp)===sess.peer)
          .forEach(x=>ids.add(x.sess||x.id));
   }
+  return ids;
+}
+function ctxRuns(){
+  const sess=ACTX?SESSIONS.find(x=>x.id===ACTX):null;
+  if(!sess)return ARUNS.filter(r=>!r.seeded);
+  const ids=runIdsOf(sess);
+  return ARUNS.filter(r=>ids.has(r.sess));
+}
+function assessSync(sess){
+  if(AFJOB)return;                       /* 正在跑的评估不打断 */
+  ASEL=null;
+  const top=document.getElementById('agtop'); if(top)top.hidden=true;
+  /* 聊天会话本身没批次：跟人聊 Harbor Desk，右栏该讲的是你和 Harbor 那单的评估。
+     按同一对手方把 task 会话的批次也认进来。 */
+  const ids=runIdsOf(sess);
   const mine=sess?ARUNS.filter(r=>ids.has(r.sess)):[];
   ACTX = sess ? sess.id : null;
   if(mine.length){
@@ -9848,6 +9880,49 @@ function openOffer(){
     }
   };
   draw();
+}
+/* 撤销和开通是同一件事的两个方向：都在改链上谁能花你的钱，
+   所以都要签一次。一键翻个标志位就撤掉，等于自己拆了「链上强制」这句话 */
+function revokeAllowance(c){
+  if(!c)return;
+  const ext=WALLET_KIND==='ext', off=c.on;   /* off=true 表示这次是撤销 */
+  const name=c.me?'Your own limit':c.name;
+  const per=c.me?RULES.perDeal:c.per, quota=c.me?budget:c.quota;
+  const icon=off
+    ? '<path d="M12 2.6 4.6 5.6v5.5c0 4.4 3 8.5 7.4 9.8 4.4-1.3 7.4-5.4 7.4-9.8V5.6Z"/><path d="M9 12.4 15 9"/>'
+    : '<path d="M12 2.6 4.6 5.6v5.5c0 4.4 3 8.5 7.4 9.8 4.4-1.3 7.4-5.4 7.4-9.8V5.6Z"/><path d="M9 11.9l2.1 2.1L15.4 9.7"/>';
+  const what=`<b>${name}</b> · up to ${per?per.toLocaleString():'any amount'} USDT per payment · ${quota.toLocaleString()} ${c.cycle}`;
+  openModal(off?'Revoke allowance':'Re-issue allowance',
+    `<div class="sqi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon}</svg></div>
+     <p class="acnote">${what}</p>
+     <p class="acnote">${off
+       ? (ext?'Your wallet signs an approve of zero to the spending contract. Payments stop as soon as it confirms.'
+            :'Signing removes the rule from your account contract — payments stop at the next block.')
+       : (ext?'Your wallet approves this cap to the spending contract again.'
+            :'Signing writes the rule back into your account contract.')}</p>
+     <div class="dfoot">
+       <button class="btn btn-primary" data-k="go">${ext?(off?'Revoke in wallet':'Approve in wallet'):'Sign with passkey'}</button>
+     </div>`,
+    ()=>{
+      document.getElementById('mbody').querySelector('[data-k="go"]').onclick=()=>{
+        const body=document.getElementById('mbody');
+        body.innerHTML=`<div class="nasign">${ext
+          ? `<span class="gspin"></span><b>Waiting for your wallet</b>
+             <em>${off?'Sign the approve of zero — it costs a network fee and nothing else moves.'
+                      :'Sign the approve — nothing moves now, it only sets the cap.'}</em>`
+          : `<span class="gpkring">✦</span><b>Touch ID</b>
+             <em>Signing the policy change on your account contract.</em>`}</div>`;
+        setTimeout(()=>{
+          body.innerHTML=`<div class="nasign"><span class="gok">✓</span>
+            <b>${off?'Allowance revoked':'Allowance live again'}</b>
+            <em>${off?`${name} can no longer spend from this wallet.`
+                     :`${name} can spend again, under the same caps.`}</em></div>`;
+          c.on=!c.on;
+          setTimeout(()=>{closeModal();renderRules();
+            toast(off?`Revoked — ${name}`:`Re-issued — ${name}`)},1100);
+        },1600);
+      };
+    },'msq');
 }
 /* 挂完把表单换成回执：这张卡是这笔挂单在对话里的凭据 */
 function offerPosted(sell,qty,px,min){
