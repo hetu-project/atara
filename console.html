@@ -3373,7 +3373,109 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 </div>
 
 <script>
-/* ───── 模拟数据（对齐设计文档 §5.1 线框示例） ───── */
+/* ═══════════════════════════════════════════════════════════════
+   后端接口层 · atara-pay
+   ───────────────────────────────────────────────────────────────
+   下面那些数组（CPS / POOL / ASSETS / CARDS …）不再是写死的数据，
+   开机时由 boot() 从后端灌进去。渲染代码读的还是同一批数组，所以
+   一行都不用改——变的只是它们从哪来。
+
+   非托管的口径在这里就要立住：余额和托管仓位都来自 /wallet，
+   那是链上的事实，前端不许自己加减。任何看起来像"本地记账"的
+   写法（used += amt 之类）都要换成重新拉一次。
+   ═══════════════════════════════════════════════════════════════ */
+const API_BASE = (() => {
+  const q = new URLSearchParams(location.search).get('api');
+  if (q) { try { localStorage.setItem('atara-api', q) } catch (_) {} return q }
+  try { const v = localStorage.getItem('atara-api'); if (v) return v } catch (_) {}
+  return 'http://localhost:8080/api/v1';
+})();
+
+/* 身份 = 地址。后端的 mock 鉴权认地址，也认展示名。 */
+let ME = null;
+let ACTOR = (() => { try { return localStorage.getItem('atara-actor') || 'Demo' } catch (_) { return 'Demo' } })();
+function setActor(a) { ACTOR = a; try { localStorage.setItem('atara-actor', a) } catch (_) {} }
+
+/* 后端连不上时不装作没事：挂横幅，退回本地演示数据。
+   静默 fallback 会让"接口坏了"和"数据就是这样"分不出来。 */
+let OFFLINE = false;
+
+class ApiError extends Error {
+  constructor(body, status) {
+    const e = (body && body.error) || {};
+    super(e.message || ('HTTP ' + status));
+    this.code = e.code || 'HTTP_' + status;
+    this.field = e.field || '';
+    this.remedy = e.remedy || null;
+    this.status = status;
+  }
+}
+
+async function req(method, path, body, opts) {
+  const o = opts || {};
+  const h = { 'X-Atara-User': ACTOR };
+  if (body !== undefined && !(body instanceof FormData)) h['Content-Type'] = 'application/json';
+  if (o.confirm) h['X-Atara-Confirmation'] = o.confirm;
+  const res = await fetch(API_BASE + path, {
+    method,
+    headers: h,
+    body: body === undefined ? undefined : (body instanceof FormData ? body : JSON.stringify(body)),
+  });
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null } catch (_) { data = null }
+  if (!res.ok) throw new ApiError(data, res.status);
+  return data;
+}
+
+const api = {
+  get:  (p)    => req('GET', p),
+  post: (p, b, o) => req('POST', p, b === undefined ? {} : b, o),
+  del:  (p)    => req('DELETE', p),
+
+  /* 确认令牌。grade 分两档，和前端按钮一一对应：
+     Passkey 签名 = signature（动钱），普通按钮 = commit（只承诺）。 */
+  async confirm(scope, parts, grade) {
+    const r = await req('POST', '/passkey/assert', { scope, parts: parts.map(String), grade: grade || 'signature' });
+    return r.confirmation;
+  },
+};
+
+/* 把后端的字段名翻成前端这些数组原来的形状。
+   翻译只在这一层做，别让 unit_price / px 两套名字漏进渲染代码。 */
+const MAP = {
+  offer: o => ({
+    id: o.id, side: o.side, coin: o.asset, net: o.network, nets: o.networks || [o.network],
+    docs: o.maker.docs || {}, qty: +o.remaining_qty, px: +o.unit_price,
+    name: o.maker.name, peer: o.maker.peer_code, fiat: o.fiat,
+    sc: o.maker.trust_score, deals: o.maker.deals, disp: o.maker.disputes,
+    rate: +o.maker.fill_rate, rel: o.maker.median_release_secs, min: +o.min_lot,
+    known: false, mine: false, ceiling: +o.fiat_ceiling, lockTx: o.lock_tx || '',
+  }),
+  contact: c => ({
+    id: c.id, name: c.name, type: c.kind, net: +c.net || 0,
+    ifr: +c.fill_rate || 0, deals: c.deals || 0,
+    atr: c.address ? c.address.slice(0, 6) + '…' + c.address.slice(-5) : '',
+    addr: c.address, rel: c.label || 'Client', since: c.since || '',
+  }),
+  asset: a => {
+    const held = (+a.on_chain) + (+a.in_escrow);
+    return {
+      coin: a.asset, net: (a.networks || ['TRON'])[0],
+      avail: +a.on_chain, escrow: +a.in_escrow,
+      fx: held > 0 ? (+a.usd_value) / held : 1,
+    };
+  },
+  allowance: a => ({
+    id: a.id, name: a.spender, kind: a.kind, me: a.kind === 'person',
+    cycle: a.cycle, quota: +a.window_cap, used: +a.used, per: +a.per_payment,
+    wl: a.recipients, tpl: a.template || 'Any',
+    exp: a.expires_at ? new Date(a.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set',
+    ifr: null, on: a.status === 'live', note: a.note || '', chainTx: a.chain_tx || '',
+  }),
+};
+
+/* ───── 模拟数据（后端连不上时的退路，正常情况下开机就被覆盖） ───── */
 /* 通讯录 = 可以付款的人。这张表既是左栏的联系人列表，也是条件单里的收款人来源——
    两者本来就该是同一份，分开维护只会让"能付给谁"和"认识谁"对不上。
    rel 关系标签不是装饰：它决定新建条件单时预填哪套释放条件（见 REL_COND）。 */
@@ -4148,8 +4250,9 @@ function assetsHtml(){
   </div>`;
 }
 function renderRules(){
-  document.getElementById('rulesbody').innerHTML=
-    renderRulesPage().replace('<!--ASSETS-->',assetsHtml());
+  const body=document.getElementById('rulesbody');
+  if(!body)return;                   /* 账户页还没挂载，重画就是空转 */
+  body.innerHTML=renderRulesPage().replace('<!--ASSETS-->',assetsHtml());
   bindRulesPage();
 }
 
@@ -4516,7 +4619,7 @@ function depAddr(coin,net){
   for(let i=0;i<(net==='TRON'?33:net==='BTC'?38:40);i++) out+=abc[(seed*(i+7)+i*13)%36];
   return out;
 }
-const WALLET_ADDR=depAddr('USDT','TRON');
+let WALLET_ADDR=depAddr('USDT','TRON');   /* 开机后由 /wallet 覆盖——地址就是账户 */
 /* 登录方式决定限额怎么签发：atara = 账户策略层；ext = 对支出合约的 approve */
 let WALLET_KIND='atara';
 try{WALLET_KIND=sessionStorage.getItem('atara-wkind')||'atara'}catch(_){}
@@ -4604,9 +4707,34 @@ function openAllowanceModal(card){
          <em>Sign the approve — ${quota.toLocaleString()} USDT to ${SPEND_ADDR.slice(0,6)}…${SPEND_ADDR.slice(-4)}. Nothing moves now; it only sets the cap.</em>`
       :`<span class="gpkring">✦</span><b>Touch ID</b>
          <em>Signing the policy update on your account contract.</em>`}</div>`;
-    setTimeout(()=>{
-      body.innerHTML=`<div class="nasign"><span class="gok">✓</span><b>${isEdit?(ext?'Allowance updated':'Policy updated'):(ext?'Allowance granted':'Policy live')}</b>
+    const finish=(okMsg)=>{
+      body.innerHTML=`<div class="nasign"><span class="gok">✓</span><b>${okMsg}</b>
         <em>${me?'You':NA.name} can spend up to ${per.toLocaleString()} USDT per payment · ${quota.toLocaleString()} ${NA.cycle} · enforced on-chain.</em></div>`;
+      setTimeout(()=>{closeModal();renderRules();renderBalance();
+        toast(isEdit?`Allowance updated — ${NA.name}`:`Allowance issued to ${NA.name}`)},1200);
+    };
+    if(!OFFLINE){
+      /* 额度就是支配权，签发它本身就是一次授权动作——所以是签名档。
+         Atara 钱包写进账户合约策略，外部钱包走对支出合约的 approve，
+         两条路后端都认，前端只要把规则报上去。 */
+      (async()=>{
+        try{
+          const conf=await api.confirm('allowance',[NA.name,String(per),String(quota)],'signature');
+          const payload={spender:NA.name, kind:me?'person':'agent',
+            per_payment:String(per), window_cap:String(quota), cycle:NA.cycle,
+            expires:NA.exp==='Not set'?'':NA.exp,
+            recipients:NA.wl==='Set later'?'Not set':NA.wl};
+          const saved=await api.post('/allowances'+(isEdit&&card&&card.id?'/'+card.id:''),payload,{confirm:conf});
+          await hydrateAllowances();
+          CARD_ACTIVE=saved.id;
+          finish(isEdit?(ext?'Allowance updated':'Policy updated'):(ext?'Allowance granted':'Policy live'));
+        }catch(e){
+          body.innerHTML=`<div class="nasign"><b>Could not sign it</b><em>${e.message}</em></div>`;
+        }
+      })();
+      return;
+    }
+    setTimeout(()=>{
       if(isEdit){
         if(me){RULES.perDeal=per; budget=quota;}
         else Object.assign(card,{per,quota,cycle:NA.cycle,exp:expDate,wl:NA.wl==='Set later'?'Not set':NA.wl});
@@ -4618,8 +4746,7 @@ function openAllowanceModal(card){
           note:ext?'Backed by an on-chain allowance — Revoke cancels the approve':'Written into your account contract — revoking takes effect next block'});
         CARD_ACTIVE=id;
       }
-      setTimeout(()=>{closeModal();renderRules();renderBalance();
-        toast(isEdit?`Allowance updated — ${NA.name}`:`Allowance issued to ${NA.name}`)},1200);
+      finish(isEdit?(ext?'Allowance updated':'Policy updated'):(ext?'Allowance granted':'Policy live'));
     },1700);
   };
   openModal(isEdit?'Edit allowance':'New allowance',' ',draw);
@@ -4627,7 +4754,7 @@ function openAllowanceModal(card){
 function renderRulesPage(){
   const sched=ITEMS.filter(i=>i.g==='sched');
   const live=CARDS.filter(c=>c.on).length;
-  document.getElementById('rn').textContent=CARDS.length;
+  {const rn=document.getElementById('rn'); if(rn)rn.textContent=CARDS.length;}
   /* 总账户是**全币种**折算合计——不能只算 USDT，否则和下面的资产明细对不上 */
   const cnyAvail=ASSETS.reduce((a,x)=>a+x.avail*x.fx,0);
   const cnyEsc=ASSETS.reduce((a,x)=>a+x.escrow*x.fx,0);
@@ -6263,7 +6390,8 @@ function startEscrow(){
               p:S.cpar||(CTPL[S.cond]?{...CTPL[S.cond].defs}:{}), t:0};
   S.cpar=null;
   escrow=snap;
-  used=Math.min(budget,used+usdOf(snap.amt,snap.coin));renderBalance();
+  /* 额度占用由后端算——前端自己 used += 会和链上的实际占用分叉。
+     建完单重新拉一次，账面永远以后端为准。 */
 
   /* 执行面板：与买单卡同一套（徽标 → 主数字 → KV → 下一步 → 动作），
      条件单提交后要看的就是「这单走到哪一步、现在轮到谁」 */
@@ -6290,7 +6418,48 @@ function startEscrow(){
   /* 播报只说增量——条件文本在卡上已经写了一次，这里再抄一遍就是第三份拷贝 */
   tpost(sess,'Order created · the escrow contract is waiting for your deposit');
   paintEscrow();
-  fundEscrow(snap,sess);
+
+  /* 建单只是承诺这笔单的条款，钱还没动——所以是 commit 档，不是签名档。
+     动钱在下面 fundEscrow 那一步。 */
+  if(OFFLINE){ fundEscrow(snap,sess); return }
+  (async()=>{
+    try{
+      const conf=await api.confirm('order',[snap.cp.id,snap.coin||'USDT',String(snap.amt)],'commit');
+      const o=await api.post('/orders',{
+        counterparty_id: snap.cp.id,
+        asset: snap.coin||'USDT',
+        amount: String(snap.amt),
+        note: snap.why||'',
+        allowance_id: (CARDS.find(c=>c.me)||{}).id||'',
+        conditions: (snap.conds||[]).map(c=>({atom_type:c.t, params:c.p||{}})),
+        fallback_days: 14,
+      },{confirm:conf});
+      snap.oid=o.id; snap.ref=o.ref;
+      snap.escrowInfo=o.escrow||null;
+      taskUpsert(sid,{oid:o.id});
+      await hydrateAllowances(); renderBalance();
+      fundEscrow(snap,sess);
+    }catch(e){
+      apiFail(e,'Could not create the order');
+      snap.stage='cancel'; paintEscrow();
+      escrow=null;
+    }
+  })();
+}
+
+/* 接口报错要说清是哪一条、错在哪个字段，并且把后端给的可点替代摆出来——
+   R3 校验就地、R4 前置拦截，两条规则在这里落地。 */
+function apiFail(e,fallback){
+  if(e && e.remedy && e.remedy.label){
+    toast(e.message+' — '+e.remedy.label);
+  }else{
+    toast((e && e.message) || fallback || 'Request failed');
+  }
+  if(e && e.field){
+    const slot=document.querySelector('#sent [data-k="'+(e.field==='amount'?'amt':e.field)+'"]')
+      ||document.querySelector('#abar [data-f="'+e.field+'"]');
+    if(slot)fieldErr(slot,e.message);
+  }
 }
 
 /* ── 入金：非托管的第一拍。钱不进平台，直接进 escrow 合约——
@@ -6337,7 +6506,8 @@ function fundEscrow(snap,sess){
   el.querySelector('[data-fw="in"]').onclick=()=>{
     requireVerify(
       `${amt} moves from your wallet into the escrow contract. It comes back if the order is cancelled before the condition clears.`,
-      '', ()=>confirmTicks(`<div class="fsig">✓ Signed · broadcast to ${ESCROW_NET[snap.coin]||'the network'}</div>`),
+      '', ()=>sendFund(snap,'wallet',
+            `<div class="fsig">✓ Signed · broadcast to ${ESCROW_NET[snap.coin]||'the network'}</div>`),
       {title:'Sign the deposit', amt:amtParts?amtParts(snap.amt,snap.coin):null, amtUsd:usdOf(snap.amt,snap.coin),
        fund:'From your Atara wallet — non-custodial, you hold the keys'});
   };
@@ -6355,12 +6525,84 @@ function fundEscrow(snap,sess){
       try{navigator.clipboard.writeText(addr)}catch(_){}
       ev.currentTarget.textContent='Copied';
     };
-    /* demo：几秒后模拟链上扫到这笔转账；真实实现是监听合约的入金事件 */
-    setTimeout(()=>{
-      if(escrow!==snap)return;
-      confirmTicks(`<div class="fsig">✓ Transfer detected · tx 0x8f42…3a2c</div>`);
-    },3200);
+    /* 外部钱包：告诉后端开始盯合约。检测与确认数都在链上，前端只是轮询。 */
+    sendFund(snap,'external','');
   };
+
+  /* 两条入金路殊途同归：把选择告诉后端，然后盯着确认数。
+     确认数是链的事实，前端不许自己数——所以这里轮询 /orders/{id}。 */
+  async function sendFund(snap2,via,preHTML){
+    if(OFFLINE){ confirmTicks(preHTML); return }
+    btns.remove();
+    body.innerHTML=`${preHTML||''}<div class="fconf"><i></i><span>Confirming on-chain · <b class="num">0/6</b></span></div>`;
+    try{
+      const grade = via==='wallet' ? 'signature' : 'commit';
+      const conf=await api.confirm('fund',[snap2.oid,snap2.coin||'USDT',String(snap2.amt)],grade);
+      await api.post('/orders/'+snap2.oid+'/fund',{via},{confirm:conf});
+      if(via==='external'){
+        const addr=(snap2.escrowInfo&&snap2.escrowInfo.contract)||ESCROW_ADDR[snap2.coin]||ESCROW_ADDR.USDT;
+        body.insertAdjacentHTML('afterbegin',
+          `<div class="fwait"><i></i>Watching ${addr.slice(0,6)}…${addr.slice(-4)} for your transfer…</div>`);
+      }
+      pollOrder(snap2,sess,body);
+    }catch(e){
+      apiFail(e,'Deposit failed');
+      body.innerHTML=`<div class="fwait">Deposit did not go through — ${e.message}</div>`;
+    }
+  }
+}
+
+/* 轮询后端的工单状态。本地那套 setInterval 状态机整个下线了：
+   状态归后端，前端只负责把它画出来。 */
+const CST2STAGE={fund:'fund', locked:'lock', awaiting_counterparty:'deliv',
+  awaiting_me:'mine', releasing:'cons', released:'rel',
+  cancelled:'cancel', expired:'dead', disputed:'dispute'};
+
+function pollOrder(snap,sess,fundBody){
+  if(snap.poll)clearInterval(snap.poll);
+  let lastSeq=0, lastConf=-1;
+  const tick=async()=>{
+    if(escrow!==snap&&snap.stage!=='fund'){clearInterval(snap.poll);return}
+    let o;
+    try{ o=await api.get('/orders/'+snap.oid) }catch(_){ return }
+    /* 入金观察窗：确认数走到几了 */
+    const e=o.escrow||{};
+    if(fundBody&&e.required&&e.confirmations!==lastConf){
+      lastConf=e.confirmations;
+      const b=fundBody.querySelector('.fconf b'); if(b)b.textContent=`${e.confirmations}/${e.required}`;
+      if(e.confirmations>=e.required){
+        const c=fundBody.querySelector('.fconf');
+        if(c)c.innerHTML=`<i class="ok"></i><span>Escrowed · ${e.confirmations}/${e.required} confirmations</span>`;
+        fundBody=null;
+      }
+    }
+    /* 播报：后端的事件流是唯一来源，前端不再自己编时间线 */
+    try{
+      const ev=await api.get('/orders/'+snap.oid+'/events');
+      (ev.events||[]).filter(x=>x.seq>lastSeq).forEach(x=>{ lastSeq=x.seq; tpost(sess,x.reason) });
+    }catch(_){}
+
+    snap.stage=CST2STAGE[o.state]||snap.stage;
+    snap.backend=o;
+    /* 后端进了放行共识，前端把那块面板起起来。
+       票与结论从 /release-consensus 拿，不是本地编的。 */
+    if(o.state==='releasing'&&!snap.consRun){
+      snap.consRun=true;
+      api.get('/orders/'+snap.oid+'/release-consensus')
+        .then(d=>{snap.decision=d})
+        .catch(()=>{})
+        .finally(()=>runReleaseConsensus());
+    }
+    paintEscrow();
+    if(o.terminal){
+      clearInterval(snap.poll);
+      taskUpsert(snap.sess,{st:'done'});
+      if(o.terminal==='completed'){ addLine('ok','Released',snap) }
+      await hydrateWallet(); await hydrateAllowances(); renderBalance();
+      if(escrow===snap)escrow=null;
+    }
+  };
+  snap.poll=setInterval(tick,1000); tick();
 }
 function startPhases(snap){
   /* 阶段推进。撤销窗口关掉之后才进条件等待——
@@ -6404,8 +6646,16 @@ function startPhases(snap){
 function cancelEscrow(){
   if(!escrow)return;
   clearInterval(escrow.iv);
+  if(escrow.oid&&!OFFLINE){
+    /* 撤销是后端的事：合约要把钱退回去，额度占用也要释放。
+       前端自己改 used 会和链上分叉。 */
+    const oid=escrow.oid;
+    api.post('/orders/'+oid+'/cancel').then(async()=>{
+      await hydrateWallet(); await hydrateAllowances(); renderBalance();
+    }).catch(e=>apiFail(e,'Cancel failed'));
+  }
+  clearInterval(escrow.poll);
   escrow.stage='cancel'; paintEscrow();
-  used=Math.max(0,used-usdOf(escrow.amt,escrow.coin));renderBalance();
   if(escrow.sess){taskUpsert(escrow.sess,{st:'done'});
     tpost(escrow.tk,'Cancelled — funds returned to your balance. No default recorded.')}
   escrow=null;
@@ -6413,7 +6663,10 @@ function cancelEscrow(){
 /* 异议：窗口内提出 → 升级审查（L2），资金保持锁定。不是撤销也不是违约 */
 function disputeEscrow(){
   if(!escrow)return;
-  clearInterval(escrow.iv);
+  clearInterval(escrow.iv); clearInterval(escrow.poll);
+  if(escrow.oid&&!OFFLINE){
+    api.post('/orders/'+escrow.oid+'/dispute').catch(e=>apiFail(e,'Dispute failed'));
+  }
   escrow.stage='dispute'; paintEscrow();
   tpost(escrow.tk,'You disputed within the window — escalated to review. Funds stay locked; the uploaded evidence and this record go with it.');
   if(escrow.sess)taskUpsert(escrow.sess,{st:'you'});
@@ -6632,8 +6885,12 @@ function runReleaseConsensus(){
     if(escrow!==snap)return;                    /* 中途被撤/被顶掉就别放了 */
     snap.consDone=true;
     const gn=releaseGates(snap).length;
-    if(snap.sess)tpost(snap.tk,`Release approved — all ${gn} release conditions hold, checked by ${list.length} agents.`);
-    releaseEscrow();
+    if(OFFLINE){
+      if(snap.sess)tpost(snap.tk,`Release approved — all ${gn} release conditions hold, checked by ${list.length} agents.`);
+      releaseEscrow();
+    }
+    /* 在线时放款由后端做：这里只负责把共识过程画出来，
+       状态与播报都等轮询拿回来——两边各说一遍会对不上。 */
   }, null, {list, sc:100, center:releaseCenter(snap), gates:releaseGates(snap),
     cons:{ok:list.length,total:list.length,need:list.length,
       txt:`Consensus ${list.length}/${list.length} — one failed condition and nothing moves`}});
@@ -7569,9 +7826,25 @@ function tryOTC(q){
 /* ── 快捷交易的撮合拍：先从池子里挑人，再对挑中的人评估。
    直接跳评估是逻辑倒置——对手方还没出现，评的是谁？
    主选 3 秒后自动继续（快捷不打断），旁边给两个备选，想换的人来得及点。 ── */
-function matchThenAssess(buy, v, pre){
+async function matchThenAssess(buy, v, pre){
   const side=buy?'sell':'buy';          /* 我买，就在卖家的挂单里挑 */
-  const cands=pre||POOL.filter(o=>o.side===side&&!o.mine).sort((a,b)=>b.sc-a.sc).slice(0,3);
+  let cands=pre;
+  if(!cands&&!OFFLINE){
+    /* 撮合归后端：它扫全池、按成绩排序、顺带把装不下这笔量的挡掉。
+       前端自己 filter 会漏掉最小单和可成交量这两道。 */
+    try{
+      const m=await api.post('/orders/match',{
+        intent:buy?'buy':'sell', amount:String(v), amount_kind:'fiat',
+        asset:'USDT', fiat:mkFiat||'CNY'});
+      if(m.violation){ apiFail(m.violation,'No match'); return }
+      cands=(m.candidates||[]).map(c=>{
+        const p=POOL.find(x=>x.id===c.offer_id);
+        return p||{id:c.offer_id,name:c.name,sc:c.trust_score,deals:c.deals,
+                   px:+c.unit_price,fiat:c.fiat,coin:'USDT',peer:c.peer_id,side};
+      });
+    }catch(e){ apiFail(e,'Match failed'); return }
+  }
+  cands=cands||POOL.filter(o=>o.side===side&&!o.mine).sort((a,b)=>b.sc-a.sc).slice(0,3);
   if(!cands.length){toast('No live offers on that side right now');return}
   document.getElementById('empty')?.remove();
   const host=(ACTIVE&&ACTIVE.el)||document.getElementById('log');
@@ -7609,10 +7882,13 @@ function matchThenAssess(buy, v, pre){
 
 function openDeal(side,fiat,o){
   if(D&&D.iv)clearInterval(D.iv);
+  if(D&&D.poll)clearInterval(D.poll);
   D={side,fiat,step:'match',ref:'ATR-7K2M',secs:0,open:true,
      /* 数量跟着金额走，不是照搬挂单整笔——用户填了 25 万就该买 25 万的量。
         池子里点整条挂单时传的是 qty*px，除回来仍是 qty，两条路都对。 */
-     u:   o? +(fiat/o.px).toFixed(o.px>1000?4:2) : +(fiat/RATE).toFixed(2),
+     /* 法币金额反算回币数量会有舍入误差，整条挂单那一档能算出比可成交量
+        多几分的数量，然后被后端以「超过可成交量」拒掉。钳在挂单量上。 */
+     u:   o? Math.min(+(fiat/o.px).toFixed(o.px>1000?4:2), o.qty) : +(fiat/RATE).toFixed(2),
      coin:o? o.coin : 'USDT',
      px:  o? o.px   : RATE,
      peer:o? o.peer : 'D137037',
@@ -7627,8 +7903,36 @@ function openDeal(side,fiat,o){
   ((ACTIVE&&ACTIVE.el)||document.getElementById('log')).appendChild(D.el);   /* 对话流:最新的在最下面 */
   document.getElementById('empty')?.remove();
   paintDeal();
+
+  /* 吃单：软预留可成交量，不动钱。承诺点在下面的 Confirm。 */
+  if(!OFFLINE&&o&&o.id){
+    const dd=D;
+    /* 按币的数量下单，不按法币金额——法币是 数量×单价 换算出来的，
+       整条挂单那一档会因为四舍五入比可成交量多出几分钱，然后被后端拒掉。
+       数量才是用户真正选的东西，换算留给后端做。 */
+    api.post('/offers/'+o.id+'/take',{
+      amount:String(D.u), amount_kind:'coin', network:(o.nets&&o.nets[0])||o.net,
+    }).then(res=>{
+      if(D!==dd)return;
+      D.oid=res.id; D.ref=res.ref;
+      /* side 以后端为准：taker 方向决定 s1 是「验证锁仓」还是「入金上链」 */
+      if(res.otc&&res.otc.side)D.side=res.otc.side;
+      D.u=+res.amount.amount; D.fiat=+res.otc.fiat_amount;
+      paintDeal();
+    }).catch(e=>{
+      apiFail(e,'Could not take that offer');
+      if(D===dd&&D.el){D.el.remove(); D=null;}
+    });
+  }
 }
 /* 从大厅点一笔单：对方卖我就买，直接进成交确认 —— 与"说一句话"汇流到同一个状态机 */
+/* 对手方评估：票与结论来自后端，前端只负责把它画出来。
+   拿不到就退回本地那套（离线演示还要能看）。 */
+async function fetchAssessment(offerId){
+  if(OFFLINE||!offerId)return null;
+  try{ return await api.get('/offers/'+offerId+'/assessment') }catch(_){ return null }
+}
+
 function showOrder(o){
   /* 先进这个人的线程，评估在对话里当着面跑——痕迹和结论都留在线程里。
      匹配卡若还躺在裸屏上（快捷交易路径），先收养再切换 */
@@ -7844,6 +8148,7 @@ function closeAct(){
   closeActCollapse();
 }
 function paintAct(){
+  if(ACT)ACT.quoted=false;   /* 改了任何一个槽，上一次的预检就作废了 */
   const bar=document.getElementById('abar');
   if(!ACT){bar.hidden=true;return}
   const d=ACT_DEF[ACT.k];
@@ -8120,6 +8425,12 @@ function runAct(force){
   if(!ACT)return;
   /* 自然语言来的单子先核对再撮合：说的实心、猜的标出来，配不上的当场给出路 */
   if(ACT.auto && !force){showReview(); return;}
+  /* 提交前预检（R4）：后端一次把所有 violation 报回来，
+     每条带 field 和可点的 remedy——本地那套只能拦到它自己知道的规则。 */
+  if(!OFFLINE && !ACT.quoted){
+    quoteThenRun();
+    return;
+  }
   const a={...ACT}; const d=ACT_DEF[a.k];
   const finish=()=>{closeAct();
     const _f=document.getElementById('free'); _f.value=''; syncSend(); autogrow();};
@@ -8164,6 +8475,44 @@ function runAct(force){
      3 秒自动用最优的，想换的人来得及点 */
   matchThenAssess(a.k==='buy', fiatAmt, ranked);
 }
+
+/* 预检：把这单报给后端问一遍，能不能成、哪里不行、有没有出路。
+   拦下来的就地标在出错的那个字段上，不弹窗、不跳页。 */
+async function quoteThenRun(){
+  const a={...ACT};
+  const cp=CPS.find(c=>c.name===a.peer);
+  try{
+    const q=await api.post('/orders/quote',{
+      intent: a.k==='cond'?'transfer':a.k,
+      amount: String(a.amt||0),
+      amount_kind: a.amtKind||'coin',
+      asset: a.coin||'USDT',
+      fiat: a.fiat||'',
+      counterparty_id: cp?cp.id:'',
+      allowance_id: (CARDS.find(c=>c.me)||{}).id||'',
+      conditions: (a.conds||[]).map(c=>({atom_type:c.t, params:c.p||{}})),
+    });
+    if(q.violations&&q.violations.length){
+      /* 每条都标出来，不是只报第一条——一次改完比来回三趟强 */
+      q.violations.forEach(v=>{
+        const chip=document.querySelector('#abar [data-f="'+(v.field==='counterparty_id'?'peer':v.field)+'"]')
+                 ||document.querySelector('#abar [data-f="amt"]');
+        if(chip&&v.remedy&&v.remedy.action==='set_amount'){
+          pickMenu(chip,[
+            {v:'fix', n:v.remedy.label, d:v.message},
+            {v:'x', n:'Keep my amount', d:v.message, off:true},
+          ], k=>{ if(k==='fix'){ACT.amt=+v.remedy.value; paintAct(); ACT.quoted=false; runAct(true);} });
+        }else if(chip){ fieldErr(chip,v.message) }
+        else toast(v.message);
+      });
+      return;
+    }
+    ACT.quoted=true;
+    runAct(true);
+  }catch(e){
+    apiFail(e,'Could not check that order');
+  }
+}
 document.querySelectorAll('#actions .act').forEach(b=>b.onclick=()=>{
   if(requireLogin(()=>openAct(b.dataset.act),b))return;
   openAct(b.dataset.act);
@@ -8206,6 +8555,10 @@ function requireLogin(after,src){
   };
   document.querySelector('.gclose').onclick=()=>{gate.classList.remove('open'); after=null;};
   gate.addEventListener('keydown',e=>{if(e.key==='Escape'){gate.classList.remove('open');after=null;}});
+  /* 四种登录方式的差别只在拿到地址的路径，落点是同一个账户。
+     后端按 method 决定 wallet_kind：连外部钱包的走 approve，
+     其余写进账户合约策略。 */
+  let GMETHOD='passkey', GADDR='', GEMAIL='';
   const enter=()=>{
     const done=()=>{
       try{sessionStorage.setItem('atara-gate','1')}catch(_){}
@@ -8213,6 +8566,16 @@ function requireLogin(after,src){
       gate.classList.remove('open');
       if(typeof paintLun==='function')paintLun();
       const fn=after; after=null;
+      if(!OFFLINE){
+        api.post('/auth/connect',{method:GMETHOD, address:GADDR, email:GEMAIL, name:''})
+          .then(async r=>{
+            if(r&&r.address){ setActor(r.address); ME=r.user||ME; }
+            await boot();
+            if(fn)setTimeout(fn,150);
+          })
+          .catch(e=>{ apiFail(e,'Sign-in failed'); if(fn)setTimeout(fn,150) });
+        return;
+      }
       if(fn)setTimeout(fn,150);
       else document.getElementById('free')?.focus();
     };
@@ -8248,18 +8611,21 @@ function requireLogin(after,src){
     return a.slice(0,6)+'…'+a.slice(-4);};
   const FLOWS={
     create(){
+      GMETHOD='passkey';
       show(`<span class="gpkring">✦</span><b>Touch ID</b>
         <em>Creating your wallet — the key is minted inside this device and never leaves it.</em>${backBtn}`);
       setTimeout(()=>doneThen(`<span class="gok">✓</span><b>Wallet created</b>
         <em><b class="gaddr num">${addrShort()}</b> · secured by your passkey. Back it up later under Settings › Wallet keys.</em>`,1100),1600);
     },
     wallet(name){
+      GMETHOD='wallet'; GADDR=WALLET_ADDR;   /* demo：真实实现是钱包回传它自己的地址 */
       show(`<span class="gspin"></span><b>Waiting for ${name}</b>
         <em>Approve the connection, then sign the one-line message — the signature proves the address is yours. Nothing is spent.</em>${backBtn}`);
       setTimeout(()=>doneThen(`<span class="gok">✓</span><b>0x8f3a…21c connected</b>
         <em>Signature verified — this address is now your account.</em>`,1000),1700);
     },
     google(){
+      GMETHOD='google'; GEMAIL='demo@gmail.com';
       /* 演示用的授权窗：只有选账号，没有任何凭据输入——真实实现是 OAuth 跳转 */
       const w=window.open('','atara-google','width=420,height=560,menubar=no,toolbar=no');
       const finish=()=>doneThen(`<span class="gok">✓</span><b>Signed in with Google</b>
@@ -8309,6 +8675,7 @@ function requireLogin(after,src){
       i.onkeydown=e=>{if(e.key==='Enter')go()};
     },
     email(addr){
+      GMETHOD='email'; GEMAIL=addr;
       show(`<b>Check your inbox</b>
         <em>We sent a 6-digit code to <b>${addr}</b> — demo build, any 6 digits work.</em>
         <input id="gcode-i" inputmode="numeric" maxlength="6" placeholder="······" autocomplete="one-time-code">${backBtn}`);
@@ -8642,13 +9009,13 @@ function openAddContact(){
              res.innerHTML=`<button class="acrow" data-addr>${avSpan(short,'cpav')}
                <span class="n"><em class="num">${short}</em><i>New contact by address</i></span>
                <span class="acgo">Send request</span></button>`;
-             res.querySelector('[data-addr]').onclick=()=>addContact(short,'Client');
+             res.querySelector('[data-addr]').onclick=()=>addContact(short,'Client',null,0,raw);
              return;
            }
            if(/^(0x|bc1|T[1-9])/.test(raw)&&raw.length>7&&!/\s/.test(raw)){
              res.innerHTML='<p class="acnote">Keep typing — the full address is needed.</p>';return}
            const hits=POOL.filter(o=>!o.mine && o.name.toLowerCase().includes(v)
-             && !CPS.some(c=>c.name===o.name)).slice(0,6);
+             && !CPS.some(c=>c.name===o.name)).slice(0,6);   /* 名字来自公开挂单，地址不公开 */
            res.innerHTML=hits.length
              ? hits.map(o=>`<button class="acrow" data-pick="${o.name}">${avSpan(o.name,'cpav')}
                  <span class="n"><em>${o.name}</em><i>${o.deals} trades · score ${o.sc}</i></span>
@@ -8656,13 +9023,13 @@ function openAddContact(){
              : '<p class="acnote">No one by that name yet.</p>';
            res.querySelectorAll('[data-pick]').forEach(x=>x.onclick=()=>{
              const o=POOL.find(y=>y.name===x.dataset.pick);
-             addContact(depAddr(o.name,'TRON').slice(0,6)+'…'+depAddr(o.name,'TRON').slice(-5), 'Client', o.name, o.deals);
+             addContact(depAddr(o.name,'TRON').slice(0,6)+'…'+depAddr(o.name,'TRON').slice(-5), 'Client', o.name, o.deals, o.name);
            });
          };
        }
        if(mode==='past') document.querySelectorAll('[data-past]').forEach(b=>b.onclick=()=>{
          const o=POOL.find(x=>x.name===b.dataset.past);
-         addContact(depAddr(o.name,'TRON').slice(0,6)+'…'+depAddr(o.name,'TRON').slice(-5), 'Client', o.name, o.deals);
+         addContact(depAddr(o.name,'TRON').slice(0,6)+'…'+depAddr(o.name,'TRON').slice(-5), 'Client', o.name, o.deals, o.name);
        });
      };
      document.querySelectorAll('.acs').forEach(b=>b.onclick=()=>{
@@ -8673,7 +9040,22 @@ function openAddContact(){
    });
 }
 /* 新联系人一律先进 pending：对方没点头之前，不能给他付款 */
-function addContact(atr, rel, name, deals){
+function addContact(atr, rel, name, deals, rawAddr){
+  if(!OFFLINE){
+    /* 一个字段收名字或地址，后端精确匹配——不做模糊搜索，
+       那等于开放一个可以遍历用户的接口。 */
+    api.post('/contacts',{query: rawAddr||name||atr, label: rel||'Client'})
+      .then(async()=>{
+        await hydrateContacts();
+        closeModal(); switchView('contacts'); renderContactsPage(); renderLeft();
+        toast(`${name||atr} added`);
+      })
+      .catch(e=>{
+        const res=document.getElementById('ac-res');
+        if(res)res.innerHTML='<p class="acnote">'+e.message+'</p>'; else apiFail(e,'Could not add');
+      });
+    return;
+  }
   const id='c'+(CPS.length+1);
   const nm=name||('New contact '+atr.slice(0,6));
   CPS.push({id, name:nm, type:'person', net:0, ifr:null, deals:deals||0,
@@ -8978,7 +9360,7 @@ function paintDeal(){
               <button type="button" class="sfchip" data-fv="ext">External wallet</button>
             </div>
             <div class="fviabody"></div>`,
-        ()=>advance('s1'),
+        ()=>dealAccept(),
         Object.assign(
           D.side==='buy'
             ?{title:'Confirm order', pay:[], plain:'Confirm order',
@@ -9016,7 +9398,7 @@ function paintDeal(){
       document.querySelectorAll('#confirm [data-fv]').forEach(x=>x.onclick=()=>paintVia(x.dataset.fv));
       paintVia(D.fundVia);
     }
-    if(a==='paid') advance('s4');
+    if(a==='paid') dealReceipt();
     if(a==='cancel') cancelDeal();
     if(a==='drop'){D.el.remove();D=null;}
   });
@@ -9034,6 +9416,12 @@ function steps(i){
 function cancelDeal(){
   if(!D)return;
   if(D.iv)clearInterval(D.iv);
+  if(D.poll)clearInterval(D.poll);
+  if(D.oid&&!OFFLINE){
+    api.post('/orders/'+D.oid+'/cancel')
+      .then(async()=>{await hydrateWallet();await hydrateOffers();renderBalance();renderPool()})
+      .catch(e=>apiFail(e,'Cancel failed'));
+  }
   const u=`${D.u.toLocaleString()} ${D.coin}`;
   tpost(D.tk,`You cancelled — their ${u} was returned. Recorded as an unfilled order, not a default.`);
   taskUpsert('t-'+D.peer,{st:'done'});
@@ -9043,6 +9431,68 @@ function cancelDeal(){
   el.querySelector('.row1 .st').textContent='Cancelled';
   el.querySelector('.row1 .dsum').innerHTML=`Cancelled · their ${u} returned to escrow origin · no default recorded`;
   D=null;
+}
+
+/* ── OTC 的动作与状态都归后端 ──
+   买方向的 accept 是纯承诺（普通按钮档）；卖方向要出币，得签名档，
+   而且要带上入金方式。这两档不是文案差异，后端会按档位拒绝。 */
+async function dealAccept(){
+  if(OFFLINE||!D||!D.oid){ advance('s1'); return }
+  const d=D;
+  try{
+    const sell=D.side!=='buy';
+    const via=sell?(D.fundVia||'wallet'):'';
+    const grade=(sell&&via!=='ext')?'signature':'commit';
+    const conf=await api.confirm('accept',[D.oid],grade);
+    await api.post('/orders/'+D.oid+'/accept',{via:via==='ext'?'external':via},{confirm:conf});
+    if(D===d){ D.step='s1'; D.open=true; paintDeal(); pollDeal(); }
+    await hydrateWallet(); renderBalance();
+  }catch(e){ apiFail(e,'Could not confirm the order') }
+}
+
+async function dealReceipt(){
+  if(OFFLINE||!D||!D.oid){ advance('s4'); return }
+  const d=D;
+  try{
+    await api.post('/orders/'+D.oid+'/receipt',{file_ref:'bank-receipt-'+D.ref+'.pdf'});
+    if(D===d){ D.step='s4'; paintDeal(); }
+  }catch(e){ apiFail(e,'Could not upload the receipt') }
+}
+
+/* 轮询成交单。站点顺序由后端的 state 决定，前端不再自己跑计时器——
+   买方向的 s1 是秒级的锁仓验证，卖方向的 s1 要等确认数，
+   这两件事的时长本来就不该由前端猜。 */
+function pollDeal(){
+  if(!D||!D.oid||OFFLINE)return;
+  const d=D;
+  if(d.poll)clearInterval(d.poll);
+  let lastSeq=0;
+  const tick=async()=>{
+    if(D!==d){clearInterval(d.poll);return}
+    let o;
+    try{ o=await api.get('/orders/'+d.oid) }catch(_){ return }
+    try{
+      const ev=await api.get('/orders/'+d.oid+'/events');
+      (ev.events||[]).filter(x=>x.seq>lastSeq).forEach(x=>{lastSeq=x.seq; tpost(d.tk,x.reason)});
+    }catch(_){}
+    const e=o.escrow||{};
+    d.conf=e.confirmations; d.confReq=e.required; d.escrowTx=e.tx_hash||'';
+    d.secs=o.seconds_left||0;
+    if(o.state!==d.step){
+      d.step=o.state==='s5'?'s5':o.terminal?'dead':o.state;
+      d.open=(d.step==='s3'&&d.side==='buy')||(d.step==='s1');
+      taskUpsert('t-'+d.peer,{st:{s1:'run',s3:d.side==='buy'?'you':'run',s4:'run',s5:'done'}[d.step]||'done'});
+      syncRight();
+    }
+    paintDeal();
+    if(o.terminal){
+      clearInterval(d.poll);
+      if(o.terminal==='completed'&&d.el)d.el.classList.add('celebrate');
+      await hydrateWallet(); await hydrateOffers(); renderBalance(); renderPool();
+      if(D===d)D=null;
+    }
+  };
+  d.poll=setInterval(tick,1000); tick();
 }
 
 /* 状态推进：轮到对方/系统时自己走，轮到我时停下来等 */
@@ -9518,14 +9968,29 @@ function openOffer(){
   };
   draw();
 }
+async function postOfferAPI(){
+  /* 卖单挂出即锁币——币进合约，所以是签名档；买单只是承诺。 */
+  const sell=OFF.dir==='sell';
+  const conf=await api.confirm('offer',[OFF.coin,String(OFF.qty)],sell?'signature':'commit');
+  return api.post('/offers',{
+    side:OFF.dir, asset:OFF.coin, network:OFF.net||(NETS_OF[OFF.coin]||['TRON'])[0],
+    networks:OFF.nets&&OFF.nets.length?OFF.nets:(NETS_OF[OFF.coin]||['TRON']),
+    fiat:OFF.fiat, unit_price:String(OFF.px), qty:String(OFF.qty), min_lot:String(OFF.min),
+  },{confirm:conf});
+}
 function postOffer(){
   const d=SELLER.d, sell=OFF.side==='Sell crypto';
-  if(sell){
-    const a=ASSETS.find(x=>x.coin===OFF.coin);
-    if(!a||a.avail<OFF.qty){toast('Not enough '+OFF.coin+' available');return}
-    a.avail=+(a.avail-OFF.qty).toFixed(6); a.escrow=+(a.escrow+OFF.qty).toFixed(6);
-    if(a.coin===FUNDS.coin){FUNDS.avail=a.avail;FUNDS.escrowed=a.escrow}
-    renderBalance();renderAssets();
+  if(!OFFLINE){
+    /* 挂出即锁币是链上动作，余额也归链——前端不再自己加减。 */
+    OFF.dir=sell?'sell':'buy';
+    postOfferAPI().then(async()=>{
+      await hydrateWallet(); await hydrateOffers();
+      mkSide=sell?'buy':'sell'; mkFilter='All'; mkFiat='';
+      switchView('market'); renderFilter(); renderPool(); renderBalance(); renderAssets();
+      toast(sell?`Listed — ${OFF.qty.toLocaleString()} ${OFF.coin} locked in the escrow contract`
+                :'Listed — your buying terms are public');
+    }).catch(e=>apiFail(e,'Could not post the listing'));
+    return;
   }
   OFFN++;
   POOL.unshift({id:'my'+OFFN, mine:true,
@@ -9541,6 +10006,16 @@ function postOffer(){
 function unlistOffer(id){
   const i=POOL.findIndex(o=>o.id===id); if(i<0)return;
   const o=POOL[i];
+  if(!OFFLINE){
+    /* 下架即解锁：合约把剩下的币还回钱包。 */
+    api.del('/offers/'+id).then(async()=>{
+      await hydrateWallet(); await hydrateOffers();
+      renderPool(); renderBalance(); renderAssets();
+      toast(o.side==='sell'?`Unlisted — ${o.qty.toLocaleString()} ${o.coin} unlocked from the contract`
+                           :'Listing removed');
+    }).catch(e=>apiFail(e,'Could not unlist'));
+    return;
+  }
   if(o.side==='sell'){
     const a=ASSETS.find(x=>x.coin===o.coin);
     if(a){a.avail=+(a.avail+o.qty).toFixed(6); a.escrow=Math.max(0,+(a.escrow-o.qty).toFixed(6));
@@ -9702,6 +10177,7 @@ function openSeller(){
 /* 右栏永远回答同一个问题：球在谁手里 */
 function syncRight(){
   ITEMS=ITEMS.filter(i=>!i.otc);
+  if(!D)return;                      /* 没有在跑的成交单，右栏就没有 OTC 那一行 */
   const g={match:'me',s1:'them',s3:'me',s4:'them',s5:null}[D.step];
   const what={match:'Confirm',s1:'Escrow',s3:'Pay',s4:'Verify receipt'}[D.step];
   if(g)ITEMS.unshift({g,who:'OTC '+D.peer,what,cp:null,otc:true});
@@ -9796,6 +10272,135 @@ renderBalance();renderTypes();
 /* 未登录的起点是市场：能看的东西在这儿，下单页留给登录后 */
 if(document.documentElement.dataset.locked)switchView('market');
 {const rn=document.getElementById('rn'); if(rn)rn.textContent=CARDS.length;}
+
+/* ═══════════════════════════════════════════════════════════════
+   开机：把后端的数据灌进上面那些数组
+   ───────────────────────────────────────────────────────────────
+   原地替换而不是重新赋值——很多闭包已经抓着数组的引用了，
+   换掉引用它们就看不到新数据。
+   ═══════════════════════════════════════════════════════════════ */
+const fill = (arr, items) => { arr.length = 0; items.forEach(x => arr.push(x)); return arr };
+
+function apiBanner(msg, kind) {
+  let el = document.getElementById('apibar');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'apibar';
+    el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:9999;padding:8px 14px;'
+      + 'font:12px/1.5 ui-sans-serif,system-ui;text-align:center;letter-spacing:.01em';
+    document.body.appendChild(el);
+  }
+  const warn = kind !== 'ok';
+  el.style.background = warn ? '#7c2d12' : '#14532d';
+  el.style.color = '#fff';
+  el.innerHTML = msg;
+  if (!warn) setTimeout(() => el.remove(), 2600);
+}
+
+async function hydrateWallet() {
+  const w = await api.get('/wallet');
+  fill(ASSETS, (w.assets || []).map(MAP.asset));
+  /* FUNDS 是右栏那块的汇总。非托管下它读的是链，不是平台的账。 */
+  const usdt = ASSETS.find(a => a.coin === 'USDT') || { avail: 0, escrow: 0 };
+  FUNDS.coin = 'USDT'; FUNDS.avail = usdt.avail; FUNDS.escrowed = usdt.escrow;
+  FUNDS.escrowN = ASSETS.filter(a => a.escrow > 0).length;
+  ESCROW_CONTRACT = w.escrow_contract || ESCROW_CONTRACT;
+  SPENDING_CONTRACT = w.spending_contract || SPENDING_CONTRACT;
+  if (w.address) { WALLET_ADDR = w.address; setWalletKind(w.wallet_kind || 'atara'); }
+  return w;
+}
+
+async function hydrateAllowances() {
+  const r = await api.get('/allowances');
+  fill(CARDS, (r.allowances || []).map(MAP.allowance));
+  /* 「我」那张卡的额度就是全局的支付规则——它们本来就是同一个对象 */
+  const me = CARDS.find(c => c.me);
+  if (me) { RULES.perDeal = me.per; budget = me.quota; used = me.used; }
+  const rn = document.getElementById('rn'); if (rn) rn.textContent = CARDS.length;
+  return r;
+}
+
+async function hydrateContacts() {
+  const r = await api.get('/contacts');
+  fill(CPS, (r.contacts || []).map(MAP.contact));
+  if (r.relationships) fill(RELS, r.relationships);
+  if (CPS.length && (!S.cp || !CPS.find(c => c.id === S.cp.id))) S.cp = CPS[0];
+  return r;
+}
+
+async function hydrateOffers() {
+  const r = await api.get('/offers?side=' + (mkSide || 'buy') + (mkFiat ? '&fiat=' + mkFiat : ''));
+  /* 池子按「我想做什么方向」查：想买就看别人的卖单。后端已经换算过，
+     这里拿到的就是可以吃的那一批。 */
+  fill(POOL, (r.offers || []).map(MAP.offer));
+  const mine = await api.get('/offers/mine').catch(() => ({ offers: [] }));
+  (mine.offers || []).forEach(o => {
+    const m = MAP.offer(o); m.mine = true;
+    if (o.status === 'active') POOL.push(m);
+  });
+  return r;
+}
+
+async function hydrateCatalog() {
+  const [fi, co] = await Promise.all([
+    api.get('/catalog/fiats').catch(() => null),
+    api.get('/catalog/conditions').catch(() => null),
+  ]);
+  if (fi && fi.corridors) {
+    fill(FIATS, fi.corridors.map(g => ({
+      g: g.group, list: (g.assets || []).map(a => [a.code, a.name, a.symbol]),
+    })));
+  }
+  /* 条件原子的联动选项也从后端来：换数据源要重置指标这条规则
+     不该在前后端各写一份。 */
+  if (co && co.atoms) {
+    co.atoms.forEach(a => {
+      const t = ATOMS[a.type]; if (!t) return;
+      (a.params || []).forEach(p => {
+        const slot = (t.params || []).find(x => x.k === p.key);
+        if (!slot) return;
+        if (p.options) slot.opts = () => p.options;
+        if (p.options_by) slot.opts = ctx => p.options_by[ctx[p.depends_on]] || [];
+      });
+    });
+    if (co.atoms.find(a => a.type === 'data')) {
+      const d = co.atoms.find(a => a.type === 'data').params.find(p => p.key === 'metric');
+      if (d && d.options_by) Object.assign(DATA_METRICS, d.options_by);
+    }
+  }
+}
+
+let ESCROW_CONTRACT = { address: '', network: 'TRON' };
+let SPENDING_CONTRACT = '';
+
+async function boot() {
+  try {
+    ME = await api.get('/me');
+    if (ME && ME.display_name) {
+      PROFILE.name = ME.display_name;
+      PROFILE.email = ME.email || PROFILE.email;
+      PROFILE.id = ME.address;
+    }
+    await Promise.all([hydrateCatalog(), hydrateWallet(), hydrateAllowances(), hydrateContacts()]);
+    await hydrateOffers();
+    OFFLINE = false;
+  } catch (e) {
+    OFFLINE = true;
+    apiBanner('atara-pay not reachable at <b>' + API_BASE + '</b> — showing local demo data. '
+      + 'Start it with <b>go run ./cmd/atara-pay</b>, then reload.'
+      + ' <span style="opacity:.75">(' + e.message + ')</span>');
+    return;
+  }
+  /* 重画与取数分开 catch：某个视图没挂载时的渲染报错，
+     不该被读成"后端连不上"——那会让人去查一个根本没坏的东西。 */
+  [paintIdentity, paintLun, renderLeft, renderBalance, renderPool, renderFilter,
+   renderRules, renderSentence, syncRight].forEach(fn => {
+    try { fn() } catch (e) { console.warn('repaint after boot:', fn.name, e.message) }
+  });
+  apiBanner('Connected to atara-pay · <b>' + API_BASE + '</b> · signed in as '
+    + (ME ? ME.display_name : ACTOR), 'ok');
+}
+boot();
 </script>
 </body>
 </html>
