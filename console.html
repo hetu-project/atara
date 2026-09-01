@@ -1737,7 +1737,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
   background:hsl(var(--pc,221) 52% 46%);background-size:cover;background-position:center}
 .lksheet h3{font-size:18px;font-weight:600;letter-spacing:-.01em;margin-bottom:8px}
 .lksheet p{font-size:12.5px;line-height:1.65;color:var(--faint);margin:0 auto 20px;max-width:274px}
-.lkok{width:100%;justify-content:center;height:46px;border-radius:13px;font-size:14px;font-weight:600;
+/* 间距不能靠错误槽撑着——没有错误时它塌成 0，按钮就贴到输入框上了 */
+.lkok{margin-top:16px;width:100%;justify-content:center;height:46px;border-radius:13px;font-size:14px;font-weight:600;
   box-shadow:0 6px 16px oklch(58% .19 258/.3);
   transition:transform var(--dur-instant) var(--ease),box-shadow var(--dur-fast) var(--ease)}
 .lkok:active{transform:translateY(2px);box-shadow:0 2px 6px oklch(58% .19 258/.28)}
@@ -3508,11 +3509,12 @@ const RELS=['Supplier','Client','Colleague','Friend','My agent'];
 /* desc 一句话说清这一步要做什么，amt 金额，when 相对时间——
    原来每条只有「名字 + 动作」两个字段，看不出这笔多大、等了多久 */
 let ITEMS=[
- {g:'me',   who:'Kenji M.',   what:'Approve',        desc:'Approve the design delivery for Q1 brand refresh', amt:6500,   when:'14m ago', cp:'kj'},
- {g:'me',   who:'Huachuang',  what:'Confirm receipt',desc:'Confirm the component shipment arrived',           amt:12000,  when:'2h ago',  cp:'hc'},
- {g:'them', who:'Aria Studio',what:'Deliver',        desc:'Waiting on final design files',                    amt:6500,   when:'1h ago',  cp:'ar'},
- {g:'them', who:'Huachuang',  what:'Ship',           desc:'Waiting on shipment and logistics number',         amt:3000,   when:'5h ago',  cp:'hc'},
- {g:'them', who:'Procurement agent', what:'Quoting', desc:'Agent is collecting quotes from three suppliers',   amt:2000,   when:'1d ago',  cp:'pa'},
+ /* V1 的演示单必须是这一版做得出来的：全部 OTC，覆盖买/卖两侧和四个阶段 */
+ {g:'me',   who:'Golden Gate',   what:'Transfer',   desc:'Send ¥36,600 to their bank — their USDT is locked',  amt:5000,  when:'12m ago', cp:null, ot:'pay'},
+ {g:'me',   who:'Pacific Bridge',what:'Verify',     desc:'Their receipt is in — check it against the order',   amt:11700, when:'1h ago',  cp:null, ot:'verify'},
+ {g:'them', who:'Harbor Desk',   what:'Their transfer', desc:'Waiting on their HKD transfer',                  amt:23400, when:'2h ago',  cp:null, ot:'wait'},
+ {g:'them', who:'Nova OTC',      what:'Escrow',     desc:'Your USDT is locking into escrow',                   amt:8000,  when:'4h ago',  cp:null, ot:'lock'},
+ {g:'them', who:'Lotus Capital', what:'Release',    desc:'Receipt verified — releasing to them',               amt:14600, when:'6h ago',  cp:null, ot:'rel'},
  {g:'me',   who:'OTC D118611', what:'Dispute',       desc:'Disputed — their receipt does not match the transfer', amt:5400, when:'3h ago', cp:null, disp:true},
  {g:'sched',who:'Rent',       what:'1st monthly',    desc:'Recurring transfer, runs without asking',           amt:8000,   when:'in 12d',  cp:null},
  {g:'sched',who:'Procurement agent', what:'API budget · weekly', desc:'Agent draws against its weekly budget', amt:2000, when:'in 3d',   cp:'pa'},
@@ -5177,11 +5179,18 @@ const OSTATE={
   time    : ['auto', 'Waiting for the release date'],
   agent   : ['auto', 'Your agent is working on it'],
   otc     : ['them', 'Waiting on the counterparty'],
+  /* OTC 四段：你打款 → 你核验 → 等对方打款 → 锁仓/放款 */
+  pay     : ['you',  'Send the transfer'],
+  verify  : ['you',  'Verify their receipt'],
+  wait    : ['them', 'Waiting on their transfer'],
+  lock    : ['auto', 'Locking into escrow'],
+  rel     : ['auto', 'Releasing to them'],
   them    : ['them', 'Waiting on the other side'],
 };
 function orderState(t){
   const i=t.seed||{};
   if(i.disp) return ['disp','In dispute — reviewing evidence'];
+  if(i.ot && OSTATE[i.ot]) return OSTATE[i.ot];
   if(t.kind && OSTATE[t.kind]) return t.st==='you' ? OSTATE.approve : OSTATE[t.kind];
   const w=(i.what||'').toLowerCase();
   if(/approve/.test(w))        return OSTATE.approve;
@@ -6069,6 +6078,22 @@ document.getElementById('free').addEventListener('keydown',e=>{
   if(THREAD){say('me',q.replace(/[<>]/g,''));merchantReply(q);
     e.target.value='';syncSend();autogrow();return}
   if(tryOTC(q)){e.target.value='';autogrow();return}
+  /* V1 只做 OTC：撤了条件单胶囊，语法后门也得一起堵——
+     否则用户随手一句 "Pay X on delivery" 就用上了这一版说没有的东西。
+     不装听不懂：告诉他这一版能做什么，并给出下一步。 */
+  document.getElementById('empty')?.remove();
+  sellerMsg('me', q.replace(/[<>]/g,''));
+  e.target.value='';syncSend();autogrow();
+  setTimeout(()=>{
+    const m=sellerMsg('them',
+      'This version settles OTC trades only — buying or selling crypto against a counterparty in the pool. '
+    + 'Conditional payments to someone you already know are not in it yet.'
+    + '<span class="rgo"><button class="btn btn-secondary btn-sm" data-nlgo="buy">Buy crypto</button>'
+    + '<button class="btn btn-secondary btn-sm" data-nlgo="mkt">Browse the pool</button></span>');
+    m.querySelectorAll('[data-nlgo]').forEach(b=>b.onclick=()=>
+      b.dataset.nlgo==='buy'?openAct('buy'):switchView('market'));
+  },700);
+  return;
   const m=q.match(/(\d[\d,]*(?:\.\d+)?)\s*(万|k|K|m|M)?/);
   if(m){let v=parseFloat(m[1].replace(/,/g,''));const u2=(m[2]||'').toLowerCase();if(m[2]==='万')v*=10000;if(u2==='k')v*=1000;if(u2==='m')v*=1000000;S.amt=Math.round(v);S.guessed.amt=false;}
   S.coin=null;   /* 这条老路径按 USD 记，防止上一笔的币种残留 */
