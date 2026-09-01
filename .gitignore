@@ -104,3 +104,5 @@ LANDING-COPY-v1-存档.md
 # skill 安装物，不进公开仓库
 .agents/
 skills-lock.json
+# Internal working docs — codenames and undecided mechanisms. Not for the public repo.
+docs-internal/

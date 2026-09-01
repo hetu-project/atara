@@ -540,6 +540,15 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
 .tkst.done i{background:var(--faint-2)}
 
 .navs{flex:none;padding:8px 8px;border-bottom:1px solid var(--hairline)}
+/* 上面四项是这个控制台的页面，下面两项通往别处——一条发丝线把两类分开 */
+.navsep{height:1px;margin:6px 10px;background:var(--hairline)}
+main.lout .navsep{margin:6px 8px}
+.nav .navtag{margin-left:auto;flex:none;font-size:10px;font-weight:600;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--faint-2);padding:2px 6px;border-radius:5px;background:var(--card)}
+.nav .navgo{margin-left:auto;flex:none;display:inline-flex;color:var(--faint-2)}
+.nav:hover .navgo{color:var(--mute)}
+a.nav{text-decoration:none}
+main.lout .navtag,main.lout .navgo{display:none}
 .nav{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;text-align:left;padding:8px 10px;border-radius:var(--r-control);font-size:14px;color:var(--mute);font-weight:500}
 .nav .ni{display:flex;align-items:center;justify-content:center;color:var(--faint);width:20px;flex:none}
 .nav .c{margin-left:auto;font-size:11px;color:var(--faint);font-weight:600}
@@ -2750,6 +2759,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 
 /* ══ 控件基座：所有非 .btn 的控件也必须落在同一套尺寸上 ══
    IconButton 28×28 · Segmented h28 · TextLink 12/500 · 图标一律 16 */
+/* display:inline-flex 会盖过 hidden 属性——凡是能被藏起来的按钮都得自己说清楚 */
+.sayic[hidden],#themebtn[hidden]{display:none!important}
 .sayic,.lnew,#send,#themebtn{
   width:28px;height:28px;flex:none;border-radius:var(--r-chip);
   display:inline-flex;align-items:center;justify-content:center;
@@ -3247,6 +3258,10 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
       <button class="nav" data-v="market"><span class="ni"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="m10.4 5.6-1.2 3.6-3.6 1.2 1.2-3.6 3.6-1.2Z"/></svg></span>Discover</button>
       <button class="nav" data-v="contacts"><span class="ni"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="5.5" r="2.6"/><path d="M1.8 13.4c.6-2.4 2.3-3.6 4.2-3.6s3.6 1.2 4.2 3.6"/><path d="M10.6 3.2a2.6 2.6 0 0 1 0 4.6M12.4 9.9c1 .5 1.7 1.7 2 3.5"/></svg></span>Contacts</button>
       <button class="nav" data-v="recs"><span class="ni"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5.2V8l2 1.4"/></svg></span>Payments</button>
+      <div class="navsep" aria-hidden="true"></div>
+      <button class="nav" id="navapi" title="Atara API"><span class="ni"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.2 10.6 3.6 8l2.6-2.6M9.8 5.4 12.4 8l-2.6 2.6"/></svg></span>Atara API<span class="navtag">Soon</span></button>
+      <!-- 同一套多 agent 辩论用在另一种判断上：那边评一支股票，这边评一个对手方 -->
+      <a class="nav" id="navloka" href="https://www.loka.cash/app" target="_blank" rel="noopener" title="Investment Analysis — multi-agent research"><span class="ni"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 13.6V2.6"/><path d="M2.4 13.6h11.2"/><path d="m4.6 10.4 2.6-3 2.4 1.8 3.2-4.4"/></svg></span>Investment Analysis<span class="navgo" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 2.6h3.8v3.8"/><path d="M13.4 2.6 7.9 8.1"/><path d="M11.9 9.6v2.9a1.5 1.5 0 0 1-1.5 1.5H3.6a1.5 1.5 0 0 1-1.5-1.5V5.6a1.5 1.5 0 0 1 1.5-1.5h2.9"/></svg></span></a>
     </div>
     <div class="lsec" id="tasksec" hidden>Chats</div>
     <div id="tasklist"></div>
@@ -3259,7 +3274,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
           <em class="lsub">Personal account · <span class="num" id="rn"></span> allowances</em>
         </span>
       </button>
-      <button class="sayic" id="themebtn" title="Toggle theme" aria-label="Toggle theme"></button>
+      <!-- 主题开关先收起来：切换逻辑还在，需要时把 hidden 去掉即可 -->
+      <button class="sayic" id="themebtn" title="Toggle theme" aria-label="Toggle theme" hidden></button>
     </div>
   </nav>
 
@@ -3724,6 +3740,8 @@ function switchView(v){
   if(v==='contacts')renderContactsPage();
 }
 document.getElementById('cpadd').onclick=openAddContact;
+document.getElementById('navapi').onclick=()=>
+  toast('Atara API — coming soon. Agents will settle through the same escrow.');
 document.querySelectorAll('.nav[data-v]').forEach(b=>b.onclick=()=>{
   /* Contacts / Payments 里全是「你的东西」——没登录就不该先跳过去再谈 */
   const v=b.dataset.v;
