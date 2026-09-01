@@ -132,6 +132,15 @@
 .nasign{display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 8px;text-align:center}
 .nasign b{font-size:14.5px;color:var(--ink)}
 .nasign em{font-style:normal;font-size:12.5px;color:var(--mute);max-width:300px;line-height:1.6}
+/* 十二个词：三列排开，序号在前——抄写时要能一眼对上位置 */
+.seedgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 0;padding:0;list-style:none}
+.seedgrid li{display:flex;align-items:baseline;gap:7px;padding:9px 10px;border-radius:var(--r-control);
+  background:var(--canvas);box-shadow:inset 0 0 0 1px var(--hairline);
+  font-size:13.5px;font-weight:500;color:var(--ink)}
+.sdn{font-size:11px;color:var(--faint-2);min-width:12px}
+.sdacts{display:flex;justify-content:flex-end;margin-top:10px}
+.sdchk{display:flex;align-items:flex-start;gap:9px;margin-top:14px;font-size:12.5px;color:var(--mute);cursor:pointer}
+.sdchk input{width:15px;height:15px;margin:2px 0 0;padding:0;flex:none;accent-color:var(--accent);cursor:pointer}
 .gshake{animation:gsh .4s}
 @keyframes gsh{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
 @media (prefers-reduced-motion:reduce){.gpkring,.gspin{animation:none}}
@@ -1228,6 +1237,14 @@ a.dspx{color:#d0574d}
 .acx{border:0;background:none;cursor:pointer;color:var(--faint-2);font-size:10px;
   padding:4px;border-radius:var(--r-chip);line-height:1}
 .acx:hover{color:var(--neg);background:var(--canvas)}
+/* 写死的条件长得不像能点的东西：无边框、无箭头 */
+.afix{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);font-weight:500}
+/* 对手方是个人，给他一张脸——一行字看不出这是谁 */
+.apav{width:18px;height:18px;flex:none;border-radius:50%;font-size:8px;font-weight:600;
+  display:inline-flex;align-items:center;justify-content:center}
+.achip.apeer{gap:6px}
+.afixav{gap:7px}
+.ddmenu .asopt b{display:inline-flex;align-items:center;gap:7px}
 .achip.addc{border-style:dashed;color:var(--faint);background:none}
 .achip.addc:hover{color:var(--accent);border-color:var(--accent)}
 #abar .ax{position:absolute;top:-2px;right:0;margin-left:0}
@@ -3338,12 +3355,12 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
       <div id="actions" role="group" aria-label="Actions">
         <button class="act" data-act="buy"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v8M4.5 7.5 8 11l3.5-3.5"/><path d="M3 13.5h10"/></svg></span>Buy</button>
         <button class="act" data-act="sell"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V5M4.5 8.5 8 5l3.5 3.5"/><path d="M3 2.5h10"/></svg></span>Sell</button>
-        <button class="act" data-act="cond"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 1.5 3 9h4l-.5 5.5L13 7H9l-.5-5.5Z"/></svg></span>Conditional order</button>
+        <!-- V1 只做 OTC：条件支付不在这一版里，入口先撤 -->
       </div>
       <div class="sayrow">
         <div id="abar" hidden></div>
         <button class="sayopen" id="sayopen" type="button" tabindex="0" aria-label="Write a payment"><span id="sayopent"></span></button>
-        <textarea id="free" rows="1" aria-label="Describe a payment" placeholder="Describe a payment — try “Buy 5,000 USDT with CNY” or “Pay Huachuang 3,000 on delivery”"></textarea>
+        <textarea id="free" rows="1" aria-label="Describe a payment" placeholder="Describe a trade — try “Buy 5,000 USDT with CNY” or “Sell 2,000 USDT for HKD”"></textarea>
         <div class="saytools">
         <button class="sayic" id="actplus" title="New order" aria-label="New order" aria-expanded="false" style="display:none"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg></button>
         <button class="sayic" id="plusbtn" title="Attach" aria-label="Attach"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12.2 7.2-4.6 4.6a2.6 2.6 0 0 1-3.7-3.7l4.9-4.9a1.8 1.8 0 0 1 2.5 2.5L6.6 10.4a.9.9 0 0 1-1.3-1.3l4.3-4.3"/></svg></button>
@@ -4702,9 +4719,9 @@ function openAllowanceModal(card){
     document.getElementById('mbody').innerHTML=`
       <div class="sf"><span class="sfl">Spender</span>
         <input type="text" id="na-name" value="${NA.name}" autocomplete="off" spellcheck="false" ${me?'disabled':''}></div>
-      <div class="sf"><span class="sfl">Per payment (USDT)</span>
+      <div class="sf"><span class="sfl">Max per payment (USDT)</span>
         <input type="text" id="na-per" value="${NA.per}" inputmode="numeric"></div>
-      <div class="sf"><span class="sfl">Window total (USDT)</span>
+      <div class="sf"><span class="sfl">Max per window (USDT)</span>
         <input type="text" id="na-quota" value="${NA.quota}" inputmode="numeric">
         <div class="sfchips">${['weekly','monthly'].map(c=>
           `<button type="button" class="sfchip${NA.cycle===c?' on':''}" data-nc="${c}">${c}</button>`).join('')}</div></div>
@@ -4826,8 +4843,10 @@ function renderRulesPage(){
       <div class="seclist">
         <div class="secrow">
           <span class="seci">🗝</span>
-          <span class="sectxt"><b>Wallet keys</b><em>Non-custodial — your passkeys sign, we never hold them · recovery kit not backed up</em></span>
-          <button class="btn btn-secondary" data-p="bakkey">Back up</button>
+          <span class="sectxt"><b>Wallet keys</b><em>${WALLET_KIND==='ext'
+            ? 'Held in your own wallet — Atara never had them, so there is nothing here to back up'
+            : `Non-custodial — your passkeys sign, we never hold them · ${BACKUP_AT?'recovery phrase backed up '+BACKUP_AT:'recovery phrase not backed up'}`}</em></span>
+          ${WALLET_KIND==='ext'?'':`<button class="btn btn-secondary" data-p="bakkey">${BACKUP_AT?'View phrase':'Back up'}</button>`}
         </div>
         <div class="secrow">
           <span class="seci">🔑</span>
@@ -4982,7 +5001,7 @@ function bindRulesPage(){
     }
     if(p==='godep'){openDeposit();return}
     if(p==='gowd'){openWithdraw();return}
-    if(p==='bakkey'){toast('Recovery kit — demo build, nothing to export');return}
+    if(p==='bakkey'){openBackup();return}
     if(p==='gopay'){openPayees();return}
     if(p==='newcard'){openAllowanceModal();return}
     if(p.startsWith('edit:')){openAllowanceModal(CARDS.find(x=>x.id===p.slice(5)));return}
@@ -7986,7 +8005,8 @@ function openAct(k){
        conds:k==='cond'?[]:[{t:'evidence',p:{proof:'Bank receipt'}},{t:'approve',p:{who:'Both sides confirm'}}],
        timeout:'14 days',
        /* 在某个人的会话里打开任一入口，对手方就是这个人——入口才有宾语 */
-       fiat:'CNY', peer:THREAD?THREAD.name:(CPS[0]?.name||''),
+       /* Buy/Sell 默认不指名——交给撮合。指名是例外，不是常态 */
+       fiat:'CNY', peer:THREAD?THREAD.name:(k==='cond'?(CPS[0]?.name||''):''),
        /* When 默认 Immediately——普通转账就是条件槽为空的退化情形，想要保障改这一行 */
        cond:'Immediately', cp:{...CTPL['Immediately'].defs},
        why:k==='cond'?'Supplier balance':null};
@@ -8031,8 +8051,12 @@ function paintAct(){
   /* Buy/Sell 的条件由协议写死（托管放币 · 回执+确认窗口）——跟陌生人交易，
      条件不标准化就没法双盲撮合。只读展示，不给编辑入口。 */
   bar.innerHTML=
+    /* 跟陌生人交易，条件不标准化就没法双盲撮合：Buy/Sell 的放行条件由协议定死。
+       只读一行——不给编辑入口，但也不能不写，否则用户不知道钱凭什么放。 */
+    (ACT.k!=='cond'
+       ? `<div class="aline">${lead('Release condition')}<span class="afix">Verified bank receipt<i class="ainfo" tabindex="0" data-tip="Fixed for pool trades — release never waits on the other side's word. Their coins lock in escrow when they list; they release once the fiat receipt reconciles with the order. Each side has a 4-hour window and can open a dispute inside it.">i</i></span></div>`
     /* 多个条件竖排:一条一行,行首 and 对齐;加号独立一行 */
-    (ACT.conds.length
+    : ACT.conds.length
        ? ACT.conds.map((c,i)=>{
            const a=ATOMS[c.t];
            const ctls=a.params.map(pm=>{
@@ -8059,6 +8083,17 @@ function paintAct(){
         ? `<button class="achip${g('peer')}" data-f="peer">${ACT.peer||'Choose'}<i>⌄</i></button>`
         : `<button class="achip${g('fiat')}" data-f="fiat"><span class="flg">${flag(ACT.fiat)}</span>${ACT.fiat}<i>⌄</i></button>`)
   + `</div>`
+  /* 对手方自己一行：行首介词走左列，胶囊跟金额对齐——挤在句尾会折到下一行的最左边。
+     在某个人的会话里打开就是跟他做，锁死不给改：那句话已经由「你在谁的对话里」说完了 */
+  + (ACT.k==='cond' ? ''
+      /* from 不是跟 buy 平级的分句主语，它是连接词——跟多条件行里的 and 同一个位置：
+         左列留空，连接词落在胶囊列的起点 */
+      : `<div class="aline">${lead('')}${word(ACT.k==='buy'?'from':'to')}`
+        + (THREAD
+            ? `<span class="afix afixav">${avSpan(THREAD.name,'apav')}${THREAD.name}</span>`
+            : `<button class="achip apeer${g('peer')}" data-f="cparty">${
+                ACT.peer?avSpan(ACT.peer,'apav')+ACT.peer:'Any'}<i>⌄</i></button>`)
+        + `</div>`)
   + (ACT.why!==null
       ? `<div class="aline"><span class="aword alead">for<i class="ainfo" tabindex="0" data-tip="Just a note — optional, and it never affects the transfer itself. It labels this payment in your history and reports so it&#39;s easy to find later. Atara fills it in from your description; tap the chip to change it.">i</i></span><button class="achip${g('why')}" data-f="why">${ACT.why}<i>⌄</i></button></div>` : '')
   + `<button class="ax" data-f="close" aria-label="Cancel">✕</button>`;
@@ -8073,6 +8108,17 @@ function paintAct(){
     if(f==='coin')  return pickMenu(b, coinOptions(), v=>{ACT.coin=v;mark('coin');paintAct()});
     if(f==='fiat')  return pickMenu(b, poolFiats().map(x=>({v:x,n:`${flag(x)} ${x}`,d:FIAT_NAME(x)})), v=>{ACT.fiat=v;mark('fiat');paintAct()});
     if(f==='peer')  return pickMenu(b, CPS.map(c=>({v:c.name,n:c.name,d:c.type==='agent'?'Agent':'Registered counterparty'})), v=>{ACT.peer=v;mark('peer');paintAct()});
+    if(f==='cparty'){
+      /* 只列真能接这一笔的人：方向、币种、法币都得对得上，否则选了也走不通 */
+      const want=ACT.k==='buy'?'sell':'buy';
+      const fits=POOL.filter(o=>!o.mine&&o.side===want&&o.coin===ACT.coin&&o.fiat===ACT.fiat)
+        .sort((x,y)=>(CPS.some(c=>c.name===y.name)?1:0)-(CPS.some(c=>c.name===x.name)?1:0)||y.sc-x.sc);
+      return pickMenu(b, [
+        {v:'', n:(ACT.peer?'':'✓ ')+'Any', d:'Quick trade — Atara matches the best counterparty for this amount'},
+        ...fits.map(o=>({v:o.name, n:(ACT.peer===o.name?'✓ ':'')+avSpan(o.name,'apav')+o.name,
+          d:`${CPS.some(c=>c.name===o.name)?'In your contacts · ':''}score ${o.sc} · ${o.deals} trades · ${FIAT_SYM(o.fiat)}${o.px} per ${o.coin}`})),
+      ], v=>{ACT.peer=v;mark('peer');paintAct()});
+    }
     /* 类型仅限模板（§4.2）；菜单副行给出整句预览，AIUSD 式 */
     if(f==='addcond'){
       const used=new Set(ACT.conds.map(c=>c.t));
@@ -8329,6 +8375,13 @@ function runAct(force){
     return;
   }
   finish();
+  /* 指名了就直接进那一单——撮合卡是「你没指定时我替你挑」，指定了再演一遍是多余 */
+  const named=a.peer&&fits.find(o=>o.name===a.peer);
+  if(named){
+    const v=asCoin?Math.round(a.amt*(named.px||1)):a.amt;
+    showOrder(Object.assign({},named,{qty:v/(named.px||1), px:named.px||1}));
+    return;
+  }
   const ranked=fits.sort((x,y)=>y.sc-x.sc).slice(0,3);
   const fiatAmt = asCoin ? Math.round(a.amt*(ranked[0].px||1)) : a.amt;
   /* 先撮合再评估：与命令路径同一拍——列出筛过金额与限额的前三名，
@@ -8936,7 +8989,7 @@ function setPlaceholder(){
   const f=document.getElementById('free');
   f.placeholder=THREAD
     ? `Message ${THREAD.name} — ask about the account, timing or documents`
-    : 'Describe a payment — try \u201CBuy 5,000 USDT with CNY\u201D or \u201CPay Huachuang 3,000 on delivery\u201D';
+    : 'Describe a trade — try \u201CBuy 5,000 USDT with CNY\u201D or \u201CSell 2,000 USDT for HKD\u201D';
   /* 三个入口在人际会话里全部保留。原先藏掉 Buy/Sell 是因为它们没有宾语，
      现在改成有宾语：在谁的会话里打开，对手方就预填成谁（见 openAct）。 */
   document.querySelectorAll('#actions .act').forEach(b=>{b.hidden=false});
@@ -9899,6 +9952,53 @@ function openOffer(){
   };
   draw();
 }
+/* 恢复短语：非托管这句话的唯一凭据——能把它抄走，就是「离开 Atara 这笔钱还是你的」。
+   所以它不是一句提示，是一条要验证、要看清、要确认抄过的流程 */
+let BACKUP_AT=null;
+const SEED_WORDS=['harbor','velvet','ridge','copper','anchor','fossil',
+                  'meadow','tunnel','quartz','breeze','marble','signal'];
+function openBackup(){
+  const warn=()=>{
+    openModal('Recovery phrase',
+      `<div class="sqi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.6 4.6 5.6v5.5c0 4.4 3 8.5 7.4 9.8 4.4-1.3 7.4-5.4 7.4-9.8V5.6Z"/><path d="M12 8.4v4"/><circle cx="12" cy="15.6" r=".9" fill="currentColor" stroke="none"/></svg></div>
+       <p class="acnote">Twelve words that restore this wallet anywhere — with or without Atara. Anyone who reads them can spend your funds, so write them down offline and never type them into a website.</p>
+       <div class="dfoot">
+         <button class="btn btn-primary" data-k="go">Reveal with passkey</button>
+       </div>`,
+      ()=>{document.getElementById('mbody').querySelector('[data-k="go"]').onclick=reveal;},'msq');
+  };
+  const reveal=()=>{
+    const b=document.getElementById('mbody');
+    b.innerHTML=`<div class="nasign"><span class="gpkring">✦</span><b>Touch ID</b>
+      <em>Confirming it is you before the phrase is shown.</em></div>`;
+    setTimeout(show,1500);
+  };
+  const show=()=>{
+    document.querySelector('#modal .mcard').className='mcard';
+    document.getElementById('mtitle').textContent='Recovery phrase';
+    const b=document.getElementById('mbody');
+    b.innerHTML=`
+      <p class="acnote">Write these down in order. Demo build — these words are not a real wallet.</p>
+      <ol class="seedgrid">${SEED_WORDS.map((w,i)=>
+        `<li><span class="sdn num">${i+1}</span>${w}</li>`).join('')}</ol>
+      <div class="sdacts">
+        <button class="btn btn-secondary btn-sm" id="sdcopy">Copy all</button>
+      </div>
+      <label class="sdchk"><input type="checkbox" id="sdok"><span>I have written them down and stored them offline</span></label>
+      <div class="dfoot"><button class="btn btn-primary" id="sddone" disabled>Done</button></div>`;
+    b.querySelector('#sdcopy').onclick=ev=>{
+      try{navigator.clipboard.writeText(SEED_WORDS.join(' '))}catch(_){}
+      ev.currentTarget.textContent='Copied';
+    };
+    const ok=b.querySelector('#sdok'), done=b.querySelector('#sddone');
+    ok.onchange=()=>{done.disabled=!ok.checked};
+    done.onclick=()=>{
+      BACKUP_AT=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      closeModal(); renderRules(); toast('Recovery phrase backed up');
+    };
+  };
+  BACKUP_AT ? reveal() : warn();
+}
 /* 撤销和开通是同一件事的两个方向：都在改链上谁能花你的钱，
    所以都要签一次。一键翻个标志位就撤掉，等于自己拆了「链上强制」这句话 */
 function revokeAllowance(c){
@@ -10008,7 +10108,10 @@ function unlistOffer(id){
 function sellerMsg(who,html){
   const el=document.createElement('div');
   el.className='msg '+who;
-  el.innerHTML=`<span class="bub">${html}</span>`;
+  /* 平台的回执也是「对方」发的：挂 Atara 的方块标识，跟人的圆头像分得开 */
+  el.innerHTML=who==='them'
+    ? `<span class="mrow"><span class="mav deskav" aria-hidden="true"><i></i></span><span class="bub">${html}</span></span>`
+    : `<span class="bub">${html}</span>`;
   ((ACTIVE&&ACTIVE.el)||document.getElementById('log')).appendChild(el);
   el.scrollIntoView({behavior:'smooth',block:'nearest'});
   return el;
@@ -10214,10 +10317,14 @@ TASKS.forEach((t,ti)=>{
     const chat={id:c.id, kind:'chat', peer:c.id, name:c.name, sc:c.ifr, el:box, n:0, stash:frag,
       headHTML:`${avSpan(c.name,'thav')}
         <span class="thwho"><b>${c.name}</b><span>${c.rel} · ${c.atr} · ${c.deals} settled together</span></span>`};
+    /* 种子消息也走同一套：对方的话挂一张脸，跟 say()/reply() 一致 */
     msgs.forEach(([who,text])=>{
       const el=document.createElement('div');
       el.className='msg '+who;
-      el.innerHTML=`<span class="bub">${text}</span><span class="mt">${stamp(chat.n++)}</span>`;
+      el.innerHTML=(who==='them'
+        ? `<span class="mrow">${avSpan(c.name,'mav')}<span class="bub">${text}</span></span>`
+        : `<span class="bub">${text}</span>`)
+        +`<span class="mt">${stamp(chat.n++)}</span>`;
       box.appendChild(el);
     });
     const last=msgs[msgs.length-1];
