@@ -1,0 +1,1047 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atara API · Developers</title>
+<meta name="description" content="Settle OTC trades from your backend or your agent. On-chain escrow, release against a verified bank receipt. REST in, JSON out.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --sans:'Inter',ui-sans-serif,-apple-system,system-ui,'PingFang SC',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  --g50:#fafafa; --g100:#f5f5f5; --g200:#e5e7eb; --g300:#d1d5db;
+  --g400:#9ca3af; --g500:#6b7280; --g600:#4b5563; --g700:#374151;
+  --ink:#000; --term:#0a0a0a;
+  --em600:#059669; --em700:#047857; --em50:#ecfdf5; --em200:#a7f3d0;
+  --am700:#b45309; --red:#dc2626;
+  --max:1400px; --pad:clamp(16px,4vw,48px);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px;background:#fff}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:#fff;color:#000;font-family:var(--sans);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+body::selection,::selection{background:#000;color:#fff}
+a{color:inherit;text-decoration:none}
+code,pre{font-family:var(--mono)}
+h1,h2,h3{margin:0;font-weight:900;letter-spacing:-.03em}
+button{font-family:inherit}
+.wrap{max-width:var(--max);margin:0 auto;padding-inline:var(--pad)}
+@media (min-width:1280px){.wrap{padding-inline:96px}}
+section{border-bottom:1px solid var(--g200)}
+.alt{background:var(--g50)}
+.pad{padding-block:clamp(48px,7vw,80px)}
+.pad-lg{padding-block:clamp(56px,9vw,96px)}
+
+/* eyebrows + headings */
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--g500);border:1px solid var(--g300);margin-bottom:24px}
+.kicker{font-size:10px;font-weight:900;letter-spacing:.25em;text-transform:uppercase;color:var(--g400);margin-bottom:20px}
+h2{font-size:clamp(28px,4.4vw,48px);line-height:1.05}
+h3{font-size:20px;letter-spacing:-.02em}
+.lede{color:var(--g600);font-size:15px;line-height:1.7;max-width:52ch;margin:0 0 28px}
+.lede-c{color:var(--g500);font-size:15px;line-height:1.7;margin:0}
+
+/* terminal */
+.term{background:var(--term);border:1px solid rgba(0,0,0,.1);border-radius:14px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,.18)}
+.term.sq{border-radius:8px;box-shadow:none}
+.tbar{display:flex;align-items:center;gap:6px;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.tbar i{width:10px;height:10px;border-radius:50%}
+.tbar i:nth-child(1){background:#ff5f56}.tbar i:nth-child(2){background:#ffbd2e}.tbar i:nth-child(3){background:#27c93f}
+.tbar b{margin-left:auto;font-size:10px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:var(--g500)}
+.tbar em{margin-left:8px;font-style:normal;font-family:var(--mono);font-size:10px;color:var(--g500)}
+.term pre{margin:0;padding:20px 22px;font-size:12.5px;line-height:1.7;color:#d4d4d8;overflow-x:auto;white-space:pre;tab-size:2}
+.cy{color:#67e8f9}.or{color:#fdba74}.vi{color:#c4b5fd}.am{color:#fcd34d}
+.em{color:#34d399}.gr{color:#6b7280}.wh{color:#fff}
+.copy{display:inline-flex;align-items:center;padding:4px 10px;border-radius:4px;font-size:10px;font-weight:700;color:var(--g500);background:transparent;border:1px solid rgba(255,255,255,.12);cursor:pointer;transition:.15s}
+.copy:hover{color:#fff;background:rgba(255,255,255,.06)}
+.copy.ok{color:#fff;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.24)}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:50;transition:.3s}
+.nav.on{background:rgba(255,255,255,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--g200);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:16px}
+.nb{display:flex;align-items:center;gap:8px;flex:none}
+.nb b{font-size:18px;font-weight:900;letter-spacing:-.03em}
+.nb .sl{color:var(--g300);font-size:14px}
+.nb span:last-child{font-size:14px;font-weight:600;color:var(--g500)}
+.nmark{width:17px;height:17px;position:relative;margin-right:2px}
+.nmark::before,.nmark::after{content:'';position:absolute;left:50%;top:50%;background:#000;transform:translate(-50%,-50%)}
+.nmark::before{width:100%;height:2px}.nmark::after{width:2px;height:100%}
+.nmark i,.nmark i::before,.nmark i::after{position:absolute;width:3px;height:3px;border-radius:50%;background:#000}
+.nmark i{left:0;top:calc(50% - 1.5px)}.nmark i::before,.nmark i::after{content:'';top:0}.nmark i::before{left:.5rem}.nmark i::after{left:.92rem}
+.nright{display:flex;align-items:center;gap:24px;flex:none}
+.nlinks{display:flex;align-items:center;gap:28px}
+.nlinks a{font-size:14px;font-weight:700;color:var(--g500);transition:.15s}
+.nlinks a:hover,.nlinks a.cur{color:#000}
+.ncta{display:inline-flex;align-items:center;padding:8px 16px;font-size:14px;font-weight:700;background:#000;color:#fff;transition:.2s;opacity:0;pointer-events:none}
+.nav.on .ncta{opacity:1;pointer-events:auto}
+.ncta:hover{background:#1f2937}
+@media (max-width:1023px){.nlinks{display:none}}
+@media (max-width:639px){.ncta{display:none}}
+
+/* hero */
+.hero{position:relative;min-height:88vh;display:flex;flex-direction:column;justify-content:center;background:var(--g50);overflow:hidden;padding-block:clamp(56px,9vw,96px)}
+.hgrid,.hcanvas,.hfade{position:absolute;inset:0;pointer-events:none}
+.hgrid{opacity:.03;background-image:linear-gradient(#000 1px,transparent 1px),linear-gradient(90deg,#000 1px,transparent 1px);background-size:64px 64px;z-index:0}
+.hcanvas{z-index:1}
+.hfade{top:auto;height:128px;background:linear-gradient(to bottom,transparent,#fff);z-index:3}
+.hero .wrap{position:relative;z-index:10;max-width:1000px;text-align:center}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--g700);background:rgba(255,255,255,.8);backdrop-filter:blur(4px);border:1px solid var(--g200);border-radius:999px;margin-bottom:40px}
+.pill i{width:6px;height:6px;border-radius:50%;background:var(--em600);animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.4}}
+@media (prefers-reduced-motion:reduce){.pill i{animation:none}}
+.hero h1{font-size:clamp(38px,7.6vw,88px);line-height:.97;letter-spacing:-.04em}
+.hero h1 span{color:var(--g400)}
+.hsub{font-size:clamp(15px,1.6vw,20px);color:var(--g600);font-weight:500;line-height:1.6;max-width:42rem;margin:32px auto 0}
+.hterm{max-width:42rem;margin:44px auto 0;text-align:left}
+.hterm .row{display:flex;align-items:center;gap:12px;padding:20px 22px}
+.hterm .cmd{flex:1;font-family:var(--mono);font-size:13px;color:#d4d4d8;word-break:break-all}
+.hnote{margin-top:16px;font-size:12px;color:var(--g500);text-align:center}
+.callfrom{margin-top:40px;display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.callfrom>span{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--g500)}
+.langs{display:flex;gap:12px}
+.langs i{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.9);border:1px solid var(--g200);display:grid;place-items:center;font-style:normal;font-size:10px;font-weight:900;color:var(--g600);transition:.2s}
+.langs i:hover{color:#000;border-color:#000}
+.hcta{margin-top:40px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+.btn-k{display:inline-flex;align-items:center;gap:8px;padding:13px 24px;border:0;border-radius:999px;background:#000;color:#fff;font-size:13px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;transition:.2s}
+.btn-k:hover{background:#1f2937}
+.btn-g{display:inline-flex;align-items:center;padding:13px 24px;border:0;background:none;color:var(--g600);font-size:13px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;transition:.15s}
+.btn-g:hover{color:#000}
+
+/* stats strip */
+.stats{display:grid;grid-template-columns:repeat(4,1fr)}
+.stats>div{padding:36px 16px;border-left:1px solid var(--g200)}
+.stats>div:first-child{border-left:0;padding-left:0}
+.stats .n{font-size:clamp(24px,3vw,38px);font-weight:900;letter-spacing:-.03em;line-height:1}
+.stats .l{font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--g400);margin-top:8px}
+@media (max-width:767px){.stats{grid-template-columns:repeat(2,1fr)}.stats>div:nth-child(3){border-left:0;padding-left:0}}
+
+/* two-column feature */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+@media (max-width:1023px){.split{grid-template-columns:1fr;gap:40px}.split .o2{order:2}.split .o1{order:1}}
+.checks{margin:0 0 32px;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px}
+.checks li{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--g700)}
+.checks svg{flex:none;margin-top:3px;color:var(--em600)}
+.dots{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--g700)}
+.dots li{display:flex;align-items:flex-start;gap:8px}
+.dots li::before{content:'·';color:var(--g400);flex:none}
+.dots code,.checks code{font-size:11.5px;background:var(--g100);border:1px solid var(--g200);padding:2px 6px}
+.arrow-l{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:900;color:#000;background:none;border:0;padding:0;cursor:pointer;transition:.15s}
+.arrow-l:hover{color:var(--g500)}
+
+/* hairline grids */
+.hg{display:grid;gap:1px;background:var(--g200);border:1px solid var(--g200)}
+.hg>*{background:#fff;padding:24px}
+.hg3{grid-template-columns:repeat(3,1fr)}
+.hg4{grid-template-columns:repeat(4,1fr)}
+@media (max-width:1023px){.hg3{grid-template-columns:1fr}}
+@media (max-width:767px){.hg4{grid-template-columns:repeat(2,1fr)}}
+.cell-l{font-size:10px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--g400);margin-bottom:12px}
+.cell-code{display:block;font-family:var(--mono);font-size:12px;font-weight:700;background:var(--g50);border:1px solid var(--g200);padding:8px 12px;word-break:break-all}
+.cell-note{font-size:11px;color:var(--g500);line-height:1.5;margin:12px 0 0}
+.cell-note code,.hg code{font-family:var(--mono);font-size:10px;background:var(--g50);border:1px solid var(--g200);padding:1px 5px}
+.tagx{display:inline-block;padding:2px 8px;font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--em700);background:var(--em50);border:1px solid var(--em200)}
+.statcell .n{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1}
+.statcell .l{font-size:11px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:var(--g700);margin-top:8px}
+.statcell .s{font-size:10px;color:var(--g400);margin-top:4px;line-height:1.4}
+
+/* domain cards */
+.doms{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.doms>.rv{height:100%}
+.dom{height:100%}
+@media (max-width:1199px){.doms{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:639px){.doms{grid-template-columns:1fr}}
+.dom{display:flex;flex-direction:column;width:100%;height:100%;text-align:left;background:#fff;border:1px solid var(--g200);padding:26px;cursor:pointer;transition:.2s;font:inherit}
+.dom:hover{border-color:#000}
+.dom .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.dom .slug{font-size:10px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--g500)}
+.dom .live{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;font-size:9px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:var(--em700);background:var(--em50);border:1px solid var(--em200)}
+.dom .live i{width:4px;height:4px;border-radius:50%;background:var(--em600)}
+.dom h3{margin-bottom:8px}
+.dom .tag{font-size:12px;color:var(--g500);line-height:1.6;margin:0 0 20px}
+.dom .eps{display:flex;flex-direction:column;gap:12px;flex:1;margin-bottom:22px}
+.dom .ep{border-left:2px solid var(--g100);padding-left:12px;transition:.2s}
+.dom:hover .ep{border-left-color:#000}
+.dom .ep .h{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.dom .ep code{font-size:11px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dom .ep p{font-size:11px;color:var(--g500);line-height:1.45;margin:0}
+.dom .foot{padding-top:16px;border-top:1px solid var(--g100);display:flex;align-items:flex-end;justify-content:space-between}
+.dom .foot .n{font-size:24px;font-weight:900;letter-spacing:-.03em;line-height:1}
+.dom .foot .c{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--g400);margin-top:4px}
+.dom .foot .go{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--g400);transition:.2s}
+.dom:hover .foot .go{color:#000}
+.m{padding:2px 6px;font-size:9px;font-weight:900;letter-spacing:.06em;flex:none}
+.m.get{background:var(--g100);color:#333}
+.m.post{background:#000;color:#fff}
+.m.del{background:#fee2e2;color:#991b1b}
+
+/* catalog */
+.cathead{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:40px}
+.filters{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:24px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;font-size:12px;font-weight:700;background:#fff;color:var(--g600);border:1px solid var(--g200);cursor:pointer;transition:.2s}
+.chip:hover{border-color:#000;color:#000}
+.chip.on{background:#000;color:#fff;border-color:#000}
+.chip b{font-size:10px;font-weight:900;color:var(--g400)}
+.chip.on b{color:rgba(255,255,255,.6)}
+.search{position:relative;margin-left:auto}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--g400)}
+.search input{padding:9px 12px 9px 34px;font-size:12px;font-weight:500;font-family:inherit;background:#fff;border:1px solid var(--g200);width:280px;transition:.15s}
+.search input:focus{border-color:#000;outline:none}
+@media (max-width:767px){.search{margin-left:0;width:100%}.search input{width:100%}}
+.cards{display:flex;flex-direction:column;gap:12px}
+.card{background:#fff;border:1px solid var(--g200);transition:.2s}
+.card:hover{border-color:var(--g400)}
+.card.open{border-color:#000;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+.card>button{width:100%;text-align:left;display:flex;flex-direction:column;gap:12px;padding:22px;background:none;border:0;cursor:pointer}
+.card .l1{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.card .l1 code{font-size:13.5px;font-weight:700;color:#000;word-break:break-all}
+.card .l1 .sp{flex:1}
+.card .grade{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--g400);flex:none}
+.card .grade.hot{color:#000}
+.card .chev{flex:none;color:var(--g400);transition:transform .2s}
+.card.open .chev{transform:rotate(180deg)}
+.card .d{font-size:13px;color:var(--g600);line-height:1.65;margin:0}
+.card .tags{display:flex;flex-wrap:wrap;gap:6px}
+.card .tags span{padding:2px 8px;font-size:10px;font-weight:700;color:var(--g500);background:var(--g50);border:1px solid var(--g200)}
+.card .ex{display:none;background:var(--term);border-top:1px solid #000}
+.card.open .ex{display:block}
+.card .ex .h{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.1)}
+.card .ex .h span{font-size:10px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:var(--g500)}
+.card .ex pre{padding:16px 20px;font-size:11.5px;line-height:1.75;color:#d4d4d8}
+.empty{background:#fff;border:1px solid var(--g200);padding:32px;text-align:center;font-size:13px;color:var(--g500)}
+
+/* use cases */
+.uc{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--g200);border:1px solid var(--g200)}
+@media (max-width:1023px){.uc{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:639px){.uc{grid-template-columns:1fr}}
+.uc>div{background:#fff;padding:26px;display:flex;flex-direction:column;transition:.2s}
+.uc>div:hover{background:var(--g50)}
+.uc .h{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.uc .h i{width:24px;height:24px;background:#000;color:#fff;font-style:normal;font-size:10px;font-weight:900;display:grid;place-items:center;flex:none}
+.uc .h code{font-size:10px;color:var(--g500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uc h3{font-size:15px;margin-bottom:8px;line-height:1.3}
+.uc p{font-size:12px;color:var(--g500);line-height:1.65;margin:0;flex:1}
+
+/* errors + scope */
+.errlist{margin-top:24px;display:flex;flex-direction:column;gap:8px}
+.errlist div{display:flex;align-items:flex-start;gap:12px;font-size:12px}
+.errlist code{font-weight:700;color:#000;flex:none}
+.errlist span{color:var(--g500)}
+.scopeitem{border-left:2px solid #000;padding-left:16px;margin-bottom:18px}
+.scopeitem b{display:block;font-size:14px;font-weight:900;margin-bottom:4px}
+.scopeitem p{font-size:12px;color:var(--g500);line-height:1.65;margin:0}
+.box{margin-top:40px;padding:22px;background:#fff;border:1px solid var(--g200)}
+.box+.box{margin-top:16px}
+.box .cell-l{margin-bottom:8px}
+.box p{font-size:13px;color:var(--g700);line-height:1.65;margin:0}
+.limbox{margin-top:40px;border:1px solid var(--g200);background:var(--g100);padding:24px}
+.limbox .h{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;margin-bottom:14px}
+.limbox .h b{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--am700)}
+.limbox .h span{font-size:11px;color:var(--g500)}
+.limbox .g{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 24px;font-size:12px;color:var(--g700)}
+@media (max-width:767px){.limbox .g{grid-template-columns:1fr}}
+.limbox .g div code{font-size:11px;background:#fff;border:1px solid var(--g200);padding:1px 5px}
+
+/* footer */
+footer{background:#fff}
+footer .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding-top:40px;padding-bottom:40px}
+footer .l{display:flex;align-items:center;gap:8px}
+footer .l b{font-size:16px;font-weight:900;letter-spacing:-.03em}
+footer .l .sl{color:var(--g300)}
+footer .l span:last-child{font-size:14px;font-weight:600;color:var(--g500)}
+footer .r{display:flex;align-items:center;gap:24px;font-size:11px;font-weight:700;color:var(--g500)}
+footer .r a,footer .r button{color:var(--g500);background:none;border:0;padding:0;font:inherit;cursor:pointer;transition:.15s}
+footer .r a:hover,footer .r button:hover{color:#000}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(32px);transition:opacity 1s cubic-bezier(.16,1,.3,1),transform 1s cubic-bezier(.16,1,.3,1)}
+.rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}}
+</style>
+</head>
+<body>
+
+<div class="nav" id="nav">
+  <div class="wrap">
+    <a class="nb" href="index.html" title="Back to Atara"><span class="nmark" aria-hidden="true"><i></i></span><b>Atara</b><span class="sl">/</span><span>Developers</span></a>
+    <div class="nright">
+      <nav class="nlinks" id="nlinks">
+        <a href="#overview">Overview</a>
+        <a href="#usecases">Use Cases</a>
+        <a href="#install">Quick Start</a>
+        <a href="#coverage">Coverage</a>
+        <a href="#endpoints">Endpoints</a>
+      </nav>
+      <a class="ncta" href="console.html">Open console</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 1. HERO ═══ -->
+<section class="hero">
+  <div class="hgrid"></div>
+  <canvas class="hcanvas" id="pcanvas"></canvas>
+  <div class="hfade"></div>
+  <div class="wrap">
+    <div class="rv"><div class="pill"><i></i>Internal Beta · No API Key Yet</div></div>
+    <div class="rv" style="transition-delay:80ms">
+      <h1>Escrowed OTC. <span>Zero custody.</span></h1>
+    </div>
+    <div class="rv" style="transition-delay:160ms">
+      <p class="hsub">Settle crypto-for-fiat trades from your backend or your agent. Coins lock on-chain, release against a verified bank receipt. You never hold a key, and never the counterparty.</p>
+    </div>
+    <div class="rv" style="transition-delay:240ms">
+      <div class="hterm">
+        <div class="term">
+          <div class="tbar"><i></i><i></i><i></i><b>try it</b></div>
+          <div class="row">
+            <div class="cmd"><span class="em">$</span> <span class="gr">curl</span> <span class="wh">http://localhost:8080/api/v1</span><span class="em">/offers?side=sell&amp;asset=USDT</span></div>
+            <button class="copy" data-copy='curl "http://localhost:8080/api/v1/offers?side=sell&asset=USDT"'>Copy</button>
+          </div>
+        </div>
+        <div class="hnote">Mock auth during internal testing · call from your server, not the browser</div>
+      </div>
+    </div>
+    <div class="rv" style="transition-delay:320ms">
+      <div class="callfrom">
+        <span>Call from</span>
+        <div class="langs"><i title="Node.js">JS</i><i title="Python">Py</i><i title="Go">Go</i><i title="Rust">Rs</i><i title="Ruby">Rb</i><i title="PHP">Ph</i><i title="curl">$_</i></div>
+      </div>
+    </div>
+    <div class="rv" style="transition-delay:400ms">
+      <div class="hcta">
+        <button class="btn-k" data-go="#endpoints">Browse 53 endpoints
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+        </button>
+        <button class="btn-g" data-go="#errors">Errors &amp; limits</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ stats strip ═══ -->
+<section>
+  <div class="wrap stats">
+    <div><div class="n">53</div><div class="l">REST endpoints</div></div>
+    <div><div class="n">4</div><div class="l">Domains</div></div>
+    <div><div class="n">2</div><div class="l">Token grades</div></div>
+    <div><div class="n">0</div><div class="l">Keys we hold</div></div>
+  </div>
+</section>
+
+<!-- ═══ 2. OVERVIEW ═══ -->
+<section id="overview">
+  <div class="wrap pad-lg">
+    <div class="split">
+      <div class="rv">
+        <div class="kicker">Atara Payment Protocol</div>
+        <h2>Your Backend's<br>Settlement Rail.</h2>
+        <p class="lede" style="margin-top:20px">Plain HTTP. Predictable JSON. One surface covering accounts and on-chain allowances, an order book whose sell side is really locked, escrowed settlement tickets, and withdrawals you sign yourself.</p>
+        <ul class="checks">
+          <li><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span>REST + JSON · every account is an on-chain address</span></li>
+          <li><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span>One-time confirmation token on anything that moves funds</span></li>
+          <li><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span>Errors carry a <code>remedy</code> — a value you can resubmit as-is</span></li>
+          <li><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span><code>phase</code> is computed per observer — no client-side state machine</span></li>
+          <li><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span>No SDK required — fetch / axios / requests / curl</span></li>
+        </ul>
+        <button class="arrow-l" data-go="#endpoints">Browse the Endpoints
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+        </button>
+      </div>
+      <div class="rv" style="transition-delay:160ms">
+        <div class="term">
+          <div class="tbar"><i></i><i></i><i></i><em>settle.ts</em></div>
+<pre><span class="gr">// 1 — take a maker's offer</span>
+<span class="vi">const</span> r = <span class="vi">await</span> <span class="cy">fetch</span>(
+  <span class="or">'http://localhost:8080/api/v1/offers/p1/take'</span>,
+  { <span class="cy">method</span>: <span class="or">'POST'</span>,
+    <span class="cy">headers</span>: { <span class="or">'X-Atara-User'</span>: <span class="or">'demo'</span> },
+    <span class="cy">body</span>: <span class="cy">JSON</span>.<span class="cy">stringify</span>({
+      <span class="cy">amount</span>: <span class="or">'73100'</span>, <span class="cy">amount_kind</span>: <span class="or">'fiat'</span>
+    })
+  }
+);
+
+<span class="gr">// 2 — read the ticket</span>
+<span class="vi">const</span> order = <span class="vi">await</span> r.<span class="cy">json</span>();
+{
+  <span class="cy">ref</span>: <span class="or">'ATR-8F42C1'</span>,
+  <span class="cy">state</span>: <span class="or">'match'</span>,
+  <span class="cy">phase</span>: <span class="or">'lock'</span>, <span class="cy">actor</span>: <span class="or">'auto'</span>,
+  <span class="cy">amount</span>: { <span class="cy">amount</span>: <span class="or">'10000'</span>, <span class="cy">asset</span>: <span class="or">'USDT'</span> },
+  <span class="cy">seconds_left</span>: <span class="am">20</span>
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 3. USE CASES ═══ -->
+<section id="usecases" class="alt">
+  <div class="wrap pad">
+    <div class="rv">
+      <div style="max-width:44rem;margin-bottom:44px">
+        <div class="eyebrow">Integration Patterns</div>
+        <h2>How developers<br>ship with this.</h2>
+      </div>
+    </div>
+    <div class="uc" id="uc"></div>
+  </div>
+</section>
+
+<!-- ═══ 4. QUICK START ═══ -->
+<section id="install">
+  <div class="wrap pad">
+    <div class="rv">
+      <div class="hg hg3">
+        <div>
+          <div class="cell-l">Base URL</div>
+          <code class="cell-code">http://localhost:8080/api/v1</code>
+          <p class="cell-note">Every path on this page appends to this base.</p>
+        </div>
+        <div>
+          <div class="cell-l">Identity</div>
+          <code class="cell-code">X-Atara-User: &lt;handle | address&gt;</code>
+          <p class="cell-note">Mock auth during internal testing; omitted falls back to <code>demo</code>. Real auth lands before public release.</p>
+        </div>
+        <div>
+          <div class="cell-l">Moving Money</div>
+          <code class="cell-code">X-Atara-Confirmation: &lt;token&gt;</code>
+          <p class="cell-note">Only on calls that move or commit funds. Minted from <code>POST /passkey/assert</code>. 120 s, single use, bound to that exact amount and peer.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 5. COVERAGE ═══ -->
+<section id="coverage" class="alt">
+  <div class="wrap pad-lg">
+    <div class="rv">
+      <div style="text-align:center;max-width:44rem;margin:0 auto 40px">
+        <h2 style="margin-bottom:16px">Endpoint Coverage</h2>
+        <p class="lede-c">53 endpoints across 4 domains. Every one of them settles the same way: escrow on-chain, release on evidence.</p>
+      </div>
+    </div>
+    <div class="rv" style="transition-delay:60ms">
+      <div class="hg hg4" style="margin-bottom:20px">
+        <div class="statcell"><div class="n">53</div><div class="l">Endpoints</div><div class="s">4 domains</div></div>
+        <div class="statcell"><div class="n">2</div><div class="l">Token grades</div><div class="s">signature moves · commit promises</div></div>
+        <div class="statcell"><div class="n">6</div><div class="l">Order states</div><div class="s">match → s1 → s3 → s3v → s4 → s5</div></div>
+        <div class="statcell"><div class="n">0</div><div class="l">Fiat touched</div><div class="s">bank-to-bank, outside the protocol</div></div>
+      </div>
+    </div>
+    <div class="doms" id="doms"></div>
+    <div class="rv" style="transition-delay:300ms">
+      <div class="hg hg3" style="margin-top:20px">
+        <div>
+          <div class="cell-l">Assets</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" class="tagrow"></div>
+          <p class="cell-note">Digital assets only — <code>GET /wallet</code> never lists a fiat balance.</p>
+        </div>
+        <div>
+          <div class="cell-l">Fiat corridors</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" class="tagrow2"></div>
+          <p class="cell-note">The fiat leg settles bank-to-bank between the two parties.</p>
+        </div>
+        <div>
+          <div class="cell-l">Also available</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" class="tagrow3"></div>
+          <p class="cell-note">Conditional transfers run a separate state machine and sit outside the v1 contract.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 6. ESCROW & RELEASE ═══ -->
+<section>
+  <div class="wrap pad-lg">
+    <div class="split">
+      <div class="rv">
+        <div class="kicker">Settlement Engine</div>
+        <h2>Evidence Releases.<br>Not the Other Side.</h2>
+        <p class="lede" style="margin-top:20px">After the fiat leg, the payer submits a bank receipt and the ticket sits in <code style="font-size:12px;background:var(--g100);border:1px solid var(--g200);padding:2px 6px">s3v</code> until the party who <em>received</em> the fiat verifies it. The submitter can't verify their own receipt.</p>
+        <ul class="dots">
+          <li>Sell offers lock coins on post — <code>lock_tx</code> is returned</li>
+          <li>Self-verify is refused with <code>NOT_YOUR_CALL</code></li>
+          <li>A failed check moves to <code>disputed</code>, funds stay locked</li>
+          <li>Contract, tx hash and confirmations exposed for independent checks</li>
+          <li>A <code>match</code> timeout is <code>cancelled</code>, not expired — fill rate untouched</li>
+        </ul>
+      </div>
+      <div class="rv o2" style="transition-delay:160ms">
+        <div class="term">
+          <div class="tbar"><i></i><i></i><i></i><em>200 OK · order.json</em></div>
+<pre>{
+  <span class="cy">"ref"</span>: <span class="or">"ATR-8F42C1"</span>,
+  <span class="cy">"state"</span>: <span class="or">"s3v"</span>, <span class="cy">"terminal"</span>: <span class="or">""</span>,
+  <span class="gr">// computed for whoever is asking</span>
+  <span class="cy">"phase"</span>: <span class="or">"verify"</span>, <span class="cy">"actor"</span>: <span class="or">"you"</span>,
+  <span class="cy">"amount"</span>: { <span class="cy">"amount"</span>: <span class="or">"10000"</span>, <span class="cy">"asset"</span>: <span class="or">"USDT"</span> },
+  <span class="cy">"otc"</span>: {
+    <span class="cy">"side"</span>: <span class="or">"sell"</span>, <span class="cy">"unit_price"</span>: <span class="or">"7.31"</span>,
+    <span class="cy">"fiat_code"</span>: <span class="or">"CNY"</span>, <span class="cy">"fiat_amount"</span>: <span class="or">"73100"</span>,
+    <span class="cy">"receipt_ref"</span>: <span class="or">"rcpt_7f2a"</span>
+  },
+  <span class="cy">"escrow"</span>: {
+    <span class="cy">"contract"</span>: <span class="or">"TEscrow..."</span>, <span class="cy">"network"</span>: <span class="or">"TRON"</span>,
+    <span class="cy">"tx_hash"</span>: <span class="or">"0x..."</span>,
+    <span class="cy">"confirmations"</span>: <span class="am">12</span>, <span class="cy">"required"</span>: <span class="am">12</span>
+  },
+  <span class="cy">"state_deadline"</span>: <span class="or">"2026-09-02T07:44:11Z"</span>,
+  <span class="cy">"seconds_left"</span>: <span class="am">6</span>
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 7. CONFIRMATION TOKENS ═══ -->
+<section class="alt">
+  <div class="wrap pad-lg">
+    <div class="split">
+      <div class="rv o2" style="transition-delay:160ms">
+        <div class="kicker">Confirmation Tokens</div>
+        <h2>Two Grades<br>of Yes.</h2>
+        <p class="lede" style="margin-top:20px">Every outflow needs an explicit confirmation — no small-amount exemption. A token is a hash of <em>this</em> operation: change the amount or the counterparty and it no longer applies, and is voided on the spot.</p>
+        <ul class="dots">
+          <li><code>signature</code> — moves money. Sell offers, withdrawals, allowances</li>
+          <li><code>commit</code> — promises only. Buy offers, taking a trade, declaring a transfer</li>
+          <li>Signature satisfies a commit endpoint. The reverse returns <code>SIGNATURE_REQUIRED</code></li>
+          <li>120 seconds, single use, persisted across restarts</li>
+          <li>An agent can commit to a trade without being able to sign money away</li>
+        </ul>
+      </div>
+      <div class="rv o1">
+        <div class="term">
+          <div class="tbar"><i></i><i></i><i></i><em>POST /passkey/assert</em></div>
+<pre><span class="gr">// request — bind the token to this exact payment</span>
+{
+  <span class="cy">"scope"</span>: <span class="or">"withdraw"</span>,
+  <span class="cy">"parts"</span>: [<span class="or">"payee-id"</span>, <span class="or">"USDT"</span>, <span class="or">"250.5"</span>],
+  <span class="cy">"grade"</span>: <span class="or">"signature"</span>
+}
+
+<span class="gr">// response</span>
+{
+  <span class="cy">"confirmation"</span>: <span class="or">"a1b2c3…"</span>,
+  <span class="cy">"expires_at"</span>:   <span class="or">"2026-09-02T05:44:05Z"</span>,
+  <span class="cy">"grade"</span>:        <span class="or">"signature"</span>,
+  <span class="cy">"header"</span>:       <span class="or">"X-Atara-Confirmation"</span>
+}
+
+<span class="gr">// then pass it on the call that moves funds</span>
+<span class="gr">curl -X POST .../withdrawals \</span>
+<span class="gr">  -H "X-Atara-Confirmation: a1b2c3…"</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 8. ENDPOINT CATALOG ═══ -->
+<section id="endpoints" class="alt">
+  <div class="wrap pad">
+    <div class="rv">
+      <div class="cathead">
+        <div>
+          <div class="eyebrow">Endpoint Catalog</div>
+          <h2>Click to expand<br>— see the full request.</h2>
+        </div>
+        <p class="lede-c" style="max-width:26rem;text-align:right;font-size:13px">Amounts are decimal strings in the major unit. Times are RFC 3339 UTC. Use <code style="font-size:11px;background:#fff;border:1px solid var(--g200);padding:2px 6px">state_deadline</code> for logic, <code style="font-size:11px;background:#fff;border:1px solid var(--g200);padding:2px 6px">seconds_left</code> only for countdowns.</p>
+      </div>
+    </div>
+    <div class="rv" style="transition-delay:80ms">
+      <div class="filters">
+        <div class="chips" id="chips"></div>
+        <div class="search">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input id="q" placeholder="Filter by path, keyword, tag…" autocomplete="off">
+        </div>
+      </div>
+    </div>
+    <div class="cards" id="cards"></div>
+  </div>
+</section>
+
+<!-- ═══ 9. ERRORS + SCOPE ═══ -->
+<section id="errors" class="alt">
+  <div class="wrap pad">
+    <div class="split" style="align-items:start">
+      <div class="rv">
+        <div class="eyebrow">Error Format</div>
+        <h3 style="font-size:clamp(22px,2.6vw,30px);margin-bottom:16px">Failures that tell you what to send.</h3>
+        <p class="lede-c" style="font-size:14px;margin-bottom:24px">One envelope for every failure. Branch on <code style="font-size:11px;background:#fff;border:1px solid var(--g200);padding:2px 6px">code</code>, never on <code style="font-size:11px;background:#fff;border:1px solid var(--g200);padding:2px 6px">message</code>. When the protocol can already tell a request will fail downstream, it stops it here and attaches a <code style="font-size:11px;background:#fff;border:1px solid var(--g200);padding:2px 6px">remedy</code>.</p>
+        <div class="term sq">
+          <div class="tbar" style="padding:9px 16px"><b style="margin-left:0">422 · below_min_lot</b>
+            <button class="copy" style="margin-left:auto" data-copy='{"error":{"code":"BELOW_MIN_LOT","field":"amount","message":"3000 CNY is below CrabWalk Trading&apos;s smallest lot","remedy":{"action":"set_amount","value":"5000","label":"Use the smallest lot — 5000 CNY"}}}'>Copy</button>
+          </div>
+<pre style="padding:16px 20px;font-size:11.5px">{
+  <span class="cy">"error"</span>: {
+    <span class="cy">"code"</span>:    <span class="or">"BELOW_MIN_LOT"</span>,
+    <span class="cy">"field"</span>:   <span class="or">"amount"</span>,
+    <span class="cy">"message"</span>: <span class="or">"3000 CNY is below the maker's smallest lot"</span>,
+    <span class="cy">"remedy"</span>: {
+      <span class="cy">"action"</span>: <span class="or">"set_amount"</span>,
+      <span class="cy">"value"</span>:  <span class="or">"5000"</span>,
+      <span class="cy">"label"</span>:  <span class="or">"Use the smallest lot — 5000 CNY"</span>
+    }
+  }
+}</pre>
+        </div>
+        <div class="errlist">
+          <div><code>CONFIRMATION_INVALID</code><span>— expired, used, or bound to a different payment</span></div>
+          <div><code>SIGNATURE_REQUIRED</code><span>— needs a signature token, you sent commit</span></div>
+          <div><code>NOT_YOUR_CALL</code><span>— receipt submitter tried to verify their own receipt</span></div>
+          <div><code>BELOW_MIN_LOT</code><span>— under the maker's smallest lot · carries a remedy</span></div>
+          <div><code>ABOVE_AVAILABLE_QTY</code><span>— over remaining, or lost a concurrent take · carries a remedy</span></div>
+          <div><code>NO_MATCH_WITH_COUNTERPARTY</code><span>— that maker can't fill this, and we don't fall back</span></div>
+          <div><code>CAP_ABOVE_WINDOW</code><span>— per-payment cap exceeds the window cap</span></div>
+          <div><code>KYC_NOT_APPROVED</code><span>— listing config submitted before identity approval</span></div>
+        </div>
+      </div>
+
+      <div class="rv" style="transition-delay:160ms">
+        <div class="eyebrow">Scope</div>
+        <h3 style="font-size:clamp(22px,2.6vw,30px);margin-bottom:16px">When NOT to use this API.</h3>
+        <p class="lede-c" style="font-size:14px;margin-bottom:32px">Atara is a settlement protocol, not a venue and not a custodian. Two invariants shape everything above.</p>
+        <div class="scopeitem"><b>Holding or moving fiat</b><p>The fiat leg settles bank-to-bank between the parties. <code style="font-size:11px;background:#fff;border:1px solid var(--g200);padding:1px 5px">GET /wallet</code> never lists a fiat asset, and a fiat withdrawal returns <code style="font-size:11px;background:#fff;border:1px solid var(--g200);padding:1px 5px">ASSET_REQUIRED</code>.</p></div>
+        <div class="scopeitem"><b>Custody or key management</b><p><code style="font-size:11px;background:#fff;border:1px solid var(--g200);padding:1px 5px">custody</code> is always <code style="font-size:11px;background:#fff;border:1px solid var(--g200);padding:1px 5px">"self"</code>. External wallets grant allowances by on-chain approve; we can't sign for them, so we watch the chain instead.</p></div>
+        <div class="scopeitem"><b>Millisecond execution</b><p>Not a matching engine. Windows are measured in minutes and hours, and the fiat leg runs at bank speed.</p></div>
+        <div class="scopeitem" style="margin-bottom:0"><b>Conditional transfers, in v1</b><p><code style="font-size:11px;background:#fff;border:1px solid var(--g200);padding:1px 5px">POST /orders</code> and its evidence and confirm routes exist and run, but sit outside the v1 contract. Specified with v2.</p></div>
+
+        <div class="limbox">
+          <div class="h"><b>Internal-beta limitations</b><span>these close before public release</span></div>
+          <div class="g">
+            <div>❌ Real auth — identity is a header</div>
+            <div>❌ API keys and per-key quotas</div>
+            <div>⚠️ <code>POST /offers</code> doesn't check maker approval</div>
+            <div>⚠️ Timings default to demo speed</div>
+            <div>⚠️ Catalog <code>usd_rate</code> is a compile-time constant</div>
+            <div>⚠️ Agent assessment is a simulated layer</div>
+            <div>✅ Full order lifecycle, both directions</div>
+            <div>✅ Confirmation tokens, both grades</div>
+          </div>
+        </div>
+
+        <div class="box">
+          <div class="cell-l">Timing windows</div>
+          <p><code style="font-size:11px;background:var(--g50);border:1px solid var(--g200);padding:1px 5px">ATARA_DEMO_TIMING</code> switches between two sets. Demo is the default: a 4-hour payment window runs 24 seconds, a 72-hour dispute window runs 15. Don't build countdowns against the demo numbers.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="l"><span class="nmark" aria-hidden="true"><i></i></span><b>Atara</b><span class="sl">/</span><span>Payment API v1</span></div>
+    <div class="r">
+      <a href="console.html">Console</a>
+      <a href="index.html">Atara</a>
+      <button data-go="#overview">Back to top</button>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ─── data ─────────────────────────────────────── */
+const BASE = 'http://localhost:8080/api/v1';
+
+const DOMAINS = {
+  account:    { label: 'Account',     slug: '/auth · /wallet · /allowances', tag: 'Address as identity, on-chain spend limits, confirmation tokens.', total: 9 },
+  liquidity:  { label: 'Liquidity',   slug: '/offers · /orders/match',       tag: 'The pool, maker reputation, matching, admission.', total: 15 },
+  settlement: { label: 'Settlement',  slug: '/orders · /tasks',              tag: 'Escrow tickets from match to release, and their chain facts.', total: 15 },
+  payout:     { label: 'Payout',      slug: '/payees · /withdrawals',        tag: 'Address book, withdrawals, evidence, counterparty threads.', total: 14 },
+};
+
+const E = [
+  // ── account ──
+  { m:'POST', p:'/auth/connect', d:'Register or sign in — the same call. Four methods land on one address; an existing address returns its account.', dom:'account', tags:['passkey','wallet','google','email'],
+    ex:`curl -X POST ${BASE}/auth/connect \\
+  -H "Content-Type: application/json" \\
+  -d '{"method":"passkey","name":"Acme Desk"}'
+
+{
+  "id": "u_8f42",
+  "address": "TDemo...",
+  "wallet_kind": "atara",     // "ext" when you bring your own wallet
+  "display_name": "Acme Desk"
+}` },
+  { m:'GET', p:'/wallet', d:'On-chain and in-escrow balances per asset, plus the escrow and spending contract addresses so you can check them yourself.', dom:'account', tags:['balances','escrow','non-custodial'],
+    ex:`curl ${BASE}/wallet -H "X-Atara-User: demo"
+
+{
+  "address": "TDemo...",
+  "wallet_kind": "atara",
+  "custody": "self",           // always
+  "on_chain_usd": "34500.00",
+  "in_escrow_usd": "5400.00",
+  "assets": [
+    { "asset": "USDT", "on_chain": "34500", "in_escrow": "5400",
+      "networks": ["TRON", "ETH"] }
+  ],
+  "escrow_contract": { "address": "TEscrow...", "network": "TRON" }
+}` },
+  { m:'POST', p:'/passkey/assert', d:'Mint a confirmation token bound to one operation. Grade signature to move money, commit to promise only.', dom:'account', tags:['signature','commit','120s'], grade:'mints tokens',
+    ex:`curl -X POST ${BASE}/passkey/assert \\
+  -H "X-Atara-User: demo" \\
+  -d '{"scope":"accept","parts":["<order-id>"],"grade":"commit"}'
+
+{
+  "confirmation": "a1b2c3...",
+  "expires_at": "2026-09-02T05:44:05Z",
+  "grade": "commit",
+  "header": "X-Atara-Confirmation"
+}
+
+// wrong amount or peer → CONFIRMATION_INVALID, and the token is voided` },
+  { m:'POST', p:'/allowances', d:'Issue spending power to a person or an agent: per-payment cap, windowed cap, cycle, expiry, optional fixed recipients.', dom:'account', tags:['agent budget','revocable','on-chain'], grade:'signature',
+    ex:`curl -X POST ${BASE}/allowances \\
+  -H "X-Atara-User: demo" \\
+  -H "X-Atara-Confirmation: <signature-token>" \\
+  -d '{
+    "spender": "Ops agent",
+    "kind": "agent",
+    "per_payment": "300",
+    "window_cap": "1200",
+    "cycle": "weekly",
+    "expires": "30 days"
+  }'
+
+// 201 Created
+// per_payment above window_cap → CAP_ABOVE_WINDOW
+// atara wallets write account policy; ext wallets approve the spending contract` },
+  { m:'DELETE', p:'/allowances/{id}', d:'Revoke. For an external wallet this is an on-chain approve(0); the agent stops being able to spend immediately.', dom:'account', tags:['revoke'],
+    ex:`curl -X DELETE ${BASE}/allowances/al_31 -H "X-Atara-User: demo"
+
+{ "status": "revoked" }
+
+// later calls against it → ALLOWANCE_REVOKED` },
+
+  // ── liquidity ──
+  { m:'GET', p:'/offers', d:'Browse the pool. Sell offers are backed by coins already locked in escrow, and every maker carries public reputation — including the gaps.', dom:'liquidity', tags:['pool','trust score','fill rate'],
+    ex:`curl "${BASE}/offers?side=sell&asset=USDT&fiat=CNY" \\
+  -H "X-Atara-User: demo"
+
+[
+  {
+    "id": "p1",
+    "maker": "CrabWalk Trading",
+    "side": "sell", "asset": "USDT", "fiat": "CNY",
+    "unit_price": "7.31",
+    "remaining_qty": "108015",      // coin
+    "min_lot": "5000",              // fiat — don't mix the units
+    "networks": ["TRON", "ETH"],
+    "lock_tx": "0x...",
+    "trust_score": 87, "deals": 412, "disputes": 2,
+    "fill_rate": "0.98", "median_release_secs": 640,
+    "docs": ["registration", "aml_policy"]   // missing ones are simply absent
+  }
+]` },
+  { m:'POST', p:'/offers', d:'Post an offer. A sell offer locks the coins on-chain before it is stored, so what buyers see in the pool is real inventory.', dom:'liquidity', tags:['lock on post','maker'], grade:'by side',
+    ex:`curl -X POST ${BASE}/offers \\
+  -H "X-Atara-User: crabwalk" \\
+  -H "X-Atara-Confirmation: <signature-token>" \\
+  -d '{
+    "side": "sell", "asset": "USDT", "fiat": "CNY",
+    "unit_price": "7.31", "qty": "108015",
+    "min_lot": "5000", "network": "TRON"
+  }'
+
+// sell → coins locked on-chain first, then stored. lock_tx returned.
+// buy  → nothing is locked (the fiat leg is at a bank), commit token is enough.` },
+  { m:'POST', p:'/offers/{id}/take', d:'Open a settlement ticket against an offer. Reserves the quantity in the same transaction — no token needed because nothing has moved yet.', dom:'liquidity', tags:['no token','reserves','concurrency'],
+    ex:`curl -X POST ${BASE}/offers/p1/take \\
+  -H "X-Atara-User: demo" \\
+  -d '{"amount":"73100","amount_kind":"fiat","network":"TRON"}'
+
+{
+  "id": "o_7c31", "ref": "ATR-8F42C1",
+  "state": "match",
+  "seconds_left": 20        // reservation window
+}
+
+// beaten to it → ABOVE_AVAILABLE_QTY (with a remedy amount)
+// your own offer → SELF_TRADE` },
+  { m:'POST', p:'/orders/match', d:'Find who can take this trade. Returns the three best makers by reputation; the order is the default choice.', dom:'liquidity', tags:['top 3','named peer','no fallback'],
+    ex:`curl -X POST ${BASE}/orders/match \\
+  -H "X-Atara-User: demo" \\
+  -d '{"intent":"buy","amount":"10000","amount_kind":"coin",
+       "asset":"USDT","fiat":"CNY"}'
+
+// with a named counterparty, we match inside that maker's offers only:
+  -d '{..., "counterparty_id":"mk-p1"}'
+
+// and if they can't fill it → NO_MATCH_WITH_COUNTERPARTY
+// we never quietly settle you with someone else.` },
+  { m:'POST', p:'/maker/application', d:'Two-stage admission. Identity first; listing config only opens after identity is approved. Review is a human decision, not agent consensus.', dom:'liquidity', tags:['kyc','two-stage','human review'],
+    ex:`curl -X POST ${BASE}/maker/application \\
+  -H "X-Atara-User: demo" \\
+  -d '{"stage":"kyc", "form": { ... }}'
+
+// kyc_done → [review] → kyc_ok → listing config allowed
+// submitting listing config early → KYC_NOT_APPROVED
+
+// known gap: POST /offers does not yet enforce approved.` },
+
+  // ── settlement ──
+  { m:'POST', p:'/orders/{id}/accept', d:'Commit to the ticket. Verifies the maker’s lock and opens the fiat leg. The token grade depends on which way you are trading.', dom:'settlement', tags:['s1 → s3','allowance check'], grade:'by side',
+    ex:`curl -X POST ${BASE}/orders/o_7c31/accept \\
+  -H "X-Atara-User: demo" \\
+  -H "X-Atara-Confirmation: <token>" \\
+  -d '{"via":"wallet"}'
+
+// taker buying coin            → commit    (their coins are already locked)
+// taker selling + atara wallet → signature (a real transfer gets signed)
+// taker selling + ext wallet   → commit    (we hold no key; we watch the chain)
+
+// state: match → s1 → s3` },
+  { m:'POST', p:'/orders/{id}/receipt', d:'The payer hands in the bank receipt once the fiat has actually been sent. The ticket moves to s3v and waits for the receiver.', dom:'settlement', tags:['s3v','evidence'],
+    ex:`curl -X POST ${BASE}/orders/o_7c31/receipt \\
+  -H "X-Atara-User: demo" \\
+  -d '{"file_ref":"upload_9a1c"}'
+
+{ "state": "s3v", "receipt_ref": "rcpt_7f2a" }
+
+// upload the file first with POST /uploads` },
+  { m:'POST', p:'/orders/{id}/verify-receipt', d:'The party who received the fiat verifies it, and the escrow releases. Verification is the only thing that unlocks the coins.', dom:'settlement', tags:['release','dispute'], grade:'fiat receiver',
+    ex:`curl -X POST ${BASE}/orders/o_7c31/verify-receipt \\
+  -H "X-Atara-User: crabwalk" \\
+  -d '{"ok":true}'
+
+// state: s3v → s4 → s5 (completed)
+
+// ok:false moves to disputed with the reason on the event log,
+// and the funds stay locked.
+// the submitter calling this on their own receipt → NOT_YOUR_CALL` },
+  { m:'GET', p:'/orders/{id}', d:'The ticket, computed for whoever is asking. Render phase and actor directly — there is no state machine to rebuild client-side.', dom:'settlement', tags:['phase','actor','rail'],
+    ex:`curl ${BASE}/orders/o_7c31 -H "X-Atara-User: demo"
+
+{
+  "state": "s3v",
+  "phase": "lock",  "actor": "auto",   // as the payer:   nothing to do
+  ...
+}
+
+// the same ticket read by the maker:
+{
+  "state": "s3v",
+  "phase": "verify", "actor": "you",   // as the receiver: your move
+  ...
+}
+
+// pay/you · wait/them · verify/you · lock/auto · rel/auto
+// terminal tickets and non-parties get null` },
+  { m:'GET', p:'/orders/{id}/escrow', d:'The chain’s version of events, not our bookkeeping: contract, transaction hash, confirmations, explorer link.', dom:'settlement', tags:['on-chain','verifiable'],
+    ex:`curl ${BASE}/orders/o_7c31/escrow -H "X-Atara-User: demo"
+
+{
+  "contract": "TEscrow...",
+  "network": "TRON",
+  "explorer": "https://...",
+  "funding_via": "wallet",
+  "tx_hash": "0x...",
+  "confirmations": 12, "required": 12,
+  "needs_funding": false
+}` },
+  { m:'GET', p:'/tasks', d:'A derived to-do projection across all your tickets. What needs you comes first, then what is running, then what is done.', dom:'settlement', tags:['inbox','polling'],
+    ex:`curl ${BASE}/tasks -H "X-Atara-User: demo"
+
+[
+  { "order": "ATR-8F42C1", "state": "you",  "label": "Verify a receipt" },
+  { "order": "ATR-11B7D2", "state": "run",  "label": "Waiting for confirmations" },
+  { "order": "ATR-0C9E44", "state": "done", "label": "Completed" }
+]
+
+// cheaper than polling every order individually` },
+
+  // ── payout ──
+  { m:'POST', p:'/withdrawals', d:'Record the intent, the purpose and the compliance file. You sign and broadcast the transfer yourself; the hash is filled in after.', dom:'payout', tags:['digital only','purpose required'], grade:'signature',
+    ex:`curl -X POST ${BASE}/withdrawals \\
+  -H "X-Atara-User: demo" \\
+  -H "X-Atara-Confirmation: <signature-token>" \\
+  -d '{
+    "payee_id": "pe_44", "asset": "USDT", "amount": "250.5",
+    "purpose": "OTC settlement", "doc_upload_id": "upload_9a1c"
+  }'
+
+// state: draft → submitted → broadcast → confirmed | failed
+// fiat → ASSET_REQUIRED. purpose missing → PURPOSE_REQUIRED
+//   (the receiving bank will ask, so we ask first)` },
+  { m:'POST', p:'/payees', d:'Address book. Unique per owner, chain and address — the same string on another chain is a different payee, so chain is required.', dom:'payout', tags:['address book'],
+    ex:`curl -X POST ${BASE}/payees \\
+  -H "X-Atara-User: demo" \\
+  -d '{"label":"Ops wallet","chain":"TRON","address":"TXm..."}'
+
+// duplicate → PAYEE_EXISTS` },
+  { m:'GET', p:'/threads/{peer}', d:'One stream per counterparty: messages and settlement tickets interleaved, so a conversation and its trades stay together.', dom:'payout', tags:['messages','orders','one stream'],
+    ex:`curl ${BASE}/threads/crabwalk -H "X-Atara-User: demo"
+
+{
+  "peer": "CrabWalk Trading",
+  "items": [
+    { "kind": "message", "from": "them", "text": "..." },
+    { "kind": "order",   "ref": "ATR-8F42C1", "state": "s3v" }
+  ]
+}
+
+// add a counterparty by name or address with POST /contacts` },
+  { m:'POST', p:'/uploads', d:'Upload a bank receipt or a compliance document and get back a file_ref you can attach to a ticket or a withdrawal.', dom:'payout', tags:['evidence','file_ref'],
+    ex:`curl -X POST ${BASE}/uploads \\
+  -H "X-Atara-User: demo" \\
+  -F "file=@receipt.pdf"
+
+{ "id": "upload_9a1c", "file_ref": "upload_9a1c" }
+
+// served back from GET /uploads/*` },
+];
+
+const USE_CASES = [
+  { t:'An agent that trades within a budget', d:'Issue an allowance with a per-payment cap and a weekly window, then let the agent match, take and accept on its own. It can commit to a trade; it can never move funds past the cap.', e:'POST /allowances' },
+  { t:'An escrowed off-ramp inside your app', d:'Show the pool with maker reputation attached, let the user take an offer, and hold the coins in escrow until their bank receipt is verified. They never pay first and hope.', e:'GET /offers' },
+  { t:'A maker desk that runs itself', d:'Post offers that lock inventory on-chain, poll /tasks for what needs you, match incoming receipts against your bank feed and verify. Refill and delist from the same API.', e:'GET /tasks' },
+  { t:'A status view both sides trust', d:'Render phase and actor as they come back. The payer sees "your turn to pay", the receiver sees "your turn to verify", and the escrow section lets a suspicious user check the chain.', e:'GET /orders/:id' },
+  { t:'Escrow between people who already know each other', d:'Pass counterparty_id and we match inside that maker only. No fill means a clear error, never a quiet settlement with a stranger. Threads keep the chat and the trades together.', e:'POST /orders/match' },
+  { t:'Compliance-ready payout runs', d:'Batch withdrawals with a purpose and a document on each one, then fill in the transaction hash after your own signer broadcasts. The protocol keeps the record; your keys stay yours.', e:'POST /withdrawals' },
+];
+
+const TAGROWS = [
+  ['USDT','USDC','ETH','BTC','TRON','ETH · L2'],
+  ['CNY','HKD','USD','SGD','AED'],
+  ['Escrow contract','Agent assessment','Dispute case','Conditional (v2)'],
+];
+
+/* ─── render ───────────────────────────────────── */
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const short = d => { let t = d.split(/(?<=\.)\s|\s—\s/)[0].trim(); if(t.length>96) t = t.slice(0,93).replace(/[\s,]+\S*$/,'')+'…'; return /[.…]$/.test(t)?t:t+'.'; };
+function hi(code){
+  return esc(code).split('\n').map(line=>{
+    const t=line.trimStart();
+    if(t.startsWith('//')||t.startsWith('#')) return `<span class="gr">${line}</span>`;
+    const slot=[]; const ph=h=>{slot.push(h);return `⦗PH${slot.length-1}HP⦘`};
+    let l=line;
+    l=l.replace(/(\/\/.*)$/,(_,c)=>ph(`<span class="gr">${c}</span>`));
+    l=l.replace(/"([^"]*)"(\s*:)/g,(_,k,c)=>ph(`<span class="cy">"${k}"</span>`)+c);
+    l=l.replace(/"([^"]*)"/g,(_,v)=>ph(`<span class="or">"${v}"</span>`));
+    l=l.replace(/'([^']*)'/g,(_,v)=>ph(`<span class="or">'${v}'</span>`));
+    l=l.replace(/\b(const|await|curl|POST|GET|DELETE|PUT|true|false|null)\b/g,'<span class="vi">$1</span>');
+    l=l.replace(/\b(\d+\.?\d*)\b/g,'<span class="am">$1</span>');
+    l=l.replace(/⦗PH(\d+)HP⦘/g,(_,i)=>slot[+i]);
+    return l||' ';
+  }).join('\n');
+}
+
+const domsEl=document.getElementById('doms');
+domsEl.innerHTML=Object.entries(DOMAINS).map(([k,v],i)=>{
+  const eps=E.filter(e=>e.dom===k);
+  return `<div class="rv" style="transition-delay:${80*(i+1)}ms"><button class="dom" data-dom="${k}">
+    <div class="top"><span class="slug">${esc(v.slug)}</span><span class="live"><i></i>Live</span></div>
+    <h3>${v.label}</h3>
+    <p class="tag">${esc(v.tag)}</p>
+    <div class="eps">${eps.slice(0,4).map(e=>`
+      <div class="ep"><div class="h"><span class="m ${e.m.toLowerCase()}">${e.m}</span><code>${esc(e.p)}</code></div>
+      <p>${esc(short(e.d))}</p></div>`).join('')}</div>
+    <div class="foot"><div><div class="n">${v.total}</div><div class="c">Endpoints</div></div>
+      <div class="go">Explore <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></div></div>
+  </button></div>`;
+}).join('');
+
+document.querySelectorAll('.tagrow,.tagrow2,.tagrow3').forEach((el,i)=>{
+  el.innerHTML=TAGROWS[i].map(t=>`<span style="padding:2px 8px;font-size:10px;font-family:var(--mono);font-weight:700;color:var(--g700);background:var(--g50);border:1px solid var(--g200)">${esc(t)}</span>`).join('');
+});
+
+document.getElementById('uc').innerHTML=USE_CASES.map((u,i)=>`
+  <div class="rv" style="transition-delay:${i*60}ms;background:none;padding:0"><div style="background:#fff;padding:26px;height:100%;display:flex;flex-direction:column">
+    <div class="h"><i>${String(i+1).padStart(2,'0')}</i><code>${esc(u.e)}</code></div>
+    <h3>${esc(u.t)}</h3><p>${esc(u.d)}</p>
+  </div></div>`).join('');
+
+let dom='all', q='';
+const chipsEl=document.getElementById('chips'), cardsEl=document.getElementById('cards');
+function counts(){const c={all:E.length};Object.keys(DOMAINS).forEach(k=>c[k]=E.filter(e=>e.dom===k).length);return c}
+function paintChips(){
+  const c=counts();
+  chipsEl.innerHTML=[['all','All'],...Object.entries(DOMAINS).map(([k,v])=>[k,v.label])]
+    .map(([k,l])=>`<button class="chip${dom===k?' on':''}" data-c="${k}">${l}<b>${c[k]}</b></button>`).join('');
+}
+function paintCards(){
+  const s=q.trim().toLowerCase();
+  const list=E.filter(e=>(dom==='all'||e.dom===dom)&&(!s||e.p.toLowerCase().includes(s)||e.d.toLowerCase().includes(s)||e.tags.some(t=>t.toLowerCase().includes(s))));
+  if(!list.length){cardsEl.innerHTML=`<div class="empty">No endpoints match "${esc(q)}". Try a different keyword.</div>`;return}
+  cardsEl.innerHTML=list.map(e=>`<div class="card" data-p="${esc(e.p)}">
+    <button>
+      <div class="l1"><span class="m ${e.m.toLowerCase()}" style="padding:5px 10px;font-size:10px">${e.m}</span>
+        <code>${esc(e.p)}</code><span class="sp"></span>
+        ${e.grade?`<span class="grade${e.grade==='signature'?' hot':''}">${esc(e.grade)}</span>`:''}
+        <svg class="chev" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <p class="d">${esc(e.d)}</p>
+      <div class="tags">${e.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div>
+    </button>
+    <div class="ex"><div class="h"><span>Example</span><button class="copy" data-copy-idx="${E.indexOf(e)}">Copy</button></div><pre>${hi(e.ex)}</pre></div>
+  </div>`).join('');
+}
+paintChips();paintCards();
+
+/* ─── interactions ─────────────────────────────── */
+document.addEventListener('click',ev=>{
+  const chip=ev.target.closest('.chip');
+  if(chip){dom=chip.dataset.c;paintChips();paintCards();return}
+  const d=ev.target.closest('.dom');
+  if(d){dom=d.dataset.dom;paintChips();paintCards();document.getElementById('endpoints').scrollIntoView({behavior:'smooth',block:'start'});return}
+  const go=ev.target.closest('[data-go]');
+  if(go){document.querySelector(go.dataset.go).scrollIntoView({behavior:'smooth',block:'start'});return}
+  const cp=ev.target.closest('.copy');
+  if(cp){
+    const txt=cp.dataset.copy!==undefined?cp.dataset.copy:E[+cp.dataset.copyIdx].ex;
+    navigator.clipboard.writeText(txt).then(()=>{cp.textContent='Copied';cp.classList.add('ok');setTimeout(()=>{cp.textContent='Copy';cp.classList.remove('ok')},2000)}).catch(()=>{});
+    ev.stopPropagation();return;
+  }
+  const card=ev.target.closest('.card');
+  if(card){const was=card.classList.contains('open');document.querySelectorAll('.card.open').forEach(c=>c.classList.remove('open'));if(!was)card.classList.add('open')}
+});
+document.getElementById('q').addEventListener('input',e=>{q=e.target.value;paintCards()});
+
+/* nav shadow + scroll spy */
+const nav=document.getElementById('nav');
+addEventListener('scroll',()=>nav.classList.toggle('on',scrollY>50),{passive:true});
+const navA=[...document.querySelectorAll('#nlinks a')];
+const io2=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)navA.forEach(a=>a.classList.toggle('cur',a.getAttribute('href')==='#'+e.target.id))}),{rootMargin:'-40% 0px -55% 0px'});
+navA.map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean).forEach(s=>io2.observe(s));
+
+/* reveal */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.05});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+
+/* hero particles */
+(function(){
+  const c=document.getElementById('pcanvas');if(!c)return;
+  const ctx=c.getContext('2d');if(!ctx)return;
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  const dpr=devicePixelRatio||1;let W=0,H=0;
+  function size(){const p=c.parentElement;W=p.clientWidth;H=p.clientHeight;c.width=W*dpr;c.height=H*dpr;c.style.width=W+'px';c.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0)}
+  size();addEventListener('resize',size);
+  const pts=Array.from({length:56},()=>({x:Math.random()*2000,y:Math.random()*1000,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2,r:Math.random()*1.2+.5,a:Math.random()*.12+.04}));
+  (function frame(){
+    ctx.clearRect(0,0,W,H);
+    for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0}
+    for(let i=0;i<pts.length;i++){
+      for(let j=i+1;j<pts.length;j++){
+        const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.hypot(dx,dy);
+        if(d<110){ctx.strokeStyle=`rgba(0,0,0,${.06*(1-d/110)})`;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.stroke()}
+      }
+      ctx.fillStyle=`rgba(0,0,0,${pts[i].a})`;ctx.beginPath();ctx.arc(pts[i].x,pts[i].y,pts[i].r,0,Math.PI*2);ctx.fill();
+    }
+    requestAnimationFrame(frame);
+  })();
+})();
+</script>
+</body>
+</html>

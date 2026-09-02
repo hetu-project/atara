@@ -80,6 +80,9 @@
   .wordmark{font-size:1.0625rem;font-weight:600;letter-spacing:-.01em}
   .nav-start{display:inline-flex;align-items:center;gap:.55rem;padding:.67rem 1rem;border:1px solid var(--line);border-radius:999px;transition:background .15s linear,color .15s linear}
   .nav-start:hover{background:var(--white);color:var(--ink)}
+  .nav-right{display:inline-flex;align-items:center;gap:.35rem}
+  .nav-link{padding:.67rem .95rem;border-radius:999px;color:var(--muted-white);font-weight:500;letter-spacing:.01em;transition:color .15s linear,background .15s linear}
+  .nav-link:hover{color:var(--white);background:oklch(97% .018 264 / .08)}
 
   .hero-main{
     width:100%;max-width:var(--maxw);min-height:100svh;margin-inline:auto;display:grid;
@@ -774,7 +777,10 @@
   <section class="hero" id="top" aria-labelledby="hero-title">
     <nav class="nav" aria-label="Primary">
       <a class="brand" href="#top" aria-label="Atara home"><span class="brand-mark" aria-hidden="true"><i></i></span><span class="wordmark">Atara</span></a>
-      <a class="nav-start" href="console.html">Start <span aria-hidden="true">&rarr;</span></a>
+      <div class="nav-right">
+        <a class="nav-link" href="api.html">API</a>
+        <a class="nav-start" href="console.html">Console <span aria-hidden="true">&rarr;</span></a>
+      </div>
     </nav>
 
     <div class="hero-main">
@@ -1455,7 +1461,7 @@
   <div class="wrap">
     <div class="footer-main">
       <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i></span><span class="wordmark">Atara</span></a>
-      <nav aria-label="Footer"><a href="#different">Why this</a><a href="#arch">Architecture</a><a href="#engine">How it works</a><a href="#conditions">Payment conditions</a></nav>
+      <nav aria-label="Footer"><a href="#different">Why this</a><a href="#arch">Architecture</a><a href="#engine">How it works</a><a href="#conditions">Payment conditions</a><a href="api.html">API</a></nav>
     </div>
     <div class="footer-note"><span>&copy; 2026 Atara</span><span>Atara is not a bank. The credit engine is in development and is not extending credit. Figures shown are illustrative.</span></div>
   </div>
