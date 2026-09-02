@@ -99,6 +99,51 @@ python3 scripts/contract-check.py
 经 dev server 代理跑一遍核心链路，验证前端 API 层与后端契约一致。
 前后端都起着时运行。
 
+## 部署
+
+**这一步最容易出错**：`dev` 靠 Vite 代理把 `/api` 转给后端，
+生产环境**没有代理**。两条路，选一条：
+
+### A · 反向代理（推荐）
+
+前后端同源，前端用相对路径，不需要 CORS：
+
+```bash
+npm run build           # 产物在 dist/
+```
+
+Nginx / Caddy 把 `/api` 转给后端：
+
+```nginx
+location /api/ { proxy_pass http://backend:8080; }
+location /     { root /srv/atara-console/dist; try_files $uri /index.html; }
+```
+
+`try_files ... /index.html` 是必须的——哈希路由的深链刷新会 404。
+
+### B · 前后端不同源
+
+构建时给出完整后端地址：
+
+```bash
+VITE_API_BASE=https://api.example.com/api/v1 npm run build
+```
+
+后端要放行前端域名：
+
+```bash
+ATARA_CORS_ORIGINS=https://console.example.com
+```
+
+**别在生产用 `ATARA_CORS_ORIGINS=*`**（那是 demo 默认值）——
+带身份头的请求对任何来源都放行，等于没有同源保护。
+
+### 仓库根的 vercel.json 不覆盖这个目录
+
+根目录那份是纯静态部署（`outputDirectory: "."`），只发 `index.html` /
+`console.html` / `api.html`。**这个 React 控制台不在它的范围里**，
+要单独部署（或把 `app/dist` 的构建产物并进去）。
+
 ## 与旧版的关系
 
 仓库根目录的 `console.html` 是重写前的单文件版本（10394 行），保留供视觉对照。

@@ -1,4 +1,4 @@
-import { ApiError, api, getIdentity, withConfirmation } from './client'
+import { ApiError, BASE, api, getIdentity, withConfirmation } from './client'
 import type {
   Allowance, CatalogAsset, ConditionCatalog, Contact, EligiblePeer, MakerApp,
   Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, User, Wallet,
@@ -141,7 +141,8 @@ export const cancel = (orderId: string, as?: string) =>
 export async function upload(file: File, as?: string): Promise<string> {
   const fd = new FormData()
   fd.append('file', file)
-  const res = await fetch('/api/v1/uploads', {
+  // 用同一个 BASE：写死 '/api/v1' 会在跨域部署时漏掉这一个端点
+  const res = await fetch(BASE + '/uploads', {
     method: 'POST',
     // 不要手写 Content-Type——boundary 由浏览器生成
     headers: { 'X-Atara-User': as ?? getIdentity() },

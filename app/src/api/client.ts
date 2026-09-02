@@ -1,6 +1,19 @@
 import type { ApiErrorBody, Confirmation, Grade } from './types'
 
-const BASE = '/api/v1'
+/**
+ * 后端地址。
+ *
+ * 默认 '/api/v1' 是相对路径——**只在前后端同源时成立**：dev 靠 Vite 代理，
+ * 生产靠反向代理把 /api 转给后端。
+ *
+ * 前后端不同源时（比如前端在 Vercel、后端在别处）必须在构建时给出完整地址：
+ *
+ *     VITE_API_BASE=https://api.example.com/api/v1 npm run build
+ *
+ * 那种部署方式要靠后端 CORS 放行前端的域名（ATARA_CORS_ORIGINS）。
+ * 相对路径不需要 CORS，是更省事也更安全的那条路——优先用反向代理。
+ */
+export const BASE = import.meta.env.VITE_API_BASE ?? '/api/v1'
 
 /** 抛出的错误保留后端的 code / field / remedy，调用方按 code 分支。 */
 export class ApiError extends Error {
