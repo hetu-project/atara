@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Atara API · Developers</title>
-<meta name="description" content="Settle OTC trades from your backend or your agent. On-chain escrow, release against a verified bank receipt. REST in, JSON out.">
+<meta name="description" content="Conditional settlement over REST. Payments release against a condition the protocol can verify, assets lock on-chain, and Atara never holds a key.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -87,13 +87,16 @@ h3{font-size:20px;letter-spacing:-.02em}
 .hgrid{opacity:.03;background-image:linear-gradient(#000 1px,transparent 1px),linear-gradient(90deg,#000 1px,transparent 1px);background-size:64px 64px;z-index:0}
 .hcanvas{z-index:1}
 .hfade{top:auto;height:128px;background:linear-gradient(to bottom,transparent,#fff);z-index:3}
-.hero .wrap{position:relative;z-index:10;max-width:1000px;text-align:center}
+/* 首屏本来就靠 max-width 收口，再吃一遍 96px 栏距会把大标题挤到折行 */
+.hero .wrap{position:relative;z-index:10;max-width:1000px;padding-inline:var(--pad);text-align:center}
 .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--g700);background:rgba(255,255,255,.8);backdrop-filter:blur(4px);border:1px solid var(--g200);border-radius:999px;margin-bottom:40px}
 .pill i{width:6px;height:6px;border-radius:50%;background:var(--em600);animation:pulse 2s infinite}
 @keyframes pulse{50%{opacity:.4}}
 @media (prefers-reduced-motion:reduce){.pill i{animation:none}}
-.hero h1{font-size:clamp(38px,7.6vw,88px);line-height:.97;letter-spacing:-.04em}
+/* 上限 80：这句话是 10.96em 宽，容器 904px，88px 会折行 */
+.hero h1{font-size:clamp(38px,7.6vw,80px);line-height:.97;letter-spacing:-.04em}
 .hero h1 span{color:var(--g400)}
+.hero h1 .k{color:inherit}
 .hsub{font-size:clamp(15px,1.6vw,20px);color:var(--g600);font-weight:500;line-height:1.6;max-width:42rem;margin:32px auto 0}
 .hterm{max-width:42rem;margin:44px auto 0;text-align:left}
 .hterm .row{display:flex;align-items:center;gap:12px;padding:20px 22px}
@@ -288,10 +291,10 @@ footer .r a:hover,footer .r button:hover{color:#000}
   <div class="wrap">
     <div class="rv"><div class="pill"><i></i>Internal Beta · No API Key Yet</div></div>
     <div class="rv" style="transition-delay:80ms">
-      <h1>Escrowed OTC. <span>Zero custody.</span></h1>
+      <h1><span class="k">Conditional settlement.</span><br><span>Zero custody.</span></h1>
     </div>
     <div class="rv" style="transition-delay:160ms">
-      <p class="hsub">Settle crypto-for-fiat trades from your backend or your agent. Coins lock on-chain, release against a verified bank receipt. You never hold a key, and never the counterparty.</p>
+      <p class="hsub">Payments release against a condition the protocol can verify, not against the other side’s word. Assets lock on-chain until it clears. You never hold a key, and never stand as the counterparty.</p>
     </div>
     <div class="rv" style="transition-delay:240ms">
       <div class="hterm">
@@ -302,7 +305,7 @@ footer .r a:hover,footer .r button:hover{color:#000}
             <button class="copy" data-copy='curl "http://localhost:8080/api/v1/offers?side=sell&asset=USDT"'>Copy</button>
           </div>
         </div>
-        <div class="hnote">Mock auth during internal testing · call from your server, not the browser</div>
+        <div class="hnote">v1 covers OTC settlement · conditional transfers follow · call from your server, not the browser</div>
       </div>
     </div>
     <div class="rv" style="transition-delay:320ms">
