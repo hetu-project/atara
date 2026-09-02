@@ -1,6 +1,8 @@
 import { ApiError, api, getIdentity, withConfirmation } from './client'
 import type {
-  CatalogAsset, EligiblePeer, MatchResult, Offer, Order, Task, User, Wallet,
+  Allowance, CatalogAsset, ConditionCatalog, Contact, EligiblePeer, MakerApp,
+  Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, User, Wallet,
+  Withdrawal,
 } from './types'
 
 // ── 账户 ──
@@ -156,3 +158,137 @@ export async function upload(file: File, as?: string): Promise<string> {
   }
   return body.file_ref
 }
+
+// ── 支配权（额度）──
+
+export const allowances = (as?: string) =>
+  api.get<{ allowances: Allowance[] }>('/allowances', { as }).then(r => r.allowances ?? [])
+
+export interface AllowanceReq {
+  spender: string
+  kind: 'person' | 'agent'
+  per_payment: string
+  window_cap: string
+  cycle: 'weekly' | 'monthly'
+  /** '30 days' | '90 days' | '' = 不过期 */
+  expires: string
+  recipients: string
+}
+
+/**
+ * 签发或改一份额度。**必须签名档**——授予支配权本身就是一次授权动作，
+ * 不是一句承诺。
+ */
+export const saveAllowance = (req: AllowanceReq, id?: string, as?: string) =>
+  withConfirmation('allowance', [req.spender, req.per_payment, req.window_cap], 'signature',
+    token => api.post<Allowance>(id ? `/allowances/${id}` : '/allowances', req, {
+      confirmation: token, as,
+    }), as)
+
+export const revokeAllowance = (id: string, as?: string) =>
+  api.del<Allowance>(`/allowances/${id}`, { as })
+
+// ── 收款方与提现 ──
+
+export const payees = (as?: string) =>
+  api.get<{ payees: Payee[] }>('/payees', { as }).then(r => r.payees ?? [])
+
+export const addPayee = (body: { label: string; chain: string; address: string }, as?: string) =>
+  api.post<Payee>('/payees', body, { as })
+
+export const deletePayee = (id: string, as?: string) =>
+  api.del<{ status: string }>(`/payees/${id}`, { as })
+
+export const withdrawals = (as?: string) =>
+  api.get<{ withdrawals: Withdrawal[] }>('/withdrawals', { as }).then(r => r.withdrawals ?? [])
+
+export interface WithdrawReq {
+  payee_id: string
+  asset: string
+  amount: string
+  purpose: string
+  doc_upload_id?: string
+}
+
+/**
+ * 提现。链上转账由你自己签，协议只记意图与合规材料——
+ * 但动钱必确认照旧适用，要签名档。只能提数字资产，法币不入账。
+ */
+export const createWithdrawal = (req: WithdrawReq, as?: string) =>
+  withConfirmation('withdraw', [req.payee_id, req.asset, req.amount], 'signature',
+    token => api.post<Withdrawal>('/withdrawals', req, { confirmation: token, as }), as)
+
+/** 回填你自己签出来的那笔转账。没有这一步，提现永远停在 submitted。 */
+export const broadcastWithdrawal = (id: string, txHash: string, as?: string) =>
+  api.post<Withdrawal>(`/withdrawals/${id}/broadcast`, { tx_hash: txHash }, { as })
+
+// ── Discover 与做市准入 ──
+
+export const markets = () =>
+  api.get<{ markets: Market[] }>('/discover/markets').then(r => r.markets)
+
+export const makerApp = (as?: string) => api.get<MakerApp>('/maker/application', { as })
+
+export const submitMakerApp = (phase: 'kyc' | 'listing', form: unknown, as?: string) =>
+  api.post<MakerApp>('/maker/application', { phase, form }, { as })
+
+/** 待审列表。需要 reviewer 角色，否则 403 ROLE_REQUIRED。 */
+export const pendingMakerApps = (as?: string) =>
+  api.get<{ applications: MakerApp[] }>('/admin/maker/applications', { as })
+    .then(r => r.applications ?? [])
+
+/** 真人审核。审核不算 agent 共识，所以挡在角色门后，系统不自动放行。 */
+export const reviewMakerApp = (
+  userId: string,
+  body: { stage: 'kyc' | 'listing'; decision: 'approve' | 'reject'; reason?: string },
+  as?: string,
+) => api.post<MakerApp>(`/admin/maker/applications/${userId}/review`, body, { as })
+
+/** 挂单。卖单会真的上链锁币，所以要签名档；买单只是承诺，commit 档即可。 */
+export const createOffer = (req: {
+  side: 'buy' | 'sell'
+  asset: string
+  fiat: string
+  unit_price: string
+  qty: string
+  min_lot: string
+  network: string
+  networks?: string[]
+}, as?: string) =>
+  withConfirmation('offer', [req.asset, req.qty],
+    req.side === 'sell' ? 'signature' : 'commit',
+    token => api.post<Offer>('/offers', req, { confirmation: token, as }), as)
+
+export const myOffers = (as?: string) =>
+  api.get<{ offers: Offer[] }>('/offers/mine', { as }).then(r => r.offers ?? [])
+
+export const delistOffer = (id: string, as?: string) =>
+  api.del<{ status: string }>(`/offers/${id}`, { as })
+
+// ── 联系人与会话 ──
+
+export const contacts = (as?: string) =>
+  api.get<{ contacts: Contact[]; relationships: string[] }>('/contacts', { as })
+
+/** 一个字段收名字或地址——没有 ATR ID 这套东西。字段名是 query，不是 q。 */
+export const addContact = (
+  body: { query: string; label?: string; nickname?: string },
+  as?: string,
+) => api.post<Contact>('/contacts', body, { as })
+
+export const threads = (as?: string) =>
+  api.get<{ threads: unknown[] }>('/threads', { as }).then(r => r.threads ?? [])
+
+export const thread = (peer: string, as?: string) =>
+  api.get<Thread>(`/threads/${encodeURIComponent(peer)}`, { as })
+
+export const postChat = (peer: string, body: string, as?: string) =>
+  api.post<Message>(`/threads/${encodeURIComponent(peer)}/messages`, { body }, { as })
+
+// ── 条件支付 ──
+
+export const conditionCatalog = () => api.get<ConditionCatalog>('/catalog/conditions')
+
+/** 自然语言解析成条件原子。V1 前端不用，端点仍在。 */
+export const parseIntent = (text: string, as?: string) =>
+  api.post<unknown>('/orders/parse', { text }, { as })

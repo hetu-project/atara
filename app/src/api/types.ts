@@ -223,3 +223,142 @@ export interface CatalogAsset {
   networks?: string[]
   corridor?: string
 }
+
+// ── 支配权（额度）──
+
+/**
+ * 额度是签进链上的支配权，不是平台的额度表——平台只记着链上签发了什么。
+ * 可撤销、有周期窗口、有单笔上限、可限定收款方。
+ */
+export interface Allowance {
+  id: string
+  spender: string
+  kind: 'person' | 'agent'
+  asset: string
+  per_payment: string
+  window_cap: string
+  used: string
+  cycle: 'weekly' | 'monthly'
+  expires_at: string | null
+  recipients: string
+  template?: string
+  wallet_kind: 'atara' | 'ext'
+  chain_tx?: string
+  status: 'live' | 'revoked'
+  note?: string
+}
+
+// ── 收款方与提现 ──
+
+export interface Payee {
+  id: string
+  label: string
+  chain: string
+  address: string
+  created_at: string
+}
+
+export type WithdrawalState = 'draft' | 'submitted' | 'broadcast' | 'confirmed' | 'failed'
+
+export interface Withdrawal {
+  id: string
+  payee_id: string
+  asset: string
+  amount: string
+  purpose: string
+  doc_upload_id?: string
+  tx_hash?: string
+  state: WithdrawalState
+  created_at: string
+  updated_at: string
+  payee_label: string
+  payee_chain: string
+  payee_address: string
+}
+
+// ── Discover 与做市准入 ──
+
+export interface Market {
+  key: string
+  name: string
+  live: boolean
+  desc?: string
+  /** [维度, 说明] 的二元组。 */
+  map?: [string, string][]
+}
+
+/**
+ * 做市申请。四个状态位驱动前端那颗按钮的三种文案：
+ * approved → 「挂单」；listing_done 未审 → 「审核中」；其余 → 「成为做市方」。
+ */
+export interface MakerApp {
+  user_id: string
+  phase: 'kyc' | 'listing'
+  kyc_done: boolean
+  kyc_ok: boolean
+  listing_done: boolean
+  approved: boolean
+  form: string
+  reject_reason?: string
+  submitted_at?: string
+  reviewed_at?: string
+  reviewer_id?: string
+  updated_at: string
+  display_name?: string
+}
+
+// ── 联系人与会话 ──
+
+export interface Contact {
+  id: string
+  address: string
+  name: string
+  kind: string
+  /** Supplier / Client / Colleague / Friend / My agent */
+  label: string
+  nickname?: string
+  deals: number
+  fill_rate: string
+  /** 往来净额，正数=对方欠我。 */
+  net: string
+  since: string
+}
+
+export interface Message {
+  id: string
+  peer_id: string
+  author: 'me' | 'peer' | 'system'
+  kind: 'chat' | 'system' | 'order' | 'assessment'
+  body: string
+  order_id?: string
+  payload?: Record<string, string>
+  created_at: string
+}
+
+export interface Thread {
+  peer: string
+  messages: Message[]
+  orders: Order[]
+}
+
+// ── 条件支付 ──
+
+export interface ConditionAtom {
+  atom_type: 'approve' | 'evidence' | 'data' | 'time'
+  params: Record<string, string>
+}
+
+export interface ConditionParam {
+  key: string
+  control: 'pick' | 'text' | 'date'
+  options?: string[]
+  options_by?: Record<string, string[]>
+  depends_on?: string
+  placeholder?: string
+}
+
+export interface ConditionCatalog {
+  max: number
+  atoms: { type: string; label: string; params: ConditionParam[] }[]
+  fallback: { default_days: number; note: string }
+}

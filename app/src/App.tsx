@@ -1,6 +1,9 @@
 import { useState } from 'react'
+import Discover from './views/Discover'
 import Market from './views/Market'
+import Money from './views/Money'
 import OrderDetail from './views/OrderDetail'
+import People from './views/People'
 import Tasks from './views/Tasks'
 import Wallet from './views/Wallet'
 import { SEED_HANDLES, useIdentity } from './hooks/useIdentity'
@@ -10,6 +13,9 @@ import type { Order } from './api/types'
 const TABS = [
   { view: 'market', label: 'Trade' },
   { view: 'tasks', label: 'Tasks' },
+  { view: 'discover', label: 'Discover' },
+  { view: 'people', label: 'People' },
+  { view: 'money', label: 'Money' },
   { view: 'account', label: 'Account' },
 ] as const
 
@@ -54,6 +60,12 @@ export default function App() {
           <Market onOrder={(o: Order) => go({ view: 'order', id: o.id })} />
         ) : route.view === 'tasks' ? (
           <Tasks identity={handle} onOpen={id => go({ view: 'order', id })} />
+        ) : route.view === 'discover' ? (
+          <Discover identity={handle} />
+        ) : route.view === 'people' ? (
+          <People identity={handle} onOpenOrder={id => go({ view: 'order', id })} />
+        ) : route.view === 'money' ? (
+          <Money identity={handle} />
         ) : (
           <Wallet identity={handle} />
         )}

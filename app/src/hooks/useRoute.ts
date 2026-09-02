@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react'
 export type Route =
   | { view: 'market' }
   | { view: 'tasks' }
+  | { view: 'discover' }
+  | { view: 'people' }
+  | { view: 'money' }
   | { view: 'account' }
   | { view: 'order'; id: string }
 
@@ -27,6 +30,9 @@ function parse(): Route {
   const [head, id] = h.split('/')
   if (head === 'order' && id) return { view: 'order', id }
   if (head === 'tasks') return { view: 'tasks' }
+  if (head === 'discover') return { view: 'discover' }
+  if (head === 'people') return { view: 'people' }
+  if (head === 'money') return { view: 'money' }
   if (head === 'account') return { view: 'account' }
   return { view: 'market' }
 }
