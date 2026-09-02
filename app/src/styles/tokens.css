@@ -1,0 +1,109 @@
+/* 设计变量原样取自 console.html（147-206 与 208-253 行）。
+   不重新调色——新 app 必须看起来是同一个产品。 */
+:root{
+  /* ── 与主题无关 ── */
+  --r-chip: 6px; --r-control: 8px; --r-card: 10px; --r-panel: 16px;
+  /* 间距刻度：同组紧、跨组松。之前账户页用的是 26/20/15/13/9/7/5 这类随手值，
+     没有刻度就没有节奏——新写的间距一律从这里取 */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:40px;
+  --dur-instant: 80ms; --dur-fast: 140ms; --dur-normal: 220ms;
+  --ease: cubic-bezier(.23,1,.32,1);
+  --ease-exit: cubic-bezier(.4,0,1,1);
+  --focus-w: 2px; --focus-o: 2px;
+  --sans:'Inter',-apple-system,'PingFang SC',system-ui,sans-serif;
+  --serif:'Newsreader',Georgia,'Songti SC',serif;
+  /* 余额锚点卡：两个主题都用深色卡面，卡内文字色因此不随主题变 */
+  /* 余额卡：浅色下不再用深色锚点——重心由字号级差承担，深色主题仍是深卡（见 dark 块） */
+  --bal-text:var(--ink); --bal-sub:var(--mute); --bal-dim:#72757c; --bal-line:var(--cream);
+
+  /* ── 浅色（默认） ── */
+  --bg:         #f5f5f5;
+  --paper:      #ffffff;
+  --canvas:     #fafafa;
+  --card:       #f2f3f4;
+  --cream:      #ecedef;
+  --hairline:   #ecedef;
+  --hairline-2: #f2f3f4;
+  --line-strong:#e0e2e5;
+
+  --ink:        #1f2124;
+  --mute:       #62656b;
+  --faint:      #72757c;   /* 白底 4.61 — 与 --placeholder 同档 */
+  --faint-2:    #b4b7bc;
+  --on-inverse: #ffffff;   /* 反转底（--ink 实底）上的文字 */
+
+  /* 浅底：填充蓝与强调蓝同源——浅底上不需要提亮，需要够深才可读 */
+  --blue:       oklch(43% .29 266);
+  --blue-deep:  oklch(31% .24 268);
+  --accent:     oklch(43% .29 266);
+  --blue-wash:  #eef1fe;
+  --signal:     oklch(89% .19 119);
+  --signal-ink: oklch(32% .09 120);
+
+  --green:      #197a4b;  --green-wash: #e8f5ee;
+  --warn:       #a55a12;  --warn-wash:  #fdf3e7;
+  --neg:        #c0392b;
+
+  --focus-c:      var(--accent);
+  --focus-ring-a: oklch(43% .29 266 / .12);
+  --placeholder:#72757c;   /* 占位符专用：白底上 4.6:1，过 AA */
+  --surface:    #ffffff;   /* 面板之上的卡面。浅色与 paper 同，深色亮一档 */
+  --glare:#0b0d12;         /* 光泽色：白底上没有比白更亮的，只能用暗晕 */
+
+  --ring:      0 0 0 1px var(--hairline);
+  --sh-btn:    0 0 0 1px var(--line-strong), 0 1px 2px #1018280d;
+  --lift-lo:   0 0 0 1px var(--hairline), 0 1px 2px #1018280a, 0 2px 6px #10182808;
+  --sh-raised: 0 0 0 1px var(--hairline), 0 2px 10px #0000000b;
+  --sh-overlay:0 0 0 1px var(--hairline), 0 8px 28px #0000001a;
+
+  /* 浅色下锚点卡是实底深卡（浅底上发光会显脏） */
+  --bal-bg:   var(--paper);
+  --bal-ring: var(--lift-lo);
+}
+
+:root[data-theme="dark"]{
+  /* 三层底：页面 / 面板 / 卡面。层级靠明度而非边框拉开。
+     两处修正：① 地板不落纯黑——#0a0a0a 在 OLED 上读作"洞"，抬到 #101114；
+     ② 全套带一点冷偏（色相 ~265，与品牌蓝同族），零色相中性灰在大面积深底上发闷。
+     卡面对地板的明度差从 8 提到 15，卡片自己就浮得出来，不必靠边框。 */
+  --bg:         #101114;
+  --paper:      #1b1c21;
+  --canvas:     #15161a;
+  --card:       #26272d;
+  --cream:      #2e2f36;
+  /* 边框用半透明白——在任何底色上都自然，实色灰会在深底上发闷 */
+  --hairline:   rgba(255,255,255,.07);
+  --hairline-2: rgba(255,255,255,.045);
+  --line-strong:rgba(255,255,255,.14);
+
+  --ink:        #f4f4f5;
+  --mute:       #a1a1aa;
+  --faint:      #8a8a92;
+  --faint-2:    #52525b;
+  --on-inverse: #101114;
+
+  /* 深底：填充蓝保持深度让白字可读，强调蓝提亮供文字/图标使用 */
+  --blue:       #2563eb;
+  --blue-deep:  #1d4ed8;
+  --accent:     #60a5fa;
+  --blue-wash:  rgba(37,99,235,.12);
+
+  --green:      oklch(72% .14 152); --green-wash: oklch(28% .05 150);
+  --warn:       oklch(75% .13 70);  --warn-wash:  oklch(28% .05 75);
+  --neg:        oklch(66% .19 25);
+
+  --focus-ring-a: rgba(96,165,250,.22);
+  --placeholder:#8a8d94;   /* 深底上 4.97:1 */
+  --surface:    #202128;
+  --glare:#ffffff;
+
+  --sh-btn:    0 0 0 1px var(--line-strong), 0 1px 2px #0000004d;
+  --lift-lo:   0 0 0 1px var(--hairline), 0 1px 2px #00000059, 0 2px 6px #00000040;
+  --sh-raised: 0 0 0 1px var(--line-strong), 0 2px 10px #00000038;
+  --sh-overlay:0 0 0 1px var(--line-strong), 0 8px 28px #00000057;
+
+  /* 深色下锚点卡是全站唯一光源 */
+  --bal-text:#f4f4f5; --bal-sub:#a1a1aa; --bal-dim:#8a8a93; --bal-line:rgba(255,255,255,.10);
+  --bal-bg:   linear-gradient(180deg,#1c1c1c,#141414);
+  --bal-ring: 0 0 0 1px oklch(48% .27 266 / .5), 0 0 24px oklch(48% .27 266 / .18);
+}
