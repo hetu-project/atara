@@ -3356,12 +3356,12 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
       <div id="actions" role="group" aria-label="Actions">
         <button class="act" data-act="buy"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v8M4.5 7.5 8 11l3.5-3.5"/><path d="M3 13.5h10"/></svg></span>Buy</button>
         <button class="act" data-act="sell"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V5M4.5 8.5 8 5l3.5 3.5"/><path d="M3 2.5h10"/></svg></span>Sell</button>
-        <!-- V1 只做 OTC：条件支付不在这一版里，入口先撤 -->
+        <button class="act" data-act="cond"><span class="acti"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 1.5 3 9h4l-.5 5.5L13 7H9l-.5-5.5Z"/></svg></span>Conditional order</button>
       </div>
       <div class="sayrow">
         <div id="abar" hidden></div>
         <button class="sayopen" id="sayopen" type="button" tabindex="0" aria-label="Write a payment"><span id="sayopent"></span></button>
-        <textarea id="free" rows="1" aria-label="Describe a payment" placeholder="Describe a trade — try “Buy 5,000 USDT with CNY” or “Sell 2,000 USDT for HKD”"></textarea>
+        <textarea id="free" rows="1" aria-label="Describe a payment" placeholder="Describe a payment — try “Buy 5,000 USDT with CNY” or “Pay Huachuang 3,000 on delivery”"></textarea>
         <div class="saytools">
         <button class="sayic" id="actplus" title="New order" aria-label="New order" aria-expanded="false" style="display:none"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg></button>
         <button class="sayic" id="plusbtn" title="Attach" aria-label="Attach"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12.2 7.2-4.6 4.6a2.6 2.6 0 0 1-3.7-3.7l4.9-4.9a1.8 1.8 0 0 1 2.5 2.5L6.6 10.4a.9.9 0 0 1-1.3-1.3l4.3-4.3"/></svg></button>
@@ -6076,22 +6076,6 @@ document.getElementById('free').addEventListener('keydown',e=>{
   if(THREAD){say('me',q.replace(/[<>]/g,''));merchantReply(q);
     e.target.value='';syncSend();autogrow();return}
   if(tryOTC(q)){e.target.value='';autogrow();return}
-  /* V1 只做 OTC：撤了条件单胶囊，语法后门也得一起堵——
-     否则用户随手一句 "Pay X on delivery" 就用上了这一版说没有的东西。
-     不装听不懂：告诉他这一版能做什么，并给出下一步。 */
-  document.getElementById('empty')?.remove();
-  sellerMsg('me', q.replace(/[<>]/g,''));
-  e.target.value='';syncSend();autogrow();
-  setTimeout(()=>{
-    const m=sellerMsg('them',
-      'This version settles OTC trades only — buying or selling crypto against a counterparty in the pool. '
-    + 'Conditional payments to someone you already know are not in it yet.'
-    + '<span class="rgo"><button class="btn btn-secondary btn-sm" data-nlgo="buy">Buy crypto</button>'
-    + '<button class="btn btn-secondary btn-sm" data-nlgo="mkt">Browse the pool</button></span>');
-    m.querySelectorAll('[data-nlgo]').forEach(b=>b.onclick=()=>
-      b.dataset.nlgo==='buy'?openAct('buy'):switchView('market'));
-  },700);
-  return;
   const m=q.match(/(\d[\d,]*(?:\.\d+)?)\s*(万|k|K|m|M)?/);
   if(m){let v=parseFloat(m[1].replace(/,/g,''));const u2=(m[2]||'').toLowerCase();if(m[2]==='万')v*=10000;if(u2==='k')v*=1000;if(u2==='m')v*=1000000;S.amt=Math.round(v);S.guessed.amt=false;}
   S.coin=null;   /* 这条老路径按 USD 记，防止上一笔的币种残留 */
@@ -9012,7 +8996,7 @@ function setPlaceholder(){
   const f=document.getElementById('free');
   f.placeholder=THREAD
     ? `Message ${THREAD.name} — ask about the account, timing or documents`
-    : 'Describe a trade — try \u201CBuy 5,000 USDT with CNY\u201D or \u201CSell 2,000 USDT for HKD\u201D';
+    : 'Describe a payment — try \u201CBuy 5,000 USDT with CNY\u201D or \u201CPay Huachuang 3,000 on delivery\u201D';
   /* 三个入口在人际会话里全部保留。原先藏掉 Buy/Sell 是因为它们没有宾语，
      现在改成有宾语：在谁的会话里打开，对手方就预填成谁（见 openAct）。 */
   document.querySelectorAll('#actions .act').forEach(b=>{b.hidden=false});
