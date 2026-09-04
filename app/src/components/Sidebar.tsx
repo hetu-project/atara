@@ -88,7 +88,7 @@ export default function Sidebar({
             <span className="navgo" aria-hidden><IGo /></span>
           </a>
           {/* 同一套多 agent 辩论用在另一种判断上：那边评一支股票，这边评一个对手方 */}
-          <a className="nav" id="navloka" href="https://www.loka.cash/app" target="_blank"
+          <a className="nav" id="navloka" href="https://trade.loka.cash/app" target="_blank"
             rel="noopener" title="Investment Analysis — multi-agent research">
             <span className="ni"><IChart /></span>Investment Analysis
             <span className="navgo" aria-hidden><IGo /></span>
