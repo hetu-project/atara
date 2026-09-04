@@ -35,7 +35,6 @@ const DOCS: [string, string, string][] = [
  */
 export default function Pool({ identity, onNeedSignIn }: { identity: string; onNeedSignIn?: () => void }) {
   const [side, setSide] = useState<'buy' | 'sell'>('buy')
-  const [vertical, setVertical] = useState<'otc' | 'compute' | 'merchants'>('otc')
   const [coin, setCoin] = useState('All')
   const [fiat, setFiat] = useState('')
 
@@ -61,16 +60,9 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
     <div className="view on" id="v-market">
       <div className="vhead"><h2>Discover</h2></div>
       <div className="vbody" id="mkbody">
-        {/* 协议按纵向划分。这一版只做 OTC——一个说得出而做不到的纵向，比不说更糟 */}
-        <div className="mkbar" style={{ justifyContent: 'space-between' }}>
-          <div className="atabs" role="tablist">
-            {(['otc', 'compute', 'merchants'] as const).map(k => (
-              <button key={k} className={'atab' + (vertical === k ? ' on' : '')} role="tab"
-                aria-selected={vertical === k} onClick={() => setVertical(k)}>
-                {k === 'otc' ? 'OTC pool' : k === 'compute' ? 'Compute & APIs' : 'Merchants'}
-              </button>
-            ))}
-          </div>
+        {/* 这一版只有 OTC 一个纵向。一个选项的 tab 行不是导航，是噪音——
+            所以这一行只留做市入口。要加纵向时再把 tab 加回来。 */}
+        <div className="mkbar" style={{ justifyContent: 'flex-end' }}>
           <MakerCta identity={identity} />
         </div>
         <div className="mkbar">
@@ -97,20 +89,13 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
           </button>
         </div>
 
-        {vertical === 'otc' ? (
-          <div id="pool">
-            {list.map(o => <OfferCard key={o.id} o={o} side={side} mine={mineIds.has(o.id)}
-              identity={identity} onNeedSignIn={onNeedSignIn} />)}
-            {!list.length && (
-              <div className="mkempty">{loading ? 'Loading offers…' : 'No offers match'}</div>
-            )}
-          </div>
-        ) : (
-          <div className="mkempty">
-            {vertical === 'compute' ? 'Compute & APIs' : 'Merchants'} settles on the same rails —
-            not open in this version.
-          </div>
-        )}
+        <div id="pool">
+          {list.map(o => <OfferCard key={o.id} o={o} side={side} mine={mineIds.has(o.id)}
+            identity={identity} onNeedSignIn={onNeedSignIn} />)}
+          {!list.length && (
+            <div className="mkempty">{loading ? 'Loading offers…' : 'No offers match'}</div>
+          )}
+        </div>
       </div>
     </div>
   )
