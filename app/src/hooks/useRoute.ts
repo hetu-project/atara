@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 
+/* 视图与左栏导航一一对应（见 console.html 的 #left）。
+   home 是默认态：新建一单，不是某个列表。 */
 export type Route =
-  | { view: 'market' }
-  | { view: 'tasks' }
+  | { view: 'home' }
   | { view: 'discover' }
-  | { view: 'people' }
-  | { view: 'money' }
+  | { view: 'contacts' }
+  | { view: 'payments' }
   | { view: 'account' }
   | { view: 'order'; id: string }
+  | { view: 'thread'; peer: string }
 
 /**
  * 哈希路由。刷新不丢页、浏览器后退可用、工单可深链分享。
@@ -29,14 +31,17 @@ function parse(): Route {
   const h = location.hash.replace(/^#\/?/, '')
   const [head, id] = h.split('/')
   if (head === 'order' && id) return { view: 'order', id }
-  if (head === 'tasks') return { view: 'tasks' }
+  if (head === 'thread' && id) return { view: 'thread', peer: decodeURIComponent(id) }
   if (head === 'discover') return { view: 'discover' }
-  if (head === 'people') return { view: 'people' }
-  if (head === 'money') return { view: 'money' }
+  if (head === 'contacts') return { view: 'contacts' }
+  if (head === 'payments') return { view: 'payments' }
   if (head === 'account') return { view: 'account' }
-  return { view: 'market' }
+  return { view: 'home' }
 }
 
 export function go(r: Route): void {
-  location.hash = r.view === 'order' ? `/order/${r.id}` : `/${r.view}`
+  location.hash =
+    r.view === 'order' ? `/order/${r.id}`
+    : r.view === 'thread' ? `/thread/${encodeURIComponent(r.peer)}`
+    : `/${r.view}`
 }

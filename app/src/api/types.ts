@@ -362,3 +362,12 @@ export interface ConditionCatalog {
   atoms: { type: string; label: string; params: ConditionParam[] }[]
   fallback: { default_days: number; note: string }
 }
+
+/** 左栏会话行。后端 /threads 返回的汇总。 */
+export interface ThreadSummary {
+  peer_id: string
+  peer_name: string
+  last: string
+  last_at: string
+  count: number
+}

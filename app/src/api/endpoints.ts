@@ -1,7 +1,8 @@
 import { ApiError, BASE, api, getIdentity, withConfirmation } from './client'
 import type {
   Allowance, CatalogAsset, ConditionCatalog, Contact, EligiblePeer, MakerApp,
-  Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, User, Wallet,
+  Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary,
+  User, Wallet,
   Withdrawal,
 } from './types'
 
@@ -278,7 +279,7 @@ export const addContact = (
 ) => api.post<Contact>('/contacts', body, { as })
 
 export const threads = (as?: string) =>
-  api.get<{ threads: unknown[] }>('/threads', { as }).then(r => r.threads ?? [])
+  api.get<{ threads: ThreadSummary[] }>('/threads', { as }).then(r => r.threads ?? [])
 
 export const thread = (peer: string, as?: string) =>
   api.get<Thread>(`/threads/${encodeURIComponent(peer)}`, { as })
