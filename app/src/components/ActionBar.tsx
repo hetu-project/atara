@@ -1,8 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import * as ep from '../api/endpoints'
 import PickMenu, { type PickItem } from './PickMenu'
 import { avHue, avInit } from './Avatar'
 import { ACT_DEF, ATOMS, DATA_METRICS, MAX_CONDS } from './actlang'
-import type { Contact, Offer } from '../api/types'
+import { useApi } from '../hooks/useApi'
+import type { CatalogAsset, Contact, EligiblePeer } from '../api/types'
 
 export type ActKind = 'buy' | 'sell'
 
@@ -20,13 +22,6 @@ export interface Act {
   amtKind?: 'coin' | null
 }
 
-const FIAT_SYM: Record<string, string> = {
-  CNY: '¥', HKD: 'HK$', SGD: 'S$', JPY: '¥', EUR: '€', USD: '$', AED: 'د.إ', GBP: '£',
-}
-const FIAT_NAME: Record<string, string> = {
-  CNY: 'Chinese Yuan', HKD: 'Hong Kong Dollar', SGD: 'Singapore Dollar', JPY: 'Japanese Yen',
-  EUR: 'Euro', USD: 'US Dollar', AED: 'UAE Dirham', GBP: 'British Pound',
-}
 /* 货币码前两位就是 ISO 国家码，映射到 regional indicator 码点，不引外部图片 */
 const flag = (c: string) => {
   const cc = c === 'EUR' ? 'EU' : c.slice(0, 2)
@@ -42,14 +37,18 @@ const av = (n: string) =>
  * 连接词走左列对齐。灰色虚线是系统的合理猜测，实心是你说过的。
  */
 export default function ActionBar({
-  act, onChange, onClose, contacts, offers,
+  act, onChange, onClose, contacts,
 }: {
   act: Act
   onChange: (a: Act) => void
   onClose: () => void
   contacts: Contact[]
-  offers: Offer[]
 }) {
+  /* 币种与法币的可选范围来自目录，不是从池子里现有的挂单反推——
+     那样列出的是「碰巧有人挂了的」，不是「系统支持的」，
+     用户改一下币种就会发现选项自己变了。 */
+  const { data: assets } = useApi(() => ep.assets(), [])
+  const { data: fiatGroups } = useApi(() => ep.fiats(), [])
   const [menu, setMenu] = useState<{ el: HTMLElement; items: PickItem[]; pick: (v: string) => void } | null>(null)
   const [editAmt, setEditAmt] = useState(false)
   const amtRef = useRef<HTMLInputElement>(null)
@@ -68,13 +67,22 @@ export default function ActionBar({
     setMenu(m => (m?.el === el ? null : { el, items, pick }))
   }
 
-  const coins = [...new Set(offers.map(o => o.asset))]
-  const fiats = [...new Set(offers.map(o => o.fiat))]
-  /* 只列真能接这一笔的人：方向、币种、法币都得对得上，否则选了也走不通 */
-  const want = act.k === 'buy' ? 'sell' : 'buy'
-  const fits = offers
-    .filter(o => o.side === want && o.asset === act.coin && o.fiat === act.fiat)
-    .sort((x, y) => (y.maker?.trust_score ?? 0) - (x.maker?.trust_score ?? 0))
+  const coins: CatalogAsset[] = assets ?? []
+  const fiats: CatalogAsset[] = (fiatGroups ?? []).flatMap(g => g.assets)
+  const fiatOf = (c: string) => fiats.find(f => f.code === c)
+  const symOf = (c: string) => fiatOf(c)?.symbol ?? ''
+
+  /* 只列真能接这一笔的人。这一层由后端算：方向、币种、法币要对得上，
+     金额还得落在对方的最小单与可成交量之间——前端自己 filter 漏得掉后两道。 */
+  const [fits, setFits] = useState<EligiblePeer[]>([])
+  useEffect(() => {
+    let alive = true
+    ep.eligibleCounterparties({
+      side: act.k, asset: act.coin, fiat: act.fiat,
+      amount: String(act.amt), amount_kind: 'coin',
+    }).then(r => { if (alive) setFits(r) }).catch(() => { if (alive) setFits([]) })
+    return () => { alive = false }
+  }, [act.k, act.coin, act.fiat, act.amt])
 
   const amtTxt = act.amt.toLocaleString()
 
@@ -106,14 +114,17 @@ export default function ActionBar({
           </button>
         )}
         <button className={'achip' + guess('coin')}
-          onClick={e => open(e, coins.map(c => ({ v: c, n: c, d: 'Settles on-chain' })),
-            v => set({ coin: v }, 'coin'))}>
+          onClick={e => open(e, coins.map(c => ({
+            v: c.code, n: (act.coin === c.code ? '✓ ' : '') + c.code,
+            d: `${c.name} · settles on ${(c.networks ?? []).join(' / ')}`,
+          })), v => set({ coin: v }, 'coin'))}>
           {act.coin}<i>⌄</i>
         </button>
         <span className="aword">{d.mid}</span>
         <button className={'achip' + guess('fiat')}
-          onClick={e => open(e, fiats.map(f => ({ v: f, n: `${flag(f)} ${f}`, d: FIAT_NAME[f] ?? f })),
-            v => set({ fiat: v }, 'fiat'))}>
+          onClick={e => open(e, fiats.map(f => ({
+            v: f.code, n: (act.fiat === f.code ? '✓ ' : '') + `${flag(f.code)} ${f.code}`, d: f.name,
+          })), v => set({ fiat: v }, 'fiat'))}>
           <span className="flg">{flag(act.fiat)}</span>{act.fiat}<i>⌄</i>
         </button>
       </div>
@@ -126,12 +137,12 @@ export default function ActionBar({
           onClick={e => open(e, [
             { v: '', n: (act.peer ? '' : '✓ ') + 'Any',
               d: 'Quick trade — Atara matches the best counterparty for this amount' },
-            ...fits.map(o => ({
-              v: o.maker?.name ?? '',
-              n: (act.peer === o.maker?.name ? '✓ ' : '') + av(o.maker?.name ?? '?') + (o.maker?.name ?? ''),
-              d: `${contacts.some(c => c.name === o.maker?.name) ? 'In your contacts · ' : ''}`
-                + `score ${o.maker?.trust_score} · ${o.maker?.deals} trades`
-                + ` · ${FIAT_SYM[o.fiat] ?? ''}${o.unit_price} per ${o.asset}`,
+            ...fits.map(p => ({
+              v: p.display_name,
+              n: (act.peer === p.display_name ? '✓ ' : '') + av(p.display_name) + p.display_name,
+              d: `${contacts.some(c => c.name === p.display_name) ? 'In your contacts · ' : ''}`
+                + `score ${p.trust_score} · ${p.deals} trades`
+                + ` · ${symOf(act.fiat)}${p.best_price} per ${act.coin}`,
             })),
           ], v => set({ peer: v }, 'peer'))}>
           {act.peer

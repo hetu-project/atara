@@ -38,12 +38,16 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
   const [fiat, setFiat] = useState('')
 
   const { data, loading } = useApi(() => ep.offers(side), [side])
+  const { data: assets } = useApi(() => ep.assets(), [])
+  const { data: fiatGroups } = useApi(() => ep.fiats(), [])
   const { data: mine } = useApi(() => ep.myOffers(identity), [identity])
   const mineIds = new Set((mine ?? []).map(o => o.id))
 
   const all = data ?? []
-  const coins = ['All', ...new Set(all.map(o => o.asset))]
-  const fiats = [...new Set(all.map(o => o.fiat))]
+  /* 筛选项来自目录，不是从当前挂单反推——池子空的时候筛选条不该跟着消失，
+     那会让人以为「这个币种没有了」，而不是「这个方向暂时没人挂单」。 */
+  const coins = ['All', ...(assets ?? []).map(a => a.code)]
+  const fiats = (fiatGroups ?? []).flatMap(g => g.assets).map(f => f.code)
   const list = all
     .filter(o => coin === 'All' || o.asset === coin)
     .filter(o => !fiat || o.fiat === fiat)

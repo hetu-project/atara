@@ -24,8 +24,6 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   const { run } = useAssessment()
   const { data: cdata } = useApi(() => ep.contacts(identity), [identity])
   const contacts = cdata?.contacts ?? []
-  // 池子给胶囊的下拉当选项来源：币种、法币、能接这一笔的人
-  const { data: offers } = useApi(() => ep.offers('buy'), [])
   const peers = useMemo(() => contacts.map(c => ({ name: c.name })), [contacts])
 
   const blank = (k: ActKind): Act => ({
@@ -104,7 +102,7 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
         <div className="sayrow">
           {act && (
             <ActionBar act={act} onChange={setAct} onClose={() => setAct(null)}
-              contacts={contacts} offers={offers ?? []} />
+              contacts={contacts} />
           )}
           <textarea id="free" rows={1} aria-label="Describe a payment"
             value={text}

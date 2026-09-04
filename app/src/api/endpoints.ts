@@ -31,6 +31,11 @@ export const wallet = (as?: string) => api.get<Wallet>('/wallet', { as })
 export const assets = () =>
   api.get<{ assets: CatalogAsset[] }>('/catalog/assets').then(r => r.assets)
 
+/** 结算法币，按走廊分组。目录只发这一版支持的——范围由后端声明。 */
+export const fiats = () =>
+  api.get<{ corridors: { group: string; assets: CatalogAsset[] }[] }>('/catalog/fiats')
+    .then(r => r.corridors)
+
 // ── 池子 ──
 
 /**
