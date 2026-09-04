@@ -1,21 +1,19 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import * as ep from '../api/endpoints'
+import { WALLETS, discover, resolve, requestAddress, type Eip1193, type WalletSpec } from './wallets'
 
 type Stage =
   | { k: 'menu' }
   | { k: 'busy'; title: string; body: string }
   | { k: 'done'; addr: string }
   | { k: 'paste' }
+  | { k: 'wc' }
 
-/** 浏览器里有没有注入钱包。没探测就写「Installed」是骗人。 */
-interface Eip1193 { request(a: { method: string; params?: unknown[] }): Promise<unknown> }
-const injected = (): Eip1193 | null => {
-  const w = window as unknown as { ethereum?: Eip1193 }
-  return w.ethereum ?? null
-}
+/** WalletConnect 的 project ID，构建时注入：VITE_WC_PROJECT_ID=… npm run build */
+const WC_ID = import.meta.env.VITE_WC_PROJECT_ID ?? ''
 
 /**
- * 登录门。只有一条路：连 MetaMask。
+ * 登录门。四个钱包 + 一条粘地址的退路。
  *
  * 「你的钱包就是你的账户」——所以这里没有密码，也没有注册。
  * 地址必须由钱包给出：我们没有它的私钥，wallet_kind 因此是 ext，
@@ -28,6 +26,13 @@ export default function Gate({
 }: { open: boolean; onClose: () => void; onDone: (addr: string) => void }) {
   const [stage, setStage] = useState<Stage>({ k: 'menu' })
   const [err, setErr] = useState('')
+  const [announced, setAnnounced] = useState<Parameters<Parameters<typeof discover>[0]>[0]>([])
+
+  /* 每次打开都重新探询一次：用户可能刚装完扩展又回到这个页面。 */
+  useEffect(() => {
+    if (!open) return
+    return discover(setAnnounced)
+  }, [open])
 
   if (!open) return null
 
@@ -45,25 +50,23 @@ export default function Gate({
     }
   }
 
-  const connect = async () => {
+  const connect = async (spec: WalletSpec, provider: Eip1193) => {
     setErr('')
-    const eth = injected()
-    // 没装扩展就别转 spinner：直说，并给一条能走通的退路
-    if (!eth) { setStage({ k: 'paste' }); return }
-    setStage({ k: 'busy', title: 'Waiting for MetaMask',
-      body: 'Approve the connection in your wallet. Nothing is spent — connecting only proves the address is yours.' })
+    setStage({
+      k: 'busy',
+      title: `Waiting for ${spec.label}`,
+      body: 'Approve the connection in your wallet. Nothing is spent — connecting only proves the address is yours.',
+    })
     try {
-      const accts = await eth.request({ method: 'eth_requestAccounts' }) as string[]
-      const addr = accts?.[0]
-      if (!addr) throw new Error('MetaMask returned no account')
-      await land(addr)
+      await land(await requestAddress(provider))
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not reach MetaMask')
+      setErr(e instanceof Error ? e.message : `Could not reach ${spec.label}`)
       setStage({ k: 'menu' })
     }
   }
 
-  const has = !!injected()
+  const rows = WALLETS.map(spec => ({ spec, provider: resolve(spec, announced) }))
+  const none = rows.every(r => !r.provider)
 
   return (
     <div id="gate" className="open novt" role="dialog" aria-modal="true" aria-labelledby="gatetitle">
@@ -77,18 +80,44 @@ export default function Gate({
         {stage.k === 'menu' && (
           <div id="gmethods">
             <div className="gmlist">
-              <button className="gmrow" onClick={() => void connect()}>
-                <span className="gmi" style={{ background: '#E2761B' }}>M</span>
-                <span className="gmtxt"><b>MetaMask</b></span>
-                <span className={'gmst' + (has ? ' on' : '')}>{has ? 'Detected' : 'Not detected'}</span>
+              {rows.map(({ spec, provider }) => (
+                <button key={spec.key} className="gmrow"
+                  onClick={() => {
+                    /* 没装就别转 spinner：直接送去安装页，比一个转不出结果的圈诚实 */
+                    if (!provider) { window.open(spec.install, '_blank', 'noopener'); return }
+                    void connect(spec, provider)
+                  }}>
+                  <span className="gmi" style={{
+                    background: spec.bg,
+                    boxShadow: spec.bg === '#000000' ? '0 0 0 1px var(--line-strong) inset' : undefined,
+                  }}>{spec.ch}</span>
+                  <span className="gmtxt"><b>{spec.label}</b></span>
+                  <span className={'gmst' + (provider ? ' on' : '')}>
+                    {provider ? 'Detected' : 'Install'}
+                  </span>
+                </button>
+              ))}
+
+              <button className="gmrow" onClick={() => setStage({ k: 'wc' })}>
+                <span className="gmi" style={{ background: '#3B99FC' }}>W</span>
+                <span className="gmtxt"><b>WalletConnect</b></span>
+                <span className={'gmst' + (WC_ID ? ' on' : '')}>
+                  {WC_ID ? 'Scan' : 'Needs setup'}
+                </span>
+              </button>
+
+              <button className="gmrow" onClick={() => setStage({ k: 'paste' })}>
+                <span className="gmi" style={{
+                  background: 'var(--card)', boxShadow: '0 0 0 1px var(--line-strong) inset',
+                }}>🗝</span>
+                <span className="gmtxt"><b>Continue with an address</b></span>
               </button>
             </div>
-            {!has && (
+
+            {none && (
               <p className="rnote" style={{ marginTop: 12 }}>
-                No wallet extension in this browser.{' '}
-                <a className="lnk" href="https://metamask.io/download/" target="_blank" rel="noopener">
-                  Install MetaMask
-                </a>{' '}— or continue with an address for the demo.
+                No wallet extension detected in this browser — the rows above link to their
+                install pages. Or continue with an address for the demo.
               </p>
             )}
           </div>
@@ -105,6 +134,18 @@ export default function Gate({
           <div id="gstage"><div className="nasign">
             <span className="gok">✓</span><b>Connected</b>
             <em><b className="gaddr num">{stage.addr}</b> · this address is now your account.</em>
+          </div></div>
+        )}
+
+        {stage.k === 'wc' && (
+          <div id="gstage"><div className="nasign">
+            <b>WalletConnect is not configured</b>
+            <em>
+              WalletConnect v2 needs a project ID from its cloud dashboard — without one the
+              relay refuses the session, so there is nothing to show a QR code for. Set{' '}
+              <b className="num">VITE_WC_PROJECT_ID</b> at build time to turn this on.
+            </em>
+            <button className="btn btn-ghost btn-sm gback" onClick={() => setStage({ k: 'menu' })}>Back</button>
           </div></div>
         )}
 
