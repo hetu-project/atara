@@ -6,7 +6,9 @@ import { IAttach, IBuy, IMic, ISell, ISend } from '../components/icons'
 import Thinking from '../components/Thinking'
 import { useApi } from '../hooks/useApi'
 import { useAssessment } from '../hooks/useAssessment'
+import { useKycGate } from '../hooks/useKycGate'
 import { go } from '../hooks/useRoute'
+import type { MatchCandidate } from '../api/types'
 
 /**
  * 首页 = 一张空台面加一句问话。
@@ -15,13 +17,18 @@ import { go } from '../hooks/useRoute'
  * 与「把示例文本塞进输入框再让人回车」的差别是——用户不必先读懂一句
  * 自己没写过的话，再猜哪几个词能改；胶囊自己说明哪里能改。
  */
+const a0 = (a: { coin: string } | null) => a?.coin ?? 'USDT'
+
 export default function Home({ identity }: { identity: string; onNeedSignIn?: () => void }) {
   const [text, setText] = useState('')
   const [act, setAct] = useState<Act | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [cands, setCands] = useState<MatchCandidate[]>([])
+  const [chosen, setChosen] = useState<MatchCandidate | null>(null)
 
-  const { run } = useAssessment()
+  const { run, start } = useAssessment()
+  const kyc = useKycGate()
   const { data: cdata } = useApi(() => ep.contacts(identity), [identity])
   const contacts = cdata?.contacts ?? []
   const peers = useMemo(() => contacts.map(c => ({ name: c.name })), [contacts])
@@ -65,6 +72,9 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     if (busy) return
     const a = act
     if (!a) { setErr('Say what you want to trade, or pick Buy / Sell'); return }
+    /* 身份门在最前面：撮合、评估都跑完了才说「你还没验身份」，
+       那十几秒就白等了。 */
+    if (kyc.require()) return
     setBusy(true); setErr('')
     try {
       /* 先撮合后评估：对手方还没出现就跑评估，评的是谁？
@@ -75,7 +85,18 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
       })
       if (m.violation) { setErr(m.violation.message); return }
       if (!m.candidates?.length) { setErr('No live offers on that side right now'); return }
-      go({ view: 'discover' })
+      /* 指名了就用指名的，没指名交给撮合的头名——成绩最好的排在前面，
+         所以排序本身就是默认选择。 */
+      const pick = (a.peer && m.candidates.find(c => c.name === a.peer)) || m.candidates[0]
+      if (!pick) { setErr('No live offers on that side right now'); return }
+      setCands(m.candidates)
+      setChosen(pick)
+      // 评估当着面跑完，再开工单——不评就下单，那张卡就成了既成事实
+      await start(pick.offer_id, pick.name)
+      const ord = await ep.take(pick.offer_id, {
+        amount: pick.coin_amount, amount_kind: 'coin', network: '',
+      })
+      go({ view: 'order', id: ord.id })
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Request failed')
     } finally { setBusy(false) }
@@ -86,7 +107,27 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
       <div id="log">
         {/* 评估一开始就撤掉空态标题：界面在提交那一刻就切进对话态，
             中间那十几秒不该还挂着一句「你想结算什么」。 */}
-        {run ? <Thinking /> : <div id="empty"><h3>What would you like to settle?</h3></div>}
+        {cands.length ? (
+          /* 先给候选再评估：直接跳评估是逻辑倒置——对手方还没出现，评的是谁？ */
+          <div className="msg sys"><div className="matchcard">
+            <div className="mcl">
+              {chosen ? <>Matched · <b>{chosen.name}</b> — running the assessment</>
+                      : 'Matching a counterparty…'}
+            </div>
+            <div className="mcs">
+              {cands.map(c => (
+                <button type="button" key={c.offer_id} disabled
+                  className={'mcand' + (chosen?.offer_id === c.offer_id ? ' on' : '')}>
+                  <span className="mcn"><b>{c.name}</b>
+                    <em>score {c.trust_score} · {c.deals} trades · {c.unit_price} {c.fiat}/{a0(act)}</em>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div></div>
+        ) : null}
+        {run ? <Thinking /> : (!cands.length &&
+          <div id="empty"><h3>What would you like to settle?</h3></div>)}
         {err ? <p className="roempty" style={{ textAlign: 'center' }}>{err}</p> : null}
       </div>
 

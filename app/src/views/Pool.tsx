@@ -3,6 +3,7 @@ import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
 import { useAssessment } from '../hooks/useAssessment'
+import { useKycGate } from '../hooks/useKycGate'
 import type { Offer } from '../api/types'
 
 const FIAT_SYM: Record<string, string> = {
@@ -34,6 +35,7 @@ const DOCS: [string, string, string][] = [
  */
 export default function Pool({ identity, onNeedSignIn }: { identity: string; onNeedSignIn?: () => void }) {
   const [side, setSide] = useState<'buy' | 'sell'>('buy')
+  const [vertical, setVertical] = useState<'otc' | 'compute' | 'merchants'>('otc')
   const [coin, setCoin] = useState('All')
   const [fiat, setFiat] = useState('')
 
@@ -59,6 +61,18 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
     <div className="view on" id="v-market">
       <div className="vhead"><h2>Discover</h2></div>
       <div className="vbody" id="mkbody">
+        {/* 协议按纵向划分。这一版只做 OTC——一个说得出而做不到的纵向，比不说更糟 */}
+        <div className="mkbar" style={{ justifyContent: 'space-between' }}>
+          <div className="atabs" role="tablist">
+            {(['otc', 'compute', 'merchants'] as const).map(k => (
+              <button key={k} className={'atab' + (vertical === k ? ' on' : '')} role="tab"
+                aria-selected={vertical === k} onClick={() => setVertical(k)}>
+                {k === 'otc' ? 'OTC pool' : k === 'compute' ? 'Compute & APIs' : 'Merchants'}
+              </button>
+            ))}
+          </div>
+          <MakerCta identity={identity} />
+        </div>
         <div className="mkbar">
           {/* 方向在最前，因为买家和卖家看的是两批完全不同的挂单 */}
           <div className="mkside" role="tablist" aria-label="Side">
@@ -83,15 +97,39 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
           </button>
         </div>
 
-        <div id="pool">
-          {list.map(o => <OfferCard key={o.id} o={o} side={side} mine={mineIds.has(o.id)}
-            identity={identity} onNeedSignIn={onNeedSignIn} />)}
-          {!list.length && (
-            <div className="mkempty">{loading ? 'Loading offers…' : 'No offers match'}</div>
-          )}
-        </div>
+        {vertical === 'otc' ? (
+          <div id="pool">
+            {list.map(o => <OfferCard key={o.id} o={o} side={side} mine={mineIds.has(o.id)}
+              identity={identity} onNeedSignIn={onNeedSignIn} />)}
+            {!list.length && (
+              <div className="mkempty">{loading ? 'Loading offers…' : 'No offers match'}</div>
+            )}
+          </div>
+        ) : (
+          <div className="mkempty">
+            {vertical === 'compute' ? 'Compute & APIs' : 'Merchants'} settles on the same rails —
+            not open in this version.
+          </div>
+        )}
       </div>
     </div>
+  )
+}
+
+/**
+ * 做市准入入口。按钮文案跟着申请状态走——
+ * 「审核中」写成「Become a maker」会让人以为没提交成功，再点一次又提交一遍。
+ */
+function MakerCta({ identity }: { identity: string }) {
+  const { data: app } = useApi(() => ep.makerApp(identity), [identity])
+  const kyc = useKycGate()
+  const label = app?.approved ? 'Post a listing →'
+    : (app?.listing_done || (app?.kyc_done && !app.kyc_ok)) ? 'Under review…'
+    : 'Become a maker →'
+  const busy = label === 'Under review…'
+  return (
+    <button className="lnk" style={{ opacity: busy ? 0.6 : 1 }}
+      onClick={() => kyc.openMaker()}>{label}</button>
   )
 }
 
@@ -103,6 +141,7 @@ function OfferCard({
 }) {
   const m = o.maker
   const { start } = useAssessment()
+  const kyc = useKycGate()
   const sym = FIAT_SYM[o.fiat] ?? ''
   const px = Number(o.unit_price)
   const qty = Number(o.remaining_qty)
@@ -112,6 +151,8 @@ function OfferCard({
   const take = async () => {
     /* 先问身份再切视图：否则用户先被甩进一个空页面，登录门才追上来 */
     if (onNeedSignIn) { onNeedSignIn(); return }
+    /* 再过身份门。法币腿点对点走银行，付款方必须可识别——买家也要验。 */
+    if (!mine && kyc.require()) return
     if (mine) {
       await ep.delistOffer(o.id, identity).catch(() => {})
       location.reload()

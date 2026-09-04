@@ -11,6 +11,7 @@ import OrderDetail from './views/OrderDetail'
 import Account from './views/Account'
 import { IDENTITY_GONE } from './api/client'
 import { AssessmentProvider } from './hooks/useAssessment'
+import { KycProvider } from './hooks/useKycGate'
 import { useIdentity } from './hooks/useIdentity'
 import { go, useRoute } from './hooks/useRoute'
 
@@ -49,6 +50,7 @@ export default function App() {
 
   return (
     <AssessmentProvider>
+    <KycProvider identity={handle}>
     <main>
       <Sidebar route={route} go={go} identity={handle} folded={folded} onFold={setFolded}
         signed={signed} onSignIn={() => setGate(true)}
@@ -78,6 +80,7 @@ export default function App() {
       <Gate open={gate} onClose={() => setGate(false)}
         onDone={addr => { signIn(addr); setGate(false) }} />
     </main>
+    </KycProvider>
     </AssessmentProvider>
   )
 }
