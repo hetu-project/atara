@@ -32,7 +32,7 @@ export default function App() {
       <Sidebar route={route} go={go} identity={handle} folded={folded} onFold={setFolded} />
 
       <section id="mid">
-        {route.view === 'home' && <Home />}
+        {route.view === 'home' && <Home identity={handle} />}
         {route.view === 'discover' && (
           <div className="view on" id="v-market"><div className="vbody"><Discover identity={handle} /></div></div>
         )}

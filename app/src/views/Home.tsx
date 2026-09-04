@@ -1,34 +1,76 @@
-import { useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import * as ep from '../api/endpoints'
+import ActionBar, { type Act, type ActKind } from '../components/ActionBar'
+import { liveParse } from '../components/actlang'
 import { IAttach, IBuy, IMic, ISell, ISend } from '../components/icons'
+import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
 
 /**
  * 首页 = 一张空台面加一句问话。
  *
- * 与 console.html 的 #v-chat 同构：空态标题 → 动作行 → 输入行。
- * 动作不藏在 + 里：藏起来的代价是用户得先猜这里能做什么。
+ * 打字的时候句子就长出来：说到的槽实心，没说到的按合理猜测填上并标虚线。
+ * 与「把示例文本塞进输入框再让人回车」的差别是——用户不必先读懂一句
+ * 自己没写过的话，再猜哪几个词能改；胶囊自己说明哪里能改。
  */
-export default function Home() {
+export default function Home({ identity }: { identity: string }) {
   const [text, setText] = useState('')
-  const [act, setAct] = useState<'buy' | 'sell' | null>(null)
+  const [act, setAct] = useState<Act | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const ta = useRef<HTMLTextAreaElement>(null)
+
+  const { data: cdata } = useApi(() => ep.contacts(identity), [identity])
+  const contacts = cdata?.contacts ?? []
+  // 池子给胶囊的下拉当选项来源：币种、法币、能接这一笔的人
+  const { data: offers } = useApi(() => ep.offers('buy'), [])
+  const peers = useMemo(() => contacts.map(c => ({ name: c.name })), [contacts])
+
+  const blank = (k: ActKind): Act => ({
+    k, amt: k === 'buy' ? 5000 : 3000, coin: 'USDT', fiat: 'CNY', peer: '', conds: [],
+  })
+
+  /** 点胶囊入口：手动开的面板一律实心，打字不去抢。 */
+  const toggle = (k: ActKind) => {
+    setErr('')
+    setAct(a => (a && a.k === k && !a.auto ? null : { ...blank(k), auto: false }))
+  }
+
+  /** 边打字边填句。清空输入就把自动开出来的句子收起。 */
+  const onType = (q: string) => {
+    setText(q)
+    setErr('')
+    if (act && !act.auto) return               // 用户手动开的面板，打字不去抢
+    if (!q.trim()) { setAct(a => (a?.auto ? null : a)); return }
+    const r = liveParse(q, peers) as null | {
+      k: string; amt?: number; coin?: string; fiat?: string; peer?: string
+      src: Record<string, 1>; amtCoin?: boolean
+    }
+    if (!r || (r.k !== 'buy' && r.k !== 'sell')) return
+    setAct(prev => {
+      const base = prev && prev.k === r.k ? prev : blank(r.k as ActKind)
+      return {
+        ...base,
+        auto: true,
+        parseSrc: r.src,
+        amt: r.amt ?? base.amt,
+        amtKind: r.amtCoin ? 'coin' : null,
+        coin: r.coin ?? base.coin,
+        fiat: r.fiat ?? base.fiat,
+      }
+    })
+  }
 
   const submit = async () => {
-    const q = text.trim()
-    if (!q || busy) return
+    if (busy) return
+    const a = act
+    if (!a) { setErr('Say what you want to trade, or pick Buy / Sell'); return }
     setBusy(true); setErr('')
     try {
       /* 先撮合后评估：对手方还没出现就跑评估，评的是谁？
          后端扫全池、按成绩排序，顺带把装不下这笔量的挡掉。 */
       const m = await ep.match({
-        intent: act ?? (/\bsell\b|卖/i.test(q) ? 'sell' : 'buy'),
-        amount: (q.match(/[\d,]+(\.\d+)?/)?.[0] ?? '0').replace(/,/g, ''),
-        amount_kind: 'fiat',
-        asset: 'USDT',
-        fiat: /hkd/i.test(q) ? 'HKD' : 'CNY',
+        intent: a.k, amount: String(a.amt), amount_kind: 'coin',
+        asset: a.coin, fiat: a.fiat,
       })
       if (m.violation) { setErr(m.violation.message); return }
       if (!m.candidates?.length) { setErr('No live offers on that side right now'); return }
@@ -45,21 +87,23 @@ export default function Home() {
         {err ? <p className="roempty" style={{ textAlign: 'center' }}>{err}</p> : null}
       </div>
 
-      <div id="say">
+      <div id="say" className={act ? 'actopen' : ''}>
         <div id="actions" role="group" aria-label="Actions">
-          <button className={'act' + (act === 'buy' ? ' on' : '')}
-            onClick={() => setAct(act === 'buy' ? null : 'buy')}>
+          <button className={'act' + (act?.k === 'buy' ? ' on' : '')} onClick={() => toggle('buy')}>
             <span className="acti"><IBuy /></span>Buy
           </button>
-          <button className={'act' + (act === 'sell' ? ' on' : '')}
-            onClick={() => setAct(act === 'sell' ? null : 'sell')}>
+          <button className={'act' + (act?.k === 'sell' ? ' on' : '')} onClick={() => toggle('sell')}>
             <span className="acti"><ISell /></span>Sell
           </button>
         </div>
         <div className="sayrow">
-          <textarea id="free" ref={ta} rows={1} aria-label="Describe a payment"
+          {act && (
+            <ActionBar act={act} onChange={setAct} onClose={() => setAct(null)}
+              contacts={contacts} offers={offers ?? []} />
+          )}
+          <textarea id="free" rows={1} aria-label="Describe a payment"
             value={text}
-            onChange={e => setText(e.target.value)}
+            onChange={e => onType(e.target.value)}
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit() }
             }}
@@ -68,7 +112,7 @@ export default function Home() {
             <button className="sayic" title="Attach" aria-label="Attach"><IAttach /></button>
             <button className="sayic" title="Voice" aria-label="Voice" aria-pressed={false}><IMic /></button>
             <button id="send" title="Compose (Enter)" aria-label="Compose"
-              disabled={!text.trim() || busy} onClick={() => void submit()}><ISend /></button>
+              disabled={busy || (!act && !text.trim())} onClick={() => void submit()}><ISend /></button>
           </div>
         </div>
       </div>
