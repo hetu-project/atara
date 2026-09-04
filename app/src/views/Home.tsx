@@ -15,7 +15,7 @@ import { go } from '../hooks/useRoute'
  * 与「把示例文本塞进输入框再让人回车」的差别是——用户不必先读懂一句
  * 自己没写过的话，再猜哪几个词能改；胶囊自己说明哪里能改。
  */
-export default function Home({ identity }: { identity: string }) {
+export default function Home({ identity }: { identity: string; onNeedSignIn?: () => void }) {
   const [text, setText] = useState('')
   const [act, setAct] = useState<Act | null>(null)
   const [busy, setBusy] = useState(false)

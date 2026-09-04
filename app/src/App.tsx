@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import RightPanel from './components/RightPanel'
+import Gate from './components/Gate'
 import Sidebar from './components/Sidebar'
 import Home from './views/Home'
 import Contacts from './views/Contacts'
@@ -19,10 +20,18 @@ import { go, useRoute } from './hooks/useRoute'
  * 样式表用的是 id 选择器，所以这里的 id 不是装饰——改名就没样式了。
  */
 export default function App() {
-  const { handle } = useIdentity()
+  const { handle, signed, signIn } = useIdentity()
+  const [gate, setGate] = useState(false)
   const { route } = useRoute()
   const [folded, setFolded] = useState(
     () => { try { return localStorage.getItem('atara-fold') === '1' } catch { return false } })
+
+  /* 未登录不是白屏：大厅照常渲染，个人区（会话列表、右栏）收起，
+     动手那一下才弹登录门。CSS 认的是 :root[data-locked]。 */
+  useEffect(() => {
+    if (signed) delete document.documentElement.dataset.locked
+    else document.documentElement.dataset.locked = '1'
+  }, [signed])
 
   useEffect(() => {
     document.documentElement.classList.toggle('lfolded', folded)
@@ -32,11 +41,17 @@ export default function App() {
   return (
     <AssessmentProvider>
     <main>
-      <Sidebar route={route} go={go} identity={handle} folded={folded} onFold={setFolded} />
+      <Sidebar route={route} go={go} identity={handle} folded={folded} onFold={setFolded}
+        signed={signed} onSignIn={() => setGate(true)} />
 
       <section id="mid">
-        {route.view === 'home' && <Home identity={handle} />}
-        {route.view === 'discover' && <Pool identity={handle} />}
+        {/* 未登录的起点是市场：能看的东西在这儿，下单页留给登录后 */}
+        {route.view === 'home' && (signed
+          ? <Home identity={handle} />
+          : <Pool identity={handle} onNeedSignIn={() => setGate(true)} />)}
+        {route.view === 'discover' && (
+          <Pool identity={handle} onNeedSignIn={signed ? undefined : () => setGate(true)} />
+        )}
         {route.view === 'contacts' && <Contacts identity={handle} />}
         {route.view === 'payments' && <Payments identity={handle} />}
         {route.view === 'account' && <Account identity={handle} />}
@@ -49,6 +64,9 @@ export default function App() {
       </section>
 
       <RightPanel identity={handle} onOpen={id => go({ view: 'order', id })} />
+
+      <Gate open={gate} onClose={() => setGate(false)}
+        onDone={addr => { signIn(addr); setGate(false) }} />
     </main>
     </AssessmentProvider>
   )

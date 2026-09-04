@@ -32,7 +32,7 @@ const DOCS: [string, string, string][] = [
  * 卡上那几样都不是装饰：信任分是选谁交易的第一判断，履约数据是分数的来源
  * （不能只给分不给依据），最小单决定这条单跟我有没有关系。
  */
-export default function Pool({ identity }: { identity: string }) {
+export default function Pool({ identity, onNeedSignIn }: { identity: string; onNeedSignIn?: () => void }) {
   const [side, setSide] = useState<'buy' | 'sell'>('buy')
   const [coin, setCoin] = useState('All')
   const [fiat, setFiat] = useState('')
@@ -80,7 +80,8 @@ export default function Pool({ identity }: { identity: string }) {
         </div>
 
         <div id="pool">
-          {list.map(o => <OfferCard key={o.id} o={o} side={side} mine={mineIds.has(o.id)} identity={identity} />)}
+          {list.map(o => <OfferCard key={o.id} o={o} side={side} mine={mineIds.has(o.id)}
+            identity={identity} onNeedSignIn={onNeedSignIn} />)}
           {!list.length && (
             <div className="mkempty">{loading ? 'Loading offers…' : 'No offers match'}</div>
           )}
@@ -91,8 +92,11 @@ export default function Pool({ identity }: { identity: string }) {
 }
 
 function OfferCard({
-  o, side, mine, identity,
-}: { o: Offer; side: 'buy' | 'sell'; mine: boolean; identity: string }) {
+  o, side, mine, identity, onNeedSignIn,
+}: {
+  o: Offer; side: 'buy' | 'sell'; mine: boolean; identity: string
+  onNeedSignIn?: () => void
+}) {
   const m = o.maker
   const { start } = useAssessment()
   const sym = FIAT_SYM[o.fiat] ?? ''
@@ -102,6 +106,8 @@ function OfferCard({
   const docsOn = Object.values(m.docs ?? {}).filter(Boolean).length
 
   const take = async () => {
+    /* 先问身份再切视图：否则用户先被甩进一个空页面，登录门才追上来 */
+    if (onNeedSignIn) { onNeedSignIn(); return }
     if (mine) {
       await ep.delistOffer(o.id, identity).catch(() => {})
       location.reload()

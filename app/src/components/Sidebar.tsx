@@ -16,13 +16,15 @@ const NAVS: { view: Route['view']; label: string; icon: Icon }[] = [
 ]
 
 export default function Sidebar({
-  route, go, identity, folded, onFold,
+  route, go, identity, folded, onFold, signed, onSignIn,
 }: {
   route: Route
   go: (r: Route) => void
   identity: string
   folded: boolean
   onFold: (v: boolean) => void
+  signed: boolean
+  onSignIn: () => void
 }) {
   const { data: me } = useApi(() => ep.me(identity), [identity])
   const { data: allow } = useApi(() => ep.allowances(identity), [identity])
@@ -32,6 +34,9 @@ export default function Sidebar({
 
   const addr = me?.address ?? ''
   const short = addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : ''
+  /* 新建的钱包没有名字，后端就拿短地址当展示名——那时再拼一次地址
+     会写成「Tc72vq…tnhc · Tc72vq…tnhc」。名字就是地址时不重复。 */
+  const named = !!me?.display_name && me.display_name !== short
   const chats = threads ?? []
 
   return (
@@ -92,15 +97,20 @@ export default function Sidebar({
         </div>
       </div>
 
+      {/* 未登录时账户位就是登录入口——那一格本来就在讲「你是谁」 */}
       <div className="luserrow">
         <button className="luser" aria-haspopup="menu" aria-expanded={false}
-          onClick={() => go({ view: 'account' })}>
-          <span className="lav">{(me?.display_name || 'D').charAt(0).toUpperCase()}</span>
+          onClick={() => (signed ? go({ view: 'account' }) : onSignIn())}>
+          <span className="lav">{signed ? (me?.display_name || 'D').charAt(0).toUpperCase() : '+'}</span>
           <span className="lutxt">
-            <em className="lun">{me?.display_name ?? 'Demo'}{short ? ` · ${short}` : ''}</em>
-            <em className="lsub">
-              Personal account · <span className="num">{allow?.length ?? 0}</span> allowances
-            </em>
+            {signed ? (
+              <>
+                <em className="lun">{named ? `${me!.display_name} · ${short}` : short}</em>
+                <em className="lsub">
+                  Personal account · <span className="num">{allow?.length ?? 0}</span> allowances
+                </em>
+              </>
+            ) : <em className="lun">Sign in</em>}
           </span>
         </button>
       </div>
