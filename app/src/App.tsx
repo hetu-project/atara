@@ -3,10 +3,11 @@ import RightPanel from './components/RightPanel'
 import Sidebar from './components/Sidebar'
 import Home from './views/Home'
 import Contacts from './views/Contacts'
+import Thread from './views/Thread'
 import Payments from './views/Payments'
 import Pool from './views/Pool'
 import OrderDetail from './views/OrderDetail'
-import Wallet from './views/Wallet'
+import Account from './views/Account'
 import { AssessmentProvider } from './hooks/useAssessment'
 import { useIdentity } from './hooks/useIdentity'
 import { go, useRoute } from './hooks/useRoute'
@@ -38,17 +39,13 @@ export default function App() {
         {route.view === 'discover' && <Pool identity={handle} />}
         {route.view === 'contacts' && <Contacts identity={handle} />}
         {route.view === 'payments' && <Payments identity={handle} />}
-        {route.view === 'account' && (
-          <div className="view on" id="v-rules"><div className="vbody" id="rulesbody">
-            <Wallet identity={handle} />
-          </div></div>
-        )}
+        {route.view === 'account' && <Account identity={handle} />}
         {route.view === 'order' && (
           <div className="view on"><div className="vbody">
             <OrderDetail id={route.id} onBack={() => go({ view: 'payments' })} />
           </div></div>
         )}
-        {route.view === 'thread' && <Contacts identity={handle} />}
+        {route.view === 'thread' && <Thread identity={handle} peer={route.peer} />}
       </section>
 
       <RightPanel identity={handle} onOpen={id => go({ view: 'order', id })} />

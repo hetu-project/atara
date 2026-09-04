@@ -110,12 +110,17 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       step('check', 'done', a.summary)
       step('cons', 'run')
     })
-    at(end + 520, () => {
-      step('cons', 'done', a.summary)
-      setRun(r => r && {
-        ...r, done: true, summary: a.summary, flagged: a.passed < a.threshold,
+    /* start 在动画跑完才 resolve：调用方要等结论出来再开工单页。
+       评估没跑完就把人甩进工单页，那张卡就成了既成事实。 */
+    await new Promise<void>(resolve => {
+      at(end + 520, () => {
+        step('cons', 'done', a.summary)
+        setRun(r => r && {
+          ...r, done: true, summary: a.summary, flagged: a.passed < a.threshold,
+        })
+        setRunning(false)
+        resolve()
       })
-      setRunning(false)
     })
   }, [])
 

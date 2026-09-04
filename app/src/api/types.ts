@@ -336,9 +336,11 @@ export interface Message {
 }
 
 export interface Thread {
-  peer: string
+  /** 后端回的是完整的 User，不是名字字符串。 */
+  peer: User
   messages: Message[]
   orders: Order[]
+  merchant?: Maker
 }
 
 // ── 条件支付 ──

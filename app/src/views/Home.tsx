@@ -3,7 +3,9 @@ import * as ep from '../api/endpoints'
 import ActionBar, { type Act, type ActKind } from '../components/ActionBar'
 import { liveParse } from '../components/actlang'
 import { IAttach, IBuy, IMic, ISell, ISend } from '../components/icons'
+import Thinking from '../components/Thinking'
 import { useApi } from '../hooks/useApi'
+import { useAssessment } from '../hooks/useAssessment'
 import { go } from '../hooks/useRoute'
 
 /**
@@ -19,6 +21,7 @@ export default function Home({ identity }: { identity: string }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
+  const { run } = useAssessment()
   const { data: cdata } = useApi(() => ep.contacts(identity), [identity])
   const contacts = cdata?.contacts ?? []
   // 池子给胶囊的下拉当选项来源：币种、法币、能接这一笔的人
@@ -83,7 +86,9 @@ export default function Home({ identity }: { identity: string }) {
   return (
     <div className="view on" id="v-chat">
       <div id="log">
-        <div id="empty"><h3>What would you like to settle?</h3></div>
+        {/* 评估一开始就撤掉空态标题：界面在提交那一刻就切进对话态，
+            中间那十几秒不该还挂着一句「你想结算什么」。 */}
+        {run ? <Thinking /> : <div id="empty"><h3>What would you like to settle?</h3></div>}
         {err ? <p className="roempty" style={{ textAlign: 'center' }}>{err}</p> : null}
       </div>
 

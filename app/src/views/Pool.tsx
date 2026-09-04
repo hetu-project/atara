@@ -107,9 +107,10 @@ function OfferCard({
       location.reload()
       return
     }
-    /* 先评估、后开单：右栏把七票一张张落完，再进工单页。
+    /* 先评估、后开单：切回中栏看着七票一张张落完，再进工单页。
        顺序是刻意的——对手方还没评过就把人甩进工单页，那张卡就成了既成事实。 */
-    void start(o.id, m.name)
+    go({ view: 'home' })
+    await start(o.id, m.name)
     try {
       /* 按币的数量下单：法币金额是换算出来的，整条挂单那一档会因为四舍五入
          比可成交量多出几分，然后被后端拒掉。 */
