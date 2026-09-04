@@ -20,7 +20,7 @@ import { go, useRoute } from './hooks/useRoute'
  * 样式表用的是 id 选择器，所以这里的 id 不是装饰——改名就没样式了。
  */
 export default function App() {
-  const { handle, signed, signIn } = useIdentity()
+  const { handle, signed, signIn, signOut } = useIdentity()
   const [gate, setGate] = useState(false)
   const { route } = useRoute()
   const [folded, setFolded] = useState(
@@ -42,7 +42,8 @@ export default function App() {
     <AssessmentProvider>
     <main>
       <Sidebar route={route} go={go} identity={handle} folded={folded} onFold={setFolded}
-        signed={signed} onSignIn={() => setGate(true)} />
+        signed={signed} onSignIn={() => setGate(true)}
+        onSignOut={() => { signOut(); go({ view: 'discover' }) }} />
 
       <section id="mid">
         {/* 未登录的起点是市场：能看的东西在这儿，下单页留给登录后 */}

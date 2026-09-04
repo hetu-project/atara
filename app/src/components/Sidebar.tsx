@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
 import Avatar from './Avatar'
@@ -16,7 +17,7 @@ const NAVS: { view: Route['view']; label: string; icon: Icon }[] = [
 ]
 
 export default function Sidebar({
-  route, go, identity, folded, onFold, signed, onSignIn,
+  route, go, identity, folded, onFold, signed, onSignIn, onSignOut,
 }: {
   route: Route
   go: (r: Route) => void
@@ -25,7 +26,20 @@ export default function Sidebar({
   onFold: (v: boolean) => void
   signed: boolean
   onSignIn: () => void
+  onSignOut: () => void
 }) {
+  const [menu, setMenu] = useState(false)
+  const row = useRef<HTMLDivElement>(null)
+
+  // 点外面或 Esc 关掉菜单
+  useEffect(() => {
+    if (!menu) return
+    const away = (e: MouseEvent) => { if (!row.current?.contains(e.target as Node)) setMenu(false) }
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false) }
+    const t = setTimeout(() => addEventListener('mousedown', away), 0)
+    addEventListener('keydown', key)
+    return () => { clearTimeout(t); removeEventListener('mousedown', away); removeEventListener('keydown', key) }
+  }, [menu])
   const { data: me } = useApi(() => ep.me(identity), [identity])
   const { data: allow } = useApi(() => ep.allowances(identity), [identity])
   // 会话列表就是左栏下半区。没有会话时整块（连标题）都不出现——
@@ -97,10 +111,11 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* 未登录时账户位就是登录入口——那一格本来就在讲「你是谁」 */}
-      <div className="luserrow">
-        <button className="luser" aria-haspopup="menu" aria-expanded={false}
-          onClick={() => (signed ? go({ view: 'account' }) : onSignIn())}>
+      {/* 未登录时账户位就是登录入口——那一格本来就在讲「你是谁」；
+          登录后它是账户菜单，退出也在这里。 */}
+      <div className="luserrow" ref={row}>
+        <button className="luser" aria-haspopup="menu" aria-expanded={menu}
+          onClick={() => (signed ? setMenu(m => !m) : onSignIn())}>
           <span className="lav">{signed ? (me?.display_name || 'D').charAt(0).toUpperCase() : '+'}</span>
           <span className="lutxt">
             {signed ? (
@@ -113,10 +128,43 @@ export default function Sidebar({
             ) : <em className="lun">Sign in</em>}
           </span>
         </button>
+
+        {menu && signed && (
+          <div className="ddmenu umenu" role="menu"
+            style={{ left: folded ? 10 : 8, bottom: 'calc(100% - 6px)' }}>
+            <div className="umhead">
+              <span className="umav">{(me?.display_name || 'D').charAt(0).toUpperCase()}</span>
+              <span><b>{me?.display_name ?? 'Demo'}</b><em className="num">{short}</em></span>
+            </div>
+            <button className="umitem" role="menuitem"
+              onClick={() => { setMenu(false); go({ view: 'account' }) }}>
+              <IUser />Profile
+            </button>
+            <div className="umsep" />
+            {/* 退出 = 回到未登录的控制台：能看不能动。
+                后端没有会话可以作废——这里清的是本机的身份选择。 */}
+            <button className="umitem" role="menuitem"
+              onClick={() => { setMenu(false); onSignOut() }}>
+              <IOut />Log out
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   )
 }
+
+const IUser = () => (
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+    strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <circle cx="8" cy="5" r="2.6" /><path d="M2.8 13.5a5.2 5.2 0 0 1 10.4 0" /></svg>
+)
+const IOut = () => (
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+    strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M10 2.5H4.5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1H10" />
+    <path d="M7 8h7M11.5 5.5 14 8l-2.5 2.5" /></svg>
+)
 
 /** 会话行右上角只给时分——日期在会话里，列表上不重复。 */
 function fmtClock(iso: string): string {

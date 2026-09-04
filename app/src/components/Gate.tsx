@@ -6,11 +6,18 @@ type Stage =
   | { k: 'busy'; kind: 'pk' | 'spin'; title: string; body: string }
   | { k: 'done'; title: string; body: string }
   | { k: 'code'; email: string }
+  | { k: 'paste'; label: string }
 
-/** 钱包入口。Installed 与否是演示态——真实实现要探测 window.ethereum。 */
-const WALLETS: [string, string, string, string?][] = [
-  ['mm', 'MetaMask', '#E2761B', 'Installed'],
-  ['okx', 'OKX Wallet', '#000', 'Installed'],
+/** 浏览器里有没有注入钱包。没有就别写「Installed」——那是骗人。 */
+interface Eip1193 { request(a: { method: string; params?: unknown[] }): Promise<unknown> }
+const injected = (): Eip1193 | null => {
+  const w = window as unknown as { ethereum?: Eip1193 }
+  return w.ethereum ?? null
+}
+
+const WALLETS: [string, string, string][] = [
+  ['mm', 'MetaMask', '#E2761B'],
+  ['okx', 'OKX Wallet', '#000'],
   ['wc', 'WalletConnect', '#3B99FC'],
 ]
 
@@ -58,15 +65,30 @@ export default function Gate({
     }), 1500)
   }
 
-  const wallet = (name: string) => {
+  /**
+   * 连钱包。地址必须由钱包给出——后端不会替 ext 钱包派生一个，
+   * 派生出来的地址我们没有私钥，那笔额度 approve 永远签不出来。
+   *
+   * 有注入钱包就真去要账户；没有就让人粘一个地址进来，
+   * 而不是转一圈 spinner 然后什么都不发生。
+   */
+  const wallet = async (name: string) => {
+    const eth = injected()
+    if (!eth) { setStage({ k: 'paste', label: name }); return }
     setStage({ k: 'busy', kind: 'spin', title: `Waiting for ${name}`,
-      body: 'Approve the connection, then sign the one-line message — the signature proves the address is yours. Nothing is spent.' })
-    /* demo：真实实现里地址由钱包回传，这里让后端按方法派生一个。
-       wallet_kind 会是 ext——我们没有它的私钥，额度只能靠 approve。 */
-    setTimeout(() => void finish('wallet', {
-      address: '', okTitle: 'Connected',
-      okBody: a => `${a} · signature verified — this address is now your account.`,
-    }), 1600)
+      body: 'Approve the connection in your wallet. Nothing is spent — connecting only proves the address is yours.' })
+    try {
+      const accts = await eth.request({ method: 'eth_requestAccounts' }) as string[]
+      const addr = accts?.[0]
+      if (!addr) throw new Error('No account returned')
+      await finish('wallet', {
+        address: addr, okTitle: 'Connected',
+        okBody: a => `${a} · this address is now your account.`,
+      })
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : `Could not reach ${name}`)
+      setStage({ k: 'menu' })
+    }
   }
 
   const google = () => {
@@ -103,17 +125,18 @@ export default function Gate({
                 <span className="gmtxt"><b>Create a wallet</b></span>
                 <span className="gmst on">Recommended</span>
               </button>
-              {WALLETS.map(([k, name, bg, tag]) => (
-                <button className="gmrow" key={k} onClick={() => wallet(name)}>
+              {WALLETS.map(([k, name, bg]) => (
+                <button className="gmrow" key={k} onClick={() => void wallet(name)}>
                   <span className="gmi" style={{ background: bg,
                     boxShadow: bg === '#000' ? '0 0 0 1px var(--line-strong) inset' : undefined }}>
                     {name[0]}
                   </span>
                   <span className="gmtxt"><b>{name}</b></span>
-                  {tag ? <span className="gmst">{tag}</span> : null}
+                  {/* 装不装得上是能探测的事实，别写死一个 Installed */}
+                  <span className="gmst">{injected() ? 'Detected' : 'Not detected'}</span>
                 </button>
               ))}
-              <button className="gmrow" onClick={() => wallet('your wallet')}>
+              <button className="gmrow" onClick={() => setStage({ k: 'paste', label: 'your wallet' })}>
                 <span className="gmi" style={{ background: 'var(--card)', boxShadow: '0 0 0 1px var(--line-strong) inset' }}>🗝</span>
                 <span className="gmtxt"><b>Import an existing wallet</b></span>
               </button>
@@ -148,6 +171,14 @@ export default function Gate({
                 <em><b className="gaddr num">{stage.body.split(' · ')[0]}</b>{stage.body.includes(' · ') ? ` · ${stage.body.split(' · ').slice(1).join(' · ')}` : ''}</em>
               </div>
             )}
+            {stage.k === 'paste' && (
+              <PasteStep label={stage.label}
+                onBack={() => setStage({ k: 'menu' })}
+                onOk={addr => void finish('wallet', {
+                  address: addr, okTitle: 'Connected',
+                  okBody: a => `${a} · this address is now your account.`,
+                })} />
+            )}
             {stage.k === 'code' && (
               <CodeStep email={stage.email}
                 onBack={() => setStage({ k: 'menu' })}
@@ -161,6 +192,31 @@ export default function Gate({
 
         <p className="gateerr" role="alert">{err}</p>
       </div>
+    </div>
+  )
+}
+
+/**
+ * 没装钱包时的退路：粘一个地址。
+ *
+ * 这条路只证明「你说这个地址是你的」，不证明你持有私钥——真实实现里
+ * 这里要让钱包签一条消息再验签。所以它连进来的账户只能看，动钱那一步
+ * 仍然过不了签名档。
+ */
+function PasteStep({ label, onBack, onOk }: { label: string; onBack: () => void; onOk: (a: string) => void }) {
+  const [v, setV] = useState('')
+  const okAddr = /^0x[0-9a-fA-F]{40}$/.test(v.trim())
+  return (
+    <div className="nasign">
+      <b>Connect {label}</b>
+      <em>No wallet extension detected in this browser. Paste the address you want to use.</em>
+      <input className="pwin" autoFocus spellCheck={false} placeholder="0x…"
+        value={v} onChange={e => setV(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter' && okAddr) onOk(v.trim()) }} />
+      <button className="btn btn-primary" disabled={!okAddr} onClick={() => onOk(v.trim())}>
+        Use this address
+      </button>
+      <button className="btn btn-ghost btn-sm gback" onClick={onBack}>Back</button>
     </div>
   )
 }
