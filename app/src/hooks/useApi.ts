@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
 
+/** 重试也好不了的错。继续轮询只会刷屏，不会变好。 */
+const FATAL = new Set(['UNKNOWN_ACTOR', 'NOT_FOUND', 'NOT_YOURS'])
+
 export interface AsyncState<T> {
   data: T | null
   error: ApiError | null
@@ -42,10 +45,11 @@ export function useApi<T>(
   }, [...deps, tick])
 
   useEffect(() => {
-    if (!pollMs) return
+    // 拿到治不好的错就停轮询：再问一百次答案也一样，只会刷满一屏 401
+    if (!pollMs || (error && FATAL.has(error.code))) return
     const t = setInterval(() => setTick(n => n + 1), pollMs)
     return () => clearInterval(t)
-  }, [pollMs])
+  }, [pollMs, error])
 
   const reload = useCallback(() => setTick(n => n + 1), [])
   return { data, error, loading, reload }

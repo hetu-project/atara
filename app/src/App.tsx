@@ -9,6 +9,7 @@ import Payments from './views/Payments'
 import Pool from './views/Pool'
 import OrderDetail from './views/OrderDetail'
 import Account from './views/Account'
+import { IDENTITY_GONE } from './api/client'
 import { AssessmentProvider } from './hooks/useAssessment'
 import { useIdentity } from './hooks/useIdentity'
 import { go, useRoute } from './hooks/useRoute'
@@ -25,6 +26,14 @@ export default function App() {
   const { route } = useRoute()
   const [folded, setFolded] = useState(
     () => { try { return localStorage.getItem('atara-fold') === '1' } catch { return false } })
+
+  /* 后端换过库、或账户被删之后，本机存的身份就指向一个不存在的人。
+     那时所有请求都是 401——退回未登录并弹门，而不是让界面一直重试。 */
+  useEffect(() => {
+    const gone = () => { signOut(); setGate(true) }
+    addEventListener(IDENTITY_GONE, gone)
+    return () => removeEventListener(IDENTITY_GONE, gone)
+  }, [signOut])
 
   /* 未登录不是白屏：大厅照常渲染，个人区（会话列表、右栏）收起，
      动手那一下才弹登录门。CSS 认的是 :root[data-locked]。 */

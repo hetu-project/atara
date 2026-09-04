@@ -59,6 +59,25 @@ export function setIdentity(handle: string): void {
   }
 }
 
+/**
+ * 身份失效时的事件名。
+ *
+ * 后端重建过库、或者账户被删掉之后，本机存的身份就指向一个不存在的人。
+ * 那时每一个轮询都会拿到 401——不处理的话界面会一秒一次地重试到天荒地老，
+ * 而屏幕上什么都不说。所以这里把它变成一次可响应的事件：清掉身份、弹登录门。
+ */
+export const IDENTITY_GONE = 'atara:identity-gone'
+
+export function clearIdentity(): void {
+  identity = 'demo'
+  try {
+    localStorage.removeItem('atara-identity')
+    sessionStorage.removeItem('atara-signed')
+  } catch {
+    /* 同上 */
+  }
+}
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'DELETE'
   body?: unknown
@@ -98,10 +117,17 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 
   if (!res.ok) {
     const body = parsed as { error?: ApiErrorBody } | null
-    throw new ApiError(res.status, body?.error ?? {
+    const err = new ApiError(res.status, body?.error ?? {
       code: 'HTTP_' + res.status,
       message: `请求失败（${res.status}）`,
     })
+    /* 身份不存在了：这是重试也好不了的错，重试只会把它变成一场 401 风暴。
+       清掉身份并广播一次，由 App 退回未登录态。 */
+    if (err.code === 'UNKNOWN_ACTOR') {
+      clearIdentity()
+      dispatchEvent(new CustomEvent(IDENTITY_GONE))
+    }
+    throw err
   }
 
   // 后端有一类响应把违规装在 200 的 body 里（撮合的 violation），
