@@ -51,7 +51,11 @@ export default function App() {
   return (
     <AssessmentProvider>
     <KycProvider identity={handle}>
-    <main>
+    {/* 右栏只属于「新建一单」这一个视图——参照里是
+        main.classList.toggle('rout', v!=='chat')。其他视图收起它，中栏才拿到
+        整条剩余宽度；.view 的 max-width:960px + align-self:center 这时才起作用，
+        卡片是居中的。不收的话中栏只有一半宽，内容顶在左边。 */}
+    <main className={route.view === 'home' && signed ? undefined : 'rout'}>
       <Sidebar route={route} go={go} identity={handle} folded={folded} onFold={setFolded}
         signed={signed} onSignIn={login}
         onSignOut={() => { signOutAll(signOut); go({ view: 'discover' }) }} />

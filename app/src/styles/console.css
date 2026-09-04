@@ -632,12 +632,7 @@ main.lout .navtag,main.lout .navgo{display:none}
 .fempty{padding:24px;text-align:center;font-size:13px;color:var(--faint)}
 .mkf{color:var(--mute);border:1px solid var(--hairline);background:var(--canvas)}
 .mkf.on{background:var(--ink);border-color:var(--ink);color:var(--on-inverse)}
-/* 固定三列，不用 auto-fill。auto-fill 按可用宽度算列数，而这一栏的宽度
-   会随右栏折叠、登录门开合而变——同一个页面刷一下就从三列变两列，看着像坏了。
-   窄屏再按视口降到两列、一列。 */
-#pool{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-content:start}
-@media (max-width:1500px){#pool{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:1000px){#pool{grid-template-columns:minmax(0,1fr)}}
+#pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-content:start}
 /* 挂单卡：单价是主角（比价第一），信任行在它上面，限额与放行时间齐全 */
 .od{display:flex;flex-direction:column;gap:10px;width:100%;text-align:left;
     padding:16px;background:var(--paper);border-radius:var(--r-card);box-shadow:var(--ring);
