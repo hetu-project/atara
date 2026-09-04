@@ -107,3 +107,7 @@ LANDING-COPY-v1-存档.md
 skills-lock.json
 # Internal working docs — codenames and undecided mechanisms. Not for the public repo.
 docs-internal/
+
+# 后端在这个目录下写用户上传的回执与 KYC 件。这个仓库是公开的，
+# 本地跑过后端就会在这里留下真实上传物——绝不能进版本控制。
+var/
