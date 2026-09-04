@@ -21,21 +21,30 @@ export function usePrivyAuth(signed: boolean, signIn: (address: string) => void)
   useEffect(() => {
     if (!ready || !authenticated || signed) return
     const w = user?.wallet
-    if (!w?.address || tried.current === w.address) return
-    tried.current = w.address
-
-    const embedded = w.walletClientType === 'privy'
     const email = user?.email?.address ?? user?.google?.email ?? ''
+
+    /* 去重键用地址；没有托管钱包时（HTTP 下 Privy 不给）退回 Privy 的用户 id。 */
+    const key = w?.address || user?.id
+    if (!key || tried.current === key) return
+
     /* 登录方式如实上报，不要拿 google 顶替 twitter——login_method 是要
        写进账户表的，糊弄一下，以后查「这个人当初怎么进来的」就查不出来了。 */
-    const method = !embedded ? 'wallet'
+    const method = w && w.walletClientType !== 'privy' ? 'wallet'
       : user?.google ? 'google'
       : user?.twitter ? 'twitter'
       : 'email'
 
+    /* 地址可以没有：HTTP 下 Privy 不发托管钱包，这时把邮箱交给后端，
+       由它按邮箱派生一个确定的地址——同一个邮箱回来还是同一个账户。
+       但外部钱包和 Twitter 都不适用：前者必须由钱包给地址，后者拿不到
+       邮箱，派生不出稳定地址，每次登录都会开一个新账户。宁可不登，
+       也不要在演示里给人发一串对不上的账户。 */
+    if (!w?.address && (method === 'wallet' || method === 'twitter' || !email)) return
+    tried.current = key
+
     void ep.connect({
       method,
-      address: w.address,
+      address: w?.address,
       email,
       name: user?.google?.name ?? user?.twitter?.username ?? '',
     }).then(r => signIn(r.address))

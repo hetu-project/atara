@@ -22,6 +22,21 @@ import type { ReactNode } from 'react'
  * 先去后台把新来源加进去。
  */
 const APP_ID = import.meta.env.VITE_PRIVY_APP_ID ?? 'cmtmpvriq01ue0dihpt5kkxkc'
+
+/**
+ * 托管钱包只能在安全上下文里跑。
+ *
+ * 明文 HTTP（localhost 除外）下 Privy 会直接抛
+ * 「Embedded wallet is only available over HTTPS」——而且是在初始化时抛，
+ * 整棵 React 树跟着挂，屏幕全黑，界面上一个字都没有。
+ *
+ * 所以这里按 isSecureContext 降级：没有 HTTPS 就不开托管钱包，
+ * 让站点照常能用（外部钱包登录不受影响，Google 走后端按邮箱派生地址）。
+ * 这是权宜，不是等价——Twitter 登录拿不到邮箱，派生不出稳定地址，
+ * 每次登录都会开一个新账户，所以那条路在 HTTP 下不出现。
+ * 正解是配上 HTTPS。
+ */
+const secure = typeof window !== 'undefined' && window.isSecureContext
 /* WalletConnect（手机钱包扫码）的 project ID。不写死：Privy 后台里给这个
    应用配了就用后台那份，这里留一个构建时覆盖的口子。借别的项目的 ID 能跑，
    但用量和封禁都会算到人家头上。 */
@@ -33,15 +48,15 @@ export default function PrivyRoot({ children }: { children: ReactNode }) {
       appId={APP_ID}
       config={{
         // 钱包、Google、Twitter。钱包列表不收窄，用 Privy 的默认全集。
-        loginMethods: ['wallet', 'google', 'twitter'],
+        loginMethods: secure ? ['wallet', 'google', 'twitter'] : ['wallet', 'google'],
         appearance: {
           theme: 'dark',
           accentColor: '#2563eb',
         },
-        // Google / 邮箱进来的人没有钱包。Privy 给他们造一个托管钱包，
+        // Google / Twitter 进来的人没有钱包。Privy 给他们造一个托管钱包，
         // 这样「身份就是地址」这条前提对所有登录方式都成立——
         // 后端的账户表以地址为唯一键，拿不到地址就等于开不了户。
-        embeddedWallets: { createOnLogin: 'all-users' },
+        embeddedWallets: { createOnLogin: secure ? 'all-users' : 'off' },
         // 手机钱包扫码
         externalWallets: { walletConnect: { enabled: true } },
         ...(WC_ID ? { walletConnectCloudProjectId: WC_ID } : {}),
