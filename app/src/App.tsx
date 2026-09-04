@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import RightPanel from './components/RightPanel'
 import Sidebar from './components/Sidebar'
 import Home from './views/Home'
-import Discover from './views/Discover'
-import Money from './views/Money'
+import Contacts from './views/Contacts'
+import Payments from './views/Payments'
+import Pool from './views/Pool'
 import OrderDetail from './views/OrderDetail'
-import People from './views/People'
 import Wallet from './views/Wallet'
 import { useIdentity } from './hooks/useIdentity'
 import { go, useRoute } from './hooks/useRoute'
@@ -33,17 +33,9 @@ export default function App() {
 
       <section id="mid">
         {route.view === 'home' && <Home identity={handle} />}
-        {route.view === 'discover' && (
-          <div className="view on" id="v-market"><div className="vbody"><Discover identity={handle} /></div></div>
-        )}
-        {route.view === 'contacts' && (
-          <div className="view on" id="v-contacts"><div className="vbody">
-            <People identity={handle} onOpenOrder={id => go({ view: 'order', id })} />
-          </div></div>
-        )}
-        {route.view === 'payments' && (
-          <div className="view on" id="v-recs"><div className="vbody"><Money identity={handle} /></div></div>
-        )}
+        {route.view === 'discover' && <Pool identity={handle} />}
+        {route.view === 'contacts' && <Contacts identity={handle} />}
+        {route.view === 'payments' && <Payments identity={handle} />}
         {route.view === 'account' && (
           <div className="view on" id="v-rules"><div className="vbody" id="rulesbody">
             <Wallet identity={handle} />
@@ -54,11 +46,7 @@ export default function App() {
             <OrderDetail id={route.id} onBack={() => go({ view: 'payments' })} />
           </div></div>
         )}
-        {route.view === 'thread' && (
-          <div className="view on"><div className="vbody">
-            <People identity={handle} onOpenOrder={id => go({ view: 'order', id })} />
-          </div></div>
-        )}
+        {route.view === 'thread' && <Contacts identity={handle} />}
       </section>
 
       <RightPanel identity={handle} onOpen={id => go({ view: 'order', id })} />
