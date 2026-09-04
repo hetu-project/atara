@@ -10,7 +10,7 @@ import type {
 
 /** 注册与登录是同一个端点：地址已存在就返回那个账户，不建重复户。 */
 export const connect = (body: {
-  method: 'passkey' | 'wallet' | 'google' | 'email'
+  method: 'passkey' | 'wallet' | 'google' | 'email' | 'twitter'
   address?: string
   email?: string
   name?: string

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import RightPanel from './components/RightPanel'
-import Gate from './components/Gate'
 import Sidebar from './components/Sidebar'
 import Home from './views/Home'
 import Contacts from './views/Contacts'
@@ -13,6 +12,7 @@ import { IDENTITY_GONE } from './api/client'
 import { AssessmentProvider } from './hooks/useAssessment'
 import { KycProvider } from './hooks/useKycGate'
 import { useIdentity } from './hooks/useIdentity'
+import { usePrivyAuth } from './hooks/usePrivyAuth'
 import { go, useRoute } from './hooks/useRoute'
 
 /**
@@ -23,7 +23,7 @@ import { go, useRoute } from './hooks/useRoute'
  */
 export default function App() {
   const { handle, signed, signIn, signOut } = useIdentity()
-  const [gate, setGate] = useState(false)
+  const { login, signOutAll } = usePrivyAuth(signed, signIn)
   const { route } = useRoute()
   const [folded, setFolded] = useState(
     () => { try { return localStorage.getItem('atara-fold') === '1' } catch { return false } })
@@ -31,10 +31,10 @@ export default function App() {
   /* 后端换过库、或账户被删之后，本机存的身份就指向一个不存在的人。
      那时所有请求都是 401——退回未登录并弹门，而不是让界面一直重试。 */
   useEffect(() => {
-    const gone = () => { signOut(); setGate(true) }
+    const gone = () => { signOutAll(signOut); login() }
     addEventListener(IDENTITY_GONE, gone)
     return () => removeEventListener(IDENTITY_GONE, gone)
-  }, [signOut])
+  }, [signOut, signOutAll, login])
 
   /* 未登录不是白屏：大厅照常渲染，个人区（会话列表、右栏）收起，
      动手那一下才弹登录门。CSS 认的是 :root[data-locked]。 */
@@ -53,16 +53,16 @@ export default function App() {
     <KycProvider identity={handle}>
     <main>
       <Sidebar route={route} go={go} identity={handle} folded={folded} onFold={setFolded}
-        signed={signed} onSignIn={() => setGate(true)}
-        onSignOut={() => { signOut(); go({ view: 'discover' }) }} />
+        signed={signed} onSignIn={login}
+        onSignOut={() => { signOutAll(signOut); go({ view: 'discover' }) }} />
 
       <section id="mid">
         {/* 未登录的起点是市场：能看的东西在这儿，下单页留给登录后 */}
         {route.view === 'home' && (signed
           ? <Home identity={handle} />
-          : <Pool identity={handle} onNeedSignIn={() => setGate(true)} />)}
+          : <Pool identity={handle} onNeedSignIn={login} />)}
         {route.view === 'discover' && (
-          <Pool identity={handle} onNeedSignIn={signed ? undefined : () => setGate(true)} />
+          <Pool identity={handle} onNeedSignIn={signed ? undefined : login} />
         )}
         {route.view === 'contacts' && <Contacts identity={handle} />}
         {route.view === 'payments' && <Payments identity={handle} />}
@@ -76,9 +76,7 @@ export default function App() {
       </section>
 
       <RightPanel identity={handle} onOpen={id => go({ view: 'order', id })} />
-
-      <Gate open={gate} onClose={() => setGate(false)}
-        onDone={addr => { signIn(addr); setGate(false) }} />
+      {/* 登录弹窗由 Privy 自己渲染，挂在 body 上——这里不需要留位置 */}
     </main>
     </KycProvider>
     </AssessmentProvider>
