@@ -7,6 +7,7 @@ import Payments from './views/Payments'
 import Pool from './views/Pool'
 import OrderDetail from './views/OrderDetail'
 import Wallet from './views/Wallet'
+import { AssessmentProvider } from './hooks/useAssessment'
 import { useIdentity } from './hooks/useIdentity'
 import { go, useRoute } from './hooks/useRoute'
 
@@ -28,6 +29,7 @@ export default function App() {
   }, [folded])
 
   return (
+    <AssessmentProvider>
     <main>
       <Sidebar route={route} go={go} identity={handle} folded={folded} onFold={setFolded} />
 
@@ -51,5 +53,6 @@ export default function App() {
 
       <RightPanel identity={handle} onOpen={id => go({ view: 'order', id })} />
     </main>
+    </AssessmentProvider>
   )
 }

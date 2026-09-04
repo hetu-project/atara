@@ -4,17 +4,25 @@ import { consensusNet, consensusRing } from './rings'
 
 /**
  * 共识环。空闲态就是一圈灰刻度——「还没开始」和「0 分」看起来必须不一样，
- * 所以空闲时传 score=0 且不给起跑延时，环只画不扫。
+ * 所以空闲时不给起跑延时，环只画不扫。
+ *
+ * runId 是重建的唯一依据：环自己会逐扇区点亮并把分数走到终值，
+ * 每落一票就重建一次会把动画打回开头，分数永远停在中间值。
  */
-export function Ring({ score = 0, running = false }: { score?: number; running?: boolean }) {
+export function Ring({
+  score = 0, runId, stepMs = 620,
+}: { score?: number; runId?: string; stepMs?: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
-    if (ref.current) consensusRing(ref.current, RISK_AGENTS, running ? 0 : null, 1050, score, null)
-  }, [score, running])
+    if (!ref.current) return
+    consensusRing(ref.current, RISK_AGENTS, runId ? 0 : null, stepMs, score, null)
+    // score 刻意不进依赖：它在动画期间会一路变到终值，进依赖就等于每帧重建
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runId])
   return (
-    <canvas ref={ref} className={'arring' + (running ? '' : ' dim')}
+    <canvas ref={ref} className={'arring' + (runId ? '' : ' dim')}
       width={220} height={220}
-      aria-label={running ? 'Assessment running' : 'No assessment running'} />
+      aria-label={runId ? 'Assessment running' : 'No assessment running'} />
   )
 }
 

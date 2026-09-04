@@ -1,6 +1,6 @@
 import { ApiError, BASE, api, getIdentity, withConfirmation } from './client'
 import type {
-  Allowance, CatalogAsset, ConditionCatalog, Contact, EligiblePeer, MakerApp,
+  Allowance, Assessment, CatalogAsset, ConditionCatalog, Contact, EligiblePeer, MakerApp,
   Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary,
   User, Wallet,
   Withdrawal,
@@ -48,6 +48,10 @@ export const offers = (intent: 'buy' | 'sell', asset?: string, fiat?: string) =>
 }
 
 export const offer = (id: string) => api.get<Offer>(`/offers/${id}`)
+
+/** 对手方风控共识。票与结论都来自后端——前端再编一份，两边就会各说各的。 */
+export const assessment = (offerId: string) =>
+  api.get<Assessment>(`/offers/${offerId}/assessment`)
 
 // ── 撮合 ──
 

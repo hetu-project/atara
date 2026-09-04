@@ -5,6 +5,7 @@ import Avatar from './Avatar'
 import { IPanel } from './icons'
 import { Constellation, Ring } from './Ring'
 import { RISK_AGENTS, agentGlyph } from './agents'
+import { useAssessment } from '../hooks/useAssessment'
 import type { Order } from '../api/types'
 
 /**
@@ -118,15 +119,31 @@ function OrderStatus({
   )
 }
 
-/** 空态的四步骨架。先摆出来，用户能提前知道会经历什么，
-    而不是看一句「什么都没跑」。 */
-const ASSESS_STEPS = ['Read the order', 'Collected evidence', 'Agent checks', 'Consensus']
+/** 四步骨架。空态也摆出来——用户能提前知道会经历什么，而不是看一句「什么都没跑」。 */
+const IDLE_STEPS = ['Read the order', 'Collected evidence', 'Agent checks', 'Consensus']
 
 /**
  * 评估。版式 B：上一排「环 | 星盘」，进度在下，候命排贴底。
+ *
  * 空闲态的环只画不扫——「还没开始」和「0 分」看起来必须不一样。
+ * 跑起来之后票一张一张落：七个一起转圈没有信息量，票本来就是一个一个落的。
  */
 function Assessment() {
+  const { run, running } = useAssessment()
+
+  /* 每个 agent 的状态：还没表态 = conferring（跑着）或 idle，表过态就封印。
+     
+     按序号对应，不按名字：后端那套名字（Sanctions screening / Source of funds…）
+     是 mock 实现自己取的，前端这七个名字才是产品对外的身份。两边都是七个、
+     同一顺序，索引是它们之间唯一稳定的关系。接真模型时应当由后端直接返回
+     这七个名字，那时这里改回按名字匹配。 */
+  const voteAt = (i: number) => run?.votes[i]
+  const stateOf = (i: number): string => {
+    const v = voteAt(i)
+    if (v) return v.v
+    return running ? 'conferring' : 'idle'
+  }
+
   return (
     <section className="rmod" id="rm-feed">
       <div className="rmh">
@@ -134,12 +151,14 @@ function Assessment() {
           <IPanel mirror />
         </button>
         <h3>Assessment</h3>
-        <span className="aflive"><i /><em>idle</em></span>
+        <span className={'aflive' + (running ? ' on' : '')}>
+          <i /><em>{running ? 'running' : run?.done ? 'done' : 'idle'}</em>
+        </span>
       </div>
       <div className="rmb">
         <div className="agtop" hidden />
         <div className="assplit">
-          <div id="arring"><Ring score={0} /></div>
+          <div id="arring"><Ring score={run?.score ?? 0} runId={run?.id} /></div>
           {/* .rstats 在 lay-b 下是 display:none，星盘才是这一格的内容 */}
           <div className="rsplit">
             <div className="rtable" id="rs-table"><Constellation /></div>
@@ -148,26 +167,69 @@ function Assessment() {
         </div>
         <div className="aswrap">
           <div id="afruns">
-            <div className="arun open aidle">
-              <div className="arsteps">
-                {ASSESS_STEPS.map(n => (
-                  <div className="arstep wait" key={n}>
-                    <span className="arsi"><i /></span>
-                    <div className="arsm"><div className="arst"><b>{n}</b></div></div>
+            <div className={'arun open' + (run ? '' : ' aidle')}>
+              {run ? (
+                <>
+                  <div className="arhead on">
+                    <span className={'arhi ' + (run.flagged ? 'flag' : run.done ? 'ok' : 'run')} />
+                    <span className="arht"><b>{run.subject}</b><i>{run.summary || 'Assessing…'}</i></span>
                   </div>
-                ))}
-              </div>
-              <div className="ardock"><div className="asby">Standing by</div></div>
+                  <div className="arsteps">
+                    {run.steps.map(st => (
+                      <div className={`arstep ${st.st}`} key={st.k}>
+                        <span className="arsi"><i>{st.st === 'done' ? '✓' : ''}</i></span>
+                        <div className="arsm">
+                          <div className="arst">
+                            <b>{st.n}</b>
+                            {st.line ? <span className="arsl">{st.line}</span> : null}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {run.done && (
+                    <div className="ardock">
+                      <div className="asby">
+                        {run.flagged
+                          ? 'Held for review — the gate did not clear'
+                          : `Cleared · ${run.votes.filter(v => v.v === 'pass').length}/${run.total} agents agree`}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="arsteps">
+                    {IDLE_STEPS.map(n => (
+                      <div className="arstep wait" key={n}>
+                        <span className="arsi"><i /></span>
+                        <div className="arsm"><div className="arst"><b>{n}</b></div></div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="ardock"><div className="asby">Standing by</div></div>
+                </>
+              )}
             </div>
           </div>
         </div>
         <div className="roster" id="rs-roster">
-          {RISK_AGENTS.map((a: { n: string; d: string }, i: number) => (
-            <button type="button" className="ragp idle" key={a.n} title={`${a.n} · ${a.d}`}>
-              <span className="ragav" dangerouslySetInnerHTML={{ __html: agentGlyph(i) }} />
-              <span className="ragt"><b>{a.n.replace(/ Agent$/, '')}</b></span>
-            </button>
-          ))}
+          {RISK_AGENTS.map((a: { n: string; d: string }, i: number) => {
+            const st = stateOf(i)
+            const note = voteAt(i)?.note ?? ''
+            return (
+              <button type="button" className={`ragp ${st}`} key={a.n} title={note || `${a.n} · ${a.d}`}>
+                <span className="ragav" dangerouslySetInnerHTML={{ __html: agentGlyph(i) }} />
+                <span className="ragt">
+                  <b>{a.n.replace(/ Agent$/, '')}</b>
+                  {st === 'conferring' ? <i>comparing notes</i>
+                    : st === 'pass' ? <i>pass</i>
+                    : st === 'note' ? <i>pass · note</i>
+                    : st === 'flag' ? <i>flagged</i> : null}
+                </span>
+              </button>
+            )
+          })}
         </div>
         <div id="afpanel" hidden />
       </div>

@@ -371,3 +371,20 @@ export interface ThreadSummary {
   last_at: string
   count: number
 }
+
+/** 一个 agent 的票。verdict 只有 pass / flag 两值；note 是它给的理由。 */
+export interface AgentVote {
+  agent: string
+  verdict: 'pass' | 'flag'
+  note: string
+}
+
+/** 对手方评估。threshold 是放行门槛——passed 不到它就是拦下转人工。 */
+export interface Assessment {
+  score: number
+  passed: number
+  total: number
+  threshold: number
+  votes: AgentVote[]
+  summary: string
+}
