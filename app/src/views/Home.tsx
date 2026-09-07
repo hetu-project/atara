@@ -105,6 +105,19 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   return (
     <div className="view on" id="v-chat">
       <div id="log">
+        {/* 准入向导：参照里它是 Atara AI 这个会话里的一张卡片，不是弹窗。
+            所以带上那条线程头，位置和外观都跟参照一致。 */}
+        {kyc.maker ? (
+          <>
+            {/* 样式挂在 #thhead 上，而且要 .show 才 display:flex——
+                写成 class 的话头像会掉到文字上面一行。 */}
+            <div id="thhead" className="show">
+              <span className="thav deskav" aria-hidden><i /></span>
+              <span className="thwho"><b>Atara AI</b><span>Verification and listing desk</span></span>
+            </div>
+            {kyc.maker}
+          </>
+        ) : null}
         {/* 评估一开始就撤掉空态标题：界面在提交那一刻就切进对话态，
             中间那十几秒不该还挂着一句「你想结算什么」。 */}
         {cands.length ? (
@@ -126,7 +139,7 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
             </div>
           </div></div>
         ) : null}
-        {run ? <Thinking /> : (!cands.length &&
+        {run ? <Thinking /> : (!cands.length && !kyc.maker &&
           <div id="empty"><h3>What would you like to settle?</h3></div>)}
         {err ? <p className="roempty" style={{ textAlign: 'center' }}>{err}</p> : null}
       </div>

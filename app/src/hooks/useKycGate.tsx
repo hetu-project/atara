@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import * as ep from '../api/endpoints'
 import MakerFlow from '../components/MakerFlow'
 import { useApi } from './useApi'
+import { go } from './useRoute'
 
 interface Ctx {
   /** 返回 true 表示被拦下了：调用方应当停手，门会自己弹出来。 */
@@ -11,9 +12,15 @@ interface Ctx {
   kycOk: boolean
   /** 交过材料但还没审完——这两个状态在界面上不是一回事。 */
   kycPending: boolean
+  /**
+   * 准入向导那张卡。参照里它不是弹窗，是挂在 Atara AI 会话里的一张卡片
+   * （console.html 的 paintMaker），所以由首页把它渲染进对话区，
+   * 而不是在这里盖一层 overlay。
+   */
+  maker: React.ReactNode | null
 }
 const KycCtx = createContext<Ctx>({
-  require: () => false, openMaker: () => {}, kycOk: false, kycPending: false,
+  require: () => false, openMaker: () => {}, kycOk: false, kycPending: false, maker: null,
 })
 export const useKycGate = () => useContext(KycCtx)
 
@@ -36,29 +43,33 @@ export function KycProvider({ identity, children }: { identity: string; children
     return true
   }, [app])
 
-  const openMaker = useCallback(() => { setWhy('maker'); setOpen(true) }, [])
+  /* 卡片长在首页的对话区里，所以开之前先把人带回首页——
+     否则在 Discover 上点「验证」会什么都看不见。 */
+  const openMaker = useCallback(() => { go({ view: 'home' }); setWhy('maker'); setOpen(true) }, [])
+
+  const showMaker = open && !(why === 'trade' && !app?.kyc_done)
 
   const value = useMemo(() => ({
     require, openMaker,
     kycOk: !!app?.kyc_ok,
     kycPending: !!app?.kyc_done && !app?.kyc_ok,
-  }), [require, openMaker, app])
+    maker: showMaker ? (
+      <MakerFlow app={app ?? null} identity={identity}
+        onClose={() => setOpen(false)}
+        /* 提交后不关：让 app 重新拉一次，卡片自己切成回执/审核中那一态。
+           直接关掉的话，界面一片空白，人会以为没提交成功。 */
+        onDone={reload} />
+    ) : null,
+  }), [require, openMaker, app, showMaker, identity, reload])
 
   return (
     <KycCtx.Provider value={value}>
       {children}
-      {open && (
-        <>
-          {/* 不把人默默甩进一张表单：先说清为什么要验，他点了头再进。
-              跳转本身不是提示。 */}
-          {why === 'trade' && !app?.kyc_done ? (
-            <Explain onClose={() => setOpen(false)} onGo={() => setWhy('maker')} />
-          ) : (
-            <MakerFlow app={app ?? null} identity={identity}
-              onClose={() => setOpen(false)}
-              onDone={() => { reload(); setOpen(false) }} />
-          )}
-        </>
+      {/* 不把人默默甩进一张表单：先说清为什么要验，他点了头再进。
+          跳转本身不是提示。这一层仍然是弹窗，参照也是。 */}
+      {open && why === 'trade' && !app?.kyc_done && (
+        <Explain onClose={() => setOpen(false)}
+          onGo={() => { go({ view: 'home' }); setWhy('maker') }} />
       )}
     </KycCtx.Provider>
   )

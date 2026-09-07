@@ -3,6 +3,23 @@ import * as ep from '../api/endpoints'
 import { KYC_CORP, KYC_IND, LISTING_STEPS, type Field, type Step } from './kycforms'
 import type { MakerApp } from '../api/types'
 
+/* Demo fill 的样本数据，逐字取自参照。演示时没人愿意手打九步表单——
+   这个按钮不是玩具，它决定了这条流程能不能当着人走完。 */
+const DEMO_TXT: Record<string, string> = {
+  surname: 'Liu', firstname: 'Ellie', idno: 'H12345678', phone: '+852 6123 4567',
+  email: 'demo@atara.example', addr: '12 Harbour Rd, Wan Chai, HK', tin: 'HK-98765432',
+  industry: 'Cross-border trade', employer: 'Self-employed',
+  company: 'Huachuang Trading Ltd', regno: 'CR-2019-88123', street: '12 Harbour Rd',
+  city: 'Hong Kong', province: 'HK', zip: '999077', bizindustry: 'Electronics export',
+  bizscope: 'Component sourcing', mainrev: 'Component resale', repname: 'Ellie Liu',
+  reptitle: 'Director', repid: 'H12345678', repphone: '+852 6123 4567',
+  dirname: 'Ellie Liu', dirid: 'H12345678', ubo: 'Ellie Liu', uboshare: '100',
+  uboid: 'H12345678',
+}
+const DEMO_DATE: Record<string, string> = {
+  idissue: '2019-06-01', iddue: '2031-06-01', birthday: '1992-04-16', estdate: '2019-03-12',
+}
+
 /* 挂单配置的字段。经营配置是能力级的——它圈定以后每次挂单的可选范围，
    所以在这里定一次，不是每次挂单重填。 */
 const LISTING_FIELDS: Field[][] = [
@@ -67,56 +84,117 @@ export default function MakerFlow({
     } finally { setBusy(false) }
   }
 
-  // 审核中：不许重复提交，把状态说清楚
+  /* 交完之后不是直接关掉——参照会在会话里留一张回执卡（receiptCard）。
+     提交完界面一片空白，人会以为什么都没发生，然后再点一遍。 */
   const reviewing = (app?.kyc_done && !app.kyc_ok) || (app?.listing_done && !app.approved)
   if (reviewing) {
     return (
-      <Sheet onClose={onClose} title="Application in review">
-        <p className="acnote">
-          Your application is with the reviewer — usually cleared within one business day.
-          {app?.reject_reason ? <><br /><b>Returned:</b> {app.reject_reason}</> : null}
-        </p>
-        <div className="dfoot"><button className="btn btn-primary" onClick={onClose}>Close</button></div>
-      </Sheet>
+      <div className="deal mine xopen">
+        <div className="row1">
+          <span className="st">{app?.listing_done ? 'Trading terms' : 'Identity verification'}</span>
+          <span>Received · in review</span>
+          <button className="sayic" style={{ marginLeft: 'auto' }} aria-label="Close" onClick={onClose}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+              strokeWidth="1.5" strokeLinecap="round" aria-hidden><path d="m4 4 8 8M12 4l-8 8" /></svg>
+          </button>
+        </div>
+        <div className="open"><div className="openin"><div className="pad">
+          <p className="sellm-lead">
+            Received — your {app?.listing_done ? 'trading terms are' : 'identity application is'}{' '}
+            under review. Usually cleared within one business day{' '}
+            <em style={{ fontStyle: 'normal', color: 'var(--faint)' }}>(demo: seconds)</em>.
+            {app?.reject_reason ? <><br /><b>Returned:</b> {app.reject_reason}</> : null}
+          </p>
+          <p className="sellm-lead">
+            Review is a person, not an agent vote — the system will not wave this through
+            on its own.
+          </p>
+          <div className="dfoot">
+            <button className="btn btn-primary" onClick={onClose}>Close</button>
+          </div>
+        </div></div></div>
+      </div>
     )
   }
 
+  const fill = () => {
+    const next: Record<string, string | string[]> = { ...form }
+    for (const st of steps) {
+      for (const f of st.fields ?? []) {
+        if (next[f.k]) continue
+        if (f.type === 'pick') next[f.k] = f.opts?.[0] ?? ''
+        else if (f.type === 'multi') next[f.k] = f.opts?.[0] ? [f.opts[0]] : []
+        else if (f.type === 'date') next[f.k] = DEMO_DATE[f.k] ?? '2020-01-01'
+        else if (f.type === 'sign') next[f.k] = 'signed'
+        else if (f.type === 'upload') next[f.k] = 'demo-upload'
+        else next[f.k] = DEMO_TXT[f.k] ?? 'Demo'
+      }
+    }
+    setErr(''); setForm(next)
+  }
+
+  const tag = phase === 'kyc'
+    ? (kind === 'Corporate' ? 'Business verification' : 'Identity verification')
+    : 'Trading terms'
+
+  /* 结构逐处对齐参照的 paintMaker()：一张 deal 卡，不是弹窗。
+     步骤指示是一条分段进度条（.dsteps），不是把九个步骤名铺成一片文字——
+     后者在窄栏里会换行成三四行，把表单本身挤到屏幕外面去。 */
   return (
-    <Sheet onClose={onClose}
-      title={phase === 'kyc' ? 'Verify your identity' : 'What you trade'}>
-      <ol className="wsteps">
-        {steps.map((s, i) => (
-          <li key={s.t} className={i < step ? 'done' : i === step ? 'on' : ''}>{s.t}</li>
-        ))}
-      </ol>
-
-      <h4 style={{ margin: '14px 0 2px' }}>{cur?.t}</h4>
-      <p className="acnote">{cur?.lead}</p>
-
-      {/* 第一步选主体类型：之后两条路的字段完全不同 */}
-      {phase === 'kyc' && step === 0 && (
-        <div className="sfchips">
-          {(['Individual', 'Corporate'] as const).map(k => (
-            <button key={k} type="button" className={'sfchip' + (kind === k ? ' on' : '')}
-              onClick={() => { setKind(k); setForm({}) }}>{k}</button>
-          ))}
-        </div>
-      )}
-
-      {(cur?.fields ?? []).map(f => <FieldRow key={f.k} f={f} v={form[f.k]} onSet={v => set(f.k, v)} />)}
-
-      {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
-
-      <div className="dfoot">
-        {step > 0 && (
-          <button className="btn btn-ghost btn-sm" style={{ marginRight: 'auto' }}
-            onClick={() => { setErr(''); setStep(s => s - 1) }}>Back</button>
-        )}
-        <button className="btn btn-primary" disabled={busy} onClick={() => void next()}>
-          {last ? 'Submit for review' : 'Next'}
+    <div className="deal mine xopen">
+      <div className="row1">
+        <span className="st">{tag}</span>
+        <span>{step + 1} / {steps.length} · {cur?.t}</span>
+        <button className="sayic" style={{ marginLeft: 'auto' }} aria-label="Close" onClick={onClose}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+            strokeWidth="1.5" strokeLinecap="round" aria-hidden><path d="m4 4 8 8M12 4l-8 8" /></svg>
         </button>
       </div>
-    </Sheet>
+      <div className="open"><div className="openin">
+        <div className="dsteps" role="progressbar" aria-valuenow={step + 1}
+          aria-valuemin={1} aria-valuemax={steps.length}
+          aria-label={`Step ${step + 1} of ${steps.length}: ${cur?.t ?? ''}`}>
+          {steps.map((s2, i) => (
+            <i key={s2.t} className={i < step ? 'on' : i === step ? 'now' : ''} title={`${i + 1}. ${s2.t}`} />
+          ))}
+        </div>
+        <div className="pad">
+          <p className="sellm-lead">{cur?.lead}</p>
+
+          {/* 第一步选主体类型：之后两条路的字段完全不同 */}
+          {phase === 'kyc' && step === 0 && (
+            <div className="sf"><span className="sfl">Account type</span>
+              <div className="sfchips">
+                {(['Individual', 'Corporate'] as const).map(k => (
+                  <button key={k} type="button" className={'sfchip' + (kind === k ? ' on' : '')}
+                    onClick={() => { setKind(k); setForm({}) }}>{k}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(cur?.fields ?? []).map(f => <FieldRow key={f.k} f={f} v={form[f.k]} onSet={v => set(f.k, v)} />)}
+
+          {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
+
+          <div className="dfoot">
+            <button className="btn btn-ghost btn-sm" onClick={fill}
+              title="Fill every step with sample data">Demo fill</button>
+            {step > 0 && (
+              <button className="btn btn-icon backbtn" title="Back" aria-label="Back"
+                onClick={() => { setErr(''); setStep(s2 => s2 - 1) }}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                  strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M10 3.5 5.5 8l4.5 4.5" /></svg>
+              </button>
+            )}
+            <button className="btn btn-primary" disabled={busy} onClick={() => void next()}>
+              {last ? 'Submit' : 'Next'}
+            </button>
+          </div>
+        </div>
+      </div></div>
+    </div>
   )
 }
 
@@ -178,25 +256,6 @@ function FieldRow({
     <div className="sf"><span className="sfl">{f.l}</span>
       <input type={f.type === 'date' ? 'date' : 'text'} value={typeof v === 'string' ? v : ''}
         onChange={e => onSet(e.target.value)} autoComplete="off" spellCheck={false} />
-    </div>
-  )
-}
-
-function Sheet({
-  title, onClose, children,
-}: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div id="modal" role="dialog" aria-modal="true" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="mcard">
-        <header className="mhead">
-          <h3>{title}</h3>
-          <button className="sayic" aria-label="Close" onClick={onClose}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
-              strokeWidth="1.5" strokeLinecap="round" aria-hidden><path d="m4 4 8 8M12 4l-8 8" /></svg>
-          </button>
-        </header>
-        <div className="mbody">{children}</div>
-      </div>
     </div>
   )
 }
