@@ -7,8 +7,14 @@ interface Ctx {
   /** 返回 true 表示被拦下了：调用方应当停手，门会自己弹出来。 */
   require: () => boolean
   openMaker: () => void
+  /** 身份是否已经审过。账户页要照实显示，不能写死成「已验证」。 */
+  kycOk: boolean
+  /** 交过材料但还没审完——这两个状态在界面上不是一回事。 */
+  kycPending: boolean
 }
-const KycCtx = createContext<Ctx>({ require: () => false, openMaker: () => {} })
+const KycCtx = createContext<Ctx>({
+  require: () => false, openMaker: () => {}, kycOk: false, kycPending: false,
+})
 export const useKycGate = () => useContext(KycCtx)
 
 /**
@@ -32,7 +38,11 @@ export function KycProvider({ identity, children }: { identity: string; children
 
   const openMaker = useCallback(() => { setWhy('maker'); setOpen(true) }, [])
 
-  const value = useMemo(() => ({ require, openMaker }), [require, openMaker])
+  const value = useMemo(() => ({
+    require, openMaker,
+    kycOk: !!app?.kyc_ok,
+    kycPending: !!app?.kyc_done && !app?.kyc_ok,
+  }), [require, openMaker, app])
 
   return (
     <KycCtx.Provider value={value}>

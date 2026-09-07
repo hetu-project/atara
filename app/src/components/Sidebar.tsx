@@ -82,7 +82,7 @@ export default function Sidebar({
             )
           })}
           <div className="navsep" aria-hidden />
-          <a className="nav" id="navapi" href="../api.html" target="_blank" rel="noopener"
+          <a className="nav" id="navapi" href="/api.html" target="_blank" rel="noopener"
             title="Atara API — developer reference">
             <span className="ni"><IApi /></span>Atara API
             <span className="navgo" aria-hidden><IGo /></span>

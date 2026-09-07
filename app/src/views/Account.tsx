@@ -2,6 +2,8 @@ import { useState } from 'react'
 import * as ep from '../api/endpoints'
 import { CHIP, IArrow, ICheck, ICopy, IFlip, IPen, IPower } from '../components/icons'
 import { useApi } from '../hooks/useApi'
+import { useKycGate } from '../hooks/useKycGate'
+import { AllowanceModal, PayeesModal, ReceiveModal, SendModal } from '../components/WalletModals'
 import { go } from '../hooks/useRoute'
 import type { Allowance, WalletAsset } from '../api/types'
 
@@ -18,7 +20,10 @@ type Tab = 'assets' | 'listings' | 'act'
  * 钱包里的是你的，合约里的是锁着的，加在一起才是总账。
  */
 export default function Account({ identity }: { identity: string }) {
+  const kyc = useKycGate()
   const [tab, setTab] = useState<Tab>('assets')
+  /* 钱包那三个按钮和「新建额度」原来是空的——没有 onClick，点了什么都不发生。 */
+  const [sheet, setSheet] = useState<'' | 'receive' | 'send' | 'payees' | 'allowance'>('')
   const [pick, setPick] = useState<string>('')
   const [flip, setFlip] = useState(false)
   const { data: me } = useApi(() => ep.me(identity), [identity])
@@ -59,8 +64,17 @@ export default function Account({ identity }: { identity: string }) {
               </div>
             </div>
             <div className="pstat">
-              <b>Personal account</b>
-              <span className="pok"><ICheck /> Individual KYC verified</span>
+              <b>{me?.kind === 'firm' ? 'Business account' : 'Personal account'}</b>
+              {/* 参照里这里是写死的「已验证」——那是个静态 demo，Demo 用户永远验过。
+                  搬到真实系统里就成了谎：新开的账户什么都没交，却显示已验证，
+                  而下一秒点下单又被身份门拦住，两处自相矛盾。 */}
+              {kyc.kycOk ? (
+                <span className="pok"><ICheck /> {me?.kind === 'firm' ? 'Business' : 'Individual'} KYC verified</span>
+              ) : kyc.kycPending ? (
+                <span>Identity in review</span>
+              ) : (
+                <button className="lnk" type="button" onClick={kyc.openMaker}>Verify identity →</button>
+              )}
             </div>
           </div>
         </div>
@@ -82,9 +96,9 @@ export default function Account({ identity }: { identity: string }) {
                   <a href="#/payments" className="lnk">View ›</a></span></div>
             </div>
             <div className="aacts">
-              <button className="btn btn-secondary">Receive</button>
-              <button className="btn btn-secondary">Send</button>
-              <button className="btn btn-secondary">Addresses</button>
+              <button className="btn btn-secondary" onClick={() => setSheet('receive')}>Receive</button>
+              <button className="btn btn-secondary" onClick={() => setSheet('send')}>Send</button>
+              <button className="btn btn-secondary" onClick={() => setSheet('payees')}>Addresses</button>
             </div>
           </section>
 
@@ -93,7 +107,8 @@ export default function Account({ identity }: { identity: string }) {
               <h4>Allowances
                 <i className="info" tabIndex={0} data-tip="A spending rule your wallet signed — the contract enforces spender, per-payment cap, window total and expiry; revoking takes effect next block.">i</i>
               </h4>
-              <button className="btn btn-ghost btn-sm">+ New allowance</button>
+              <button className="btn btn-ghost btn-sm"
+                onClick={() => setSheet('allowance')}>+ New allowance</button>
             </div>
             {card ? (
               <Card c={card} all={cards} flip={flip} onFlip={() => setFlip(f => !f)}
@@ -167,6 +182,16 @@ export default function Account({ identity }: { identity: string }) {
             )}
           </section>
         </div>
+        {sheet === 'receive' && <ReceiveModal w={w ?? null} onClose={() => setSheet('')} />}
+        {sheet === 'payees' && <PayeesModal identity={identity} onClose={() => setSheet('')} />}
+        {sheet === 'send' && (
+          <SendModal identity={identity} assets={assets}
+            onClose={() => setSheet('')} onDone={() => {}} />
+        )}
+        {sheet === 'allowance' && (
+          <AllowanceModal identity={identity} asset={w?.assets?.[0]?.asset ?? 'USDT'}
+            onClose={() => setSheet('')} onDone={() => { reload(); setSheet('') }} />
+        )}
       </div>
     </div>
   )
