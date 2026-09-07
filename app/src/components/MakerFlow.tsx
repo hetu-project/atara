@@ -71,8 +71,15 @@ export default function MakerFlow({
     return f.type === 'multi' ? !(Array.isArray(v) && v.length) : !v
   })
 
+  /* 占位符写了 YYYY-MM-DD 就得真按这个收——原生日期控件没了，
+     格式校验的活就落到这里，不然一句「2019年6月」也会被当成填好了。 */
+  const badDate = (cur?.fields ?? []).find(f =>
+    f.type === 'date' && typeof form[f.k] === 'string'
+    && !/^\d{4}-\d{2}-\d{2}$/.test(form[f.k] as string))
+
   const next = async () => {
     if (missing.length) { setErr(`${missing[0]!.l} is required`); return }
+    if (badDate) { setErr(`${badDate.l} must be YYYY-MM-DD`); return }
     setErr('')
     if (!last) { setStep(s => s + 1); return }
     setBusy(true)
@@ -252,9 +259,15 @@ function FieldRow({
       </div>
     )
   }
+  /* 日期不用原生 <input type="date">：它按浏览器语言渲染，中文系统上会显示
+     「年/月/日」，跟这套全英文界面对不上。参照用的就是普通文本框 +
+     YYYY-MM-DD 占位符，格式由这里自己校验。 */
+  const isDate = f.type === 'date'
   return (
     <div className="sf"><span className="sfl">{f.l}</span>
-      <input type={f.type === 'date' ? 'date' : 'text'} value={typeof v === 'string' ? v : ''}
+      <input type="text" value={typeof v === 'string' ? v : ''}
+        placeholder={isDate ? 'YYYY-MM-DD' : 'Enter'}
+        inputMode={isDate ? 'numeric' : undefined}
         onChange={e => onSet(e.target.value)} autoComplete="off" spellCheck={false} />
     </div>
   )
