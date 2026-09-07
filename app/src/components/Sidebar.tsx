@@ -82,7 +82,12 @@ export default function Sidebar({
             )
           })}
           <div className="navsep" aria-hidden />
-          <a className="nav" id="navapi" href="/api.html" target="_blank" rel="noopener"
+          {/* 指向公开站点上的那份，跟旧版部署一致。参照里写的是相对路径
+              href="api.html"——那是因为 console.html 当时就挂在 loka.cash 上，
+              相对路径正好落到同一个域。控制台搬到自己的服务器之后，
+              相对路径就指不到那份文档了，所以这里写绝对地址。 */}
+          <a className="nav" id="navapi" href="https://www.loka.cash/api.html"
+            target="_blank" rel="noopener"
             title="Atara API — developer reference">
             <span className="ni"><IApi /></span>Atara API
             <span className="navgo" aria-hidden><IGo /></span>
