@@ -1710,6 +1710,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .pwin[hidden]{display:none}
 .pwin.shake{animation:pwshake .34s cubic-bezier(.36,.07,.19,.97)}
 @keyframes pwshake{10%,90%{transform:translateX(-1.5px)}30%,70%{transform:translateX(3px)}50%{transform:translateX(-3px)}}
+/* 「为什么把你带到这儿」放在说明上面，用强调色——它是这次打开的理由 */
+.pwwhy{color:var(--ink)!important;font-weight:500}
 .pwerr{font-size:11.5px;color:var(--warn);min-height:15px;padding:5px 2px 0;text-align:left}
 .pwerr:empty{min-height:0;padding:0}
 .pwhint{font-size:11px;color:var(--faint-2);padding:4px 2px 0;text-align:center}
@@ -4007,6 +4009,15 @@ const LOCK_IDLE=(()=>{
 let LOCKED=false, lockT=null;
 function lockSession(){
   if(LOCKED)return;
+  /* 既没密码也没 passkey 就锁不了——锁上了没有任何方式能打开，
+     等于把用户关在门外。armLock（空置自动锁）本来就有这道防护，
+     左下角那个「Lock session」以前绕过了它：锁完给一颗
+     「Unlock with passkey」，而这个账户根本没有 passkey。
+     现在改成先带他去设一把锁，设好了再替他锁上——他点这一下的意图不丢 */
+  if(!PAY_PW&&!HAS_PK){
+    openPwSetup({then:lockSession, why:'Set a password first — without one, or a passkey, nothing could unlock the console again.'});
+    return;
+  }
   LOCKED=true;
   clearTimeout(lockT);
   closeStrip();
@@ -5363,13 +5374,11 @@ function renderRulesPage(){
   const secSettings=`
     <div class="rsec"><h3>Security</h3>
       <div class="seclist">
-        <div class="secrow">
+        ${WALLET_KIND==='ext' ? '' : `<div class="secrow">
           <span class="seci">🗝</span>
-          <span class="sectxt"><b>Wallet keys</b><em>${WALLET_KIND==='ext'
-            ? 'Held in your own wallet — Atara never had them, so there is nothing here to back up'
-            : `Non-custodial — the key is yours and Atara cannot move funds · ${BACKUP_AT?'recovery phrase backed up '+BACKUP_AT:'recovery phrase not backed up'}`}</em></span>
-          ${WALLET_KIND==='ext'?'':`<button class="btn btn-secondary" data-p="bakkey">${BACKUP_AT?'View phrase':'Back up'}</button>`}
-        </div>
+          <span class="sectxt"><b>Wallet keys</b><em>Non-custodial — the key is yours and Atara cannot move funds · ${BACKUP_AT?'recovery phrase backed up '+BACKUP_AT:'recovery phrase not backed up'}</em></span>
+          <button class="btn btn-secondary" data-p="bakkey">${BACKUP_AT?'View phrase':'Back up'}</button>
+        </div>`}
         <!-- 两步验证这一期不上：一个能开关却没人读的安全设置，比没有更糟。
              整行先收起，处理器留着 -->
         <div class="secrow">
@@ -5377,7 +5386,7 @@ function renderRulesPage(){
           <span class="sectxt"><b>Session lock</b><em id="pwsub">${PAY_PW
             ? `The console locks after 15 minutes idle · unlock with ${WALLET_KIND==='ext'?'this password':'your passkey, or this password'} · demo password ${PAY_PW}`
             : (WALLET_KIND==='ext'
-              ? 'Not set — your wallet signs the transfers; a password here just keeps the console from sitting open.'
+              ? 'Not set — your wallet approves the transfers; a password here only keeps the console from sitting open.'
               : HAS_PK
                 ? 'Locks after 15 minutes idle — your passkey unlocks it. A password is only needed on a device without one.'
                 : 'Not set, and no passkey on this device — set a password so the console can lock at all.')}</em></span>
@@ -6708,12 +6717,13 @@ let PAY_LIST=[], PAY_I=0, PAY_AMT=0, PAY_FUND=null, PAY_WHY='';
    叫「支付密码」是早期的错名：代码里它从来没进过任何一条支付路径。
    原型演示件：只存在这个变量里，不落盘、不出网。 */
 function setPayPw(v){PAY_PW=v||'';try{sessionStorage.setItem('atara-pw',PAY_PW)}catch(_){}}
-function openPwSetup(){
-  const set=!!PAY_PW;
+function openPwSetup(o){
+  const set=!!PAY_PW, opt=o||{};
   const m=document.createElement('div'); m.id='pwmodal'; m.className='pwmask';
   m.innerHTML=`<div class="pwsheet" role="dialog" aria-modal="true" aria-label="Session lock password">
     <h3>${set?'Change lock password':'Set a lock password'}</h3>
-    <p>It unlocks this console when the session locks — it does not sign anything. Transfers and allowances are always signed by your passkey. Demo only: it stays in this browser tab and is never sent anywhere.</p>
+    ${opt.why?`<p class="pwwhy">${opt.why}</p>`:''}
+    <p>It unlocks this console when the session locks — it does not approve anything. Transfers and allowances always go through your passkey. Demo only: it stays in this browser tab and is never sent anywhere.</p>
     ${set?`<input type="password" class="pwin" id="pwold" placeholder="Current password" autocomplete="off">`:''}
     <input type="password" class="pwin" id="pwnew" placeholder="${set?'New password':'Lock password'}" autocomplete="off">
     <input type="password" class="pwin" id="pwrep" placeholder="Repeat it" autocomplete="off">
@@ -6734,6 +6744,7 @@ function openPwSetup(){
     toast(set?'Lock password changed':'Lock password set');
     /* renderRulesPage 只产出 HTML，挂载的是 renderRules */
     if(document.getElementById('pwsub'))renderRules();
+    if(opt.then)opt.then();
   };
   m.addEventListener('click',e=>{if(e.target===m)m.remove()});
   setTimeout(()=>m.querySelector(set?'#pwold':'#pwnew').focus(),40);
