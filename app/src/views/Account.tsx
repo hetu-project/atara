@@ -24,6 +24,7 @@ export default function Account({ identity }: { identity: string }) {
   const [tab, setTab] = useState<Tab>('assets')
   /* 钱包那三个按钮和「新建额度」原来是空的——没有 onClick，点了什么都不发生。 */
   const [sheet, setSheet] = useState<'' | 'receive' | 'send' | 'payees' | 'allowance'>('')
+  const [editing, setEditing] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState('')
   const [pick, setPick] = useState<string>('')
@@ -140,7 +141,8 @@ export default function Account({ identity }: { identity: string }) {
             {card ? (
               <Card c={card} all={cards} flip={flip} onFlip={() => setFlip(f => !f)}
                 onPick={setPick} asset={w?.assets?.[0]?.asset ?? 'USDT'}
-                onRevoke={async () => { await ep.revokeAllowance(card.id, identity); reload() }} />
+                onRevoke={async () => { await ep.revokeAllowance(card.id, identity); reload() }}
+                onEdit={() => { setEditing(true); setSheet('allowance') }} />
             ) : <p className="rnote">No allowances yet.</p>}
           </section>
         </div>
@@ -217,7 +219,9 @@ export default function Account({ identity }: { identity: string }) {
         )}
         {sheet === 'allowance' && (
           <AllowanceModal identity={identity} asset={w?.assets?.[0]?.asset ?? 'USDT'}
-            onClose={() => setSheet('')} onDone={() => { reload(); setSheet('') }} />
+            edit={editing ? card : undefined}
+            onClose={() => { setSheet(''); setEditing(false) }}
+            onDone={() => { reload(); setSheet(''); setEditing(false) }} />
         )}
       </div>
     </div>
@@ -257,10 +261,10 @@ function Assets({ rows }: { rows: WalletAsset[] }) {
  * 翻面看完整条件，包括到期与执行方式。
  */
 function Card({
-  c, all, flip, onFlip, onPick, asset, onRevoke,
+  c, all, flip, onFlip, onPick, asset, onRevoke, onEdit,
 }: {
   c: Allowance; all: Allowance[]; flip: boolean; onFlip: () => void
-  onPick: (id: string) => void; asset: string; onRevoke: () => void
+  onPick: (id: string) => void; asset: string; onRevoke: () => void; onEdit: () => void
 }) {
   const q = Number(c.window_cap)
   const u = Number(c.used)
@@ -309,13 +313,25 @@ function Card({
           <button key={r.id} className={`cthumb ${r.id === c.id ? 'on' : ''} ${r.status === 'live' ? '' : 'off'}`}
             style={{ ['--ch' as string]: r.kind === 'agent' ? 190 : 221 }}
             title={r.spender} aria-label={`Show ${r.spender}`} aria-pressed={r.id === c.id}
-            onClick={() => onPick(r.id)} />
+            onClick={() => onPick(r.id)}>
+            {/* 缩略卡里要有名字。空着的话一排小方块彼此没有区别，
+                「点哪个换到上面」就成了盲猜。 */}
+            <i /><span>{r.spender}</span>
+          </button>
         ))}
         <span className="cacts">
-          <button className="btn btn-ghost btn-sm" onClick={onFlip}><IFlip />Flip</button>
-          <button className={`btn btn-${live ? 'danger' : 'ghost'} btn-sm`} onClick={onRevoke}>
-            <IPower />{live ? 'Revoke' : 'Revoked'}
+          {/* 翻面按钮的文案是「翻到哪一面」，不是「翻面」——参照里正面叫
+              Conditions、背面叫 Front。写死成 Flip 就不知道翻过去是什么。 */}
+          <button className="btn btn-ghost btn-sm" onClick={onFlip}>
+            <IFlip /><span className="fliplbl">{flip ? 'Front' : 'Conditions'}</span>
           </button>
+          <button className="btn btn-ghost btn-sm" onClick={onEdit}><IPen />Edit</button>
+          {/* 「Me」那张是自己的支出策略，没有可撤销的对象 */}
+          {c.spender !== 'Me' && (
+            <button className={`btn btn-${live ? 'danger' : 'ghost'} btn-sm`} onClick={onRevoke}>
+              <IPower />{live ? 'Revoke' : 'Re-issue'}
+            </button>
+          )}
         </span>
       </div>
     </div>

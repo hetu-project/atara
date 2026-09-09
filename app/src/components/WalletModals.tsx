@@ -134,12 +134,12 @@ export function PayeesModal({ identity, onClose }: { identity: string; onClose: 
       {add ? (
         <>
           <div className="sf"><span className="sfl">Label</span>
-            <input value={f.label} autoFocus autoComplete="off"
+            <input type="text" value={f.label} autoFocus autoComplete="off"
               onChange={e => setF({ ...f, label: e.target.value })} /></div>
           <div className="sf"><span className="sfl">Network</span>
             <Chips opts={['ETH', 'POLYGON']} on={f.chain} onPick={c => setF({ ...f, chain: c })} /></div>
           <div className="sf"><span className="sfl">Address</span>
-            <input value={f.address} spellCheck={false} autoComplete="off"
+            <input type="text" value={f.address} spellCheck={false} autoComplete="off"
               onChange={e => setF({ ...f, address: e.target.value })} /></div>
           {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
           <div className="dfoot">
@@ -242,12 +242,12 @@ export function SendModal({
         <Chips opts={opts} on={useAsset} onPick={setAsset} /></div>
 
       <div className="sf"><span className="sfl">Amount ({useAsset})</span>
-        <input value={amount} inputMode="decimal" placeholder={`Available ${bal}`}
+        <input type="text" value={amount} inputMode="decimal" placeholder={`Available ${bal}`}
           onChange={e => setAmount(e.target.value)} /></div>
 
       {/* 提现要留用途：这不是仪式，是反洗钱审查时唯一能回溯的东西 */}
       <div className="sf"><span className="sfl">Purpose</span>
-        <input value={purpose} autoComplete="off" placeholder="e.g. supplier payment"
+        <input type="text" value={purpose} autoComplete="off" placeholder="e.g. supplier payment"
           onChange={e => setPurpose(e.target.value)} /></div>
 
       {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
@@ -311,13 +311,13 @@ export function AllowanceModal({
   return (
     <Sheet title={edit ? 'Edit allowance' : 'New allowance'} onClose={onClose}>
       <div className="sf"><span className="sfl">Spender</span>
-        <input value={f.spender} autoComplete="off"
+        <input type="text" value={f.spender} autoComplete="off"
           onChange={e => setF({ ...f, spender: e.target.value })} /></div>
       <div className="sf"><span className="sfl">Max per payment ({asset})</span>
-        <input value={f.per_payment} inputMode="numeric"
+        <input type="text" value={f.per_payment} inputMode="numeric"
           onChange={e => setF({ ...f, per_payment: e.target.value })} /></div>
       <div className="sf"><span className="sfl">Max per window ({asset})</span>
-        <input value={f.window_cap} inputMode="numeric"
+        <input type="text" value={f.window_cap} inputMode="numeric"
           onChange={e => setF({ ...f, window_cap: e.target.value })} /></div>
       <div className="sf"><span className="sfl">Window</span>
         <Chips opts={['weekly', 'monthly']} on={f.cycle}

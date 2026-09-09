@@ -129,6 +129,9 @@ const IDLE_STEPS = ['Read the order', 'Collected evidence', 'Agent checks', 'Con
  * 跑起来之后票一张一张落：七个一起转圈没有信息量，票本来就是一个一个落的。
  */
 function Assessment({ onFold }: { onFold: () => void }) {
+  /* 点名册里的 agent 打开它的 profile。原来这些按钮没有 onClick，
+     名字、职责、这一轮投了什么票，全都只能靠 title 悬停去看。 */
+  const [agent, setAgent] = useState<number | null>(null)
   const { run, running } = useAssessment()
 
   /* 每个 agent 的状态：还没表态 = conferring（跑着）或 idle，表过态就封印。
@@ -222,7 +225,8 @@ function Assessment({ onFold }: { onFold: () => void }) {
             const st = stateOf(i)
             const note = voteAt(i)?.note ?? ''
             return (
-              <button type="button" className={`ragp ${st}`} key={a.n} title={note || `${a.n} · ${a.d}`}>
+              <button type="button" className={`ragp ${st}`} key={a.n} title={note || `${a.n} · ${a.d}`}
+                onClick={() => setAgent(i)}>
                 <span className="ragav" dangerouslySetInnerHTML={{ __html: agentGlyph(i) }} />
                 <span className="ragt">
                   <b>{a.n.replace(/ Agent$/, '')}</b>
@@ -236,6 +240,33 @@ function Assessment({ onFold }: { onFold: () => void }) {
           })}
         </div>
         <div id="afpanel" hidden />
+
+        {/* Agent profile。参照里它占满整块 feed（.agpage），顶上的环和星盘收起——
+            读 profile 的时候那些只是占地方的背景。 */}
+        {agent !== null && (() => {
+          const a = RISK_AGENTS[agent] as { n: string; d: string }
+          const v = voteAt(agent)
+          return (
+            <div className="agpage">
+              <header className="agph2">
+                <span className="agcav" dangerouslySetInnerHTML={{ __html: agentGlyph(agent) }} />
+                <div className="agid">
+                  <b className="agpn">{a.n.replace(/ Agent$/, '')}</b>
+                  <span className="agpr">{a.d}</span>
+                </div>
+                {v ? <span className="ardvv">{v.v}</span>
+                   : <span className="agpidle">{running ? 'checking' : 'standing by'}</span>}
+              </header>
+              <div className="agsep" aria-hidden />
+              <p className="agmeasure">
+                {v?.note || 'No vote in this run yet — this agent has nothing to report.'}
+              </p>
+              <div className="dfoot">
+                <button className="btn btn-ghost btn-sm" onClick={() => setAgent(null)}>Back</button>
+              </div>
+            </div>
+          )
+        })()}
       </div>
     </section>
   )

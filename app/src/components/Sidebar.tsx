@@ -74,7 +74,14 @@ export default function Sidebar({
             const Icon = n.icon
             return (
               <button key={n.view} className={'nav' + (route.view === n.view ? ' on' : '')}
-                title={n.label} onClick={() => go({ view: n.view } as Route)}>
+                title={n.label}
+                /* 未登录时，除了 Discover 都要先登录。原来点 New order 会
+                   落到 Discover——那是「未登录的起点是市场」那条规则的副作用，
+                   但从用户看就是「我点了 A，你给我 B」。直接弹登录门。 */
+                onClick={() => {
+                  if (!signed && n.view !== 'discover') { onSignIn(); return }
+                  go({ view: n.view } as Route)
+                }}>
                 <span className="ni"><Icon /></span>{n.label}
               </button>
             )
