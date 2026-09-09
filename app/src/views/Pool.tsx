@@ -37,6 +37,9 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
   const [side, setSide] = useState<'buy' | 'sell'>('buy')
   const [coin, setCoin] = useState('All')
   const [fiat, setFiat] = useState('')
+  /* 法币筛选走弹窗。原来是点一下换下一个币种——币多起来要点七八下才轮到，
+     而且中途根本不知道后面还有什么。 */
+  const [picking, setPicking] = useState(false)
 
   const { data, loading } = useApi(() => ep.offers(side), [side])
   const { data: assets } = useApi(() => ep.assets(), [])
@@ -48,7 +51,6 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
   /* 筛选项来自目录，不是从当前挂单反推——池子空的时候筛选条不该跟着消失，
      那会让人以为「这个币种没有了」，而不是「这个方向暂时没人挂单」。 */
   const coins = ['All', ...(assets ?? []).map(a => a.code)]
-  const fiats = (fiatGroups ?? []).flatMap(g => g.assets).map(f => f.code)
   const list = all
     .filter(o => coin === 'All' || o.asset === coin)
     .filter(o => !fiat || o.fiat === fiat)
@@ -81,13 +83,19 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
                 onClick={() => setCoin(c)}>{c}</button>
             ))}
           </div>
-          <button className="mkfiat" onClick={() => {
-            const i = fiats.indexOf(fiat)
-            setFiat(i + 1 >= fiats.length ? '' : (fiats[i + 1] ?? ''))
-          }}>
+          <button className="mkfiat" onClick={() => setPicking(true)}>
             {fiat ? `${flag(fiat)} ${fiat}` : 'Any currency'}
           </button>
         </div>
+
+        {picking && (
+          <FiatPicker groups={fiatGroups ?? []} on={fiat}
+            /* 只列池子里真有人接的币种：列一个没人挂单的币，选完是空池，
+               看的人会以为筛坏了。 */
+            avail={new Set(all.map(o => o.fiat))}
+            onPick={c => { setFiat(c); setPicking(false) }}
+            onClose={() => setPicking(false)} />
+        )}
 
         <div id="pool">
           {list.map(o => <OfferCard key={o.id} o={o} side={side} mine={mineIds.has(o.id)}
@@ -221,5 +229,68 @@ function OfferCard({
         <span className="od-cta">{mine ? 'Unlist' : side === 'buy' ? 'Buy' : 'Sell'}</span>
       </div>
     </button>
+  )
+}
+
+
+/**
+ * 结算币种选择器。结构逐处对齐参照的 openFiatPicker：
+ * 搜索框 + Any currency + 按走廊分组的币种卡。
+ */
+function FiatPicker({
+  groups, on, avail, onPick, onClose,
+}: {
+  groups: { group: string; assets: { code: string; name: string }[] }[]
+  on: string
+  avail: Set<string>
+  onPick: (code: string) => void
+  onClose: () => void
+}) {
+  const [q, setQ] = useState('')
+  const kw = q.trim().toLowerCase()
+  const shown = groups
+    .map(g => ({
+      group: g.group,
+      assets: g.assets.filter(a => avail.has(a.code)
+        && (!kw || a.code.toLowerCase().includes(kw) || a.name.toLowerCase().includes(kw))),
+    }))
+    .filter(g => g.assets.length)
+
+  return (
+    <div id="modal" role="dialog" aria-modal="true"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="mcard">
+        <header className="mhead">
+          <h3>Settlement currency</h3>
+          <button className="sayic" aria-label="Close" onClick={onClose}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+              strokeWidth="1.5" strokeLinecap="round" aria-hidden><path d="m4 4 8 8M12 4l-8 8" /></svg>
+          </button>
+        </header>
+        <div className="mbody">
+          <div className="sf">
+            <input type="text" autoFocus value={q} onChange={e => setQ(e.target.value)}
+              placeholder="Search currency or code" autoComplete="off" />
+          </div>
+          <button className={'fany' + (on ? '' : ' on')} onClick={() => onPick('')}>Any currency</button>
+          {shown.map(g => (
+            <div className="fgrp" key={g.group}>
+              <h4>{g.group}</h4>
+              <div className="fgrid">
+                {g.assets.map(a => (
+                  <button key={a.code} className={'fchip' + (on === a.code ? ' on' : '')}
+                    onClick={() => onPick(a.code)}>
+                    <span className="fflag">{flag(a.code)}</span>
+                    <span className="fmeta"><b>{a.code}</b><em>{a.name}</em></span>
+                    {on === a.code ? <span className="fok">✓</span> : null}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          {!shown.length && <div className="fempty">No match</div>}
+        </div>
+      </div>
+    </div>
   )
 }
