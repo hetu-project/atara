@@ -24,13 +24,22 @@ export default function Account({ identity }: { identity: string }) {
   const [tab, setTab] = useState<Tab>('assets')
   /* 钱包那三个按钮和「新建额度」原来是空的——没有 onClick，点了什么都不发生。 */
   const [sheet, setSheet] = useState<'' | 'receive' | 'send' | 'payees' | 'allowance'>('')
+  const [renaming, setRenaming] = useState(false)
+  const [draft, setDraft] = useState('')
   const [pick, setPick] = useState<string>('')
   const [flip, setFlip] = useState(false)
-  const { data: me } = useApi(() => ep.me(identity), [identity])
+  const { data: me, reload: reloadMe } = useApi(() => ep.me(identity), [identity])
   const { data: w } = useApi(() => ep.wallet(identity), [identity])
   const { data: allow, reload } = useApi(() => ep.allowances(identity), [identity])
   const { data: mine } = useApi(() => ep.myOffers(identity), [identity])
   const { data: orders } = useApi(() => ep.orders(identity), [identity])
+
+  const saveName = async () => {
+    const v = draft.trim()
+    setRenaming(false)
+    if (!v || v === me?.display_name) return
+    try { await ep.rename(v, identity); reloadMe() } catch { /* 后端会说原因，这里不吞成静默失败 */ }
+  }
 
   const cards = allow ?? []
   const card = cards.find(c => c.id === pick) ?? cards[0]
@@ -51,8 +60,26 @@ export default function Account({ identity }: { identity: string }) {
             <button className="pfav" title="Change avatar" aria-label="Change avatar">{ini}</button>
             <div className="pidmain">
               <div className="pnrow">
-                <span className="pname">{me?.display_name ?? 'Demo'}</span>
-                <button className="pedit" title="Rename" aria-label="Edit nickname"><IPen /></button>
+                {/* 铅笔原来没有 onClick，点了完全没反应。改名走 POST /me，
+                    只改展示名——地址才是账户的唯一键，订单、额度、联系人
+                    全挂在地址上，改名不影响它们。 */}
+                {renaming ? (
+                  <input className="pname" autoFocus value={draft}
+                    onChange={e => setDraft(e.target.value)}
+                    onBlur={() => void saveName()}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') void saveName()
+                      if (e.key === 'Escape') setRenaming(false)
+                    }} />
+                ) : (
+                  <>
+                    <span className="pname">{me?.display_name ?? 'Demo'}</span>
+                    <button className="pedit" title="Rename" aria-label="Edit nickname"
+                      onClick={() => { setDraft(me?.display_name ?? ''); setRenaming(true) }}>
+                      <IPen />
+                    </button>
+                  </>
+                )}
               </div>
               <div className="pmeta">
                 <span className="num" title="Your wallet address is your account">

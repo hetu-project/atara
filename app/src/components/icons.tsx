@@ -140,3 +140,19 @@ export const IFlip = () => (
     <path d="M13 6.5A5 5 0 0 0 3.4 5.2" /><path d="M3 3v2.4h2.4" />
     <path d="M3 9.5a5 5 0 0 0 9.6 1.3" /><path d="M13 13v-2.4h-2.4" /></svg>
 )
+
+/* 用户菜单：设置与锁屏。描边风格与同一组图标保持一致。 */
+export const IGear = () => (
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+    strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <circle cx="8" cy="8" r="2.1" />
+    <path d="M8 1.6v1.6M8 12.8v1.6M14.4 8h-1.6M3.2 8H1.6M12.5 3.5l-1.1 1.1M4.6 11.4l-1.1 1.1M12.5 12.5l-1.1-1.1M4.6 4.6 3.5 3.5" />
+  </svg>
+)
+export const ILock = () => (
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+    strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect x="3.2" y="7" width="9.6" height="6.4" rx="1.4" />
+    <path d="M5.6 7V5.2a2.4 2.4 0 0 1 4.8 0V7" />
+  </svg>
+)

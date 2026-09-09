@@ -33,15 +33,27 @@ export default function Contacts({ identity }: { identity: string }) {
     <div className="view on" id="v-contacts">
       <div className="vhead vhrow">
         <h2>Contacts</h2>
-        <button className="btn btn-secondary" onClick={() => setAdding(a => !a)}>
+        <button className="btn btn-secondary" onClick={() => setAdding(true)}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor"
             strokeWidth="1.5" strokeLinecap="round" aria-hidden><path d="M8 3.5v9M3.5 8h9" /></svg>
           Add contact
         </button>
       </div>
       <div className="vbody" id="cpbody">
+        {/* 加联系人是一次性动作，参照里走弹窗。做成常驻在页面上的一块，
+            会把「有哪些联系人」这个主体内容挤下去，而且没有关闭的去处。 */}
         {adding && (
-          <div className="ctcard" style={{ padding: 16, display: 'grid', gap: 10 }}>
+          <div id="modal" role="dialog" aria-modal="true"
+            onClick={e => { if (e.target === e.currentTarget) setAdding(false) }}>
+          <div className="mcard">
+            <header className="mhead">
+              <h3>Add contact</h3>
+              <button className="sayic" aria-label="Close" onClick={() => setAdding(false)}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                  strokeWidth="1.5" strokeLinecap="round" aria-hidden><path d="m4 4 8 8M12 4l-8 8" /></svg>
+              </button>
+            </header>
+            <div className="mbody">
             <label className="acf">
               <span>Name or address</span>
               <input autoFocus value={q} onChange={e => setQ(e.target.value)}
@@ -60,6 +72,8 @@ export default function Contacts({ identity }: { identity: string }) {
             <div className="dfoot">
               <button className="btn btn-primary btn-sm" onClick={() => void add()}>Send request</button>
             </div>
+            </div>
+          </div>
           </div>
         )}
 

@@ -2,9 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
 import Avatar from './Avatar'
-import {
-  IApi, IChart, IContacts, IDiscover, IGo, INewOrder, IPanel, IPayments,
-} from './icons'
+import { IApi, IChart, IContacts, IDiscover, IGear, IGo, ILock, INewOrder, IPanel, IPayments } from './icons'
 import type { Icon } from './icons'
 import type { Route } from '../hooks/useRoute'
 
@@ -17,7 +15,7 @@ const NAVS: { view: Route['view']; label: string; icon: Icon }[] = [
 ]
 
 export default function Sidebar({
-  route, go, identity, folded, onFold, signed, onSignIn, onSignOut,
+  route, go, identity, folded, onFold, signed, onSignIn, onSignOut, onLock,
 }: {
   route: Route
   go: (r: Route) => void
@@ -27,6 +25,7 @@ export default function Sidebar({
   signed: boolean
   onSignIn: () => void
   onSignOut: () => void
+  onLock: () => void
 }) {
   const [menu, setMenu] = useState(false)
   const row = useRef<HTMLDivElement>(null)
@@ -144,7 +143,20 @@ export default function Sidebar({
               onClick={() => { setMenu(false); go({ view: 'account' }) }}>
               <IUser />Profile
             </button>
+            {/* 参照里 Settings 和 Profile 落到同一页（openAcct 只是带个锚点）。
+                与其造一个空的设置页，不如老实指向账户页——那里就是所有
+                可改的东西所在。 */}
+            <button className="umitem" role="menuitem"
+              onClick={() => { setMenu(false); go({ view: 'account' }) }}>
+              <IGear />Settings
+            </button>
             <div className="umsep" />
+            {/* 锁屏：把界面盖住，回来要点一下。参照里还带一道演示密码，
+                那是演示件——这里不做假的凭据校验，只做「离开座位」这件事。 */}
+            <button className="umitem" role="menuitem"
+              onClick={() => { setMenu(false); onLock() }}>
+              <ILock />Lock session
+            </button>
             {/* 退出 = 回到未登录的控制台：能看不能动。
                 后端没有会话可以作废——这里清的是本机的身份选择。 */}
             <button className="umitem" role="menuitem"

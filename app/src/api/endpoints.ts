@@ -24,6 +24,10 @@ export const connect = (body: {
 
 export const me = (as?: string) => api.get<User>('/me', { as })
 
+/** 改展示名。地址才是账户的唯一键，所以改名不动任何已有关系。 */
+export const rename = (displayName: string, as?: string) =>
+  api.post<User>('/me', { display_name: displayName }, { as })
+
 export const wallet = (as?: string) => api.get<Wallet>('/wallet', { as })
 
 // ── 目录 ──

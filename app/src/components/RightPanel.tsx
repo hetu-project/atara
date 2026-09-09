@@ -15,15 +15,15 @@ import type { Order } from '../api/types'
  * 栏顶不挂总标题：三块各自有名字，再挂一个会跟模块名重复。
  */
 export default function RightPanel({
-  identity, onOpen,
-}: { identity: string; onOpen: (id: string) => void }) {
+  identity, onOpen, onFold,
+}: { identity: string; onOpen: (id: string) => void; onFold: () => void }) {
   return (
     <aside id="right" className="lay-b" aria-label="Assessment and agent status">
       <div className="rgrid" id="rgrid">
         {/* DOM 顺序无所谓：grid-area 指定位置。
             lay-b 下 Assessment 吃掉 Agent status（后者 display:none），
             所以这里不渲染它——渲染了也看不见，只会多一次取数。 */}
-        <Assessment />
+        <Assessment onFold={onFold} />
         <OrderStatus identity={identity} onOpen={onOpen} />
       </div>
     </aside>
@@ -128,7 +128,7 @@ const IDLE_STEPS = ['Read the order', 'Collected evidence', 'Agent checks', 'Con
  * 空闲态的环只画不扫——「还没开始」和「0 分」看起来必须不一样。
  * 跑起来之后票一张一张落：七个一起转圈没有信息量，票本来就是一个一个落的。
  */
-function Assessment() {
+function Assessment({ onFold }: { onFold: () => void }) {
   const { run, running } = useAssessment()
 
   /* 每个 agent 的状态：还没表态 = conferring（跑着）或 idle，表过态就封印。
@@ -147,7 +147,11 @@ function Assessment() {
   return (
     <section className="rmod" id="rm-feed">
       <div className="rmh">
-        <button className="rfoldx" type="button" title="Collapse panel" aria-label="Collapse panel">
+        {/* 收起右栏。原来这颗按钮没有 onClick，点了完全没反应。
+            状态和视图级的 rout 分开记：rout 是「这个视图没有右栏」，
+            rfold 是「用户自己收起来了」，两者不该互相覆盖。 */}
+        <button className="rfoldx" type="button" title="Collapse panel" aria-label="Collapse panel"
+          onClick={onFold}>
           <IPanel mirror />
         </button>
         <h3>Assessment</h3>

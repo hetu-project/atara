@@ -9,6 +9,7 @@ import Pool from './views/Pool'
 import OrderDetail from './views/OrderDetail'
 import Account from './views/Account'
 import { IDENTITY_GONE } from './api/client'
+import { IPanel } from './components/icons'
 import { AssessmentProvider } from './hooks/useAssessment'
 import { KycProvider } from './hooks/useKycGate'
 import { useIdentity } from './hooks/useIdentity'
@@ -25,6 +26,13 @@ export default function App() {
   const { handle, signed, signIn, signOut } = useIdentity()
   const { login, signOutAll } = usePrivyAuth(signed, signIn)
   const { route } = useRoute()
+  /* 右栏是用户自己收起来的——和「这个视图本来就没有右栏」(rout) 分开记，
+     否则从 Discover 切回新建单，右栏会莫名其妙地不见。 */
+  const [rfold, setRfold] = useState(false)
+  /* 锁屏：离开座位时把界面盖住。不做假的密码校验——参照里那道演示密码
+     是原型件，在一个碰真钱的界面上摆一个不校验任何东西的密码框，
+     传达的安全感是假的。 */
+  const [locked, setLocked] = useState(false)
   const [folded, setFolded] = useState(
     () => { try { return localStorage.getItem('atara-left') === '1' } catch { return false } })
 
@@ -58,11 +66,12 @@ export default function App() {
         main.classList.toggle('rout', v!=='chat')。其他视图收起它，中栏才拿到
         整条剩余宽度；.view 的 max-width:960px + align-self:center 这时才起作用，
         卡片是居中的。不收的话中栏只有一半宽，内容顶在左边。 */}
-    <main className={[route.view === 'home' && signed ? '' : 'rout', folded ? 'lout' : '']
-      .filter(Boolean).join(' ') || undefined}>
+    <main className={[route.view === 'home' && signed ? '' : 'rout', folded ? 'lout' : '',
+      rfold ? 'rfold' : ''].filter(Boolean).join(' ') || undefined}>
       <Sidebar route={route} go={go} identity={handle} folded={folded} onFold={setFolded}
         signed={signed} onSignIn={login}
-        onSignOut={() => { signOutAll(signOut); go({ view: 'discover' }) }} />
+        onSignOut={() => { signOutAll(signOut); go({ view: 'discover' }) }}
+        onLock={() => setLocked(true)} />
 
       <section id="mid">
         {/* 未登录的起点是市场：能看的东西在这儿，下单页留给登录后 */}
@@ -83,9 +92,32 @@ export default function App() {
         {route.view === 'thread' && <Thread identity={handle} peer={route.peer} />}
       </section>
 
-      <RightPanel identity={handle} onOpen={id => go({ view: 'order', id })} />
+      <RightPanel identity={handle} onOpen={id => go({ view: 'order', id })}
+        onFold={() => setRfold(true)} />
+
+      {/* 收起之后要能还原。参照里这颗按钮只在「用户收起了、而且这个视图
+          本来有右栏」时出现——视图本来就没有右栏时给一颗展开按钮，
+          点了什么也不会发生。 */}
+      <button className="rshow" type="button" title="Show panel" aria-label="Show panel"
+        hidden={!rfold || !(route.view === 'home' && signed)}
+        onClick={() => setRfold(false)}>
+        <IPanel mirror />
+      </button>
       {/* 登录弹窗由 Privy 自己渲染，挂在 body 上——这里不需要留位置 */}
     </main>
+
+    {locked && (
+      <div id="lock" className="show" role="dialog" aria-modal="true" aria-label="Session locked">
+        <div className="lkcard">
+          <h3>Session locked</h3>
+          <p className="acnote">
+            The screen is covered so nothing is readable over your shoulder.
+            Your session is still open — unlocking does not sign you in again.
+          </p>
+          <button className="btn btn-primary" autoFocus onClick={() => setLocked(false)}>Unlock</button>
+        </div>
+      </div>
+    )}
     </KycProvider>
     </AssessmentProvider>
   )

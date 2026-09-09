@@ -47,9 +47,17 @@ function Chips({
 // ── 收款 ────────────────────────────────────────────────────────────
 
 export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => void }) {
-  const assets = w?.assets ?? []
-  const [coin, setCoin] = useState(assets[0]?.asset ?? 'USDT')
-  const cur = assets.find(a => a.asset === coin) ?? assets[0]
+  /* 资产和网络取自目录，不是持仓。收款的前提恰恰是「还没有」——
+     用持仓来填这两排，新账户就是两个空标签，弹窗看着像坏了。 */
+  const { data: cat } = useApi(() => ep.assets(), [])
+  const held = w?.assets ?? []
+  const list = (cat ?? []).map(a => ({
+    asset: a.code,
+    networks: a.networks ?? held.find(h => h.asset === a.code)?.networks ?? [],
+  }))
+  const [coin, setCoin] = useState('')
+  const useCoin = list.some(a => a.asset === coin) ? coin : (list[0]?.asset ?? '')
+  const cur = list.find(a => a.asset === useCoin)
   const nets = cur?.networks ?? []
   const [net, setNet] = useState(nets[0] ?? '')
   const useNet = nets.includes(net) ? net : (nets[0] ?? '')
@@ -58,7 +66,7 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
   return (
     <Sheet title="Receive" onClose={onClose}>
       <div className="sf"><span className="sfl">Asset</span>
-        <Chips opts={assets.map(a => a.asset)} on={coin}
+        <Chips opts={list.map(a => a.asset)} on={useCoin}
           onPick={c => { setCoin(c); setNet('') }} />
       </div>
       <div className="sf"><span className="sfl">Network</span>
@@ -78,7 +86,7 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
 
       <p className="rnote">
         Your own address — funds land in your wallet, not with us.
-        Receives <b>{coin}</b> on <b>{useNet}</b> only. Sending another asset or another
+        Receives <b>{useCoin}</b> on <b>{useNet}</b> only. Sending another asset or another
         network cannot be recovered.
       </p>
     </Sheet>
@@ -166,24 +174,30 @@ export function SendModal({
 }) {
   const { data: list } = useApi(() => ep.payees(identity), [identity])
   const [payee, setPayee] = useState('')
-  const [asset, setAsset] = useState(assets[0]?.asset ?? 'USDT')
+  /* 同样兜底到目录：没有余额也该看得见有哪些币可选，
+     「能不能发得出去」由下面的余额校验来说，不是靠让选项消失。 */
+  const { data: cat } = useApi(() => ep.assets(), [])
+  const codes = (cat ?? []).map(a => a.code)
+  const opts = codes.length ? codes : assets.map(a => a.asset)
+  const [asset, setAsset] = useState('')
+  const useAsset = opts.includes(asset) ? asset : (opts[0] ?? '')
   const [amount, setAmount] = useState('')
   const [purpose, setPurpose] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState('')
 
-  const bal = assets.find(a => a.asset === asset)?.on_chain ?? '0'
+  const bal = assets.find(a => a.asset === useAsset)?.on_chain ?? '0'
 
   const submit = async () => {
     if (!payee) { setErr('Select an address'); return }
     if (!(Number(amount) > 0)) { setErr('Enter an amount'); return }
-    if (Number(amount) > Number(bal)) { setErr(`Only ${bal} ${asset} available`); return }
+    if (Number(amount) > Number(bal)) { setErr(`Only ${bal} ${useAsset} available`); return }
     if (!purpose.trim()) { setErr('Purpose is required'); return }
     setBusy(true); setErr('')
     try {
       const wd = await ep.createWithdrawal(
-        { payee_id: payee, asset, amount, purpose: purpose.trim() }, identity)
+        { payee_id: payee, asset: useAsset, amount, purpose: purpose.trim() }, identity)
       setDone(wd.id)
       onDone()
     } catch (e) {
@@ -225,9 +239,9 @@ export function SendModal({
       </div>
 
       <div className="sf"><span className="sfl">Asset</span>
-        <Chips opts={assets.map(a => a.asset)} on={asset} onPick={setAsset} /></div>
+        <Chips opts={opts} on={useAsset} onPick={setAsset} /></div>
 
-      <div className="sf"><span className="sfl">Amount ({asset})</span>
+      <div className="sf"><span className="sfl">Amount ({useAsset})</span>
         <input value={amount} inputMode="decimal" placeholder={`Available ${bal}`}
           onChange={e => setAmount(e.target.value)} /></div>
 
