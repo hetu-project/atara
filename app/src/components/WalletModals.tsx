@@ -11,6 +11,12 @@ import type { Allowance, Payee, Wallet, WalletAsset } from '../api/types'
  * 接口后端也早就有了，只是前端没接。
  */
 
+const WD_STEPS = ['Address', 'Amount', 'Purpose', 'Document']
+/* 用途是可选项而不是自由文本：反洗钱审查要的是可归类的口径，
+   一人一种写法的自由输入没法聚合。逐字取自参照。 */
+const PURPOSES = ['OTC settlement', 'Goods payment', 'Service fee', 'Refund',
+  'Internal transfer', 'Other']
+
 function Sheet({
   title, onClose, children,
 }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -73,9 +79,15 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
         <Chips opts={nets} on={useNet} onPick={setNet} />
       </div>
 
-      {/* 参照这里画了一个装饰性的假二维码。收款弹窗里放一张扫不出地址的码，
-          是会让人把钱打丢的那种细节，所以只留地址本身。 */}
       <div className="depaddr">
+        {/* 参照里这是一块装饰性的码（aria-hidden），不编码任何内容——
+            扫不出来就是扫不出来，不会把人导到别的地址。地址本身在右边，
+            要转账靠复制那一串，不靠扫这个。 */}
+        <div className="qr" aria-hidden>
+          {Array.from({ length: 64 }, (_, n) => (
+            <i key={n} className={(n * 7 + (n % 5) + useCoin.length + useNet.length) % 3 ? '' : 'on'} />
+          ))}
+        </div>
         <div className="depmeta">
           <span className="sfl">Your wallet address</span>
           <code>{addr}</code>
@@ -173,33 +185,40 @@ export function SendModal({
   onDone: () => void
 }) {
   const { data: list } = useApi(() => ep.payees(identity), [identity])
-  const [payee, setPayee] = useState('')
-  /* 同样兜底到目录：没有余额也该看得见有哪些币可选，
-     「能不能发得出去」由下面的余额校验来说，不是靠让选项消失。 */
   const { data: cat } = useApi(() => ep.assets(), [])
-  const codes = (cat ?? []).map(a => a.code)
-  const opts = codes.length ? codes : assets.map(a => a.asset)
-  const [asset, setAsset] = useState('')
-  const useAsset = opts.includes(asset) ? asset : (opts[0] ?? '')
+  const [step, setStep] = useState(0)
+  const [payee, setPayee] = useState<Payee | null>(null)
   const [amount, setAmount] = useState('')
   const [purpose, setPurpose] = useState('')
+  const [note, setNote] = useState('')
+  const [file, setFile] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
-  const [done, setDone] = useState('')
+  const [done, setDone] = useState(false)
 
-  const bal = assets.find(a => a.asset === useAsset)?.on_chain ?? '0'
+  /* 资产跟着收款地址所在的网络走——地址定了，能往那儿发什么就定了。
+     没有匹配的就退回目录第一项，而不是让这一格空着。 */
+  const codes = (cat ?? []).map(a => a.code)
+  const asset = codes[0] ?? assets[0]?.asset ?? 'USDT'
+  const bal = assets.find(a => a.asset === asset)?.on_chain ?? '0'
 
-  const submit = async () => {
-    if (!payee) { setErr('Select an address'); return }
-    if (!(Number(amount) > 0)) { setErr('Enter an amount'); return }
-    if (Number(amount) > Number(bal)) { setErr(`Only ${bal} ${useAsset} available`); return }
-    if (!purpose.trim()) { setErr('Purpose is required'); return }
-    setBusy(true); setErr('')
+  const next = async () => {
+    if (step === 0 && !payee) { setErr('Select an address'); return }
+    if (step === 1 && !(Number(amount) > 0 && Number(amount) <= Number(bal))) {
+      setErr('Must be above 0 and within your balance'); return
+    }
+    if (step === 2 && !purpose) { setErr('Select a purpose'); return }
+    if (step === 3 && !file) { setErr('A document is required'); return }
+    setErr('')
+    if (step < 3) { setStep(s => s + 1); return }
+    setBusy(true)
     try {
-      const wd = await ep.createWithdrawal(
-        { payee_id: payee, asset: useAsset, amount, purpose: purpose.trim() }, identity)
-      setDone(wd.id)
-      onDone()
+      await ep.createWithdrawal({
+        payee_id: payee!.id, asset, amount,
+        purpose: note.trim() ? `${purpose} — ${note.trim()}` : purpose,
+        doc_upload_id: file,
+      }, identity)
+      setDone(true); onDone()
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not submit')
     } finally { setBusy(false) }
@@ -220,46 +239,92 @@ export function SendModal({
 
   return (
     <Sheet title="Send" onClose={onClose}>
-      <div className="sf"><span className="sfl">Send to a registered address</span>
-        {(list ?? []).length ? (
-          <div className="wlist">
-            {(list ?? []).map((p: Payee) => (
-              <button key={p.id} className={'wrow' + (payee === p.id ? ' on' : '')}
-                onClick={() => setPayee(p.id)}>
-                <span className="wnet">{p.chain}</span>
-                <span className="wtxt"><b>{p.label}</b>
-                  <em>{p.address.slice(0, 10)}…{p.address.slice(-6)}</em></span>
-                {payee === p.id ? <span className="wok">✓</span> : null}
-              </button>
-            ))}
+      <ol className="wsteps">
+        {WD_STEPS.map((t, n) => (
+          <li key={t} className={n === step ? 'on' : n < step ? 'done' : ''}>{n + 1} {t}</li>
+        ))}
+      </ol>
+
+      {step === 0 && (
+        <div className="sf">
+          <span className="sfl">Send to a registered address</span>
+          {(list ?? []).length ? (
+            <div className="wlist">
+              {(list ?? []).map((p: Payee) => (
+                <button key={p.id} className={'wrow' + (payee?.id === p.id ? ' on' : '')}
+                  onClick={() => setPayee(p)}>
+                  <span className="wnet">{p.chain}</span>
+                  <span className="wtxt"><b>{p.label}</b>
+                    <em>{p.address.slice(0, 10)}…{p.address.slice(-6)}</em></span>
+                  {payee?.id === p.id ? <span className="wok">✓</span> : null}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="fempty">No registered addresses yet — add one under Addresses.</div>
+          )}
+        </div>
+      )}
+
+      {step === 1 && (
+        <>
+          <div className="sf"><span className="sfl">Amount ({asset})</span>
+            <input type="text" autoFocus value={amount} inputMode="decimal"
+              placeholder={`Available ${bal}`} onChange={e => setAmount(e.target.value)} />
           </div>
-        ) : (
-          <div className="fempty">No registered addresses yet — add one under Addresses.</div>
-        )}
-      </div>
+          <dl className="sfsum">
+            <div><dt>Network</dt><dd>{payee?.chain}</dd></div>
+            <div><dt>Available</dt><dd className="num">{bal} {asset}</dd></div>
+          </dl>
+        </>
+      )}
 
-      <div className="sf"><span className="sfl">Asset</span>
-        <Chips opts={opts} on={useAsset} onPick={setAsset} /></div>
+      {step === 2 && (
+        <>
+          <div className="sf"><span className="sfl">Purpose</span>
+            <Chips opts={PURPOSES} on={purpose} onPick={setPurpose} />
+          </div>
+          <div className="sf"><span className="sfl">Note (optional)</span>
+            <input type="text" value={note} placeholder="For reconciliation only"
+              onChange={e => setNote(e.target.value)} />
+          </div>
+        </>
+      )}
 
-      <div className="sf"><span className="sfl">Amount ({useAsset})</span>
-        <input type="text" value={amount} inputMode="decimal" placeholder={`Available ${bal}`}
-          onChange={e => setAmount(e.target.value)} /></div>
-
-      {/* 提现要留用途：这不是仪式，是反洗钱审查时唯一能回溯的东西 */}
-      <div className="sf"><span className="sfl">Purpose</span>
-        <input type="text" value={purpose} autoComplete="off" placeholder="e.g. supplier payment"
-          onChange={e => setPurpose(e.target.value)} /></div>
+      {step === 3 && (
+        <>
+          <div className="sf">
+            {/* 反洗钱审查要看的是文件本身，不是一句「已上传」，所以这里真传。 */}
+            <label className={'sfup' + (file ? ' ok' : '')} style={{ cursor: 'pointer' }}>
+              <span><b>Document</b><em>{file || 'Contract, invoice or settlement note'}</em></span>
+              <span className="sfst">{file ? 'Uploaded' : 'Upload'}</span>
+              <input type="file" hidden accept="image/*,application/pdf"
+                onChange={async e => {
+                  const f = e.target.files?.[0]
+                  if (!f) return
+                  try { setFile(await ep.upload(f)) } catch { setErr('Upload failed') }
+                }} />
+            </label>
+          </div>
+          <dl className="sfsum">
+            <div><dt>To</dt><dd>{payee?.label} · {payee?.address.slice(0, 10)}…</dd></div>
+            <div><dt>Amount</dt><dd className="num">{amount} {asset}</dd></div>
+            <div><dt>Purpose</dt><dd>{purpose}</dd></div>
+          </dl>
+        </>
+      )}
 
       {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
 
       <div className="dfoot">
-        <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
-          {busy ? 'Confirming…' : 'Continue'}
+        <span className="dnote">Purpose and document are required</span>
+        {step > 0 && (
+          <button className="btn" onClick={() => { setErr(''); setStep(s => s - 1) }}>Back</button>
+        )}
+        <button className="btn btn-primary" disabled={busy} onClick={() => void next()}>
+          {step === 3 ? 'Submit' : 'Next'}
         </button>
       </div>
-      <p className="rnote">
-        Registered addresses only. Digital assets only — fiat never enters the account.
-      </p>
     </Sheet>
   )
 }
