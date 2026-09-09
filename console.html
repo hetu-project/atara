@@ -5367,7 +5367,7 @@ function renderRulesPage(){
           <span class="seci">🗝</span>
           <span class="sectxt"><b>Wallet keys</b><em>${WALLET_KIND==='ext'
             ? 'Held in your own wallet — Atara never had them, so there is nothing here to back up'
-            : `Non-custodial — your key is split three ways and no single share can sign · ${BACKUP_AT?'recovery phrase backed up '+BACKUP_AT:'recovery phrase not backed up'}`}</em></span>
+            : `Non-custodial — the key is yours and Atara cannot move funds · ${BACKUP_AT?'recovery phrase backed up '+BACKUP_AT:'recovery phrase not backed up'}`}</em></span>
           ${WALLET_KIND==='ext'?'':`<button class="btn btn-secondary" data-p="bakkey">${BACKUP_AT?'View phrase':'Back up'}</button>`}
         </div>
         <!-- 两步验证这一期不上：一个能开关却没人读的安全设置，比没有更糟。
