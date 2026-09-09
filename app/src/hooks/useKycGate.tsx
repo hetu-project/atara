@@ -79,7 +79,10 @@ function Explain({ onClose, onGo }: { onClose: () => void; onGo: () => void }) {
   return (
     <div id="modal" role="dialog" aria-modal="true"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="mcard">
+      {/* msq 是参照给这类「一句话 + 一个动作」的弹窗留的窄居中版式，
+          配 sqi 那块图标。原来只用了 mcard，于是文字左对齐、没有图标，
+          跟参照差得很明显。 */}
+      <div className="mcard msq">
         <header className="mhead">
           <h3>Verify your identity</h3>
           <button className="sayic" aria-label="Close" onClick={onClose}>
@@ -88,6 +91,14 @@ function Explain({ onClose, onGo }: { onClose: () => void; onGo: () => void }) {
           </button>
         </header>
         <div className="mbody">
+          <div className="sqi">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 2.6 4.6 5.6v5.5c0 4.4 3 8.5 7.4 9.8 4.4-1.3 7.4-5.4 7.4-9.8V5.6Z" />
+              <circle cx="12" cy="10" r="2.4" />
+              <path d="M8.4 16.4a4 4 0 0 1 7.2 0" />
+            </svg>
+          </div>
           <p className="acnote">
             A one-time check before your first trade — the fiat leg goes bank to bank,
             so the payer has to be identifiable.

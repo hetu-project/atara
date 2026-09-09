@@ -3,6 +3,7 @@ import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
 import Avatar from './Avatar'
 import { IApi, IChart, IContacts, IDiscover, IGear, IGo, ILock, INewOrder, IPanel, IPayments } from './icons'
+import { useKycGate } from '../hooks/useKycGate'
 import type { Icon } from './icons'
 import type { Route } from '../hooks/useRoute'
 
@@ -28,6 +29,7 @@ export default function Sidebar({
   onLock: () => void
 }) {
   const [menu, setMenu] = useState(false)
+  const kyc = useKycGate()
   const row = useRef<HTMLDivElement>(null)
 
   // 点外面或 Esc 关掉菜单
@@ -105,8 +107,20 @@ export default function Sidebar({
           </a>
         </div>
 
-        <div className="lsec" id="tasksec" hidden={!chats.length}>Chats</div>
+        <div className="lsec" id="tasksec" hidden={!signed}>Chats</div>
         <div id="tasklist">
+          {/* Atara AI 是常驻的第一条会话——准入、审核这些事都在它里面发生。
+              参照里它一直在列表上；我们原来只在开向导时临时显示一个标题，
+              流程走完就找不回去了，「我的申请审到哪了」没有入口。 */}
+          {signed && (
+            <button className={'cp' + (route.view === 'home' ? ' on' : '')} title="Atara AI"
+              onClick={() => { go({ view: 'home' }); kyc.openMaker() }}>
+              <span className="cpav deskav" aria-hidden><i /></span>
+              {/* 参照里这一行只有名字。别的会话那行小字是「最后一条消息」，
+                  这里塞一句固定副标题会把名字挤到截断。 */}
+              <span className="n"><em>Atara AI</em></span>
+            </button>
+          )}
           {chats.map(t => (
             <button key={t.peer_id} className="cp" title={t.peer_name}
               onClick={() => go({ view: 'thread', peer: t.peer_id })}>
