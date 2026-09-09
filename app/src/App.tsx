@@ -26,7 +26,7 @@ export default function App() {
   const { login, signOutAll } = usePrivyAuth(signed, signIn)
   const { route } = useRoute()
   const [folded, setFolded] = useState(
-    () => { try { return localStorage.getItem('atara-fold') === '1' } catch { return false } })
+    () => { try { return localStorage.getItem('atara-left') === '1' } catch { return false } })
 
   /* 后端换过库、或账户被删之后，本机存的身份就指向一个不存在的人。
      那时所有请求都是 401——退回未登录并弹门，而不是让界面一直重试。 */
@@ -43,9 +43,12 @@ export default function App() {
     else document.documentElement.dataset.locked = '1'
   }, [signed])
 
+  /* 折叠状态记在 <main class="lout"> 上——参照就是这么做的，整套收起样式
+     （68px 图标条、隐藏文字、logo 变展开按钮）都挂在 main.lout 下面。
+     之前写的是 documentElement 上的 lfolded，那个类在样式表里根本不存在，
+     所以按钮点了什么都不发生。 */
   useEffect(() => {
-    document.documentElement.classList.toggle('lfolded', folded)
-    try { localStorage.setItem('atara-fold', folded ? '1' : '0') } catch { /* 隐身窗口 */ }
+    try { localStorage.setItem('atara-left', folded ? '1' : '0') } catch { /* 隐身窗口 */ }
   }, [folded])
 
   return (
@@ -55,7 +58,8 @@ export default function App() {
         main.classList.toggle('rout', v!=='chat')。其他视图收起它，中栏才拿到
         整条剩余宽度；.view 的 max-width:960px + align-self:center 这时才起作用，
         卡片是居中的。不收的话中栏只有一半宽，内容顶在左边。 */}
-    <main className={route.view === 'home' && signed ? undefined : 'rout'}>
+    <main className={[route.view === 'home' && signed ? '' : 'rout', folded ? 'lout' : '']
+      .filter(Boolean).join(' ') || undefined}>
       <Sidebar route={route} go={go} identity={handle} folded={folded} onFold={setFolded}
         signed={signed} onSignIn={login}
         onSignOut={() => { signOutAll(signOut); go({ view: 'discover' }) }} />

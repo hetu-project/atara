@@ -65,7 +65,6 @@ export default function Sidebar({
         <a className="lbrand" href="../index.html" aria-label="Back to site">
           <span className="lmark" aria-hidden><i /></span><b>Atara</b>
         </a>
-        <span className="demo">DEMO</span>
         <button className="sayic lfoldx" title="Collapse sidebar" aria-label="Collapse sidebar"
           aria-expanded={!folded} onClick={() => onFold(true)}><IPanel /></button>
       </div>

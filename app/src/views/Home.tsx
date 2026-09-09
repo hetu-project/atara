@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import * as ep from '../api/endpoints'
 import ActionBar, { type Act, type ActKind } from '../components/ActionBar'
 import { liveParse } from '../components/actlang'
-import { IAttach, IBuy, IMic, ISell, ISend } from '../components/icons'
+import { IBuy, IMic, ISell, ISend } from '../components/icons'
 import Thinking from '../components/Thinking'
 import { useApi } from '../hooks/useApi'
 import { useAssessment } from '../hooks/useAssessment'
@@ -26,6 +26,9 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   const [err, setErr] = useState('')
   const [cands, setCands] = useState<MatchCandidate[]>([])
   const [chosen, setChosen] = useState<MatchCandidate | null>(null)
+  /* 语音按钮：参照里它只是一个按下态开关（micbtn.onclick 切 .on 和
+     aria-pressed），没有接语音识别。原来我们连这个都没接，点了完全没反应。 */
+  const [mic, setMic] = useState(false)
 
   const { run, start } = useAssessment()
   const kyc = useKycGate()
@@ -166,8 +169,10 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
             }}
             placeholder={'Describe a trade — try “Buy 5,000 USDT with CNY” or “Sell 2,000 USDT for HKD”'} />
           <div className="saytools">
-            <button className="sayic" title="Attach" aria-label="Attach"><IAttach /></button>
-            <button className="sayic" title="Voice" aria-label="Voice" aria-pressed={false}><IMic /></button>
+            {/* 附件按钮按产品要求隐藏：它在参照里会走一段文档识别的演示，
+                我们这边没有对应实现，留一个点了没反应的按钮不如不给。 */}
+            <button className={'sayic' + (mic ? ' on' : '')} title="Voice" aria-label="Voice"
+              aria-pressed={mic} onClick={() => setMic(m => !m)}><IMic /></button>
             <button id="send" title="Compose (Enter)" aria-label="Compose"
               disabled={busy || (!act && !text.trim())} onClick={() => void submit()}><ISend /></button>
           </div>
