@@ -888,6 +888,9 @@ main.lout .navtag,main.lout .navgo{display:none}
   transform-style:preserve-3d;transform:rotateY(var(--flip));
   transition:transform 620ms cubic-bezier(.22,1,.28,1)}
 .ccard.flip{--flip:180deg}
+/* 整张卡就是翻面的开关——底下再放一个「Conditions」按钮，等于把卡自己会做的事外包出去 */
+.ccard{cursor:pointer}
+.ccard:focus-visible{outline:2px solid var(--accent);outline-offset:6px;border-radius:16px}
 @media (prefers-reduced-motion:reduce){
   .ccsway{animation:none;transform:rotateY(-13deg) rotateX(5deg)}
 }
@@ -1354,6 +1357,7 @@ a.dspx{color:#d0574d}
 .arow:hover{background:var(--canvas)}
 .acoin{width:28px;height:28px;flex:none;border-radius:999px;display:flex;align-items:center;justify-content:center;
   font-size:10px;font-weight:700;color:#fff}
+.acoin svg{width:76%;height:76%;display:block}
 .anm{display:flex;flex-direction:column;gap:1px;min-width:0}
 .anm b{font-size:13px;font-weight:600;color:var(--ink)}
 .anm em{font-style:normal;font-size:11px;color:var(--faint)}
@@ -1693,6 +1697,7 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 
 
 /* ══ 支付密码 ══ 原型演示件：只在内存里比对，不落盘不出网 */
+.pwin[hidden]{display:none}
 .pwin{width:100%;height:44px;padding:0 14px;border-radius:12px;font:inherit;font-size:14px;
   letter-spacing:.12em;color:var(--ink);background:var(--card);
   border:1px solid var(--hairline);outline:none;
@@ -3066,6 +3071,22 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 #mx{margin-left:auto}
 .mbody{flex:1;overflow-y:auto;min-height:0;padding:6px 24px 22px}
 .mbody .rsec{margin-bottom:20px}
+/* 不可逆操作的确认：它必须比一条内联提示更重——盖住整屏、盖在原弹窗之上、
+   默认焦点落在「取消」，红色那颗要按第二次才是真的。
+   之前做成卡片里的一条琥珀提示，看起来和「顺便说一句」同级，配不上「删了要重抄账号」 */
+#danger{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  padding:24px;background:oklch(18% .02 265 / .62)}
+#danger[hidden]{display:none}
+.dgcard{width:100%;max-width:392px;padding:26px 26px 20px;text-align:center;
+  background:var(--paper);border-radius:var(--r-panel);box-shadow:var(--sh-overlay)}
+.dgic{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:0 auto 14px;
+  border-radius:999px;background:var(--neg-wash,var(--warn-wash));color:var(--neg)}
+.dgcard h3{font-size:17px;font-weight:600;color:var(--ink);margin-bottom:8px}
+.dgcard p{font-size:13px;line-height:1.6;color:var(--mute);margin-bottom:20px}
+.dgacts{display:flex;gap:10px}
+.dgacts .btn{flex:1;justify-content:center;height:38px}
+.btn-danger-solid{background:var(--neg);color:#fff;border-color:var(--neg)}
+.btn-danger-solid:hover{filter:brightness(1.08)}
 /* 一句话一个动作的小对话框：方一点，居中，关闭只靠角上的 ✕ */
 .mcard.msq{max-width:372px;text-align:center}
 .msq .mhead{position:relative;justify-content:center;padding:34px 30px 10px}
@@ -3093,6 +3114,17 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .sectxt em{font-style:normal;font-size:12px;color:var(--faint)}
 .secrow>.btn,.secrow>.achip,.secrow>.swtch,.secfix{margin-left:auto;flex:none}
 .secfix{font-size:12.5px;font-weight:600;color:var(--mute)}
+/* passkey 是一份清单：标题行说总数，每把钥匙单独一行，各自可删 */
+.pkcard{margin-top:10px}
+.secrow.pkgrp{flex-wrap:wrap}
+.pkrows{flex:0 0 calc(100% - 44px);margin:8px 0 0 44px;min-width:0;display:flex;flex-direction:column}
+.pkrow{display:flex;align-items:center;gap:10px;padding:7px 0 7px 10px;border-top:1px solid var(--hairline)}
+.pkrow:first-child{border-top:0}
+.pkdev{width:22px;text-align:center;font-size:13px;flex:none}
+.pkname{font-size:13px;font-weight:500;color:var(--ink);display:flex;align-items:center;gap:8px;min-width:0}
+.pkthis{font-style:normal;font-size:10.5px;font-weight:600;letter-spacing:.02em;color:var(--mute);background:var(--card);padding:2px 7px;border-radius:999px}
+.pkat{font-size:12px;color:var(--faint);margin-left:auto;flex:none}
+.pkrow .btn{flex:none;margin-left:4px}
 .swtch{width:36px;height:20px;border-radius:999px;background:var(--card);position:relative;
   transition:background var(--dur-fast) var(--ease);cursor:pointer}
 .swtch i{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:999px;background:var(--paper);
@@ -3152,6 +3184,12 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .depmeta code{display:block;width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size:12px;line-height:1.6;color:var(--ink);word-break:break-all;
   padding:9px 12px;background:var(--canvas);border-radius:var(--r-control);border:1px solid var(--hairline)}
+/* 复制紧跟着地址：它是这个地址的动作，不是这一段的动作 */
+.depline{display:flex;align-items:flex-start;gap:8px;width:100%}
+.depline .btn{flex:none;margin-top:1px}
+.depsame{font-size:11.5px;color:var(--faint)}
+/* 说明和二维码之间要有一口气，不然读起来像二维码的注脚 */
+.depnote{margin-top:18px}
 
 /* 出金：步骤条与地址选择 */
 .wsteps{display:flex;gap:6px;list-style:none;margin-bottom:14px}
@@ -3161,6 +3199,24 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .wsteps li.on::before,.wsteps li.done::before{background:var(--accent)}
 .wsteps li.done{color:var(--mute)}
 .wlist{display:flex;flex-direction:column;gap:6px}
+/* Send：已存地址是快捷选择，横排小卡；陌生地址给一条提醒，不拦 */
+/* 第一步：选资产。一行一个，右边是可动的余额——这是选择的依据 */
+.walist{display:flex;flex-direction:column;gap:4px}
+.warow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 12px;
+  border:1px solid transparent;border-radius:var(--r-control);background:var(--card);cursor:pointer}
+.warow:hover{border-color:var(--line-strong);background:var(--canvas)}
+.waval{margin-left:auto;text-align:right;flex:none}
+.waval b{display:block;font-size:13px;font-weight:600;color:var(--ink)}
+.waval em{font-style:normal;font-size:11px;color:var(--faint)}
+.wago{flex:none;font-size:16px;color:var(--faint);line-height:1}
+/* 第二步顶上：选中的资产，兼作回到第一步的入口 */
+.wpicked{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 12px;margin-bottom:14px;
+  border:1px solid var(--hairline);border-radius:var(--r-control);background:var(--card);cursor:pointer}
+.wpicked:hover{border-color:var(--line-strong)}
+.wachg{margin-left:auto;flex:none;font-size:12px;font-weight:600;color:var(--accent)}
+.wnew{margin:0 0 14px;padding:10px 12px;border-radius:var(--r-control);background:var(--warn-wash);font-size:12.5px;color:var(--mute)}
+.wnew p{margin:0;line-height:1.45}
+.wnew b{color:var(--ink);font-weight:600}
 .wrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;
   border-radius:var(--r-control);border:1px solid var(--hairline);background:var(--canvas);
   transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
@@ -3188,6 +3244,52 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .ptag{font-style:normal;font-size:10px;font-weight:500;padding:2px 6px;border-radius:var(--r-chip);
   background:var(--blue-wash);color:var(--accent)}
 .ptag.alt{background:var(--card);color:var(--mute)}
+/* 删账户先问一句：账号是手抄进来的，误删的代价是重新抄一遍 */
+.prow.danger{border-color:var(--warn);background:var(--warn-wash)}
+.pdel{flex:none;display:flex;align-items:center;gap:6px}
+.pdel em{font-style:normal;font-size:12px;color:var(--mute)}
+/* 可搜索下拉：全世界的银行只能靠搜，滚不完 */
+.cbox{position:relative}
+.cblist{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:40;max-height:216px;overflow-y:auto;
+  padding:4px;border-radius:var(--r-control);background:var(--paper);box-shadow:var(--ring),0 12px 28px rgba(0,0,0,.18)}
+.cbrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 10px;
+  border-radius:6px;background:transparent;cursor:pointer}
+.cbrow:hover,.cbrow.on{background:var(--canvas)}
+.cbn{font-size:13px;color:var(--ink);min-width:0}
+.cbc{margin-left:auto;flex:none;font-size:11px;color:var(--faint)}
+.cbfree .cbn{color:var(--accent)}
+.cbhint{display:block;margin-top:5px;font-size:11px;color:var(--faint)}
+.cbhint.ok{color:var(--green)}
+.cbhint.no{color:var(--neg)}
+.sf.bad .cbhint{display:none}
+/* 额度为零的空态：画一张虚线的卡轮廓，尺寸和真卡一致（290×198）——
+   它占住同一块位置，签出第一张时布局不跳；同时先教会用户「这儿会出现什么形状的东西」。
+   一个新账户本来就该是空的：额度得他自己签，平台生成不出来 */
+.cempty{display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:18px 26px 26px;gap:14px}
+.cghost{position:relative;width:290px;height:198px;flex:none;padding:18px 20px;
+  display:flex;flex-direction:column;border-radius:14px;
+  border:1px dashed var(--line-strong);background:
+    linear-gradient(135deg,color-mix(in oklab,var(--card) 70%,transparent),transparent 70%)}
+.cgchip{color:var(--faint);opacity:.5}
+.cgnum{width:118px;height:26px;margin-top:16px;border-radius:6px;background:var(--card)}
+.cgbar{width:100%;height:4px;margin-top:14px;border-radius:999px;background:var(--card)}
+.cgline{width:150px;height:9px;margin-top:16px;border-radius:999px;background:var(--card)}
+.cgline.sm{width:96px;margin-top:8px}
+.cempty b{font-size:14px;font-weight:600;color:var(--ink)}
+.cempty em{font-style:normal;font-size:12px;line-height:1.6;color:var(--faint);max-width:334px}
+@media (prefers-reduced-motion:no-preference){
+  .cghost{animation:cgfade 3.4s var(--ease) infinite}
+}
+@keyframes cgfade{0%,100%{opacity:.72}50%{opacity:1}}
+/* 列表行可点进去：整行是按钮，右侧一个去向记号 */
+.prowgo{width:100%;text-align:left;cursor:pointer;background:var(--paper)}
+.prowgo:hover{border-color:var(--line-strong);background:var(--canvas)}
+/* 账户详情的标签比别处长（Account holder / Where the bank is），
+   72px 会把它们折成两行——这一处单独给宽一点 */
+.sfsum-rows{margin-top:2px}
+.sfsum-rows dt{width:118px}
+.wnew.warn p{margin-bottom:10px}
 .pmeta{flex:none;font-size:11px;color:var(--faint)}
 
 /* toast */
@@ -3321,7 +3423,7 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
     <div id="lock" role="dialog" aria-modal="true" aria-label="Session locked">
       <div class="lksheet">
         <span class="lkav" id="lkav"></span>
-        <h3>Enter your password</h3>
+        <h3 id="lkh">Enter your password</h3>
         <p id="lkwhy"></p>
         <input type="password" class="pwin" id="lkpw" autocomplete="off" aria-label="Password">
         <div class="pwerr" id="lkerr"></div>
@@ -3467,6 +3569,20 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 </main>
 
 <!-- 通用模态：存入 / 提取 / 收款账户 -->
+<div id="danger" role="dialog" aria-modal="true" aria-labelledby="dgt" hidden>
+  <div class="dgcard">
+    <span class="dgic" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 8v5"/><path d="M12 16.5v.5"/><path d="M10.3 3.6 2.5 17.2A1.9 1.9 0 0 0 4.2 20h15.6a1.9 1.9 0 0 0 1.7-2.8L13.7 3.6a1.9 1.9 0 0 0-3.4 0Z"/></svg>
+    </span>
+    <h3 id="dgt"></h3>
+    <p id="dgb"></p>
+    <div class="dgacts">
+      <button class="btn" id="dgno">Cancel</button>
+      <button class="btn btn-danger-solid" id="dgok">Remove</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle" hidden>
   <div class="mcard">
     <header class="mhead">
@@ -3551,7 +3667,15 @@ let ASSETS=[
 const fxOf=c=>ASSETS.find(x=>x.coin===c)?.fx||1;
 const usdOf=(n,c)=>Math.round(n*fxOf(c||'USDT'));
 const escAmtTxt=(n,c)=>(!c||fxOf(c)===1)?'$'+n.toLocaleString():n.toLocaleString()+' '+c;
-const NETS_OF={USDT:['TRON','ETH'],USDC:['POLYGON','ETH'],BTC:['BTC'],ETH:['ETH']};
+/* 稳定币天生多链——USDT 十几条、USDC 十几条。这里不抄全，只列一张 OTC 台子
+   真会结算的：TRON 是亚洲 OTC 的主场，Base / Arbitrum / Polygon 是便宜的 USDC 通道。
+   列表越长，用户选错链的机会越多，而选错链的钱是找不回来的 */
+const NETS_OF={
+  USDT:['TRON','ETH','ARBITRUM'],
+  USDC:['BASE','ARBITRUM','POLYGON','ETH'],
+  BTC :['BTC'],
+  ETH :['ETH','ARBITRUM','BASE'],
+};
 /* 法币目录:按走廊分组。OTC 的法币腿点对点走银行,能接哪种币取决于对手方的银行账户 */
 const FIATS=[
  {g:'Greater China', list:[['CNY','Chinese Yuan','¥'],['HKD','Hong Kong Dollar','HK$'],['TWD','New Taiwan Dollar','NT$']]},
@@ -3574,39 +3698,124 @@ const FLAG_CC={EUR:'EU'};
 const flag=c=>{const cc=FLAG_CC[c]||c.slice(0,2);
   return String.fromCodePoint(...[...cc].map(ch=>0x1F1E6+ch.charCodeAt(0)-65));};
 /* 出金用途：文档里每笔出金都强制选 Purpose 并传证明文件，这是合规留痕 */
-const PURPOSES=['OTC settlement','Goods payment','Service fee','Refund','Internal transfer','Other'];
 
 let PAYEES={
  bank:[
-  {id:'b1',name:'Huachuang Tech',bank:'CMB',no:'6214 **** 8832',ccy:'CNY',region:'Shenzhen, CN',self:false,rel:'Counterparty'},
-  {id:'b2',name:'Me',        bank:'BOC',no:'6217 **** 1109',ccy:'CNY',region:'Shenzhen, CN',self:true, rel:'Me'},
-  {id:'b3',name:'Me',        bank:'ICBC',no:'6222 **** 4417',ccy:'CNY',region:'Shanghai, CN',self:true, rel:'Me'},
-  {id:'b4',name:'Me',        bank:'HSBC',no:'4088 **** 2260',ccy:'HKD',region:'Hong Kong',   self:true, rel:'Me'},
+  {id:'b2',holder:'Demo Ltd.',   bank:'BOC', no:'6217 **** 1109',ccy:'CNY',region:'Shenzhen, CN'},
+  {id:'b3',holder:'Demo Ltd.',   bank:'ICBC',no:'6222 **** 4417',ccy:'CNY',region:'Shanghai, CN'},
+  {id:'b4',holder:'Demo Limited',bank:'HSBC',no:'4088 **** 2260',ccy:'HKD',region:'Hong Kong'},
  ],
- chain:[
-  {id:'c1',net:'TRON',addr:'TQ5n7Yc2mK8pXvL3wR9dHf4bN6tZaU8k',ref:'Huachuang'},
-  {id:'c2',net:'ETH', addr:'0x8f3aD41c92Be7705Ef1a3c8B2d6E0b21c',ref:'Kenji M.'},
- ]
 };
+/* 银行目录：这张表的职责不是「权威登记册」，而是三件事——
+   替用户省打字、把同一家银行的写法归一（不然同一家会被记成五种拼法）、
+   以及从选中项推出国家和币种。所以它靠搜索，不靠滚动，
+   而且永远留着「直接用我输入的文字」这条出口：一个能拦住用户填自己真实银行的下拉框就是个 bug。
+   按国家分组写，省掉重复的国家码；别名那一列让「招商」「CMB」「zhaoshang」命中同一家。
+   注意里面有意收了跨境 EMI 和对加密友好的银行（Wise / Airwallex / Statrys / ZA / Sygnum…）——
+   做 OTC 的账户常常开不在四大行，只列资产规模最大的那几家等于没覆盖真实用户 */
+const BANK_DIR={
+ CN:['Industrial & Commercial Bank of China|ICBC 工商银行 gongshang','China Construction Bank|CCB 建设银行 jianshe',
+     'Agricultural Bank of China|ABC 农业银行 nongye','Bank of China|BOC 中国银行 zhongguo',
+     'Bank of Communications|BOCOM 交通银行 jiaotong','China Merchants Bank|CMB 招商银行 zhaoshang',
+     'Ping An Bank|平安银行 pingan','China CITIC Bank|中信银行 zhongxin','China Minsheng Bank|民生银行 minsheng',
+     'Shanghai Pudong Development Bank|SPDB 浦发银行 pufa','Industrial Bank|CIB 兴业银行 xingye',
+     'China Everbright Bank|CEB 光大银行 guangda','China Guangfa Bank|CGB 广发银行 guangfa',
+     'Postal Savings Bank of China|PSBC 邮储银行 youchu','Bank of Beijing|北京银行','Bank of Shanghai|上海银行',
+     'Bank of Ningbo|宁波银行','Bank of Jiangsu|江苏银行'],
+ HK:['HSBC|汇丰 huifeng Hongkong Shanghai Banking','Hang Seng Bank|恒生 hangseng',
+     'Bank of China (Hong Kong)|BOCHK 中银香港','Standard Chartered (Hong Kong)|渣打 zhada SCB',
+     'Citibank (Hong Kong)|花旗 huaqi','DBS Bank (Hong Kong)|星展','Bank of East Asia|BEA 东亚银行',
+     'ICBC (Asia)|工银亚洲','CMB Wing Lung Bank|招商永隆','Nanyang Commercial Bank|南洋商业银行',
+     'Dah Sing Bank|大新银行','Fubon Bank (Hong Kong)|富邦银行','Public Bank (Hong Kong)|大众银行',
+     'China Construction Bank (Asia)|建银亚洲','Chong Hing Bank|创兴银行',
+     'ZA Bank|众安银行 virtual','Mox Bank|virtual','WeLab Bank|汇立银行 virtual','livi Bank|virtual',
+     'Statrys|EMI','Currenxie|EMI','Airwallex (Hong Kong)|空中云汇 EMI'],
+ SG:['DBS Bank|星展 Development Bank of Singapore','OCBC Bank|华侨银行 Oversea-Chinese',
+     'United Overseas Bank|UOB 大华银行','Standard Chartered (Singapore)|渣打','Citibank (Singapore)|花旗',
+     'HSBC (Singapore)|汇丰','Maybank (Singapore)|马来亚银行','Bank of China (Singapore)|中国银行',
+     'CIMB Bank (Singapore)|联昌','Trust Bank|digital','Aspire|EMI','Nium|EMI'],
+ JP:['MUFG Bank|三菱UFJ Mitsubishi Tokyo','Sumitomo Mitsui Banking|SMBC 三井住友','Mizuho Bank|みずほ 瑞穗',
+     'Resona Bank|りそな','Japan Post Bank|ゆうちょ 邮政','Rakuten Bank|楽天 乐天','SBI Shinsei Bank|新生'],
+ KR:['KB Kookmin Bank|국민 国民','Shinhan Bank|신한 新韩','KEB Hana Bank|하나 Hana','Woori Bank|우리',
+     'NH NongHyup Bank|농협 农协','Industrial Bank of Korea|IBK 기업'],
+ TW:['CTBC Bank|中國信託 Chinatrust','Cathay United Bank|國泰世華','E.SUN Bank|玉山','Fubon Bank (Taiwan)|富邦',
+     'Taishin Bank|台新','Mega International Bank|兆豐'],
+ US:['JPMorgan Chase|Chase 大通','Bank of America|BofA 美国银行','Citibank|花旗 huaqi Citi',
+     'Wells Fargo|富国银行','U.S. Bank|USB','PNC Bank','Truist Bank','Capital One',
+     'Goldman Sachs|高盛','Morgan Stanley|摩根士丹利','Charles Schwab|嘉信',
+     'Cross River Bank|fintech','Customers Bank|fintech','Lead Bank|fintech','Mercury|fintech','Brex|fintech'],
+ GB:['Barclays|巴克莱','HSBC UK|汇丰','Lloyds Bank|劳依德','NatWest|National Westminster',
+     'Santander UK|桑坦德','Nationwide Building Society','Monzo|digital','Starling Bank|digital',
+     'Revolut|EMI','Wise|TransferWise EMI'],
+ DE:['Deutsche Bank|德意志银行','Commerzbank|德国商业银行','N26|digital','DKB|Deutsche Kreditbank'],
+ FR:['BNP Paribas|法国巴黎银行','Société Générale|法国兴业银行','Crédit Agricole|法国农业信贷'],
+ ES:['Banco Santander|桑坦德','BBVA|Banco Bilbao Vizcaya','CaixaBank'],
+ IT:['UniCredit|裕信银行','Intesa Sanpaolo|联合圣保罗'],
+ NL:['ING Bank|荷兰国际','ABN AMRO|荷兰银行','Rabobank|荷兰合作银行'],
+ CH:['UBS|瑞银 Union Bank of Switzerland','PostFinance|瑞士邮政','Julius Baer|宝盛',
+     'Sygnum Bank|crypto','AMINA Bank|SEBA crypto'],
+ LI:['Bank Frick|crypto'],
+ AT:['Erste Group|奥地利第一储蓄','Raiffeisen Bank International|RBI'],
+ SE:['SEB|Skandinaviska Enskilda Banken','Swedbank','Nordea|北欧联合'],
+ DK:['Danske Bank|丹斯克'],
+ AE:['Emirates NBD|阿联酋国民银行','First Abu Dhabi Bank|FAB 阿布扎比第一','Abu Dhabi Commercial Bank|ADCB',
+     'Mashreq Bank|马什雷克','Dubai Islamic Bank|迪拜伊斯兰'],
+ TH:['Bangkok Bank|盘谷银行','Kasikornbank|开泰银行 KBank','Siam Commercial Bank|SCB 汇商',
+     'Krungthai Bank|泰京银行'],
+ VN:['Vietcombank|越南外贸银行','Techcombank|越南技术商业','VietinBank|越南工商','BIDV|越南投资发展'],
+ MY:['Maybank|马来亚银行','CIMB Bank|联昌国际','Public Bank|大众银行','RHB Bank'],
+ PH:['BDO Unibank|金融银行','Bank of the Philippine Islands|BPI','Metrobank|首都银行','UnionBank of the Philippines'],
+ ID:['Bank Central Asia|BCA 中亚银行','Bank Mandiri|曼迪利','Bank Negara Indonesia|BNI','Bank Rakyat Indonesia|BRI'],
+ IN:['HDFC Bank|印度','ICICI Bank','State Bank of India|SBI 印度国家银行','Axis Bank','Kotak Mahindra Bank'],
+ AU:['Commonwealth Bank|CBA 澳洲联邦','Westpac|西太平洋','ANZ|澳新银行','National Australia Bank|NAB'],
+};
+const BANKS=Object.entries(BANK_DIR).flatMap(([c,list])=>list.map(row=>{
+  const [n,a]=row.split('|'); return {n, c, a:a||''};
+}));
+const CTRY={CN:'Chinese mainland',HK:'Hong Kong',SG:'Singapore',JP:'Japan',KR:'South Korea',
+ TW:'Taiwan',US:'United States',GB:'United Kingdom',DE:'Germany',FR:'France',ES:'Spain',IT:'Italy',
+ NL:'Netherlands',CH:'Switzerland',LI:'Liechtenstein',AT:'Austria',SE:'Sweden',DK:'Denmark',
+ AE:'United Arab Emirates',TH:'Thailand',VN:'Vietnam',MY:'Malaysia',PH:'Philippines',
+ ID:'Indonesia',IN:'India',AU:'Australia'};
+/* 币种默认值只在这张表里有把握的地方给，其余留给用户自己选 */
+const CTRY_CCY={CN:'CNY',HK:'HKD',SG:'SGD',JP:'JPY',US:'USD'};
+/* 账号校验：世界上没有一种统一的银行账号格式，所以只做两件真能做的事——
+   一是 IBAN，它自带 mod-97 校验位，本地就能算出对错；
+   二是其余情况的位数区间。不装作能校验它校验不了的东西 */
+const IBAN_RE=/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/;
+function ibanOk(v){
+  const r=(v.slice(4)+v.slice(0,4)).replace(/[A-Z]/g,c=>c.charCodeAt(0)-55);
+  let m=0; for(const d of r) m=(m*10+ +d)%97;
+  return m===1;
+}
+function checkAcct(raw){
+  const v=raw.replace(/[\s-]/g,'').toUpperCase();
+  if(!v)return{s:'empty'};
+  if(/^[A-Z]{2}\d{2}/.test(v)){
+    if(!IBAN_RE.test(v))return{s:'bad', msg:'An IBAN is 15–34 characters — check for a missing block'};
+    return ibanOk(v)?{s:'ok', msg:`IBAN checksum valid · ${CTRY[v.slice(0,2)]||v.slice(0,2)}`}
+                   :{s:'bad', msg:'IBAN checksum does not match — one character is wrong'};
+  }
+  if(/[^0-9]/.test(v))return{s:'bad', msg:'Digits only, or a full IBAN starting with a country code'};
+  if(v.length<8)return{s:'bad', msg:'Too short — bank accounts are at least 8 digits'};
+  if(v.length>19)return{s:'bad', msg:'Too long — at most 19 digits'};
+  return{s:'ok', msg:`${v.length} digits`};
+}
 let FTAB='assets';  /* 账户页分区：概览 / 入金 / 出金 / 收款账户 */
 let DEP={coin:'USDT', net:'TRON'};
-let WD={step:0, addr:null, amt:'', purpose:'', file:'', note:''};
+let WD={to:'', net:'', amt:'', save:false, label:'', bad:''};
 
 /* 授权卡：人自己也是一张卡，agent 各是一张。统一了「我的支付规则」与「agent 额度」——
    本来就是同一种对象：主账户上的一份支配权，带额度与条件。 */
 let CARDS=[
  {id:'me', name:'Me', kind:'person', me:true,
-  cycle:'this week', per:null, wl:'Any', tpl:'Any', ifr:null, on:true,
-  note:'Hitting the limit stops autopay, not incoming funds'},
+  cycle:'this week', per:null, ifr:null, on:true},
  {id:'pa', name:'Procurement agent', kind:'agent',
-  cycle:'weekly', quota:2000, used:340, per:500, wl:'3  verified providers', tpl:'On delivery · 7-day window',
-  exp:'Oct 31, 2026', ifr:95, on:true, note:'Over-limit returns for your approval'},
+  cycle:'weekly', quota:2000, used:340, per:500, exp:'Oct 31, 2026', ifr:95, on:true},
  {id:'da', name:'Data agent', kind:'agent',
-  cycle:'monthly', quota:800, used:612, per:200, wl:'2  data sources', tpl:'On successful call',
-  exp:'Sep 30, 2026', ifr:99, on:true, note:'High frequency, low ceiling'},
+  cycle:'monthly', quota:800, used:612, per:200, exp:'Sep 30, 2026', ifr:99, on:true},
  {id:'ta', name:'Travel agent', kind:'agent',
-  cycle:'monthly', quota:5000, used:0, per:1500, wl:'Platform merchants only', tpl:'On ticketing · refundable',
-  exp:'Not set', ifr:null, on:false, note:'Set an allowlist before enabling'},
+  cycle:'monthly', quota:5000, used:0, per:1500, exp:'Not set', ifr:null, on:false},
 ];
 /* 余额与本周额度合成一块：都是「我的钱和我对钱的支配」，分在对角线两端要来回看 */
 /* 余额默认隐藏——公共场合打开控制台不该把余额直接摊在屏幕上 */
@@ -3614,6 +3823,21 @@ let SHOW_BAL=false;
 const MASK='••••••';
 const usd=n=>'$'+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 const COIN_HUE={USDT:158,USDC:220,BTC:36,ETH:250};
+/* 币标只定义一次：品牌底色 + 币符。以前各处画一个「首字母圆圈」，
+   那是占位符不是记号——USDT 和 USDC 都是 U，等于没标 */
+const COIN_MARK={
+  USDT:{c:'#26A17B', d:'M17.9 12.6V10h4.4V7H9.7v3h4.4v2.6c-3.6.17-6.3.89-6.3 1.75 0 .86 2.7 1.58 6.3 1.75V24h3.8v-8.9c3.6-.17 6.3-.89 6.3-1.75 0-.86-2.7-1.58-6.3-1.75zm0 2.87v-.01c-.09 0-.56.03-1.6.03-.83 0-1.42-.02-1.62-.03v.01c-3.19-.14-5.57-.7-5.57-1.36 0-.66 2.38-1.21 5.57-1.36v2.16c.21.01.81.05 1.64.05 1 0 1.5-.04 1.58-.05v-2.16c3.18.15 5.55.7 5.55 1.36 0 .66-2.37 1.21-5.55 1.36z'},
+  USDC:{c:'#2775CA', d:'M16 6.2c-1 0-1.9.6-2.3 1.5-2.2.5-4 1.7-5.2 3.4l1.6 1.1c.9-1.3 2.2-2.2 3.7-2.6v1.5c-1.9.3-3.4 2-3.4 4 0 2.2 1.8 4 4 4h1.2c.7 0 1.2.5 1.2 1.2s-.5 1.2-1.2 1.2h-3.7v2h3.5c.4.9 1.3 1.5 2.3 1.5s1.9-.6 2.3-1.5c2.2-.5 4-1.7 5.2-3.4l-1.6-1.1c-.9 1.3-2.2 2.2-3.7 2.6v-1.5c1.9-.3 3.4-2 3.4-4 0-2.2-1.8-4-4-4h-1.2c-.7 0-1.2-.5-1.2-1.2s.5-1.2 1.2-1.2h3.7v-2h-3.5c-.4-.9-1.3-1.5-2.3-1.5z'},
+  BTC :{c:'#F7931A', d:'M21.5 14.3c.3-1.9-1.2-2.9-3.2-3.6l.65-2.6-1.6-.4-.63 2.53c-.42-.1-.85-.2-1.28-.3l.63-2.54-1.6-.4-.65 2.6c-.34-.08-.68-.16-1-.24v-.01l-2.2-.55-.42 1.7s1.18.27 1.16.29c.65.16.77.59.75.93l-.75 3c.045.01.1.03.17.05l-.17-.04-1.05 4.2c-.08.2-.28.5-.73.39.02.02-1.16-.29-1.16-.29l-.79 1.83 2.2.55c.41.1.81.21 1.2.31l-.66 2.63 1.6.4.65-2.6c.44.12.86.23 1.28.33l-.65 2.59 1.6.4.65-2.62c2.73.52 4.78.31 5.64-2.16.7-1.99-.03-3.14-1.47-3.89 1.05-.24 1.84-.93 2.05-2.35zm-3.67 5.14c-.49 1.99-3.84.91-4.93.64l.87-3.48c1.09.27 4.58.81 4.06 2.84zm.49-5.17c-.45 1.81-3.24.89-4.15.66l.79-3.16c.91.23 3.83.65 3.36 2.5z'},
+  ETH :{c:'#627EEA', d:'M16 5.5l-.18.6v11.02l.18.18 5.5-3.25L16 5.5zm0 0l-5.5 8.55L16 17.3V5.5zm0 12.83l-.1.13v3.92l.1.3 5.5-7.75-5.5 3.4zm0 4.35v-4.35l-5.5-3.4 5.5 7.75zm0-5.38l5.5-3.25-5.5-2.5v5.75zm-5.5-3.25l5.5 3.25v-5.75l-5.5 2.5z'},
+};
+/* 链的显示名：代号是给机器看的，「BTC · BTC」这种重复是没起名字的症状 */
+const NET_NAME={BTC:'Bitcoin', ETH:'Ethereum', POLYGON:'Polygon', TRON:'TRON', BSC:'BNB Chain', ARBITRUM:'Arbitrum', BASE:'Base', OPTIMISM:'Optimism'};
+const netName=n=>NET_NAME[n]||n;
+const coinLogo=(coin,cls)=>{const m=COIN_MARK[coin];
+  return m
+    ? `<span class="acoin${cls?' '+cls:''}" style="background:${m.c}" aria-hidden="true"><svg viewBox="0 0 32 32" fill="currentColor"><path d="${m.d}"/></svg></span>`
+    : `<span class="acoin${cls?' '+cls:''}" style="background:hsl(${COIN_HUE[coin]??200} 45% 40%)">${coin.slice(0,1)}</span>`};
 /* 余额 / 资产 / 定期原来住在右栏，现在右栏改成 agent 流水，这几块的全貌
    在账户页 Profile 里（余额模块 + Assets / Auto payment / Activity 三个分栏）。
    渲染器保留但对缺失宿主空转——锁屏、充值、改额度都还会调它们。 */
@@ -3793,11 +4017,18 @@ function lockSession(){
     ? `${Math.round(LOCK_IDLE/60000)} minutes`
     : `${Math.round(LOCK_IDLE/1000)} seconds`;
   document.getElementById('lkwhy').textContent=
-    `For your security, this session locks after ${span} of inactivity. Enter your password to continue.`;
+    `For your security, this session locks after ${span} of inactivity. `
+    + (PAY_PW?'Enter your password to continue.':'Unlock with your passkey to continue.');
+  /* 没设密码的账户不摆密码框，也不给它误导性的提示 */
+  const lkpw=document.getElementById('lkpw');
+  if(lkpw){lkpw.hidden=!PAY_PW; lkpw.value='';}
+  document.getElementById('lkok').textContent=PAY_PW?'Unlock':'Unlock with passkey';
   const pw=document.getElementById('lkpw');
   pw.value='';
   document.getElementById('lkerr').textContent='';
-  document.getElementById('lkhint').textContent=`Demo password ${PAY_PW}`;
+  /* 没设密码的账户，标题和演示提示都不该再提密码 */
+  document.getElementById('lkh').textContent=PAY_PW?'Enter your password':'Session locked';
+  document.getElementById('lkhint').textContent=PAY_PW?`Demo password ${PAY_PW}`:'';
   setTimeout(()=>pw.focus(),120);
   document.getElementById('lock').classList.add('show');
 }
@@ -3806,8 +4037,45 @@ function unlockSession(){
   document.getElementById('lock').classList.remove('show');
   armLock();
 }
+/* 这两个状态在脚本加载期就会被 armLock 读到——let 的 TDZ 连 typeof 都挡不住，
+   所以声明必须排在这儿，setter 留在各自的功能段里 */
+/* 有没有 passkey：Google / 邮箱创建的钱包此刻还没有。
+   passkey 是一份清单（一人可以有多把：笔记本、手机），不是一段拼接的文字——
+   之前直接往 textContent 后面接，加两次就重复两遍，重绘一次又全丢 */
+let HAS_PK=true;
+try{HAS_PK=sessionStorage.getItem('atara-haspk')!=='0'}catch(_){}
+let PASSKEYS=HAS_PK?[{d:'MacBook Pro', at:'Aug 12', me:true}]:[];
+const PK_DEVS=['iPhone','iPad','Windows laptop','YubiKey'];
+const pkIcon=d=>/iphone|ipad|pixel|phone/i.test(d)?'📱':/yubi|key/i.test(d)?'🔑':'💻';
+function addPasskey(){
+  /* 第一把是在这台机器上按 Touch ID 生成的，所以就是「这台设备」；
+     再往后加的才是别的设备（手机、平板、硬件钥匙） */
+  if(!PASSKEYS.some(x=>x.me)){
+    PASSKEYS.push({d:'MacBook Pro', at:'just now', me:true});
+    HAS_PK=true; try{sessionStorage.setItem('atara-haspk','1')}catch(_){}
+    return 'MacBook Pro';
+  }
+  const used=new Set(PASSKEYS.map(x=>x.d));
+  let d=PK_DEVS.find(x=>!used.has(x))||'this device';
+  /* 设备名用完了还在加：编号往后排，不能又撞出两条一样的 */
+  if(used.has(d)){let i=2; while(used.has(`${d} ${i}`))i++; d=`${d} ${i}`;}
+  PASSKEYS.push({d, at:'just now'});
+  HAS_PK=true; try{sessionStorage.setItem('atara-haspk','1')}catch(_){}
+  return d;
+}
+function removePasskey(i){
+  const [k]=PASSKEYS.splice(i,1);
+  if(!PASSKEYS.length){HAS_PK=false; try{sessionStorage.setItem('atara-haspk','0')}catch(_){}}
+  return k;
+}
+/* 新账户没有支付密码——「已设好一个 2468」是演示便利，不是事实 */
+let PAY_PW='2468';
+try{const _p=sessionStorage.getItem('atara-pw'); if(_p!==null)PAY_PW=_p;}catch(_){}
 function armLock(){
   if(LOCKED)return;
+  /* 既没密码也没 passkey 时不上锁——锁的意义在于能被解开。
+     armLock 在脚本加载时就跑一次，那时下面两个 let 还没初始化，得躲开 TDZ */
+  if(!PAY_PW&&!HAS_PK)return;
   clearTimeout(lockT);
   lockT=setTimeout(lockSession, LOCK_IDLE);
 }
@@ -3818,6 +4086,13 @@ document.getElementById('lkok').onclick=ev=>{
   const b=ev.currentTarget;
   if(b.classList.contains('busy'))return;
   const pw=document.getElementById('lkpw'), er=document.getElementById('lkerr');
+  /* 没设过密码的账户用 passkey 解锁：不能拿一个他没有的东西问他 */
+  if(!PAY_PW){
+    b.classList.add('busy'); const t=b.textContent;
+    b.innerHTML='<span class="pkpulse"></span>Touch ID…';
+    setTimeout(()=>{b.classList.remove('busy'); b.textContent=t; unlockSession()},1100);
+    return;
+  }
   if(pw.value!==PAY_PW){
     er.textContent=pw.value?'Wrong password':'Enter your password';
     pw.classList.remove('shake'); void pw.offsetWidth; pw.classList.add('shake'); pw.focus();
@@ -4244,7 +4519,8 @@ function cardHTML(c){
   /* 条件写在卡面上——这张卡能付给谁、按什么条件付，本来就是它的「面额」 */
   return `<div class="card ${c.on?'':'off'} ${c.kind==='agent'?'kagent':''}" data-c="${c.id}">
     <div class="cdeck">
-      <div class="ccsway"><div class="ccard ${CARD_FLIP?'flip':''}">
+      <div class="ccsway"><div class="ccard ${CARD_FLIP?'flip':''}" data-p="flip"
+        role="button" tabindex="0" aria-label="${CARD_FLIP?'Show the front of this allowance':'Show the conditions on the back'}">
         <div class="ccface front">
           <div class="cctop"><span class="cchip2">${CHIP}</span>
             ${c.kind==='person'?'':'<span class="cctag">Agent</span>'}
@@ -4254,23 +4530,19 @@ function cardHTML(c){
           <div class="ccbar"><i style="width:${pct}%"></i></div>
           <div class="cccond">
             <span>Up to <b class="num cper">${per?cur+per.toLocaleString()+suf:'any amount'}</b> per payment</span>
-            <span>To <b>${c.wl}</b></span>
           </div>
           <div class="ccfoot"><span class="ccn">${c.name}</span>
             ${c.ifr!=null?`<span class="ccy num" title="Share of commitments fulfilled as declared">Fulfilment ${c.ifr}</span>`:''}</div>
         </div>
         <div class="ccface back">
-          <div class="cctop"><span class="cctag" style="margin-left:0">Conditions</span></div>
+          <div class="cctop"><span class="cctag" style="margin-left:0">Limits</span></div>
           <div class="ccb">
-            <div class="ccbrow"><span class="ccbk">Release</span><b>${c.tpl}</b></div>
-            <div class="ccbrow"><span class="ccbk">Recipients</span><b>${c.wl}</b></div>
             ${win?`<div class="ccbrow"><span class="ccbk">Window</span><b class="${inWindow()?'':'dim'}">${win}</b></div>`:''}
             <div class="ccbrow"><span class="ccbk">Per payment</span><b class="num">${per?cur+per.toLocaleString()+suf:'Any amount'}</b></div>
             ${c.exp?`<div class="ccbrow"><span class="ccbk">Expires</span><b>${c.exp}</b></div>`:''}
-            <div class="ccbrow"><span class="ccbk">Enforced</span><b>${c.me?'Policy · co-signer checks':'On-chain · by the contract'}</b></div>
           </div>
           <div class="ccfoot"><span class="ccn">${c.name}</span>
-            <span class="ccy">${c.note}</span></div>
+            <span class="ccy">${c.on?'Active':(c.me?'Off':'Revoked')}</span></div>
         </div>
       </div></div>
     </div>
@@ -4282,9 +4554,7 @@ function cardHTML(c){
     </div>
     <div class="cinfo">
       <div class="cfoot">
-        <span class="cacts"><button class="btn btn-ghost btn-sm" data-p="flip">${I_FLIP}<span class="fliplbl">${CARD_FLIP?'Front':'Conditions'}</span></button><button class="btn btn-ghost btn-sm" data-p="edit:${c.id}">${I_PEN}Edit</button>${c.me
-          ? ``
-          : `<button class="btn btn-${c.on?'danger':'ghost'} btn-sm" data-p="tg:${c.id}">${I_PWR}${c.on?'Revoke':'Re-issue'}</button>`}</span>
+        <span class="cacts"><button class="btn btn-ghost btn-sm" data-p="edit:${c.id}">${I_PEN}Edit</button></span>
       </div>
     </div>
   </div>`;
@@ -4296,8 +4566,8 @@ function assetsHtml(){
     ${ASSETS.map(a=>{
       const usd=(a.avail+a.escrow)*a.fx, pct=usd/tot*100, hue=COIN_HUE[a.coin]??200;
       return `<div class="arow3">
-        <span class="acoin" style="background:hsl(${hue} 45% 40%)">${a.coin.slice(0,1)}</span>
-        <span class="anm"><b>${a.coin}</b><em>${a.net}${a.escrow?` · ${fmtAmt(a.escrow)} locked`:''}</em></span>
+        ${coinLogo(a.coin)}
+        <span class="anm"><b>${a.coin}</b><em>${netName(a.net)}${a.escrow?` · ${fmtAmt(a.escrow)} locked`:''}</em></span>
         <span class="aright"><b class="num">$${Math.round(usd).toLocaleString()}</b>
           <em class="num">${fmtAmt(a.avail)} available</em>
           <span class="ashare" title="${pct<1?'<1':Math.round(pct)}% of the account"><i style="width:${Math.max(2,pct).toFixed(1)}%;background:hsl(${hue} 50% 48%)"></i></span></span>
@@ -4350,6 +4620,29 @@ function closeModal(){
   const M=document.getElementById('modal');
   M.hidden=true; MODAL_LAST?.focus?.();
 }
+/* 不可逆操作走这一层。焦点默认给「取消」：确认框的默认答案应该是「不」 */
+let DANGER_OK=null;
+function confirmDanger({title, body, ok='Remove', onOk}){
+  const D=document.getElementById('danger');
+  document.getElementById('dgt').textContent=title;
+  document.getElementById('dgb').textContent=body;
+  document.getElementById('dgok').textContent=ok;
+  DANGER_OK=onOk;
+  D.hidden=false;
+  setTimeout(()=>document.getElementById('dgno').focus(),0);
+}
+function closeDanger(){document.getElementById('danger').hidden=true; DANGER_OK=null}
+(()=>{
+  const D=document.getElementById('danger');
+  document.getElementById('dgno').onclick=closeDanger;
+  D.onclick=e=>{if(e.target===D)closeDanger()};
+  document.getElementById('dgok').onclick=()=>{const f=DANGER_OK; closeDanger(); f&&f()};
+  /* Esc 要先关这一层，不能穿透到底下那个弹窗 */
+  document.addEventListener('keydown',e=>{
+    if(D.hidden||e.key!=='Escape')return;
+    e.preventDefault(); e.stopPropagation(); closeDanger();
+  },true);
+})();
 (()=>{
   const M=document.getElementById('modal');
   document.getElementById('mx').onclick=closeModal;
@@ -4378,17 +4671,20 @@ function openDeposit(){
           `<button type="button" class="sfchip${DEP.coin===c?' on':''}" data-dc="${c}">${c}</button>`).join('')}</div></div>
       <div class="sf"><span class="sfl">Network</span>
         <div class="sfchips">${nets.map(n=>
-          `<button type="button" class="sfchip${DEP.net===n?' on':''}" data-dn="${n}">${n}</button>`).join('')}</div></div>
+          `<button type="button" class="sfchip${DEP.net===n?' on':''}" data-dn="${n}">${netName(n)}</button>`).join('')}</div></div>
       <div class="depaddr">
         <div class="qr" aria-hidden="true">${Array.from({length:64},(_,i)=>
-          `<i class="${((i*7+i%5+DEP.coin.length+DEP.net.length)%3)?'':'on'}"></i>`).join('')}</div>
+          `<i class="${((i*7+i%5+CHAIN_OF(DEP.net).length*3)%3)?'':'on'}"></i>`).join('')}</div>
         <div class="depmeta">
           <span class="sfl">Your wallet address</span>
-          <code id="depaddr">${depAddr(DEP.coin,DEP.net)}</code>
-          <button class="btn btn-sm" id="depcopy">Copy</button>
+          <div class="depline">
+            <code id="depaddr">${chainAddr(DEP.net)}</code>
+            <button class="btn btn-secondary btn-sm btn-icon" id="depcopy" title="Copy address" aria-label="Copy wallet address">${I_COPY}</button>
+          </div>
+          ${CHAIN_OF(DEP.net)==='evm'?'<span class="depsame">The same address works on every EVM network.</span>':''}
         </div>
       </div>
-      <p class="rnote">Your own address — funds land in your wallet, not with us. Receives <b>${DEP.coin}</b> on <b>${DEP.net}</b> only.<i class="info" tabindex="0" data-tip="Assets sent on the wrong asset or network cannot be recovered. Arrivals show up as soon as the chain confirms them. Fiat does not go here: it settles bank-to-bank between buyer and seller, and we only verify the receipt.">i</i></p>`;
+      <p class="rnote depnote">Your own address — funds land in your wallet, not with us. Receives <b>${DEP.coin}</b> on <b>${netName(DEP.net)}</b> only.${ASSETS.some(a=>a.coin===DEP.coin&&a.net===DEP.net)?'':` A ${DEP.coin} balance on ${netName(DEP.net)} appears once the first deposit confirms.`}<i class="info" tabindex="0" data-tip="Assets sent on the wrong asset or network cannot be recovered. Arrivals show up as soon as the chain confirms them. Fiat does not go here: it settles bank-to-bank between buyer and seller, and we only verify the receipt.">i</i></p>`;
     document.getElementById('mbody').innerHTML=html;
     bind();
   };
@@ -4396,114 +4692,119 @@ function openDeposit(){
     const b=document.getElementById('mbody');
     b.querySelectorAll('[data-dc]').forEach(x=>x.onclick=()=>{DEP.coin=x.dataset.dc;draw()});
     b.querySelectorAll('[data-dn]').forEach(x=>x.onclick=()=>{DEP.net=x.dataset.dn;draw()});
-    document.getElementById('depcopy').onclick=e=>{
+    document.getElementById('depcopy').onclick=()=>{
       navigator.clipboard?.writeText(document.getElementById('depaddr').textContent);
-      e.target.textContent='Copied'; setTimeout(()=>e.target.textContent='Copy',1400);
+      toast('Address copied');
     };
   };
   openModal('Receive',' ',draw);
 }
 
 /* ── 提取：四步（照 User Guide p10-14，五种出金统一四步，末步 Support File 强制）── */
-const WD_STEPS=['Address','Amount','Purpose','Document'];
 function openWithdraw(){
-  WD.step=0; WD.addr=null; WD.amt=''; WD.purpose=''; WD.file=''; WD.note=''; WD.bad='';
-  const draw=()=>{
-    const st=WD.step;
-    const asset=WD.addr ? (ASSETS.find(a=>a.coin===coinOfNet(WD.addr.net))||ASSETS[0]) : ASSETS[0];
-    let form='';
-    if(st===0) form=PAYEES.chain.length
-      ? `<div class="sf" id="wd-addr"><span class="sfl">Send to a registered address</span>
-          <div class="wlist">${PAYEES.chain.map(c=>`
-            <button class="wrow${WD.addr&&WD.addr.id===c.id?' on':''}" data-wa="${c.id}">
-              <span class="wnet">${c.net}</span>
-              <span class="wtxt"><b>${c.ref}</b><em>${c.addr.slice(0,10)}…${c.addr.slice(-6)}</em></span>
-              ${WD.addr&&WD.addr.id===c.id?'<span class="wok">✓</span>':''}
-            </button>`).join('')}</div>
-          <span class="err">Select an address</span></div>
-          <p class="rnote">Registered addresses only.<i class="info" tabindex="0" data-tip="Add new addresses under Recipients. They take effect after security verification.">i</i></p>`
-      : `<div class="fempty">No registered addresses yet。<button class="lnk" id="gopayee">Register one ›</button></div>`;
+  /* 非托管的 Send 就是钱包里的 Send，两步：先选转哪种资产，再填往哪儿转。
+     顺序只能这样——资产决定链，链决定地址长什么样。反过来让地址去猜链，
+     0x 地址就得再补一排「ETH / POLYGON」让人选，那是顺序错了的症状。
+     以前那套「只能打到注册地址 + 用途 + 证明文件」是托管所的提币流程：
+     托管所能这么要求是因为钱在它手里；我们拦不住，也没有立场问「为什么转」。
+     安全层只留一条：第一次打给陌生地址时提醒核对，并可以顺手存下来 */
+  const SENDABLE=ASSETS.filter(a=>a.net&&a.avail>0);
+  WD={step:0, coin:'', net:'', to:'', amt:'', bad:''};
+  const FEE={TRON:'~1 TRX',ETH:'~0.002 ETH',POLYGON:'~0.01 POL',BTC:'~0.0001 BTC',ARBITRUM:'~0.0001 ETH',BASE:'~0.0001 ETH',BSC:'~0.0005 BNB'};
+  /* 每条链自己的地址格式；表里没有的一律按 EVM（0x + 40 位）*/
+  const ADDR_RE={TRON:/^T[1-9A-HJ-NP-Za-km-z]{33}$/, BTC:/^(bc1[ac-hj-np-z02-9]{25,62}|[13][1-9A-HJ-NP-Za-km-z]{25,34})$/};
+  const isEvm=n=>!ADDR_RE[n];
+  const validTo=v=>(ADDR_RE[WD.net]||/^0x[0-9a-fA-F]{40}$/).test(v);
+  const short=a=>a.slice(0,8)+'…'+a.slice(-6);
 
-    if(st===1) form=`
-      <div class="sf" id="wd-amt"><span class="sfl">Amount（${asset.coin}）</span>
-        <input type="text" id="wd-amt-i" value="${WD.amt}" placeholder="Available ${fmtAmt(asset.avail)}" inputmode="decimal">
-        <span class="err">Must be above 0 and within your balance</span></div>
-      <dl class="sfsum">
-        <div><dt>Network</dt><dd>${WD.addr.net}</dd></div>
-        <div><dt>Fee</dt><dd class="num">1 ${asset.coin}</dd></div>
-        <div><dt>Available</dt><dd class="num">${fmtAmt(asset.avail)} ${asset.coin}</dd></div>
-      </dl>`;
+  const steps=st=>`<ol class="wsteps">${['Asset','Recipient'].map((t,i)=>
+    `<li class="${i===st?'on':i<st?'done':''}">${i+1} ${t}</li>`).join('')}</ol>`;
 
-    if(st===2) form=`
-      <div class="sf" id="wd-purpose"><span class="sfl">Purpose</span>
-        <div class="sfchips">${PURPOSES.map(p=>
-          `<button type="button" class="sfchip${WD.purpose===p?' on':''}" data-wp="${p}">${p}</button>`).join('')}</div>
-        <span class="err">Select a purpose</span></div>
-      <div class="sf"><span class="sfl">Note (optional)</span>
-        <input type="text" id="wd-note" value="${WD.note}" placeholder="For reconciliation only"></div>`;
-
-    if(st===3) form=`
-      <div class="sf" id="wd-file">
-        <button type="button" class="sfup${WD.file?' ok':''}" id="wd-up">
-          <span><b>Document</b><em>${WD.file||'Contract, invoice or settlement note'}</em></span>
-          <span class="sfst">${WD.file?'Uploaded':'Upload'}</span></button>
-        <span class="err">A document is required</span></div>
-      <dl class="sfsum">
-        <div><dt>To</dt><dd>${WD.addr.ref} · ${WD.addr.addr.slice(0,10)}…</dd></div>
-        <div><dt>Amount</dt><dd class="num">${WD.amt} ${asset.coin}</dd></div>
-        <div><dt>Purpose</dt><dd>${WD.purpose}</dd></div>
-      </dl>`;
-
-    document.getElementById('mbody').innerHTML=`
-      <ol class="wsteps">${WD_STEPS.map((t,i)=>
-        `<li class="${i===st?'on':i<st?'done':''}">${i+1} ${t}</li>`).join('')}</ol>
-      ${form}
-      <div class="dfoot">
-        <span class="dnote">Purpose and document are required</span>
-        ${st>0?'<button class="btn" id="wd-prev">Back</button>':''}
-        <button class="btn btn-primary" id="wd-next">${st===3?'Submit':'Next'}</button>
-      </div>`;
-    if(WD.bad) document.getElementById(WD.bad)?.classList.add('bad');
-    bind(asset);
+  const drawAsset=()=>{
+    document.getElementById('mbody').innerHTML=`${steps(0)}
+      <div class="walist">${SENDABLE.map(a=>`
+        <button type="button" class="warow" data-wasset="${a.coin}">
+          ${coinLogo(a.coin)}
+          <span class="anm"><b>${a.coin}</b><em>${netName(a.net)}${a.escrow?` · ${fmtAmt(a.escrow)} locked`:''}</em></span>
+          <span class="waval"><b class="num">${fmtAmt(a.avail)}</b><em>available</em></span>
+          <span class="wago" aria-hidden="true">›</span>
+        </button>`).join('')}</div>
+      ${SENDABLE.length<ASSETS.length?`<p class="rnote">Assets with nothing available are not listed.</p>`:''}`;
+    document.getElementById('mbody').querySelectorAll('[data-wasset]').forEach(x=>x.onclick=()=>{
+      const a=SENDABLE.find(a=>a.coin===x.dataset.wasset);
+      WD.coin=a.coin; WD.net=a.net; WD.to=''; WD.amt=''; WD.save=false; WD.label=''; WD.bad='';
+      WD.step=1; drawTo();
+      document.getElementById('wd-to-i')?.focus();
+    });
   };
 
-  const bind=asset=>{
+  const drawTo=()=>{
+    const asset=SENDABLE.find(a=>a.coin===WD.coin);
+    const to=WD.to.trim(), ok=validTo(to);
+    document.getElementById('mbody').innerHTML=`${steps(1)}
+      <button type="button" class="wpicked" id="wd-back2">
+        ${coinLogo(asset.coin)}
+        <span class="anm"><b>${asset.coin}</b><em>${netName(asset.net)} · ${fmtAmt(asset.avail)} available</em></span>
+        <span class="wachg">Change</span>
+      </button>
+      <div class="sf" id="wd-to"><span class="sfl">To</span>
+        <input type="text" class="mono" id="wd-to-i" value="${WD.to}" placeholder="Paste a ${netName(asset.net)} address" spellcheck="false" autocomplete="off">
+        <span class="err">That is not a ${netName(asset.net)} address</span></div>
+      ${ok?`<div class="wnew">
+        <p>Check every character against what the recipient gave you — <b>an on-chain transfer cannot be undone</b>.</p>
+      </div>`:''}
+      <div class="sf" id="wd-amt"><span class="sfl">Amount (${asset.coin})</span>
+        <input type="text" id="wd-amt-i" value="${WD.amt}" placeholder="Available ${fmtAmt(asset.avail)}" inputmode="decimal">
+        <span class="err">Must be above 0 and within what is available</span></div>
+      <dl class="sfsum">
+        <div><dt>Network fee</dt><dd class="num">${FEE[asset.net]||'paid in the chain\'s native coin'}</dd></div>
+      </dl>
+      <div class="dfoot">
+        <button class="btn backbtn" id="wd-back">Back</button>
+        <button class="btn btn-primary" id="wd-next">Review</button>
+      </div>`;
+    if(WD.bad)document.getElementById(WD.bad)?.classList.add('bad');
+    bindTo(asset,ok);
+  };
+
+  const bindTo=(asset,ok0)=>{
     const b=document.getElementById('mbody');
-    b.querySelectorAll('[data-wa]').forEach(x=>x.onclick=()=>{
-      WD.addr=PAYEES.chain.find(c=>c.id===x.dataset.wa); WD.bad=''; draw();});
-    b.querySelectorAll('[data-wp]').forEach(x=>x.onclick=()=>{WD.purpose=x.dataset.wp;WD.bad='';draw()});
+    const back=()=>{WD.step=0; WD.bad=''; drawAsset()};
+    document.getElementById('wd-back').onclick=back;
+    document.getElementById('wd-back2').onclick=back;
+    const ti=document.getElementById('wd-to-i');
+    /* 地址框每敲一个字不重画（会丢光标）；只在「合法与否 / 是不是已存」变化时重画 */
+    ti.oninput=e=>{
+      WD.to=e.target.value; WD.bad='';
+      e.target.closest('.sf').classList.remove('bad');
+      const ok=validTo(WD.to.trim());
+      if(ok!==ok0){
+        drawTo(); const n=document.getElementById('wd-to-i'); n.focus(); n.setSelectionRange(n.value.length,n.value.length);
+      }
+    };
     const ai=document.getElementById('wd-amt-i');
-    if(ai) ai.oninput=e=>{WD.amt=e.target.value; e.target.closest('.sf').classList.remove('bad')};
-    const nt=document.getElementById('wd-note'); if(nt) nt.oninput=e=>WD.note=e.target.value;
-    const up=document.getElementById('wd-up');
-    if(up) up.onclick=()=>{WD.file=WD.file?'':'settlement-note.pdf'; WD.bad=''; draw()};
-    document.getElementById('gopayee')?.addEventListener('click',()=>{closeModal();openPayees()});
-    document.getElementById('wd-prev')?.addEventListener('click',()=>{WD.step--;WD.bad='';draw()});
+    if(ai)ai.oninput=e=>{WD.amt=e.target.value; e.target.closest('.sf').classList.remove('bad')};
     document.getElementById('wd-next').onclick=()=>{
-      if(!wdValid())return draw();
-      if(WD.step<3){WD.step++;draw();return}
-      const a=ASSETS.find(x=>x.coin===asset.coin), n=Number(WD.amt);
-      a.avail=Math.max(0,a.avail-n-1);
-      if(a.coin===FUNDS.coin){FUNDS.avail=a.avail; renderBalance()}
-      const ref=WD.addr.ref, amt=WD.amt, coin=asset.coin;
-      closeModal(); renderRules();
-      toast(`Signed: ${amt} ${coin} → ${ref} — broadcasting from your wallet`);
+      const to=WD.to.trim();
+      if(!validTo(to)){WD.bad='wd-to';return drawTo()}
+      const n=Number(WD.amt);
+      if(!(n>0)||n>asset.avail){WD.bad='wd-amt';return drawTo()}
+      const who=short(to);
+      closeModal();
+      requireVerify('',
+        `<dl class="sfsum"><div><dt>To</dt><dd class="mono">${who}</dd></div>
+          <div><dt>Network</dt><dd>${netName(asset.net)}</dd></div>
+          <div><dt>Network fee</dt><dd class="num">${FEE[asset.net]||'—'}</dd></div></dl>`,
+        ()=>{
+          asset.avail=Math.max(0,asset.avail-n);
+          if(asset.coin===FUNDS.coin){FUNDS.avail=asset.avail; renderBalance()}
+          renderRules();
+          toast(`Signed: ${fmtAmt(n)} ${asset.coin} → ${short(to)} — broadcasting from your wallet`);
+        },
+        {title:'Send', amt:{v:fmtAmt(n),u:asset.coin,pos:'post'}, amtUsd:0, pay:[]});
     };
   };
-  openModal('Send',' ',draw);
-}
-function coinOfNet(net){const a=ASSETS.find(x=>x.net===net); return a?a.coin:'USDT'}
-function wdValid(){
-  const bad=id=>{WD.bad=id;return false};
-  if(WD.step===0 && !WD.addr) return bad('wd-addr');
-  if(WD.step===1){
-    const asset=ASSETS.find(a=>a.coin===coinOfNet(WD.addr.net))||ASSETS[0];
-    const v=Number(String(WD.amt).replace(/[,，\s]/g,''));
-    if(!Number.isFinite(v)||v<=0||v>asset.avail) return bad('wd-amt');
-  }
-  if(WD.step===2 && !WD.purpose) return bad('wd-purpose');
-  if(WD.step===3 && !WD.file) return bad('wd-file');
-  WD.bad=''; return true;
+  openModal('Send',' ',drawAsset);
 }
 
 /* ── 收款账户（照 User Guide p24-27 Payees）── */
@@ -4635,47 +4936,243 @@ function openFiatPicker(){
 }
 
 function openPayees(){
-  const html=`
-    <div class="rsec"><h3>Fiat accounts</h3>
-      <p class="fnote"><b>We never receive fiat.</b> These cards exist so you can give the number to a counterparty — they pay your bank directly, and we verify the receipt.</p>
-      <div class="plist">
-        ${PAYEES.bank.map(b=>`<div class="prow">
-          <span class="pav">${b.bank.slice(0,2)}</span>
-          <span class="ptxt"><b>${b.name}${b.self?'<i class="ptag">Me</i>':`<i class="ptag alt">${b.rel}</i>`}</b>
-            <em>${b.bank} · ${b.no} · ${b.ccy}</em></span>
-          <span class="pmeta">${b.region}</span>
-        </div>`).join('')}
-      </div>
-      <button class="btn btn-sm" id="addbank">+ Add bank account</button>
-      <p class="rnote">Each account records whether it is yours.<i class="info" tabindex="0" data-tip="Ownership and relationship to the account holder are recorded for anti-money-laundering review — they identify nominee arrangements.">i</i></p>
+  /* 收款账户管理：只有我自己的法币收款账户。
+     OTC 的法币腿点对点走银行——账号是给对手方的，钱不经过 Atara。
+     对手方的银行信息属于那笔交易，不属于我的账户簿，所以这里不混进来。
+     链上地址也不在这儿：它是 Send 里的快捷选择，跟「怎么收法币」是两件事。
+     一行一个账户，点进去看详情，详情里才有编辑和删除——
+     账号是手抄进来的，改和删都不该在列表上一键完成 */
+  let VIEW='list';   /* list | detail | form */
+  let CUR=null;      /* 详情/编辑中的账户 id */
+  let PF=null;       /* 正在填的表单 */
+  const CCY=['CNY','HKD','USD','SGD','JPY'];
+  /* 只留首四末四。IBAN 前四位是国家码 + 校验位，是有用信息，所以按字符切而不是只取数字 */
+  const mask=v=>{const t=v.replace(/[\s-]/g,'').toUpperCase();
+    return t.length<8?t:`${t.slice(0,4)} **** ${t.slice(-4)}`};
+  const get=()=>PAYEES.bank.find(b=>b.id===CUR);
+  const body=()=>document.getElementById('mbody');
+
+  const list=()=>`
+    <p class="fnote"><b>We never receive fiat.</b> These are your own bank accounts — you give the number to a counterparty, they pay your bank directly, and we verify the receipt.</p>
+    <div class="plist">
+      ${PAYEES.bank.map(b=>`<button type="button" class="prow prowgo" data-open="${b.id}">
+        <span class="pav">${b.bank.slice(0,2)}</span>
+        <span class="ptxt"><b>${b.bank}<i class="ptag alt">${b.ccy}</i></b>
+          <em>${b.no} · ${b.region}</em></span>
+        <span class="wago" aria-hidden="true">›</span>
+      </button>`).join('')}
+      ${PAYEES.bank.length?'':'<div class="fempty">No account yet — add one so a counterparty knows where to pay you.</div>'}
     </div>
-    <div class="rsec" style="margin-bottom:4px"><h3>Crypto addresses</h3>
-      <div class="plist">
-        ${PAYEES.chain.map(c=>`<div class="prow">
-          <span class="pav net">${c.net.slice(0,3)}</span>
-          <span class="ptxt"><b>${c.ref}</b><em class="mono">${c.addr}</em></span>
-          <span class="pmeta">${c.net}</span>
-        </div>`).join('')}
+    <button class="btn btn-sm" id="addbank">+ Add account</button>`;
+
+  const detail=()=>{const b=get(); if(!b){VIEW='list';return list()}
+    return `
+    <button type="button" class="wpicked" data-back="1">
+      <span class="pav">${b.bank.slice(0,2)}</span>
+      <span class="anm"><b>${b.bank}</b><em>${b.ccy} · ${b.region}</em></span>
+      <span class="wachg">All accounts</span>
+    </button>
+    <dl class="sfsum sfsum-rows">
+      <div><dt>Account holder</dt><dd>${b.holder}</dd></div>
+      <div><dt>Bank</dt><dd>${b.bank}</dd></div>
+      <div><dt>Account number</dt><dd class="mono">${b.no}</dd></div>
+      <div><dt>Currency</dt><dd>${b.ccy}</dd></div>
+      <div><dt>Where the bank is</dt><dd>${b.region}</dd></div>
+    </dl>
+    <p class="rnote">Only the last four digits are kept in the clear.<i class="info" tabindex="0" data-tip="A counterparty sees the full number when you hand it over in a trade. Atara stores it masked and never moves fiat.">i</i></p>
+    <div class="dfoot">
+      <button class="btn btn-danger backbtn" data-askdel="1">Remove</button>
+      <button class="btn btn-primary" data-edit="1">Edit</button>
+    </div>`};
+
+  const form=()=>`
+    <button type="button" class="wpicked" data-back="1">
+      <span class="pav">${PF.id?PF.bank.slice(0,2)||'··':'+'}</span>
+      <span class="anm"><b>${PF.id?'Edit account':'New account'}</b><em>${PF.id?'Changes apply the next time you hand out the number':'A counterparty will pay this account directly'}</em></span>
+      <span class="wachg">Cancel</span>
+    </button>
+    <div class="sf" id="pf-holder"><span class="sfl">Account holder</span>
+      <input type="text" id="pf-holder-i" value="${PF.holder}" placeholder="Name on the account">
+      <span class="err">Required</span></div>
+    <div class="sf" id="pf-bank"><span class="sfl">Bank</span>
+      <div class="cbox">
+        <input type="text" id="pf-bank-i" value="${PF.bank}" placeholder="Type to search — CMB, HSBC, 招商…"
+          role="combobox" aria-expanded="false" aria-controls="pf-bank-list" autocomplete="off">
+        <div class="cblist" id="pf-bank-list" role="listbox" hidden></div>
       </div>
-      <button class="btn btn-sm" id="addchain">+ Add address</button>
-      <p class="rnote">Withdrawals go to registered addresses only.</p>
+      <span class="err">Required</span></div>
+    <div class="sf" id="pf-no"><span class="sfl">Account number</span>
+      <input type="text" class="mono" id="pf-no-i" value="${PF.no}" placeholder="${PF.id?'Retype it to change it':'Account number, or a full IBAN'}" autocomplete="off" spellcheck="false">
+      <span class="err" id="pf-no-err">At least eight digits</span>
+      <span class="cbhint" id="pf-no-hint"></span></div>
+    <div class="sf"><span class="sfl">Currency</span>
+      <div class="sfchips">${CCY.map(c=>`<button type="button" class="sfchip${PF.ccy===c?' on':''}" data-pccy="${c}">${c}</button>`).join('')}</div></div>
+    <div class="sf" id="pf-region"><span class="sfl">Where the bank is</span>
+      <input type="text" id="pf-region-i" value="${PF.region}" placeholder="Shenzhen, CN">
+      <span class="err">Required</span></div>
+    <div class="dfoot">
+      <button class="btn backbtn" data-back="1">Cancel</button>
+      <button class="btn btn-primary" data-psave="1">${PF.id?'Save changes':'Add account'}</button>
     </div>`;
-  openModal('Recipients',html,()=>{
-    document.getElementById('addbank').onclick=()=>toast('Demo — registration takes three steps: profile, address, payment method');
-    document.getElementById('addchain').onclick=()=>toast('Demo — select network, enter address and label, then verify');
-  });
+
+  const draw=()=>{
+    body().innerHTML=VIEW==='form'?form():VIEW==='detail'?detail():list();
+    bind();
+  };
+  /* 银行组合框：只重画下拉那一块，绝不重画整张表单——否则每敲一个字光标就丢 */
+  const bindBank=()=>{
+    const inp=document.getElementById('pf-bank-i'); if(!inp)return;
+    const list=document.getElementById('pf-bank-list');
+    let hits=[], cur=-1;
+    const close=()=>{list.hidden=true; inp.setAttribute('aria-expanded','false'); cur=-1};
+    const paint=()=>{
+      const q=inp.value.trim().toLowerCase();
+      /* 空查询不该给一串按字母排的头几家——按当前选中的币种猜国家更有用 */
+      hits=q
+        ? BANKS.filter(x=>(x.n+' '+x.a+' '+(CTRY[x.c]||'')).toLowerCase().includes(q)).slice(0,8)
+        : BANKS.filter(x=>CTRY_CCY[x.c]===PF.ccy).slice(0,8);
+      const exact=hits.some(x=>x.n.toLowerCase()===q);
+      list.innerHTML=hits.map((x,i)=>`<button type="button" class="cbrow${i===cur?' on':''}" data-bank="${x.n}" role="option">
+          <span class="cbn">${x.n}</span><span class="cbc">${CTRY[x.c]||x.c}</span></button>`).join('')
+        +(q&&!exact?`<button type="button" class="cbrow cbfree${cur===hits.length?' on':''}" data-bank="${inp.value.trim().replace(/"/g,'&quot;')}" role="option">
+            <span class="cbn">Use “${inp.value.trim()}”</span><span class="cbc">not in the list</span></button>`:'');
+      list.hidden=!list.innerHTML;
+      inp.setAttribute('aria-expanded',String(!list.hidden));
+      list.querySelectorAll('[data-bank]').forEach(r=>r.onmousedown=e=>{e.preventDefault(); pick(r.dataset.bank)});
+    };
+    const pick=name=>{
+      PF.bank=name; inp.value=name; close();
+      const hit=BANKS.find(x=>x.n===name);
+      /* 选中一家银行就把国家和币种带出来——不然这个下拉只是省了几个字母 */
+      if(hit){
+        if(!PF.region.trim())
+          {PF.region=CTRY[hit.c]||hit.c; const r=document.getElementById('pf-region-i'); if(r)r.value=PF.region;}
+        if(!PF.ccyTouched&&CTRY_CCY[hit.c]&&CCY.includes(CTRY_CCY[hit.c])){
+          PF.ccy=CTRY_CCY[hit.c];
+          document.querySelectorAll('[data-pccy]').forEach(c=>c.classList.toggle('on',c.dataset.pccy===PF.ccy));
+        }
+      }
+      document.getElementById('pf-bank').classList.remove('bad');
+      document.getElementById('pf-no-i')?.focus();
+    };
+    inp.oninput=()=>{PF.bank=inp.value; document.getElementById('pf-bank').classList.remove('bad'); cur=-1; paint()};
+    inp.onfocus=paint;
+    inp.onblur=()=>setTimeout(close,120);
+    inp.onkeydown=e=>{
+      const n=hits.length+(list.querySelector('.cbfree')?1:0);
+      if(e.key==='ArrowDown'){e.preventDefault(); cur=(cur+1)%Math.max(n,1); paint()}
+      else if(e.key==='ArrowUp'){e.preventDefault(); cur=(cur-1+n)%Math.max(n,1); paint()}
+      else if(e.key==='Enter'){
+        const row=list.querySelectorAll('[data-bank]')[cur];
+        if(!list.hidden&&row){e.preventDefault(); pick(row.dataset.bank)}
+      }
+      else if(e.key==='Escape')close();
+    };
+  };
+  /* 账号：边填边说结果。IBAN 能算校验位，其余只能验位数——就只说这么多 */
+  const bindAcct=()=>{
+    const inp=document.getElementById('pf-no-i'); if(!inp)return;
+    const hint=document.getElementById('pf-no-hint');
+    const show=()=>{
+      const sf=document.getElementById('pf-no');
+      const r=checkAcct(inp.value);
+      sf.classList.remove('bad');
+      inp.classList.toggle('inv', r.s==='bad');
+      hint.className='cbhint'+(r.s==='ok'?' ok':r.s==='bad'?' no':'');
+      hint.textContent=r.s==='empty'?(PF.id?'Leave empty to keep the current number':''):r.msg;
+    };
+    inp.oninput=()=>{PF.no=inp.value; show()};
+    show();
+  };
+  const bind=()=>{
+    const b=body();
+    b.querySelectorAll('[data-open]').forEach(x=>x.onclick=()=>{
+      CUR=x.dataset.open; VIEW='detail'; draw()});
+    /* 退一层：改到一半退回这个账户的详情；新增到一半、或从详情退，都回列表 */
+    b.querySelectorAll('[data-back]').forEach(x=>x.onclick=()=>{
+      const editing=VIEW==='form'&&PF&&PF.id;
+      PF=null;
+      VIEW=editing?'detail':'list';
+      if(!editing)CUR=null;
+      draw();
+    });
+    document.getElementById('addbank')?.addEventListener('click',()=>{
+      PF={id:'', holder:'', bank:'', no:'', ccy:'CNY', region:'', ccyTouched:false}; CUR=null; VIEW='form'; draw();
+      document.getElementById('pf-holder-i')?.focus();
+    });
+    b.querySelector('[data-edit]')?.addEventListener('click',()=>{
+      const a=get(); PF={id:a.id, holder:a.holder, bank:a.bank, no:'', ccy:a.ccy, region:a.region, ccyTouched:true};
+      VIEW='form'; draw(); document.getElementById('pf-bank-i')?.focus();
+    });
+    b.querySelector('[data-askdel]')?.addEventListener('click',()=>{
+      const a=get();
+      confirmDanger({
+        title:`Remove ${a.bank} ${a.no}?`,
+        body:`A counterparty can no longer be pointed at this account, and you will have to type the number again to add it back.`,
+        ok:'Remove account',
+        onOk:()=>{
+          PAYEES.bank=PAYEES.bank.filter(v=>v.id!==a.id);
+          CUR=null; VIEW='list'; draw(); renderRules();
+          toast(`Removed ${a.bank} ${a.no}`);
+        }});
+    });
+    b.querySelectorAll('[data-pccy]').forEach(x=>x.onclick=()=>{PF.ccy=x.dataset.pccy; PF.ccyTouched=true; draw()});
+    const on=(id,k)=>{const el=document.getElementById(id);
+      if(el)el.oninput=e=>{PF[k]=e.target.value; e.target.closest('.sf').classList.remove('bad')}};
+    on('pf-holder-i','holder'); on('pf-region-i','region');
+    /* 银行是组合框、账号要边填边校验，各有自己的 oninput——
+       必须排在通用 on() 之后，否则会被它覆盖 */
+    bindBank(); bindAcct();
+    b.querySelector('[data-psave]')?.addEventListener('click',()=>{
+      const bad=id=>{document.getElementById(id)?.classList.add('bad'); return true};
+      if(!PF.holder.trim())return bad('pf-holder');
+      if(!PF.bank.trim())return bad('pf-bank');
+      /* 编辑时账号可以留空 = 不改；新增必须填。校验走 checkAcct，和输入时同一套规则 */
+      const r=checkAcct(PF.no);
+      if(!PF.id&&r.s!=='ok')return bad('pf-no');
+      if(PF.id&&PF.no.trim()&&r.s!=='ok')return bad('pf-no');
+      if(!PF.region.trim())return bad('pf-region');
+      if(PF.id){
+        const a=PAYEES.bank.find(v=>v.id===PF.id);
+        a.holder=PF.holder.trim(); a.bank=PF.bank.trim(); a.ccy=PF.ccy; a.region=PF.region.trim();
+        if(PF.no.trim())a.no=mask(PF.no);
+        CUR=a.id; PF=null; VIEW='detail'; draw(); renderRules(); toast('Account updated');
+      }else{
+        const id='b'+Date.now();
+        PAYEES.bank.push({id, holder:PF.holder.trim(), bank:PF.bank.trim(),
+          no:mask(PF.no), ccy:PF.ccy, region:PF.region.trim()});
+        const nm=PF.bank.trim(); PF=null; CUR=id; VIEW='detail'; draw(); renderRules();
+        toast(`${nm} account added`);
+      }
+    });
+  };
+  openModal('Fiat accounts',' ',draw);
 }
 
 /* 地址按币种+主网稳定生成/* 地址按币种+主网稳定生成，避免每次重绘都换一个 */
-function depAddr(coin,net){
-  const seed=[...(coin+net)].reduce((a,c)=>a+c.charCodeAt(0),0);
+/* 地址属于链，不属于币：TRON 上只有一个 T 地址，USDT 和 USDC 共用它；
+   所有 EVM 链共用同一个 0x 地址（同一把私钥推出来的）。
+   原来按 coin+net 各生成一个，切个币种地址就变——那是错的模型，
+   也会教会用户一个危险的错觉：以为每个币有专属地址 */
+const CHAIN_OF=n=>n==='TRON'?'tron':n==='BTC'?'btc':'evm';
+function chainAddr(net){
+  const fam=CHAIN_OF(net);
+  const seed=[...fam].reduce((a,c)=>a+c.charCodeAt(0),0)*7919;
   const abc='abcdefghijklmnopqrstuvwxyz0123456789';
-  let out=net==='TRON'?'T':net==='BTC'?'bc1q':'0x';
-  for(let i=0;i<(net==='TRON'?33:net==='BTC'?38:40);i++) out+=abc[(seed*(i+7)+i*13)%36];
+  let out=fam==='tron'?'T':fam==='btc'?'bc1q':'0x';
+  for(let i=0;i<(fam==='tron'?33:fam==='btc'?38:40);i++) out+=abc[(seed*(i+7)+i*13)%36];
   return out;
 }
-const WALLET_ADDR=depAddr('USDT','TRON');
+const depAddr=(coin,net)=>chainAddr(net);
+const WALLET_ADDR=chainAddr('TRON');
 /* 登录方式决定限额怎么签发：atara = 账户策略层；ext = 对支出合约的 approve */
+function setHasPk(v){
+  HAS_PK=!!v;
+  /* 清单跟着走：没有 passkey 就是空清单，有就至少有一把 */
+  if(!HAS_PK)PASSKEYS=[];
+  else if(!PASSKEYS.length)PASSKEYS=[{d:'MacBook Pro', at:'Aug 12', me:true}];
+  try{sessionStorage.setItem('atara-haspk',v?'1':'0')}catch(_){}
+}
 let WALLET_KIND='atara';
 try{WALLET_KIND=sessionStorage.getItem('atara-wkind')||'atara'}catch(_){}
 function setWalletKind(k){WALLET_KIND=k;try{sessionStorage.setItem('atara-wkind',k)}catch(_){}}
@@ -4705,12 +5202,10 @@ function openAllowanceModal(card){
     quota: String(me?budget:card.quota),
     cycle: (card.cycle||'weekly').includes('month')?'monthly':'weekly',
     exp: card.exp||'Not set',
-    wl: card.wl||'Any',
   });
-  else Object.assign(NA,{name:'New agent',per:'500',quota:'2000',cycle:'weekly',exp:'90 days',wl:'Verified providers'});
+  else Object.assign(NA,{name:'New agent',per:'500',quota:'2000',cycle:'weekly',exp:'90 days'});
   /* 当前值不在预设里就把它挂进选项，选中态落在原值上 */
   const expOpts=[...new Set([NA.exp&&!['30 days','90 days','Not set'].includes(NA.exp)?NA.exp:null,'30 days','90 days','Not set'].filter(Boolean))];
-  const wlOpts=[...new Set([NA.wl&&!['Any','Verified providers','Set later'].includes(NA.wl)?NA.wl:null,'Any','Verified providers','Set later'].filter(Boolean))];
   const ext=WALLET_KIND==='ext';
   const draw=()=>{
     document.getElementById('mbody').innerHTML=`
@@ -4725,19 +5220,31 @@ function openAllowanceModal(card){
       <div class="sf"><span class="sfl">Expires</span>
         <div class="sfchips">${expOpts.map(x=>
           `<button type="button" class="sfchip${NA.exp===x?' on':''}" data-ne="${x}">${x}</button>`).join('')}</div></div>
-      <div class="sf"><span class="sfl">Recipients</span>
-        <div class="sfchips">${wlOpts.map(x=>
-          `<button type="button" class="sfchip${NA.wl===x?' on':''}" data-nw="${x}">${x}</button>`).join('')}</div></div>
-      <p class="rnote">${ext
-        ?`Your wallet approves this cap to the Atara spending contract <b class="num">${SPEND_ADDR.slice(0,6)}…${SPEND_ADDR.slice(-4)}</b> — enforced on-chain, revoke any time.`
-        :'Signing writes this rule into your account contract — enforced on-chain, revoking takes effect next block.'}</p>
-      <div class="dfoot"><span class="dnote" id="na-err"></span>
+      <div class="dfoot">
+        ${isEdit?`<button class="btn btn-danger backbtn" id="na-rv">${me
+          ? (card.on?'Disable':'Enable')
+          : (card.on?'Revoke':'Re-issue')}</button>`:''}
+        <span class="dnote" id="na-err"></span>
         <button class="btn btn-primary" id="na-go">${ext?'Approve in wallet':'Sign with passkey'}</button></div>`;
     const read=()=>{NA.name=document.getElementById('na-name').value.trim()||'New agent';
       NA.per=document.getElementById('na-per').value; NA.quota=document.getElementById('na-quota').value;};
     document.querySelectorAll('#mbody [data-nc]').forEach(x=>x.onclick=()=>{read();NA.cycle=x.dataset.nc;draw()});
     document.querySelectorAll('#mbody [data-ne]').forEach(x=>x.onclick=()=>{read();NA.exp=x.dataset.ne;draw()});
-    document.querySelectorAll('#mbody [data-nw]').forEach(x=>x.onclick=()=>{read();NA.wl=x.dataset.nw;draw()});
+    /* 从卡面挪进这里：卡面只留一个动作，但「签出去的授权收得回来」不能没有——
+       那是非托管里用户唯一的兜底。
+       Me 那张是本地护栏，关它不用签名（链上没有这份东西可收回）；
+       agent 那张是链上授权，只能签名收回，本地开关关不住它 */
+    document.getElementById('na-rv')?.addEventListener('click',()=>{
+      if(me){
+        card.on=!card.on;
+        closeModal(); renderRules(); renderBalance();
+        toast(card.on
+          ? 'Your own limit is back on'
+          : 'Your own limit is off — it no longer blocks anything in this console');
+        return;
+      }
+      revokeAllowance(card);
+    });
     document.getElementById('na-go').onclick=()=>{
       read();
       const per=parseInt((NA.per+'').replace(/[^\d]/g,''),10)||0,
@@ -4767,12 +5274,12 @@ function openAllowanceModal(card){
         <em>${me?'You':NA.name} can spend up to ${per.toLocaleString()} USDT per payment · ${quota.toLocaleString()} ${NA.cycle} · enforced on-chain.</em></div>`;
       if(isEdit){
         if(me){RULES.perDeal=per; budget=quota;}
-        else Object.assign(card,{per,quota,cycle:NA.cycle,exp:expDate,wl:NA.wl==='Set later'?'Not set':NA.wl});
+        else Object.assign(card,{per,quota,cycle:NA.cycle,exp:expDate});
         if(!me)CARD_ACTIVE=card.id;
       }else{
         const id='n'+(CARDS.length+1);
         CARDS.push({id,name:NA.name,kind:'agent',cycle:NA.cycle,
-          quota,used:0,per,wl:NA.wl==='Set later'?'Not set':NA.wl,tpl:'Not set',exp:expDate,ifr:null,on:true,
+          quota,used:0,per,exp:expDate,ifr:null,on:true,
           note:ext?'Backed by an on-chain allowance — Revoke cancels the approve':'Written into your account contract — revoking takes effect next block'});
         CARD_ACTIVE=id;
       }
@@ -4827,12 +5334,27 @@ function renderRulesPage(){
           <div><span class="al">In escrow contracts</span><b class="num">$${Math.round(cnyEsc).toLocaleString()}</b>
             <span class="ad">${FUNDS.escrowN} trades locked · <a href="#" class="lnk" data-p="goto-recs">View ›</a></span></div>
         </div>
-        <div class="aacts"><button class="btn btn-secondary" data-p="godep">Receive</button><button class="btn btn-secondary" data-p="gowd">Send</button><button class="btn btn-secondary" data-p="gopay">Addresses</button></div>
+        <!-- 导出钱包留在 Settings › Wallet keys 一处：那里连着备份状态，
+             同一个动作不必开两个门 -->
+        <div class="aacts"><button class="btn btn-secondary" data-p="godep">Receive</button><button class="btn btn-secondary" data-p="gowd">Send</button><button class="btn btn-secondary" data-p="gopay">Fiat accounts</button></div>
       </section>
       <section class="pmod">
-        <div class="pmh"><h4>Allowances<i class="info" tabindex="0" data-tip="A spending rule your wallet signed — the contract enforces spender, per-payment cap, window total and expiry; revoking takes effect next block. Your own limit is a policy layer — co-signers refuse anything over it.">i</i></h4>
+        <div class="pmh"><h4>Allowances<i class="info" tabindex="0" data-tip="A spending rule your wallet signed: who may spend, how much per payment, how much per window, and until when. Revoking takes effect next block. Your own limit is a guardrail in this console — it cannot stop a transfer you sign yourself.">i</i></h4>
           <button class="btn btn-ghost btn-sm" data-p="newcard">+ New allowance</button></div>
-        ${cardHTML(CARDS.find(c=>c.id===CARD_ACTIVE)||CARDS[0])}
+        ${CARDS.length
+          ? cardHTML(CARDS.find(c=>c.id===CARD_ACTIVE)||CARDS[0])
+          : `<div class="cempty">
+              <div class="cghost" aria-hidden="true">
+                <span class="cgchip">${CHIP}</span>
+                <span class="cgnum"></span>
+                <span class="cgbar"></span>
+                <span class="cgline"></span>
+                <span class="cgline sm"></span>
+              </div>
+              <b>No allowance yet</b>
+              <em>An allowance is a rule you sign: who may spend from this wallet, how much per payment, and until when. Until you sign one, nothing can spend on your behalf.</em>
+              <button class="btn btn-primary btn-sm" data-p="newcard">+ New allowance</button>
+            </div>`}
       </section>
     </div>`;
   const secSettings=`
@@ -4842,30 +5364,36 @@ function renderRulesPage(){
           <span class="seci">🗝</span>
           <span class="sectxt"><b>Wallet keys</b><em>${WALLET_KIND==='ext'
             ? 'Held in your own wallet — Atara never had them, so there is nothing here to back up'
-            : `Non-custodial — your passkeys sign, we never hold them · ${BACKUP_AT?'recovery phrase backed up '+BACKUP_AT:'recovery phrase not backed up'}`}</em></span>
+            : `Non-custodial — your key is split three ways and no single share can sign · ${BACKUP_AT?'recovery phrase backed up '+BACKUP_AT:'recovery phrase not backed up'}`}</em></span>
           ${WALLET_KIND==='ext'?'':`<button class="btn btn-secondary" data-p="bakkey">${BACKUP_AT?'View phrase':'Back up'}</button>`}
         </div>
-        <div class="secrow">
-          <span class="seci">🔑</span>
-          <span class="sectxt"><b>Passkeys</b><em id="pklist">Touch ID · MacBook Pro · added Aug 12</em></span>
-          <button class="btn btn-secondary" data-p="addpk">Add passkey</button>
-        </div>
-        <div class="secrow">
-          <span class="seci">🛡</span>
-          <span class="sectxt"><b>Two-step verification</b><em>Authenticator app · for withdrawals and new payout addresses</em></span>
-          <button class="swtch on" role="switch" aria-checked="true" data-p="tfa" aria-label="Two-step verification"><i></i></button>
-        </div>
+        <!-- 两步验证这一期不上：一个能开关却没人读的安全设置，比没有更糟。
+             整行先收起，处理器留着 -->
         <div class="secrow">
           <span class="seci">🔒</span>
-          <span class="sectxt"><b>Payment password</b><em id="pwsub">Unlocks a locked session, and stands in when no passkey is available · demo password ${PAY_PW}</em></span>
-          <button class="btn btn-secondary" data-p="setpw">Change</button>
-        </div>
-        <div class="secrow">
-          <span class="seci">⏳</span>
-          <span class="sectxt"><b>New payout address delay</b><em>Withdrawals to a newly added address wait 48 h · two-step required</em></span>
-          <span class="secfix">48 h</span>
+          <span class="sectxt"><b>Session lock</b><em id="pwsub">${PAY_PW
+            ? `The console locks after 15 minutes idle · unlock with ${WALLET_KIND==='ext'?'this password':'your passkey, or this password'} · demo password ${PAY_PW}`
+            : (WALLET_KIND==='ext'
+              ? 'Not set — your wallet signs the transfers; a password here just keeps the console from sitting open.'
+              : HAS_PK
+                ? 'Locks after 15 minutes idle — your passkey unlocks it. A password is only needed on a device without one.'
+                : 'Not set, and no passkey on this device — set a password so the console can lock at all.')}</em></span>
+          <button class="btn btn-${PAY_PW?'secondary':'primary'} btn-sm" data-p="setpw">${PAY_PW?'Change':'Set password'}</button>
         </div>
       </div>
+      ${WALLET_KIND==='ext' ? '' : `<div class="seclist pkcard"><div class="secrow pkgrp">
+          <span class="seci">🔑</span>
+          <span class="sectxt"><b>Passkeys</b><em id="pklist">${PASSKEYS.length
+            ? `${PASSKEYS.length} device${PASSKEYS.length>1?'s':''} can approve transfers`
+            :'None on this account — your next transfer will ask you to add one.'}</em></span>
+          <button class="btn btn-${PASSKEYS.length?'secondary':'primary'} btn-sm" data-p="addpk">${PASSKEYS.length?'Add a device':'Add passkey'}</button>
+          ${PASSKEYS.length?`<div class="pkrows">${PASSKEYS.map((k,i)=>`<div class="pkrow">
+            <span class="pkdev" aria-hidden="true">${pkIcon(k.d)}</span>
+            <span class="pkname">${k.d}${k.me?'<i class="pkthis">This device</i>':''}</span>
+            <span class="pkat">${k.at==='just now'?'Added just now':'Added '+k.at}</span>
+            <button class="btn btn-ghost btn-sm" data-rmpk="${i}">Remove</button>
+          </div>`).join('')}</div>`:''}
+        </div></div>`}
     </div>`;
   /* 资产 / 自动扣款 / 交易动态改成三个分栏：三段内容各自都不多，
      并排会把页面拉长，叠着又都长一个样——分栏是这里唯一说得通的收纳 */
@@ -4949,15 +5477,27 @@ function bindRulesPage(){
   document.querySelector('[data-p="addpk"]')?.addEventListener('click',ev=>{
     const b=ev.currentTarget;
     if(b.classList.contains('busy'))return;
-    b.classList.add('busy'); const t=b.textContent;
+    b.classList.add('busy');
     b.innerHTML='<span class="pkpulse"></span>Touch ID…';
     setTimeout(()=>{
-      b.classList.remove('busy'); b.textContent=t;
-      const l=document.getElementById('pklist');
-      l.textContent=l.textContent+'  ·  Touch ID · this device · just now';
-      toast('Passkey added');
+      const d=addPasskey();
+      renderRules();   /* 整行重画：按钮、清单、条数、锁屏那段说明一起跟上 */
+      toast(`Passkey added — ${d}`);
     },1100);
   });
+  document.querySelectorAll('[data-rmpk]').forEach(b=>b.addEventListener('click',ev=>{
+    const el=ev.currentTarget, i=+el.dataset.rmpk;
+    if(el.classList.contains('busy'))return;
+    el.classList.add('busy');
+    el.innerHTML='<span class="pkpulse"></span>Touch ID…';
+    setTimeout(()=>{
+      const k=removePasskey(i);
+      renderRules();
+      toast(PASSKEYS.length
+        ? `Passkey removed — ${k.d}`
+        : `Passkey removed — your next transfer will ask you to add one`);
+    },1000);
+  }));
   document.querySelector('[data-p="tfa"]')?.addEventListener('click',ev=>{
     const b=ev.currentTarget;
     const on=!b.classList.contains('on');
@@ -4979,8 +5519,9 @@ function bindRulesPage(){
     if(p.startsWith('unlist:')){unlistOffer(p.slice(7));return}
     if(p==='flip'){
       CARD_FLIP=!CARD_FLIP;
-      document.querySelector('.ccard')?.classList.toggle('flip',CARD_FLIP);
-      const l=b.querySelector('.fliplbl'); if(l)l.textContent=CARD_FLIP?'Front':'Conditions';
+      const cd=document.querySelector('.ccard');
+      cd?.classList.toggle('flip',CARD_FLIP);
+      cd?.setAttribute('aria-label',CARD_FLIP?'Show the front of this allowance':'Show the conditions on the back');
       return;
     }
     if(p==='rename'){renameProfile();return}
@@ -5922,8 +6463,8 @@ function renderAssets(){
   _al.innerHTML=ASSETS.map(a=>{
     const v=(a.avail+a.escrow)*a.fx;
     return `<div class="arow">
-      <span class="acoin" style="background:hsl(${COIN_HUE[a.coin]??200} 45% 40%)">${a.coin.slice(0,1)}</span>
-      <span class="anm"><b>${a.coin}</b><em>${a.net}</em></span>
+      ${coinLogo(a.coin)}
+      <span class="anm"><b>${a.coin}</b><em>${netName(a.net)}</em></span>
       <span class="aval"><b>${SHOW_BAL?(a.avail+a.escrow).toLocaleString():'•••'}</b>
         <em>${SHOW_BAL?'≈$'+Math.round(v).toLocaleString():'•••'}${a.escrow?` <span class="aesc">${SHOW_BAL?a.escrow.toLocaleString():'•'} locked</span>`:''}</em></span>
     </div>`}).join('');
@@ -6137,15 +6678,28 @@ document.getElementById('go').onclick=()=>{
 let PENDING_VERIFY=null;
 /* 收银台三问的取数：付多少(amt) / 从哪付(pay) / 为什么要你亲自确认(why)。
    amt: {v,u,pos} pos='pre' 符号在前(法币) 'post' 单位在后(币)；pay: {kind,ic,name,sub} */
-const COIN_NET={USDT:'TRON',USDC:'Polygon',BTC:'Bitcoin',ETH:'Ethereum'};
-const PK_LABEL='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 1.8a4.5 4.5 0 0 1 4.5 4.5c0 2.6-.7 5-2 7"/><path d="M8 4.4a1.9 1.9 0 0 1 1.9 1.9c0 2.3-.6 4.5-1.7 6.4M5.6 3.2A4.5 4.5 0 0 0 3.5 6.3M4.2 8.6c0 1.9-.4 3.5-1 4.9M6.1 7.1c.1 2.7-.4 5-1.3 6.9"/></svg> Confirm with passkey';
+const COIN_NET=Object.fromEntries(ASSETS.map(a=>[a.coin,netName(a.net)]));
+const PK_ICON='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 1.8a4.5 4.5 0 0 1 4.5 4.5c0 2.6-.7 5-2 7"/><path d="M8 4.4a1.9 1.9 0 0 1 1.9 1.9c0 2.3-.6 4.5-1.7 6.4M5.6 3.2A4.5 4.5 0 0 0 3.5 6.3M4.2 8.6c0 1.9-.4 3.5-1 4.9M6.1 7.1c.1 2.7-.4 5-1.3 6.9"/></svg>';
+const WAL_ICON='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="12" height="8.4" rx="1.6"/><path d="M2 6.6h12"/><path d="M11 9.6h1.4"/></svg>';
+/* 签名发生在哪儿，按钮就说哪儿：Atara 钱包是 passkey，外接钱包是它自己的弹窗。
+   对 MetaMask 用户说「Confirm with passkey」是在说一个他没有的东西 */
+const isExt=()=>WALLET_KIND==='ext';
+/* 三种签名归属，按钮说的必须是其中真的那一种：
+   外接钱包 → 它自己的弹窗；Atara 钱包 + passkey → passkey；
+   Atara 钱包还没 passkey → 先补一个，否则「你的钥匙你签」这句话在这条路上不成立 */
+const needsPk=()=>!isExt()&&!HAS_PK;
+const pkLabel=()=>isExt()
+  ? WAL_ICON+' Sign in your wallet'
+  : needsPk()
+    ? PK_ICON+' Add a passkey to approve'
+    : PK_ICON+' Confirm with passkey';
 const amtParts=(amt,coin)=>coin
   ? {v:(+amt).toLocaleString(), u:coin, pos:'post'}
   : {v:(+amt).toLocaleString(), u:'$',  pos:'pre'};
 /* 法币这一腿从你自己的银行账户走，不经过我们——所以它是一句陈述，不是一张卡。
    同币种的账户优先说出来；没有同币种的就说明是你的银行在换汇 */
 const fundLine=ccy=>{
-  const mine=PAYEES.bank.filter(x=>x.self);
+  const mine=PAYEES.bank;
   const same=mine.find(b=>b.ccy===ccy);
   if(same) return `Paid from your ${same.bank} account ${same.no} — bank to bank, never through Atara`;
   const any=mine[0];
@@ -6163,19 +6717,18 @@ let PAY_LIST=[], PAY_I=0, PAY_AMT=0, PAY_FUND=null, PAY_WHY='';
 ['lock','confirm'].forEach(id=>{
   const el=document.getElementById(id); if(el)document.body.appendChild(el);
 });
-/* 支付密码。原型演示件：只存在这个变量里，不落盘、不出网、不做任何真实凭据的校验。
-   每笔支付要它 + Passkey 两道，会话解锁也用它。 */
-/* 演示账户开户时就设好了密码（跟邀请码一样是公开的演示值），
-   收银台只负责「问」，不负责「设」——在付款那一刻现场创建密码是很怪的 */
-let PAY_PW='2468';
+/* 会话锁的密码。它只解锁这块界面，签不了任何东西——转账与额度一律由 passkey 签名。
+   叫「支付密码」是早期的错名：代码里它从来没进过任何一条支付路径。
+   原型演示件：只存在这个变量里，不落盘、不出网。 */
+function setPayPw(v){PAY_PW=v||'';try{sessionStorage.setItem('atara-pw',PAY_PW)}catch(_){}}
 function openPwSetup(){
   const set=!!PAY_PW;
   const m=document.createElement('div'); m.id='pwmodal'; m.className='pwmask';
-  m.innerHTML=`<div class="pwsheet" role="dialog" aria-modal="true" aria-label="Payment password">
-    <h3>${set?'Change payment password':'Set a payment password'}</h3>
-    <p>Unlocks a locked session, and stands in when no passkey is available. Demo only — it stays in this browser tab and is never sent anywhere.</p>
+  m.innerHTML=`<div class="pwsheet" role="dialog" aria-modal="true" aria-label="Session lock password">
+    <h3>${set?'Change lock password':'Set a lock password'}</h3>
+    <p>It unlocks this console when the session locks — it does not sign anything. Transfers and allowances are always signed by your passkey. Demo only: it stays in this browser tab and is never sent anywhere.</p>
     ${set?`<input type="password" class="pwin" id="pwold" placeholder="Current password" autocomplete="off">`:''}
-    <input type="password" class="pwin" id="pwnew" placeholder="${set?'New password':'Payment password'}" autocomplete="off">
+    <input type="password" class="pwin" id="pwnew" placeholder="${set?'New password':'Lock password'}" autocomplete="off">
     <input type="password" class="pwin" id="pwrep" placeholder="Repeat it" autocomplete="off">
     <div class="pwerr" id="pwerr"></div>
     <div class="pwrow">
@@ -6190,8 +6743,8 @@ function openPwSetup(){
     if(set&&old!==PAY_PW)return err('Current password does not match');
     if(a.length<4)return err('Use at least 4 characters');
     if(a!==b)return err('The two entries do not match');
-    PAY_PW=a; m.remove();
-    toast(set?'Payment password changed':'Payment password set');
+    setPayPw(a); m.remove();
+    toast(set?'Lock password changed':'Lock password set');
     /* renderRulesPage 只产出 HTML，挂载的是 renderRules */
     if(document.getElementById('pwsub'))renderRules();
   };
@@ -6213,6 +6766,8 @@ function payCardFacts(c){
     draw:q?Math.min(100-(q?u/q*100:0),PAY_AMT/q*100):0,
     over:per!=null&&PAY_AMT>per};
 }
+/* 付款只能用还生效的额度。撤销过的 / 关掉的不进这个列表——
+   卡面上写着 Revoked，付款处却还能选它，是两处对同一件事说了不同的话 */
 function payCards(){return CARDS.filter(c=>c.on);}
 function paintPay(){
   const c=PAY_LIST[PAY_I]; if(!c)return;
@@ -6226,7 +6781,7 @@ function paintPay(){
     `<span class="pstop">${CHIP}<span class="psbank">${c.kind==='agent'?'Agent card':'Personal'}</span></span>`+
     `<span class="pswin"><b class="num">${money(f.u)}</b><em class="num">of ${money(f.q)} ${c.cycle}</em></span>`+
     `<span class="psbar"><i style="width:${f.used}%"></i><u style="width:${f.draw}%"></u></span>`+
-    `<span class="pslim">Up to <b class="num">${f.per?money(f.per):'any amount'}</b> per payment · to <b>${c.wl}</b></span>`+
+    `<span class="pslim">Up to <b class="num">${f.per?money(f.per):'any amount'}</b> per payment</span>`+
     `<span class="psmeta"><b>${c.name}</b>`+
       `<em><span>this</span> ${money(PAY_AMT)}</em>`+
       (f.over?'<span class="psover">over cap</span>':'')+`</span>`;
@@ -6296,7 +6851,7 @@ function requireVerify(why, bodyHTML, cb, opts){
   document.getElementById('psopts').classList.remove('open');
   if(PAY_LIST.length)paintPay(); else document.getElementById('psopts').innerHTML='';
   /* 动资金的签名走 Passkey；纯承诺类确认（接单）不动钱，普通按钮就够 */
-  document.getElementById('cok').innerHTML=o.plain||PK_LABEL;
+  document.getElementById('cok').innerHTML=o.plain||pkLabel();
   document.getElementById('cok').dataset.plain=o.plain?'1':'';
   PENDING_VERIFY=cb;
   document.getElementById('confirm').classList.add('show');
@@ -6308,10 +6863,23 @@ document.getElementById('confirm').addEventListener('click',e=>{
 document.getElementById('cok').onclick=ev=>{
   const b=ev.currentTarget;
   if(b.classList.contains('busy'))return;
+  const plain0=b.dataset.plain==='1';
+  /* 还没有 passkey：这一下先注册，装好了再让他签同一笔——不把人踢出这个弹窗 */
+  if(!plain0&&needsPk()){
+    b.classList.add('busy');
+    b.innerHTML='<span class="pkpulse"></span>Creating your passkey…';
+    setTimeout(()=>{
+      addPasskey();
+      b.classList.remove('busy'); b.innerHTML=pkLabel();
+      toast('Passkey added — it signs from now on');
+    },1500);
+    return;
+  }
   b.classList.add('busy');
   const orig=b.innerHTML;
   const plain=b.dataset.plain==='1';
-  b.innerHTML=plain?'<span class="pkpulse"></span>Confirming…':'<span class="pkpulse"></span>Waiting for Touch ID…';
+  b.innerHTML=plain?'<span class="pkpulse"></span>Confirming…'
+    :`<span class="pkpulse"></span>${isExt()?'Waiting for your wallet…':'Waiting for Touch ID…'}`;
   setTimeout(()=>{
     b.innerHTML=plain?'✓ Confirmed':'✓ Verified';
     setTimeout(()=>{
@@ -6655,17 +7223,17 @@ function releaseAgents(snap){
       kv:[['Locked',amt],['Other claims','0'],['Ledger height','71,402,118']],
       raw:['escrow_id   esc-'+ESCN,'locked      '+amt,'claims      0',
            'state       LOCKED  ready_to_release']}},
-   {n:'Screening Agent', d:'Payout address · sanctions · card', v:'Pass',
-    m:'payout address is clean, no sanctions hit, and the amount sits inside the card that authorised it',
-    ev:{pull:'3 lists + card rules', rec:5, srcN:3,
+   {n:'Screening Agent', d:'Payout address · sanctions · allowance', v:'Pass',
+    m:'payout address is clean, no sanctions hit, and the amount sits inside the allowance that authorised it',
+    ev:{pull:'3 lists + allowance rules', rec:5, srcN:3,
       srcs:[{n:'OFAC / UN / EU',d:'0 hits at release time'},
             {n:'Payout address history',d:'seen before · 12 prior releases'},
-            {n:'Card rules',d:'per-payment cap and allowlist checked'}],
+            {n:'Allowance rules',d:'per-payment cap and window total checked'}],
       checks:[['Sanctions','0 hits'],['Payout address','known · 12 prior releases'],
-              ['Within card cap','Yes'],['Recipient on allowlist','Yes']],
+              ['Within per-payment cap','Yes'],['Within window total','Yes']],
       kv:[['Lists queried','3'],['Address age','14 months'],['Prior releases','12']],
       raw:['ofac/un/eu  0 hits   rechecked at release','payout      '+cp.name+'  first_seen 2025-06',
-           'card_rule   within cap  allowlist_ok','verdict     CLEAR']}},
+           'allowance   within cap  window_ok','verdict     CLEAR']}},
   ];
   /* 一个条件原子派一到两个 agent：谁去读那份证据，谁就出现在图上。
      参数直接读原子，别从 condText 里劈字符串——组合条件会劈出
@@ -8510,7 +9078,10 @@ function requireLogin(after,src){
   };
   const back=()=>{stage.hidden=true; stage.innerHTML=''; methods.hidden=false;};
   const backBtn='<button class="btn btn-ghost btn-sm gback" data-gback>Back</button>';
-  const doneThen=(h,ms)=>{show(h); setTimeout(enter,ms);};
+  /* 新开的账户没有任何额度——一份额度是用户签出来的链上授权，
+     平台替他生成不出来。演示种子数据属于「老用户」，注册流走完要清空 */
+  const freshAccount=()=>{CARDS=[]; CARD_ACTIVE=null;};
+  const doneThen=(h,ms)=>{freshAccount(); show(h); setTimeout(enter,ms);};
   const addrShort=()=>{const a=(typeof WALLET_ADDR==='string')?WALLET_ADDR:'TQ5n7Yc2eK';
     return a.slice(0,6)+'…'+a.slice(-4);};
   const FLOWS={
@@ -8584,7 +9155,7 @@ function requireLogin(after,src){
         if(i.value.replace(/\D/g,'').length<6) return;
         try{if(typeof PROFILE==='object')PROFILE.email=addr;}catch(_){}
         doneThen(`<span class="gok">✓</span><b>Wallet created for you</b>
-          <em><b class="gaddr num">${addrShort()}</b> · the email is only for codes and notices — add a passkey to hold the key yourself.</em>`,1100);
+          <em><b class="gaddr num">${addrShort()}</b> · the email is only for codes and notices — add a passkey and moving funds will need your fingerprint.</em>`,1100);
       };
     },
   };
@@ -8593,6 +9164,8 @@ function requireLogin(after,src){
     err.textContent='';
     const m=b.dataset.gm;
     setWalletKind(m==='create'||m==='google'?'atara':'ext');
+    setHasPk(m==='create');   /* 只有「创建钱包」那条路当场生成了 passkey */
+    setPayPw('');              /* 支付密码是之后自己设的，不是开户送的 */
     if(m==='create')FLOWS.create();
     else if(m==='imp')FLOWS.imp();
     else if(m==='google')FLOWS.google();
@@ -8603,7 +9176,7 @@ function requireLogin(after,src){
     const v=document.getElementById('gmail-i').value.trim();
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){err.textContent='That does not look like an email address.';return}
     err.textContent='';
-    setWalletKind('atara');
+    setWalletKind('atara'); setHasPk(false); setPayPw('');
     FLOWS.email(v);
   };
 })();
@@ -9329,7 +9902,7 @@ function bindFundVia(coin, amtText, st){
       ev.currentTarget.textContent='Copied';});
     const ok=document.getElementById('cok');
     if(v==='ext'){ok.innerHTML='I\u2019ve sent it'; ok.dataset.plain='1';}
-    else{ok.innerHTML=PK_LABEL; ok.dataset.plain='';}
+    else{ok.innerHTML=pkLabel(); ok.dataset.plain='';}
   };
   document.querySelectorAll('#confirm [data-fv]').forEach(x=>x.onclick=()=>paint(x.dataset.fv));
   paint(st.fundVia);
@@ -9982,10 +10555,12 @@ function openBackup(){
     openModal('Recovery phrase',
       `<div class="sqi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.6 4.6 5.6v5.5c0 4.4 3 8.5 7.4 9.8 4.4-1.3 7.4-5.4 7.4-9.8V5.6Z"/><path d="M12 8.4v4"/><circle cx="12" cy="15.6" r=".9" fill="currentColor" stroke="none"/></svg></div>
        <p class="acnote">Twelve words that restore this wallet anywhere — with or without Atara. Anyone who reads them can spend your funds, so write them down offline and never type them into a website.</p>
+       ${HAS_PK?'':'<p class="acnote">No passkey on this device yet, so there is nothing to check against — add one afterwards and the next export will ask for it.</p>'}
        <div class="dfoot">
-         <button class="btn btn-primary" data-k="go">Reveal with passkey</button>
+         <button class="btn btn-primary" data-k="go">${HAS_PK?'Reveal with passkey':'Show my phrase'}</button>
        </div>`,
-      ()=>{document.getElementById('mbody').querySelector('[data-k="go"]').onclick=reveal;},'msq');
+      ()=>{document.getElementById('mbody').querySelector('[data-k="go"]').onclick=
+        ()=>HAS_PK?reveal():show();},'msq');
   };
   const reveal=()=>{
     const b=document.getElementById('mbody');
@@ -10017,7 +10592,7 @@ function openBackup(){
       closeModal(); renderRules(); toast('Recovery phrase backed up');
     };
   };
-  BACKUP_AT ? reveal() : warn();
+  BACKUP_AT ? (HAS_PK?reveal():show()) : warn();
 }
 /* 撤销和开通是同一件事的两个方向：都在改链上谁能花你的钱，
    所以都要签一次。一键翻个标志位就撤掉，等于自己拆了「链上强制」这句话 */
