@@ -428,7 +428,8 @@ export function AllowanceModal({
   const useCoin = coins.includes(f.asset) ? f.asset : (coins[0] ?? 'USDT')
   const useNet = rows.some(c => c.code === f.network) ? f.network : (rows[0]?.code ?? '')
   const chain = rows.find(c => c.code === useNet) ?? null
-  const wtx = useWalletTx(chain)
+  const { data: myWallet } = useApi(() => ep.wallet(identity), [identity])
+  const wtx = useWalletTx(chain, myWallet?.address)
 
   const submit = async () => {
     setBad(null)

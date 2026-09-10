@@ -17,7 +17,11 @@ import type { ChainRow } from '../api/types'
  * 换一次合约，写死的前端会把钱 approve 给旧合约，而且要到锁币那一刻才发现。
  */
 
+const short = (a: string) => (a.length > 10 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a)
+
 const ERC20 = [
+  { name: 'decimals', type: 'function', stateMutability: 'view',
+    inputs: [], outputs: [{ type: 'uint8' }] },
   { name: 'approve', type: 'function', stateMutability: 'nonpayable',
     inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }],
     outputs: [{ type: 'bool' }] },
@@ -75,8 +79,12 @@ function readable(e: unknown): string {
 /**
  * @param info 这笔交易要发在哪条链上。挂单选了哪个网络就传哪条——
  *   不是「后端连着哪条」：一条挂单说自己在 BASE 上，钱包就该切到 BASE。
+ * @param expected 这个账户的地址。Privy 手里往往不止一个钱包——开了托管
+ *   钱包之后，每个人都多一个空的内置钱包。按下标取 wallets[0] 会随机拿到
+ *   其中一个，于是余额查的是空钱包、交易也从空钱包发出去，报「余额不足」
+ *   而人明明看着自己账上有钱。要按地址认。
  */
-export function useWalletTx(info: ChainRow | null) {
+export function useWalletTx(info: ChainRow | null, expected?: string) {
   const { wallets } = useWallets()
   const [step, setStep] = useState<TxStep>({ k: 'idle' })
 
@@ -86,8 +94,15 @@ export function useWalletTx(info: ChainRow | null) {
     if (!info.deployed) {
       throw new Error(`${info.name} has no escrow contract yet — nothing can be locked there`)
     }
-    const w = wallets[0]
+    const want = (expected ?? '').toLowerCase()
+    const w = (want && wallets.find(x => x.address.toLowerCase() === want)) || wallets[0]
     if (!w) throw new Error('No wallet connected — sign in with a wallet first')
+    if (want && w.address.toLowerCase() !== want) {
+      /* 登录的那个地址此刻没连上。硬用另一个钱包签会把币从别人的地址上扣，
+         或者当场失败——两种都比说清楚糟。 */
+      throw new Error(
+        `This account is ${short(expected!)}, but that wallet is not connected right now`)
+    }
     const chain = defineChain({
       id: info.chain_id,
       name: info.name,
@@ -144,7 +159,7 @@ export function useWalletTx(info: ChainRow | null) {
       wallet: createWalletClient({ account, chain, transport: custom(provider) }),
       chain,
     }
-  }, [info, wallets])
+  }, [info, wallets, expected])
 
   /**
    * approve 到位再锁币。
@@ -165,7 +180,17 @@ export function useWalletTx(info: ChainRow | null) {
       const bal = await pub.readContract({
         address: token, abi: ERC20, functionName: 'balanceOf', args: [account],
       })
-      if (bal < amount) throw new Error('Not enough of that coin in this wallet')
+      if (bal < amount) {
+        /* 把地址、代币合约和两个数一起说出来。只说「余额不足」的话，同一个
+           钱包里可能躺着好几个都叫 USDT 的代币，人对着其中一个的余额看，
+           永远想不通为什么不够。 */
+        const dec = await pub.readContract({
+          address: token, abi: ERC20, functionName: 'decimals',
+        }).catch(() => 18)
+        const fmt = (v: bigint) => (Number(v) / 10 ** Number(dec)).toLocaleString()
+        throw new Error(
+          `${short(account)} holds ${fmt(bal)} of ${short(token)} — this needs ${fmt(amount)}`)
+      }
 
       const allowed = await pub.readContract({
         address: token, abi: ERC20, functionName: 'allowance', args: [account, escrow],

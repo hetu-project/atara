@@ -68,7 +68,9 @@ export default function MakerOffer({
      币却锁在后端连的那条链上，前端只好去问「你连的是哪条」——四条链因此
      只能有一条。现在网络自己说清楚是哪条链。 */
   const chain = (chains?.chains ?? []).find(c => c.code === curNet) ?? null
-  const tx = useWalletTx(chain)
+  /* 传地址：Privy 手里往往不止一个钱包（开了托管钱包之后每人都多一个空的），
+     按下标取会拿到空钱包，余额查出来是 0。 */
+  const tx = useWalletTx(chain, w?.address)
   const onChain = chains?.impl === 'evm'
   /* 能结算哪些法币，由配置里选过的收款渠道决定——你没有那个国家的收款
      账户，就不该对外说你收那种钱。 */

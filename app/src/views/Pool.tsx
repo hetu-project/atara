@@ -148,7 +148,9 @@ function OfferCard({
 
   /* 下架要在挂单所在的那条链上发交易——不是后端连的那条。 */
   const { data: chains } = useApi(() => ep.chainInfo(), [])
-  const tx = useWalletTx((chains?.chains ?? []).find(c => c.code === o.network) ?? null)
+  const { data: myWallet } = useApi(() => ep.wallet(identity), [identity])
+  const tx = useWalletTx(
+    (chains?.chains ?? []).find(c => c.code === o.network) ?? null, myWallet?.address)
 
   const take = async () => {
     /* 先问身份再切视图：否则用户先被甩进一个空页面，登录门才追上来 */
