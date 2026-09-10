@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { KYC_CORP, KYC_IND, LISTING_STEPS, type Field, type Step } from './kycforms'
 import type { MakerApp } from '../api/types'
@@ -243,6 +243,33 @@ export default function MakerFlow({
   )
 }
 
+/**
+ * 上传行。用 <button> 而不是包着 input 的 <label>——样式表里有一条
+ * `.sf>label{display:block}`，优先级比 .sfup 高，会把这一行从 flex 压成
+ * block，右边那颗状态胶囊就贴到文字后面去了，推不到最右。
+ */
+function UploadRow({
+  f, v, onSet,
+}: { f: Field; v: string | string[] | undefined; onSet: (v: string) => void }) {
+  const pick = useRef<HTMLInputElement>(null)
+  return (
+    <div className="sf">
+      <button type="button" className={'sfup' + (v ? ' ok' : '')}
+        onClick={() => pick.current?.click()}>
+        <span><b>{f.l}</b><em>{typeof v === 'string' && v ? v : 'Tap to upload'}</em></span>
+        <span className="sfst">{v ? 'Uploaded' : 'Upload'}</span>
+      </button>
+      {/* 真上传：审核员要看到的是文件，不是一个占位字符串 */}
+      <input type="file" hidden ref={pick} accept="image/*,application/pdf"
+        onChange={async e => {
+          const file = e.target.files?.[0]
+          if (!file) return
+          try { onSet(await ep.upload(file)) } catch { /* 失败就保持未附 */ }
+        }} />
+    </div>
+  )
+}
+
 function FieldRow({
   f, v, onSet,
 }: { f: Field; v: string | string[] | undefined; onSet: (v: string | string[]) => void }) {
@@ -285,23 +312,7 @@ function FieldRow({
       </div>
     )
   }
-  if (f.type === 'upload') {
-    return (
-      <div className="sf">
-        <label className={'sfup' + (v ? ' ok' : '')} style={{ cursor: 'pointer' }}>
-          <span><b>{f.l}</b><em>{typeof v === 'string' && v ? v : 'Tap to upload'}</em></span>
-          <span className="sfst">{v ? 'Uploaded' : 'Upload'}</span>
-          {/* 真上传：审核员要看到的是文件，不是一个占位字符串 */}
-          <input type="file" hidden accept="image/*,application/pdf"
-            onChange={async e => {
-              const file = e.target.files?.[0]
-              if (!file) return
-              try { onSet(await ep.upload(file)) } catch { /* 失败就保持未附 */ }
-            }} />
-        </label>
-      </div>
-    )
-  }
+  if (f.type === 'upload') return <UploadRow f={f} v={v} onSet={onSet} />
   /* 日期不用原生 <input type="date">：它按浏览器语言渲染，中文系统上会显示
      「年/月/日」，跟这套全英文界面对不上。参照用的就是普通文本框 +
      YYYY-MM-DD 占位符，格式由这里自己校验。 */

@@ -3188,25 +3188,6 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
   #send:active:not([disabled]){transform:none}}
 
 
-  :root{color-scheme:dark}
-  *{box-sizing:border-box}
-  body{margin:0;background:#101114;color:#f4f4f5;
-    font:14px/1.6 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    -webkit-font-smoothing:antialiased}
-  .wrap{max-width:720px;margin:0 auto;padding:48px 24px 80px}
-  .brand{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#8a8a92;margin-bottom:28px}
-  h1{font-size:26px;font-weight:600;letter-spacing:-.02em;margin:0 0 6px}
-  .sub{color:#a1a1aa;margin:0 0 28px;font-size:13px}
-  .ok{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;
-    background:rgba(74,222,128,.1);color:#4ade80;font-size:12px;font-weight:500;margin-bottom:28px}
-  table{width:100%;border-collapse:collapse;margin-bottom:32px}
-  th,td{text-align:left;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.06);vertical-align:top}
-  th{width:150px;font-weight:400;color:#a1a1aa;font-size:13px}
-  td{font-weight:500}
-  .sheet{border:1px solid rgba(255,255,255,.06);border-radius:10px;background:#1b1c21;padding:28px}
-  .sheet .cap{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8a8a92;margin-bottom:18px}
-  .ln{height:9px;border-radius:3px;background:#26272d;margin-bottom:11px}
-  .note{color:#8a8a92;font-size:12px;margin-top:24px}
 
 /* ── React 挂载点 ──
    console.html 里 <main> 直接在 body 下，这里多了一层 #root。
