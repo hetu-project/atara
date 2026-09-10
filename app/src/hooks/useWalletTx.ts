@@ -4,7 +4,7 @@ import {
   createPublicClient, createWalletClient, custom, defineChain, http,
   type Address, type Hex,
 } from 'viem'
-import type { ChainInfo } from '../api/types'
+import type { ChainRow } from '../api/types'
 
 /**
  * 用用户自己的钱包发交易。
@@ -72,19 +72,26 @@ function readable(e: unknown): string {
   return raw.split('\n')[0]!.slice(0, 200)
 }
 
-export function useWalletTx(info: ChainInfo | null) {
+/**
+ * @param info 这笔交易要发在哪条链上。挂单选了哪个网络就传哪条——
+ *   不是「后端连着哪条」：一条挂单说自己在 BASE 上，钱包就该切到 BASE。
+ */
+export function useWalletTx(info: ChainRow | null) {
   const { wallets } = useWallets()
   const [step, setStep] = useState<TxStep>({ k: 'idle' })
 
   /** 拿到能签名的客户端，并确保钱包停在正确的链上。 */
   const connect = useCallback(async () => {
-    if (!info || info.impl !== 'evm') throw new Error('This deployment is not connected to a chain')
+    if (!info) throw new Error('Pick a network first')
+    if (!info.deployed) {
+      throw new Error(`${info.name} has no escrow contract yet — nothing can be locked there`)
+    }
     const w = wallets[0]
     if (!w) throw new Error('No wallet connected — sign in with a wallet first')
     const chain = defineChain({
       id: info.chain_id,
-      name: info.network,
-      nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+      name: info.name,
+      nativeCurrency: { name: info.native, symbol: info.native, decimals: 18 },
       rpcUrls: { default: { http: [info.rpc_url] } },
       blockExplorers: info.explorer
         ? { default: { name: 'explorer', url: info.explorer } } : undefined,
@@ -96,8 +103,29 @@ export function useWalletTx(info: ChainInfo | null) {
     if (parseInt(String(current), 16) !== info.chain_id) {
       try {
         await w.switchChain(info.chain_id)
-      } catch {
-        throw new Error(`Switch your wallet to ${info.network} (chain ${info.chain_id})`)
+      } catch (e) {
+        /* 钱包里没添加过这条链时，switch 会报 4902（不认识）。测试网尤其
+           常见——没人手动加过 BSC 测试网。这时该替他加上，而不是甩一句
+           「请自己切过去」让他去翻钱包设置。 */
+        const code = (e as { code?: number })?.code
+        const unknown = code === 4902 || /Unrecognized chain|not been added/i.test(String(e))
+        if (!unknown) {
+          throw new Error(`Switch your wallet to ${info.name} (chain ${info.chain_id})`)
+        }
+        try {
+          await provider.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: `0x${info.chain_id.toString(16)}`,
+              chainName: info.name,
+              nativeCurrency: { name: info.native, symbol: info.native, decimals: 18 },
+              rpcUrls: [info.rpc_url],
+              blockExplorerUrls: info.explorer ? [info.explorer] : [],
+            }],
+          } as never)
+        } catch {
+          throw new Error(`Add ${info.name} (chain ${info.chain_id}) to your wallet to continue`)
+        }
       }
     }
     const account = w.address as Address

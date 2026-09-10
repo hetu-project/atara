@@ -36,10 +36,8 @@ export default function MakerOffer({
   const { data: fiatCorridors } = useApi(() => ep.fiats(), [])
   const { data: w } = useApi(() => ep.wallet(identity), [identity])
   /* 接了链就走真交易：币由做市方自己的钱包锁进托管合约。
-     没接链（mock）时 chain.impl 是 mock，走原来那条后端记账的路。 */
-  const { data: chain } = useApi(() => ep.chainInfo(), [])
-  const tx = useWalletTx(chain ?? null)
-  const onChain = chain?.impl === 'evm'
+     没接链（mock）时没有任何一条链是 deployed，走原来那条后端记账的路。 */
+  const { data: chains } = useApi(() => ep.chainInfo(), [])
 
   const [side, setSide] = useState('')
   const [coin, setCoin] = useState('')
@@ -66,6 +64,12 @@ export default function MakerOffer({
   const catNets = cat?.find(a => a.code === curCoin)?.networks ?? []
   const nets = (terms?.nets ?? catNets).filter(n => catNets.includes(n))
   const curNet = nets.includes(net) ? net : (nets[0] ?? '')
+  /* 选中的网络就是要发交易的那条链。以前这里跟链是断开的：挂单写着 ETH，
+     币却锁在后端连的那条链上，前端只好去问「你连的是哪条」——四条链因此
+     只能有一条。现在网络自己说清楚是哪条链。 */
+  const chain = (chains?.chains ?? []).find(c => c.code === curNet) ?? null
+  const tx = useWalletTx(chain)
+  const onChain = chains?.impl === 'evm'
   /* 能结算哪些法币，由配置里选过的收款渠道决定——你没有那个国家的收款
      账户，就不该对外说你收那种钱。 */
   const tradableFiat = (fiatCorridors ?? []).flatMap(c => c.assets.map(a => a.code))
@@ -148,7 +152,7 @@ export default function MakerOffer({
            ③ 拿着号来建挂单，后端去链上核对锁了什么
          买单不锁币（法币腿走银行），一步就够。 */
       let extra: { offer_id?: string; lock_tx?: string } = {}
-      if (onChain && sell) {
+      if (onChain && sell && chain?.deployed) {
         const prep = await ep.prepareOffer(body, identity)
         const hash = await tx.lockListing({
           escrow: prep.escrow, token: prep.token,
@@ -203,7 +207,16 @@ export default function MakerOffer({
         </div>
 
         <div className="sf"><span className="sfl">Network</span>
-          {chips(nets, curNet, setNet)}</div>
+          {chips(nets, curNet, setNet)}
+          {chain && (
+            <span className="ad" style={{ fontSize: 11.5, color: 'var(--faint)' }}>
+              {chain.name} · chain {chain.chain_id}
+              {chain.testnet ? ' · testnet — these coins have no value' : ''}
+              {onChain && sell && !chain.deployed
+                ? ' · no escrow contract deployed here yet' : ''}
+            </span>
+          )}
+        </div>
 
         <div className="sf"><span className="sfl">Settles in</span>
           {chips(fiats, curFiat, setFiat)}</div>
@@ -235,10 +248,16 @@ export default function MakerOffer({
         {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
         <TxNote step={tx.step} explorer={chain?.explorer ?? ''} />
 
-        {onChain && sell && (
+        {onChain && sell && chain?.deployed && (
           <p className="rnote">
-            Posting sends two transactions from your own wallet on {chain?.network}:
+            Posting sends two transactions from your own wallet on {chain.name}:
             one to approve the escrow contract, one to lock the coins into it.
+          </p>
+        )}
+        {onChain && sell && chain && !chain.deployed && (
+          <p className="rnote" style={{ color: 'var(--warn)' }}>
+            No escrow contract is deployed on {chain.name} yet, so coins cannot be locked
+            there. Pick another network, or deploy to this one first.
           </p>
         )}
 

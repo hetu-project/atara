@@ -144,8 +144,9 @@ function OfferCard({
   const ceiling = Math.round(Number(o.fiat_ceiling))
   const docsOn = Object.values(m.docs ?? {}).filter(Boolean).length
 
-  const { data: chain } = useApi(() => ep.chainInfo(), [])
-  const tx = useWalletTx(chain ?? null)
+  /* 下架要在挂单所在的那条链上发交易——不是后端连的那条。 */
+  const { data: chains } = useApi(() => ep.chainInfo(), [])
+  const tx = useWalletTx((chains?.chains ?? []).find(c => c.code === o.network) ?? null)
 
   const take = async () => {
     /* 先问身份再切视图：否则用户先被甩进一个空页面，登录门才追上来 */

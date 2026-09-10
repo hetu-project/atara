@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import * as ep from '../api/endpoints'
+import { useApi } from '../hooks/useApi'
 import { FIAT_RAILS, FX_IDX } from './kycforms'
 
 /**
@@ -32,7 +34,7 @@ export const blankListing = (): Listing => ({
 
 export const DEMO_LISTING: Partial<Listing> = {
   dir: ['Sell crypto', 'Buy crypto'], coins: ['USDT', 'BTC'], lo: '1000', hi: '50000',
-  nets: ['TRON', 'ETH'], rails: ['ICBC', 'China Merchants Bank', 'HSBC', 'DBS'], agree: true,
+  nets: ['BSC', 'BSC-TESTNET'], rails: ['ICBC', 'China Merchants Bank', 'HSBC', 'DBS'], agree: true,
 }
 
 const num = (v: string) => Number(String(v).replace(/[,，\s]/g, ''))
@@ -130,6 +132,16 @@ export function ListingStep({
     arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]
   const cls = (id: string) => 'sf' + (bad === id ? ' bad' : '')
 
+  const { data: chains } = useApi(() => ep.chainInfo(), [])
+  const rows = chains?.chains ?? []
+  const netCodes = rows.map(c => c.code)
+  /* 哪几条链上真的能锁币，得说出来：没有托管合约的链上挂不了卖单，
+     等到签名时被拒才知道就太晚了。 */
+  const live = rows.filter(c => c.deployed).map(c => c.name)
+  const netHint = !rows.length ? ''
+    : live.length ? `Coins can only be locked on: ${live.join(' · ')}`
+      : 'No escrow contract is deployed yet — listings here will not lock coins on chain'
+
   if (step === 1) {
     const px = d.pricing === 'Float'
       ? `Index ${num(d.spread) >= 0 ? '+' : ''}${d.spread}%`
@@ -182,8 +194,14 @@ export function ListingStep({
         <span className="err">Min must be below max</span></div>
 
       <div className={cls('sf-nets')}><span className="sfl">Networks</span>
-        <Chips opts={['TRON', 'ETH', 'POLYGON']} sel={d.nets}
+        {/* 链的名单来自后端，不写死：这里写死一份、挂单表单写死另一份，
+            两处迟早不一样；而且写死的名字（TRON / POLYGON）跟实际发交易的
+            那条链根本对不上——挂单说 ETH，币锁在别的链上。 */}
+        <Chips opts={netCodes} sel={d.nets}
           onPick={v => set({ nets: flip(d.nets, v) })} />
+        <span className="ad" style={{ fontSize: 11.5, color: 'var(--faint)' }}>
+          {netHint}
+        </span>
         <span className="err">Select at least one network</span></div>
 
       <div className={cls('sf-pricing')}><span className="sfl">Pricing</span>

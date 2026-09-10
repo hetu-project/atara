@@ -214,18 +214,33 @@ export interface MatchResult {
 }
 
 /** money.Asset。注意 USDRate 在后端标了 json:"-"，不出参——前端拿不到汇率。 */
-/** 前端自己发交易要用的网络与合约地址。来自 GET /catalog/chain。 */
-export interface ChainInfo {
-  /** mock 时所有地址都是空的——那条链上没有合约可调，这一版不发交易。 */
-  impl: 'mock' | 'evm'
-  network: string
+/** 一条链，以及我们在上面部署了没有。来自 GET /catalog/chain。 */
+export interface ChainRow {
+  /** 网络码。挂单、订单里写的就是它。 */
+  code: string
+  name: string
+  /** EIP-155 链号。钱包切链认的是它，不是名字。 */
   chain_id: number
-  rpc_url: string
+  testnet: boolean
   explorer: string
+  /** 这条链上付 gas 用的币。钱包添加链时要用。 */
+  native: string
+  /**
+   * 有没有托管合约。「支持这条链」和「这条链上能挂卖单」不是一回事——
+   * 没部署就锁不了币，界面要照实说，不能让人填完了才在签名时被拒。
+   */
+  deployed: boolean
   escrow: string
   spending: string
+  rpc_url: string
   tokens: Record<string, { address: string; decimals: number }>
   updated_at?: string
+}
+
+export interface ChainInfo {
+  /** mock 时没有任何一条链是 deployed —— 这一版不发交易。 */
+  impl: 'mock' | 'evm'
+  chains: ChainRow[]
 }
 
 /** /offers/prepare 的回执：去锁币要用的全部参数。 */
