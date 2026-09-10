@@ -68,10 +68,11 @@ export function PwSetup({
       <div className="pwsheet" role="dialog" aria-modal="true" aria-label="Session lock password">
         <h3>{had ? 'Change lock password' : 'Set a lock password'}</h3>
         {why ? <p className="pwwhy">{why}</p> : null}
+        {/* 文案逐字取自参照的 openPwSetup，不改写。 */}
         <p>
-          It unlocks this console when the session locks — <b>it does not approve anything</b>.
-          Transfers and allowances always go through your wallet. Demo only: it stays in this
-          browser tab and is never sent anywhere.
+          It unlocks this console when the session locks — it does not approve anything.
+          Transfers and allowances always go through your passkey. Demo only: it stays in
+          this browser tab and is never sent anywhere.
         </p>
         {had && (
           <input type="password" className="pwin" placeholder="Current password" autoComplete="off"
@@ -123,7 +124,7 @@ export function LockScreen({
         <h3>Enter your password</h3>
         <p>
           For your security, this session locks after {span} of inactivity.
-          Enter your password to continue.
+          {' '}Enter your password to continue.
         </p>
         <input type="password" className={'pwin' + (shake ? ' shake' : '')} key={shake}
           autoFocus autoComplete="off" aria-label="Password" value={v}
@@ -131,6 +132,8 @@ export function LockScreen({
           onKeyDown={e => { if (e.key === 'Enter') submit() }} />
         <div className="pwerr">{err}</div>
         <button className="btn btn-primary lkok" onClick={submit}>Unlock</button>
+        {/* 参照在锁屏上直接把演示密码写出来——它是演示件，藏起来只会让人卡住 */}
+        <div className="pwhint">Demo password {pw}</div>
         {/* 共用屏幕的场景下，回到座位的可能不是同一个人 */}
         <button className="lkout" onClick={onSignOut}>Not you? Sign out</button>
       </div>
@@ -151,7 +154,10 @@ export function useSessionLock(signed: boolean) {
 
   const lock = useCallback(() => {
     if (!readPw()) {
-      setSetup({ why: 'Set a password first — without one, nothing could unlock the console again.' })
+      setSetup({
+        why: 'Set a password first — without one, or a passkey, '
+          + 'nothing could unlock the console again.',
+      })
       return
     }
     setLocked(true)
