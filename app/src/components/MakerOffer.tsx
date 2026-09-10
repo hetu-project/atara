@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
 import { FIAT_RAILS, FX_IDX } from './kycforms'
@@ -41,7 +41,11 @@ export default function MakerOffer({
   const [px, setPx] = useState('')
   const [qty, setQty] = useState('')
   const [min, setMin] = useState('')
-  const [bad, setBad] = useState('')
+  /* 出错的行，外加它这一次为什么错。一行可能有两种错法（没填 / 填过头），
+     只挂一句固定文案的话，空着不填会被告知「不能超过挂单总额」——
+     那句话在说另一件事，人会盯着那个数字反复改。参照就是这么写的，
+     照抄过来的第一天就有人被它挡住。 */
+  const [bad, setBad] = useState<{ id: string; msg?: string }>({ id: '' })
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -72,6 +76,22 @@ export default function MakerOffer({
   const spread = terms?.pricing === 'Float' ? (parseFloat(String(terms.spread)) || 0) : 0
   const quote = +(idx * (1 + spread / 100)).toFixed(2)
 
+  /* 预填要真的写进 state。渲染时写 value={px || quote} 看着一样，但那样
+     框子就清不掉了：删空 → px 变成 ''  → 立刻又渲染回建议价，下一个键
+     反而接在 7.34 后面变成 7.345。
+     换了币或法币，计价基准变了，旧价作废按新指数重填——参照也是这么做的。
+     最小成交额只填一次：条款里那行「Per-trade limits (CNY)」问的就是这个数，
+     让人再抄一遍没道理，而空着的后果就是提交时被一句报错挡住。 */
+  const basis = `${curCoin}|${curFiat}`
+  const seeded = useRef('')
+  useEffect(() => {
+    if (!curCoin || !curFiat || seeded.current === basis) return
+    const first = !seeded.current
+    seeded.current = basis
+    setPx(String(quote))
+    if (first && terms?.lo) setMin(String(num(terms.lo)))
+  }, [basis, quote, curCoin, curFiat, terms])
+
   if (cat && (!coins.length || !fiats.length)) {
     return (
       <div className="deal mine xopen">
@@ -89,12 +109,26 @@ export default function MakerOffer({
   }
 
   const post = async () => {
-    const p = num(px || String(quote)), q = num(qty), m = num(min)
+    const p = num(px), q = num(qty), m = num(min)
     setErr('')
-    if (!(p > 0)) { setBad('of-px'); return }
-    if (!(q > 0) || (sell && q > avail)) { setBad('of-qty'); return }
-    if (!(m > 0) || m > q * p) { setBad('of-min'); return }
-    setBad(''); setBusy(true)
+    if (!(p > 0)) { setBad({ id: 'of-px' }); return }
+    if (!(q > 0)) { setBad({ id: 'of-qty', msg: 'Enter a quantity' }); return }
+    if (sell && q > avail) {
+      setBad({ id: 'of-qty', msg: `More than you hold — ${avail.toLocaleString()} ${curCoin}` })
+      return
+    }
+    if (!(m > 0)) {
+      setBad({ id: 'of-min', msg: 'Enter the smallest trade you will accept' })
+      return
+    }
+    if (m > q * p) {
+      setBad({
+        id: 'of-min',
+        msg: `Must be below the listing total — ${sym}${(q * p).toLocaleString()}`,
+      })
+      return
+    }
+    setBad({ id: '' }); setBusy(true)
     try {
       const o = await ep.createOffer({
         side: sell ? 'sell' : 'buy', asset: curCoin, fiat: curFiat,
@@ -111,11 +145,13 @@ export default function MakerOffer({
     <div className="sfchips">
       {list.map(x => (
         <button key={x} type="button" className={'sfchip' + (sel === x ? ' on' : '')}
-          onClick={() => { setBad(''); pick(x) }}>{x}</button>
+          onClick={() => { setBad({ id: '' }); pick(x) }}>{x}</button>
       ))}
     </div>
   )
-  const cls = (id: string) => 'sf' + (bad === id ? ' bad' : '')
+  const cls = (id: string) => 'sf' + (bad.id === id ? ' bad' : '')
+  /** 这一行现在该说什么：出错了就说这一次错在哪，没出错就是它的常驻提示。 */
+  const errMsg = (id: string, dflt: string) => (bad.id === id && bad.msg) || dflt
 
   return (
     <div className="deal mine xopen">
@@ -131,7 +167,7 @@ export default function MakerOffer({
 
         <div className="sf"><span className="sfl">Asset</span>
           {/* 换了计价基准旧价就作废，清掉让它按新指数重新预填 */}
-          {chips(coins, curCoin, v => { setCoin(v); setPx('') })}
+          {chips(coins, curCoin, setCoin)}
           {sell && (
             <span className="ad num" style={{ fontSize: 11.5, color: 'var(--faint)' }}>
               {avail.toLocaleString()} {curCoin} available — locks into escrow while listed
@@ -143,12 +179,12 @@ export default function MakerOffer({
           {chips(nets, curNet, setNet)}</div>
 
         <div className="sf"><span className="sfl">Settles in</span>
-          {chips(fiats, curFiat, v => { setFiat(v); setPx('') })}</div>
+          {chips(fiats, curFiat, setFiat)}</div>
 
         <div className={cls('of-px')}>
           <span className="sfl">Your rate · {sym} per {curCoin}</span>
-          <input type="text" inputMode="decimal" value={px || String(quote)}
-            placeholder={String(quote)} onChange={e => { setBad(''); setPx(e.target.value) }} />
+          <input type="text" inputMode="decimal" value={px}
+            placeholder={String(quote)} onChange={e => { setBad({ id: '' }); setPx(e.target.value) }} />
           <span className="num" style={{ display: 'block', marginTop: 5, fontSize: 11.5, color: 'var(--faint)' }}>
             Index {idx.toLocaleString()}
             {terms?.pricing === 'Float'
@@ -160,14 +196,14 @@ export default function MakerOffer({
 
         <div className={cls('of-qty')}><span className="sfl">Size · {curCoin}</span>
           <input type="text" inputMode="decimal" value={qty} placeholder="Quantity"
-            onChange={e => { setBad(''); setQty(e.target.value) }} />
-          <span className="err">{sell ? 'More than you hold' : 'Enter a quantity'}</span></div>
+            onChange={e => { setBad({ id: '' }); setQty(e.target.value) }} />
+          <span className="err">{errMsg('of-qty', 'Enter a quantity')}</span></div>
 
         <div className={cls('of-min')}>
           <span className="sfl">Minimum per trade · {curFiat}</span>
           <input type="text" inputMode="numeric" value={min} placeholder="Min lot"
-            onChange={e => { setBad(''); setMin(e.target.value) }} />
-          <span className="err">Must be below the listing total</span></div>
+            onChange={e => { setBad({ id: '' }); setMin(e.target.value) }} />
+          <span className="err">{errMsg('of-min', 'Must be below the listing total')}</span></div>
 
         {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
 
