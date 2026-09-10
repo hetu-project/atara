@@ -94,6 +94,36 @@ export default function MakerFlow({
   /* 交完之后不是直接关掉——参照会在会话里留一张回执卡（receiptCard）。
      提交完界面一片空白，人会以为什么都没发生，然后再点一遍。 */
   const reviewing = (app?.kyc_done && !app.kyc_ok) || (app?.listing_done && !app.approved)
+  /* 身份材料现在是交完即通过，所以这张卡不能再说「审核中」。
+     一个已经放行的账户被告知在排队，下一步能下单反而成了意外。 */
+  const cleared = app?.kyc_ok && !app.listing_done
+  if (cleared) {
+    return (
+      <div className="deal mine xopen">
+        <div className="row1">
+          <span className="st">Identity verification</span>
+          <span>Cleared</span>
+          <button className="sayic" style={{ marginLeft: 'auto' }} aria-label="Close" onClick={onClose}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+              strokeWidth="1.5" strokeLinecap="round" aria-hidden><path d="m4 4 8 8M12 4l-8 8" /></svg>
+          </button>
+        </div>
+        <div className="open"><div className="openin"><div className="pad">
+          <p className="sellm-lead">
+            Your identity is verified — you can trade now.
+          </p>
+          <p className="sellm-lead">
+            Posting your own listings is a separate step: it decides what prices and sizes
+            you show the market, so that one is still reviewed by a person.
+          </p>
+          <div className="dfoot">
+            <button className="btn btn-ghost btn-sm" onClick={onClose}>Close</button>
+            <button className="btn btn-primary" onClick={() => onDone()}>Set up listings →</button>
+          </div>
+        </div></div></div>
+      </div>
+    )
+  }
   if (reviewing) {
     return (
       <div className="deal mine xopen">
