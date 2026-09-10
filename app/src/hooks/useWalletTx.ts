@@ -99,8 +99,14 @@ export function useWalletTx(info: ChainRow | null) {
     /* 切链要在拿 provider 之后：Privy 的 switchChain 换的是这个钱包的当前链，
        provider 拿早了还指着旧链，交易会发到另一条链上去。 */
     const provider = await w.getEthereumProvider()
-    const current = await provider.request({ method: 'eth_chainId' })
-    if (parseInt(String(current), 16) !== info.chain_id) {
+    /* eth_chainId 各家回的形式不一样：多数是 "0x61"，也有回十进制字符串
+       "97" 或直接一个数字的。一律按 16 进制解析的话，"97" 会被读成 151，
+       于是明明在对的链上也判成不对。 */
+    const raw = await provider.request({ method: 'eth_chainId' })
+    const current = typeof raw === 'string' && raw.startsWith('0x')
+      ? parseInt(raw, 16)
+      : Number(raw)
+    if (current !== info.chain_id) {
       try {
         await w.switchChain(info.chain_id)
       } catch (e) {
@@ -110,7 +116,10 @@ export function useWalletTx(info: ChainRow | null) {
         const code = (e as { code?: number })?.code
         const unknown = code === 4902 || /Unrecognized chain|not been added/i.test(String(e))
         if (!unknown) {
-          throw new Error(`Switch your wallet to ${info.name} (chain ${info.chain_id})`)
+          /* 把钱包此刻在哪条链上一起说出来。只说「请切到 X」的话，人已经在
+             X 上时这句话是无解的——上一版就是这样，原因其实在别处。 */
+          throw new Error(
+            `Wallet is on chain ${current}; this listing needs ${info.name} (chain ${info.chain_id})`)
         }
         try {
           await provider.request({

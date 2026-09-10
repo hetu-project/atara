@@ -1,4 +1,5 @@
 import { PrivyProvider } from '@privy-io/react-auth'
+import { base, bsc, bscTestnet, mainnet } from 'viem/chains'
 import type { ReactNode } from 'react'
 
 /**
@@ -42,6 +43,19 @@ const secure = typeof window !== 'undefined' && window.isSecureContext
    但用量和封禁都会算到人家头上。 */
 const WC_ID = import.meta.env.VITE_WC_PROJECT_ID ?? ''
 
+/**
+ * 告诉 Privy 我们在哪几条链上做事。
+ *
+ * 不声明的话 Privy 只认以太坊主网，`switchChain(97)` 会因为「这条链不在
+ * 配置里」直接抛错——**跟钱包实际停在哪条链上无关**。人明明已经在 BSC
+ * 测试网上了，界面还在喊「请切到 BSC 测试网」，说的是反的。
+ *
+ * 这一份要跟后端 money/chains.go 那四条对上。链本身的定义（chainId、RPC、
+ * 浏览器）是公开常识，用 viem 现成的；哪条链上有我们的合约是另一回事，
+ * 那个由后端的 chain_deployments 说了算，不在这里写。
+ */
+const CHAINS = [bsc, mainnet, base, bscTestnet] as const
+
 export default function PrivyRoot({ children }: { children: ReactNode }) {
   return (
     <PrivyProvider
@@ -57,6 +71,9 @@ export default function PrivyRoot({ children }: { children: ReactNode }) {
         // 这样「身份就是地址」这条前提对所有登录方式都成立——
         // 后端的账户表以地址为唯一键，拿不到地址就等于开不了户。
         embeddedWallets: { createOnLogin: secure ? 'all-users' : 'off' },
+        supportedChains: [...CHAINS],
+        // 默认落在测试网：这一版的合约只部在那儿，登录后不必先切一次链。
+        defaultChain: bscTestnet,
         // 手机钱包扫码
         externalWallets: { walletConnect: { enabled: true } },
         ...(WC_ID ? { walletConnectCloudProjectId: WC_ID } : {}),
