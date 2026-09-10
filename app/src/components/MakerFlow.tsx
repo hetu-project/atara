@@ -56,6 +56,9 @@ export default function MakerFlow({
   const [form, setForm] = useState<Record<string, string | string[]>>({})
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  /* 从「身份已通过」那张卡进挂单配置。原来那颗按钮调的是 onDone——
+     而 onDone 只是重新拉一次数据，拉完状态没变，又渲染同一张卡，原地打转。 */
+  const [toListing, setToListing] = useState(false)
 
   const steps: Step[] = phase === 'kyc'
     ? (kind === 'Corporate' ? KYC_CORP : KYC_IND)
@@ -96,7 +99,7 @@ export default function MakerFlow({
   const reviewing = (app?.kyc_done && !app.kyc_ok) || (app?.listing_done && !app.approved)
   /* 身份材料现在是交完即通过，所以这张卡不能再说「审核中」。
      一个已经放行的账户被告知在排队，下一步能下单反而成了意外。 */
-  const cleared = app?.kyc_ok && !app.listing_done
+  const cleared = app?.kyc_ok && !app.listing_done && !toListing
   if (cleared) {
     return (
       <div className="deal mine xopen">
@@ -118,7 +121,12 @@ export default function MakerFlow({
           </p>
           <div className="dfoot">
             <button className="btn btn-ghost btn-sm" onClick={onClose}>Close</button>
-            <button className="btn btn-primary" onClick={() => onDone()}>Set up listings →</button>
+            {/* 切到挂单配置要把步数归零。不归零的话它还停在身份那九步的第 9 步，
+                而挂单配置只有两步，卡片会显示「9 / 2」而且一个字段都没有。 */}
+            <button className="btn btn-primary"
+              onClick={() => { setStep(0); setForm({}); setErr(''); setToListing(true) }}>
+              Set up listings →
+            </button>
           </div>
         </div></div></div>
       </div>
