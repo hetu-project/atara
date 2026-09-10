@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
+import { ICopy } from './icons'
 import type { Allowance, Payee, Wallet, WalletAsset } from '../api/types'
 
 /**
@@ -23,6 +24,16 @@ const ADDR_RE: Record<string, RegExp> = {
   BTC: /^(bc1[ac-hj-np-z02-9]{25,62}|[13][1-9A-HJ-NP-Za-km-z]{25,34})$/,
 }
 const shortAddr = (a: string) => (a.length > 16 ? `${a.slice(0, 8)}…${a.slice(-6)}` : a)
+
+/* 网络的全名。芯片上写 POLYGON 是代码，写 Polygon 才是这条链的名字。 */
+const NET_NAME: Record<string, string> = {
+  BTC: 'Bitcoin', ETH: 'Ethereum', POLYGON: 'Polygon', TRON: 'TRON',
+  BSC: 'BNB Chain', ARBITRUM: 'Arbitrum', BASE: 'Base', OPTIMISM: 'Optimism',
+}
+const netName = (n: string) => NET_NAME[n] ?? n
+/* 地址格式按链族走，不按币种——同一条链上所有代币共用一个地址。
+   按币种算是上一版的 bug：USDT 和 USDC 都在 Polygon 上，却给出两个地址。 */
+const CHAIN_OF = (n: string) => (n === 'TRON' ? 'tron' : n === 'BTC' ? 'btc' : 'evm')
 
 function Sheet({
   title, onClose, children,
@@ -83,7 +94,12 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
           onPick={c => { setCoin(c); setNet('') }} />
       </div>
       <div className="sf"><span className="sfl">Network</span>
-        <Chips opts={nets} on={useNet} onPick={setNet} />
+        <div className="sfchips">
+          {nets.map(n => (
+            <button key={n} type="button" className={'sfchip' + (n === useNet ? ' on' : '')}
+              onClick={() => setNet(n)}>{netName(n)}</button>
+          ))}
+        </div>
       </div>
 
       <div className="depaddr">
@@ -97,16 +113,28 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
         </div>
         <div className="depmeta">
           <span className="sfl">Your wallet address</span>
-          <code>{addr}</code>
-          <button className="btn btn-sm"
-            onClick={() => navigator.clipboard?.writeText(addr)}>Copy</button>
+          <div className="depline">
+            <code>{addr}</code>
+            <button className="btn btn-secondary btn-sm btn-icon" title="Copy address"
+              aria-label="Copy wallet address"
+              onClick={() => navigator.clipboard?.writeText(addr)}><ICopy /></button>
+          </div>
+          {/* 同一条链族共用一个地址。不说这句，用户会以为换个网络就要换地址，
+              于是每换一次都重新复制一遍。 */}
+          {CHAIN_OF(useNet) === 'evm' && (
+            <span className="depsame">The same address works on every EVM network.</span>
+          )}
         </div>
       </div>
 
-      <p className="rnote">
+      <p className="rnote depnote">
         Your own address — funds land in your wallet, not with us.
-        Receives <b>{useCoin}</b> on <b>{useNet}</b> only. Sending another asset or another
-        network cannot be recovered.
+        Receives <b>{useCoin}</b> on <b>{netName(useNet)}</b> only.
+        {/* 还没有这个币种的余额行时说清楚：钱到了才会长出来，
+            否则收完款回到账户页看不到那一行，会以为丢了。 */}
+        {!held.some(h => h.asset === useCoin)
+          && ` A ${useCoin} balance on ${netName(useNet)} appears once the first deposit confirms.`}
+        {' '}Sending another asset or another network cannot be recovered.
       </p>
     </Sheet>
   )
@@ -325,21 +353,23 @@ export function SendModal({
 // ── 额度 ────────────────────────────────────────────────────────────
 
 export function AllowanceModal({
-  identity, edit, asset, onClose, onDone,
+  identity, edit, asset, walletKind, onClose, onDone, onRevoke,
 }: {
   identity: string
   edit?: Allowance
   asset: string
+  walletKind: string
   onClose: () => void
   onDone: () => void
+  onRevoke?: () => void
 }) {
+  const me = edit?.spender === 'Me'
   const [f, setF] = useState({
     spender: edit?.spender ?? 'New agent',
     per_payment: edit?.per_payment ?? '500',
     window_cap: edit?.window_cap ?? '2000',
     cycle: (edit?.cycle ?? 'weekly') as 'weekly' | 'monthly',
     expires: edit?.expires_at ? '90 days' : '90 days',
-    recipients: edit?.recipients ?? 'Any',
   })
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
@@ -358,7 +388,9 @@ export function AllowanceModal({
         spender: f.spender.trim(), kind: 'agent',
         per_payment: f.per_payment, window_cap: f.window_cap,
         cycle: f.cycle, expires: f.expires === 'Not set' ? '' : f.expires,
-        recipients: f.recipients,
+        /* 收款方范围这一排参照删掉了。接口还收这个字段，就按「不限」发过去，
+           而不是把一个界面上问不到的选择留成空值。 */
+        recipients: 'Any',
       }, edit?.id, identity)
       onDone()
     } catch (e) {
@@ -366,40 +398,44 @@ export function AllowanceModal({
     } finally { setBusy(false) }
   }
 
+  const live = edit?.status === 'live'
+
   return (
     <Sheet title={edit ? 'Edit allowance' : 'New allowance'} onClose={onClose}>
       <div className="sf"><span className="sfl">Spender</span>
-        <input type="text" value={f.spender} autoComplete="off"
+        {/* 「Me」是自己的支出策略，改名没有意义——那不是一个可以改叫别的名字的对象 */}
+        <input type="text" value={f.spender} autoComplete="off" spellCheck={false} disabled={me}
           onChange={e => setF({ ...f, spender: e.target.value })} /></div>
+
       <div className="sf"><span className="sfl">Max per payment ({asset})</span>
         <input type="text" value={f.per_payment} inputMode="numeric"
           onChange={e => setF({ ...f, per_payment: e.target.value })} /></div>
+
+      {/* 周期跟上限是一件事——「每周 2000」拆成两行读起来是两个独立设置 */}
       <div className="sf"><span className="sfl">Max per window ({asset})</span>
         <input type="text" value={f.window_cap} inputMode="numeric"
-          onChange={e => setF({ ...f, window_cap: e.target.value })} /></div>
-      <div className="sf"><span className="sfl">Window</span>
+          onChange={e => setF({ ...f, window_cap: e.target.value })} />
         <Chips opts={['weekly', 'monthly']} on={f.cycle}
-          onPick={c => setF({ ...f, cycle: c as 'weekly' | 'monthly' })} /></div>
+          onPick={c => setF({ ...f, cycle: c as 'weekly' | 'monthly' })} />
+      </div>
+
       <div className="sf"><span className="sfl">Expires</span>
         <Chips opts={['30 days', '90 days', 'Not set']} on={f.expires}
           onPick={c => setF({ ...f, expires: c })} /></div>
-      <div className="sf"><span className="sfl">Recipients</span>
-        <Chips opts={['Any', 'Verified providers']} on={f.recipients}
-          onPick={c => setF({ ...f, recipients: c })} /></div>
-
-      {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
 
       <div className="dfoot">
+        {edit && onRevoke && (
+          <button className="btn btn-danger backbtn" onClick={onRevoke}>
+            {me ? (live ? 'Disable' : 'Enable') : (live ? 'Revoke' : 'Re-issue')}
+          </button>
+        )}
+        <span className="dnote" style={{ color: 'var(--warn)' }}>{err}</span>
         <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
-          {busy ? 'Signing…' : 'Sign allowance'}
+          {/* 签在哪儿由钱包类型决定：外部钱包是对支出合约 approve，
+              自建钱包才是 passkey 签账户策略。写错就是在教用户找一个不存在的弹窗。 */}
+          {busy ? 'Signing…' : walletKind === 'ext' ? 'Approve in wallet' : 'Sign with passkey'}
         </button>
       </div>
-      <p className="rnote">
-        {/* 额度是签进链上的支配权，不是平台的一张额度表——所以这一步要签名档，
-            而不是一句承诺。 */}
-        Signed by your wallet and enforced by the contract: spender, per-payment cap,
-        window total and expiry. Revoking takes effect on the next block.
-      </p>
     </Sheet>
   )
 }

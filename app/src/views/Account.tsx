@@ -219,7 +219,12 @@ export default function Account({ identity }: { identity: string }) {
         )}
         {sheet === 'allowance' && (
           <AllowanceModal identity={identity} asset={w?.assets?.[0]?.asset ?? 'USDT'}
+            walletKind={me?.wallet_kind ?? 'ext'}
             edit={editing ? card : undefined}
+            onRevoke={card ? async () => {
+              await ep.revokeAllowance(card.id, identity)
+              reload(); setSheet(''); setEditing(false)
+            } : undefined}
             onClose={() => { setSheet(''); setEditing(false) }}
             onDone={() => { reload(); setSheet(''); setEditing(false) }} />
         )}

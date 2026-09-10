@@ -3235,3 +3235,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 
 /* 设置密码弹窗里那句「为什么现在要设」——比正文重，因为它是这次打断的理由 */
 .pwwhy{color:var(--ink)!important;font-weight:500}
+
+/* 收款弹窗：地址与复制按钮同一行、EVM 同址提示（Ellie 更新后的 console.html）*/
+.depline{display:flex;align-items:flex-start;gap:8px;width:100%}
+.depsame{font-size:11.5px;color:var(--faint)}
+.depnote{margin-top:18px}
