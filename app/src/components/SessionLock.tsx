@@ -132,8 +132,6 @@ export function LockScreen({
           onKeyDown={e => { if (e.key === 'Enter') submit() }} />
         <div className="pwerr">{err}</div>
         <button className="btn btn-primary lkok" onClick={submit}>Unlock</button>
-        {/* 参照在锁屏上直接把演示密码写出来——它是演示件，藏起来只会让人卡住 */}
-        <div className="pwhint">Demo password {pw}</div>
         {/* 共用屏幕的场景下，回到座位的可能不是同一个人 */}
         <button className="lkout" onClick={onSignOut}>Not you? Sign out</button>
       </div>

@@ -29,11 +29,13 @@ export default function Settings({ identity }: { identity: string }) {
     ? `${Math.round(LOCK_IDLE / 60000)} minutes`
     : `${Math.round(LOCK_IDLE / 1000)} seconds`
 
-  /* 文案逐字取自参照的 Security 段，只把写死的 15 分钟换成实际的闲置阈值
-     （?lock=N 能改它，说 15 分钟就成了假话）。 */
+  /* 文案取自参照的 Security 段，改了两处：
+     - 写死的「15 minutes」换成实际的闲置阈值（?lock=N 能改它，写死就成了假话）
+     - 参照会把演示密码原样印出来，这里不印。密码是用来挡人的，印在屏幕上
+       就挡不住任何人；而且这行字在真环境里会跟着一起上线。 */
   const lockSub = pw
     ? `The console locks after ${span} idle · unlock with ${
-      ext ? 'this password' : 'your passkey, or this password'} · demo password ${pw}`
+      ext ? 'this password' : 'your passkey, or this password'}`
     : ext
       ? 'Not set — your wallet approves the transfers; a password here only keeps the console from sitting open.'
       : 'Not set, and no passkey on this device — set a password so the console can lock at all.'
