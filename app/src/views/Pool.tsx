@@ -65,7 +65,7 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
         {/* 这一版只有 OTC 一个纵向。一个选项的 tab 行不是导航，是噪音——
             所以这一行只留做市入口。要加纵向时再把 tab 加回来。 */}
         <div className="mkbar" style={{ justifyContent: 'flex-end' }}>
-          <MakerCta identity={identity} />
+          <MakerCta />
         </div>
         <div className="mkbar">
           {/* 方向在最前，因为买家和卖家看的是两批完全不同的挂单 */}
@@ -113,9 +113,10 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
  * 做市准入入口。按钮文案跟着申请状态走——
  * 「审核中」写成「Become a maker」会让人以为没提交成功，再点一次又提交一遍。
  */
-function MakerCta({ identity }: { identity: string }) {
-  const { data: app } = useApi(() => ep.makerApp(identity), [identity])
-  const kyc = useKycGate()
+function MakerCta() {
+  /* 用门那一份，不自己再拉一遍：放行是后端隔几秒改的，只有门那份在轮询。
+     自己拉的那份没人再问它，通过之后按钮会一直停在「Under review…」。 */
+  const { app, ...kyc } = useKycGate()
   const label = app?.approved ? 'Post a listing →'
     : (app?.listing_done || (app?.kyc_done && !app.kyc_ok)) ? 'Under review…'
     : 'Become a maker →'

@@ -35,18 +35,23 @@ const LISTING_FIELDS: Field[][] = [
 ]
 
 /**
- * 做市准入：两段提交，两次真人审核。
+ * 做市准入：两段提交，两段审核。
  *
  *   身份 →【审核】→ 挂单配置 →【审核】→ 可挂单
  *
- * 审核不算 agent 共识，是真人动作——所以中间那两道门系统不会自动放行。
  * KYC 是账户级的，审过一次就不再重做；挂单配置是能力级的，改经营范围才重提。
+ *
+ * 两道门的放行都在后端：提交后落一个到期时间，调度器到点改状态（演示 5 秒，
+ * 参照里是 6 秒的 setTimeout）。放行不在前端做——前端置位的话，换个浏览器
+ * 打开就又变回「审核中」了，而且后端那道挂单闸门根本不认。
  */
 export default function MakerFlow({
-  app, identity, onClose, onDone,
+  app, identity, from, onClose, onDone,
 }: {
   app: MakerApp | null
   identity: string
+  /** 从哪儿来的：先要下单（trade）还是直接来入驻（maker）。决定通过后说什么。 */
+  from: 'trade' | 'maker'
   onClose: () => void
   onDone: () => void
 }) {
@@ -97,9 +102,34 @@ export default function MakerFlow({
   /* 交完之后不是直接关掉——参照会在会话里留一张回执卡（receiptCard）。
      提交完界面一片空白，人会以为什么都没发生，然后再点一遍。 */
   const reviewing = (app?.kyc_done && !app.kyc_ok) || (app?.listing_done && !app.approved)
-  /* 身份材料现在是交完即通过，所以这张卡不能再说「审核中」。
-     一个已经放行的账户被告知在排队，下一步能下单反而成了意外。 */
   const cleared = app?.kyc_ok && !app.listing_done && !toListing
+  /* 两段都过了。以前挂单那一段永远不会通过，所以没有这张卡；现在会通过了，
+     不补上的话卡片会掉回九步表单，看起来像提交没成功。 */
+  if (app?.approved) {
+    return (
+      <div className="deal mine xopen">
+        <div className="row1">
+          <span className="st">Trading terms</span>
+          <span>Approved</span>
+          <button className="sayic" style={{ marginLeft: 'auto' }} aria-label="Close" onClick={onClose}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+              strokeWidth="1.5" strokeLinecap="round" aria-hidden><path d="m4 4 8 8M12 4l-8 8" /></svg>
+          </button>
+        </div>
+        <div className="open"><div className="openin"><div className="pad">
+          <p className="sellm-lead">
+            ✓ Terms approved — you can post listings now. A listing is one offer with an
+            amount and a price; posting it locks those coins into the escrow contract.
+          </p>
+          {/* 参照这里还有一颗「Post your first listing →」。挂单的界面这边还没有，
+              放一颗点不动的按钮比不放更糟——上一轮就是这么被挑出来的。 */}
+          <div className="dfoot">
+            <button className="btn btn-primary" onClick={onClose}>Close</button>
+          </div>
+        </div></div></div>
+      </div>
+    )
+  }
   if (cleared) {
     return (
       <div className="deal mine xopen">
@@ -112,12 +142,13 @@ export default function MakerFlow({
           </button>
         </div>
         <div className="open"><div className="openin"><div className="pad">
+          {/* 文案取自参照的两条通过消息：为下单来验的只说「可以交易了」，
+              直接来入驻的才带出下一段。 */}
           <p className="sellm-lead">
-            Your identity is verified — you can trade now.
-          </p>
-          <p className="sellm-lead">
-            Posting your own listings is a separate step: it decides what prices and sizes
-            you show the market, so that one is still reviewed by a person.
+            {from === 'trade'
+              ? '✓ Identity verified — you can trade now.'
+              : '✓ Identity verified. Next: configure what you sell — assets, limits, '
+                + 'pricing and payment rails.'}
           </p>
           <div className="dfoot">
             <button className="btn btn-ghost btn-sm" onClick={onClose}>Close</button>
@@ -125,7 +156,7 @@ export default function MakerFlow({
                 而挂单配置只有两步，卡片会显示「9 / 2」而且一个字段都没有。 */}
             <button className="btn btn-primary"
               onClick={() => { setStep(0); setForm({}); setErr(''); setToListing(true) }}>
-              Set up listings →
+              Set up trading terms →
             </button>
           </div>
         </div></div></div>
@@ -149,10 +180,6 @@ export default function MakerFlow({
             under review. Usually cleared within one business day{' '}
             <em style={{ fontStyle: 'normal', color: 'var(--faint)' }}>(demo: seconds)</em>.
             {app?.reject_reason ? <><br /><b>Returned:</b> {app.reject_reason}</> : null}
-          </p>
-          <p className="sellm-lead">
-            Review is a person, not an agent vote — the system will not wave this through
-            on its own.
           </p>
           <div className="dfoot">
             <button className="btn btn-primary" onClick={onClose}>Close</button>

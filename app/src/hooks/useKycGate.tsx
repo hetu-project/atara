@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import * as ep from '../api/endpoints'
 import MakerFlow from '../components/MakerFlow'
+import type { MakerApp } from '../api/types'
 import { useApi } from './useApi'
 import { go } from './useRoute'
 
@@ -13,6 +14,11 @@ interface Ctx {
   /** 交过材料但还没审完——这两个状态在界面上不是一回事。 */
   kycPending: boolean
   /**
+   * 整份申请。给要看挂单那一段的地方用（准入 CTA 的文案）。
+   * 各处自己再拉一遍的话，放行之后有的地方变了有的没变——而且没人轮询，
+   * 那一份会一直停在「审核中」。 */
+  app: MakerApp | null
+  /**
    * 准入向导那张卡。参照里它不是弹窗，是挂在 Atara AI 会话里的一张卡片
    * （console.html 的 paintMaker），所以由首页把它渲染进对话区，
    * 而不是在这里盖一层 overlay。
@@ -20,7 +26,8 @@ interface Ctx {
   maker: React.ReactNode | null
 }
 const KycCtx = createContext<Ctx>({
-  require: () => false, openMaker: () => {}, kycOk: false, kycPending: false, maker: null,
+  require: () => false, openMaker: () => {}, kycOk: false, kycPending: false,
+  app: null, maker: null,
 })
 export const useKycGate = () => useContext(KycCtx)
 
@@ -35,6 +42,23 @@ export function KycProvider({ identity, children }: { identity: string; children
   const { data: app, reload } = useApi(() => ep.makerApp(identity), [identity])
   const [open, setOpen] = useState(false)
   const [why, setWhy] = useState<'trade' | 'maker'>('trade')
+
+  /* 材料交上去之后，放行是后端隔几秒改的状态——不问它就永远显示「审核中」，
+     人只能自己刷页面。所以在审核中这段时间里问一问。
+
+     只在审核中问，而且问一阵就停：真实口径下审核是人在看件，可能挂几个小时，
+     那种时候每秒敲一次后端毫无意义。停了也不会卡住——重新打开这张卡或者
+     刷新页面都会重新拉一次。 */
+  const pending = !!app && ((app.kyc_done && !app.kyc_ok) || (app.listing_done && !app.approved))
+  useEffect(() => {
+    if (!pending) return
+    let left = 40 // ~60s
+    const t = setInterval(() => {
+      if (left-- <= 0) { clearInterval(t); return }
+      reload()
+    }, 1500)
+    return () => clearInterval(t)
+  }, [pending, reload])
 
   const require = useCallback(() => {
     if (app?.kyc_ok) return false
@@ -53,14 +77,15 @@ export function KycProvider({ identity, children }: { identity: string; children
     require, openMaker,
     kycOk: !!app?.kyc_ok,
     kycPending: !!app?.kyc_done && !app?.kyc_ok,
+    app: app ?? null,
     maker: showMaker ? (
-      <MakerFlow app={app ?? null} identity={identity}
+      <MakerFlow app={app ?? null} identity={identity} from={why}
         onClose={() => setOpen(false)}
         /* 提交后不关：让 app 重新拉一次，卡片自己切成回执/审核中那一态。
            直接关掉的话，界面一片空白，人会以为没提交成功。 */
         onDone={reload} />
     ) : null,
-  }), [require, openMaker, app, showMaker, identity, reload])
+  }), [require, openMaker, app, showMaker, identity, why, reload])
 
   return (
     <KycCtx.Provider value={value}>
