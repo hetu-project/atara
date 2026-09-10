@@ -151,16 +151,31 @@ function AddContact({
                     /* 地址打了一半就搜名字，只会搜出一堆无关的人。
                        直说还差什么，比给一个空结果强。 */
                     : partial ? <p className="acnote">Keep typing — the full address is needed.</p>
-                    : hits.length ? hits.map(m => (
-                      <button className="acrow" key={m.name} disabled={busy}
-                        onClick={() => void send(m.name)}>
-                        <Avatar name={m.name} cls="cpav" />
-                        <span className="n"><em>{m.name}</em>
-                          <i>{m.deals} trades · score {m.score}</i></span>
-                        <span className="acgo">Add</span>
-                      </button>
-                    ))
-                    : <p className="acnote">No one by that name yet.</p>}
+                    : (
+                      <>
+                        {hits.map(m => (
+                          <button className="acrow" key={m.name} disabled={busy}
+                            onClick={() => void send(m.name)}>
+                            <Avatar name={m.name} cls="cpav" />
+                            <span className="n"><em>{m.name}</em>
+                              <i>{m.deals} trades · score {m.score}</i></span>
+                            <span className="acgo">Add</span>
+                          </button>
+                        ))}
+                        {/* 建议列表是从公开挂单推出来的，只覆盖「正在挂单的人」。
+                            按它来决定能不能提交，就等于：对方没挂单就永远加不上，
+                            哪怕这个账户真实存在。能不能加是后端说了算——它按
+                            名字或地址解析，找不到会回一句能读的话。 */}
+                        {!hits.some(m => m.name.toLowerCase() === raw.toLowerCase()) && (
+                          <button className="acrow" disabled={busy} onClick={() => void send(raw)}>
+                            <Avatar name={raw} cls="cpav" />
+                            <span className="n"><em>{raw}</em>
+                              <i>{hits.length ? 'Not in the list — try this name' : 'Add by name'}</i></span>
+                            <span className="acgo">Add</span>
+                          </button>
+                        )}
+                      </>
+                    )}
                 </div>
               </>
             ) : (
@@ -176,7 +191,12 @@ function AddContact({
                       <span className="acgo">Add</span>
                     </button>
                   ))}
-                  {!makers.length && <p className="acnote">Nothing to add yet.</p>}
+                  {!makers.length && (
+                    <p className="acnote">
+                      No one yet — people you have traded with show up here.
+                      Use the other tab to add someone by name or address.
+                    </p>
+                  )}
                 </div>
               </>
             )}

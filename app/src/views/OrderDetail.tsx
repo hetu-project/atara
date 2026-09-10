@@ -25,14 +25,23 @@ const money = (v: number, c: string) =>
  * 轮询 1 秒：s1 的绑定、s4 的放款都是后端调度器推的，不轮询看不到状态变化；
  * 演示口径下各站只有几秒，轮询必须比它快。
  */
-export default function OrderDetail({ id, onBack }: { id: string; onBack: () => void }) {
+/**
+ * @param bare 只出这张卡，不套页面外壳。参照里工单卡是长在对话流里的
+ *   （.deal 直接挂在 #log 下面），不是另开一页——「他说发货了」和「这单
+ *   还等着凭证」摆在一起才对得上号。
+ */
+export default function OrderDetail({
+  id, onBack, bare,
+}: { id: string; onBack: () => void; bare?: boolean }) {
   const { data: o, error, reload } = useApi(() => ep.order(id), [id], 1000)
   const { run, pending, error: actErr } = useAction()
   const [open, setOpen] = useState(true)
   const file = useRef<HTMLInputElement>(null)
 
-  if (error) return <Shell onBack={onBack}><div className="mkempty">{error.message}</div></Shell>
-  if (!o) return <Shell onBack={onBack}><div className="mkempty">Loading the order…</div></Shell>
+  const wrap = (node: React.ReactNode) =>
+    bare ? <>{node}</> : <Shell onBack={onBack}>{node}</Shell>
+  if (error) return wrap(<div className="mkempty">{error.message}</div>)
+  if (!o) return wrap(<div className="mkempty">Loading the order…</div>)
 
   const act = async (fn: () => Promise<unknown>) => { await run(fn); reload() }
   const sell = o.otc?.side === 'sell'
@@ -83,8 +92,8 @@ export default function OrderDetail({ id, onBack }: { id: string; onBack: () => 
     })
   }
 
-  return (
-    <Shell onBack={onBack}>
+  return wrap(
+    <>
       <div className={'deal' + (mine ? ' mine' : '') + (over ? ' done' : '') + (open ? ' xopen' : '')}>
         <div className="row1" role="button" tabIndex={0} aria-expanded={open}
           onClick={() => setOpen(v => !v)}
@@ -183,7 +192,7 @@ export default function OrderDetail({ id, onBack }: { id: string; onBack: () => 
       </div>
 
       {actErr ? <div className="mkempty">{actErr.message}</div> : null}
-    </Shell>
+    </>,
   )
 }
 

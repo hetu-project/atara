@@ -4,7 +4,8 @@ import Avatar from '../components/Avatar'
 import { IAttach, IMic, ISend } from '../components/icons'
 import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
-import type { Message } from '../api/types'
+import OrderDetail from './OrderDetail'
+import type { Message, Order } from '../api/types'
 
 /**
  * 一个对手方一条线程。
@@ -20,6 +21,18 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
   const end = useRef<HTMLDivElement>(null)
   const msgs = data?.messages ?? []
   const name = data?.peer?.display_name ?? peer
+  const m = data?.merchant
+  const orders = data?.orders ?? []
+
+  /* 消息和工单卡按时间穿插在同一条流里。
+  
+     参照就是这么做的：工单卡（.deal）直接挂在 #log 下面，不是另开一页。
+     分开的话，「他说钱打了」和「这单还等着凭证」永远对不上号——而这两件事
+     本来就是同一件事的两面。 */
+  const stream: ({ t: number } & ({ msg: Message } | { order: Order }))[] = [
+    ...msgs.map(x => ({ t: Date.parse(x.created_at), msg: x })),
+    ...orders.map(o => ({ t: Date.parse(o.created_at), order: o })),
+  ].sort((a, b) => a.t - b.t)
 
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }) }, [msgs.length])
 
@@ -37,14 +50,22 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
         <Avatar name={name} cls="thav" />
         <span className="thwho">
           <b>{name}</b>
-          <span>{(data?.orders ?? []).length} orders together</span>
+          {/* 参照这一行是对手方的成绩单：多少笔、多少分。「N orders together」
+              说的是我跟他做过几单，那是另一个数，而且它已经在下面的流里了。 */}
+          <span>
+            {m ? `${m.deals} trades · score ${m.trust_score}` : 'No trades yet'}
+          </span>
         </span>
       </div>
 
       <div id="log">
         <div className="tfeed">
-          {msgs.map(m => <Bubble key={m.id} m={m} />)}
-          {!msgs.length && (
+          {stream.map(x => ('msg' in x
+            ? <Bubble key={x.msg.id} m={x.msg} />
+            /* 工单卡不套页面外壳，直接进流。onBack 在这儿没有意义——
+               卡就在会话里，没有「返回」这回事。 */
+            : <OrderDetail key={x.order.id} id={x.order.id} bare onBack={() => {}} />))}
+          {!stream.length && (
             <div className="msg sys"><span className="bub">
               Nothing here yet. Orders and messages with {name} land in this stream.
             </span></div>
