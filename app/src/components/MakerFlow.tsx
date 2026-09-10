@@ -170,8 +170,8 @@ export default function MakerFlow({
         if (f.type === 'pick') next[f.k] = f.opts?.[0] ?? ''
         else if (f.type === 'multi') next[f.k] = f.opts?.[0] ? [f.opts[0]] : []
         else if (f.type === 'date') next[f.k] = DEMO_DATE[f.k] ?? '2020-01-01'
-        else if (f.type === 'sign') next[f.k] = 'signed'
-        else if (f.type === 'upload') next[f.k] = 'demo-upload'
+        else if (f.type === 'sign') next[f.k] = 'Signed'
+        else if (f.type === 'upload') next[f.k] = 'Uploaded'
         else next[f.k] = DEMO_TXT[f.k] ?? 'Demo'
       }
     }
@@ -271,26 +271,31 @@ function FieldRow({
       </div>
     )
   }
+  /* 签名和上传都是一条宽行（.sfup），标签在按钮里面，外面不再另起 .sfl——
+     参照就是这么做的：这两个不是「从几个选项里挑一个」，而是「做一件事」，
+     做成小芯片会跟旁边的多选芯片长得一样，读的人分不出哪个是动作。 */
   if (f.type === 'sign') {
     return (
-      <div className="sf"><span className="sfl">{f.l}</span>
-        <button type="button" className={'sfchip' + (v ? ' on' : '')}
-          onClick={() => onSet(v ? '' : 'signed')}>
-          {v ? '✓ Signed' : 'Sign'}
+      <div className="sf">
+        <button type="button" className={'sfup' + (v ? ' ok' : '')}
+          onClick={() => onSet(v ? '' : 'Signed')}>
+          <span><b>{f.l}</b><em>{typeof v === 'string' && v ? v : 'Tap to sign'}</em></span>
+          <span className="sfst">{v ? 'Signed' : 'Sign'}</span>
         </button>
       </div>
     )
   }
   if (f.type === 'upload') {
     return (
-      <div className="sf"><span className="sfl">{f.l}</span>
-        <label className="sfchip" style={{ cursor: 'pointer' }}>
-          {v ? '✓ Attached' : 'Choose file'}
+      <div className="sf">
+        <label className={'sfup' + (v ? ' ok' : '')} style={{ cursor: 'pointer' }}>
+          <span><b>{f.l}</b><em>{typeof v === 'string' && v ? v : 'Tap to upload'}</em></span>
+          <span className="sfst">{v ? 'Uploaded' : 'Upload'}</span>
+          {/* 真上传：审核员要看到的是文件，不是一个占位字符串 */}
           <input type="file" hidden accept="image/*,application/pdf"
             onChange={async e => {
               const file = e.target.files?.[0]
               if (!file) return
-              // 真上传：审核员要看到的是文件，不是一个占位字符串
               try { onSet(await ep.upload(file)) } catch { /* 失败就保持未附 */ }
             }} />
         </label>
