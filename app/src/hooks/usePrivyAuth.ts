@@ -17,9 +17,14 @@ export function usePrivyAuth(signed: boolean, signIn: (address: string) => void)
   /* 记住这一轮已经拿哪个地址换过账户了。不记的话，后端一旦报错，
      effect 会随每次 render 重试，变成一场自己打自己的请求风暴。 */
   const tried = useRef('')
+  /* 正在退出。Privy 的 logout 是异步的，在它完成之前 authenticated 仍然是
+     true，而我们这边的 signed 已经是 false 了——下面那个 effect 看到的正是
+     「Privy 登着、本地没登」，于是立刻又把人登回来。表现就是第一次点退出
+     没反应，第二次才退得掉。 */
+  const signingOut = useRef(false)
 
   useEffect(() => {
-    if (!ready || !authenticated || signed) return
+    if (!ready || !authenticated || signed || signingOut.current) return
     const w = user?.wallet
     const email = user?.email?.address ?? user?.google?.email ?? ''
 
@@ -52,11 +57,18 @@ export function usePrivyAuth(signed: boolean, signIn: (address: string) => void)
   }, [ready, authenticated, user, signed, signIn])
 
   /* 登出要两边一起清：只清我们这边，Privy 的会话还在，
-     下次点登录会直接静默登回来，看着像退不出去。 */
+     下次点登录会直接静默登回来，看着像退不出去。
+     
+     去重键要等 Privy 真的退完再清。提前清掉的话，上面那个 effect 在
+     「Privy 还登着、本地已登出」的空档里就没有任何东西拦得住它，会当场
+     把人登回来——第一次点退出没反应就是这么来的。 */
   const signOutAll = (localSignOut: () => void) => {
-    tried.current = ''
+    signingOut.current = true
     localSignOut()
-    void logout()
+    void logout().finally(() => {
+      tried.current = ''
+      signingOut.current = false
+    })
   }
 
   return { ready, login, signOutAll }
