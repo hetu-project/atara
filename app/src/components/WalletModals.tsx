@@ -11,11 +11,18 @@ import type { Allowance, Payee, Wallet, WalletAsset } from '../api/types'
  * 接口后端也早就有了，只是前端没接。
  */
 
-const WD_STEPS = ['Address', 'Amount', 'Purpose', 'Document']
-/* 用途是可选项而不是自由文本：反洗钱审查要的是可归类的口径，
-   一人一种写法的自由输入没法聚合。逐字取自参照。 */
-const PURPOSES = ['OTC settlement', 'Goods payment', 'Service fee', 'Refund',
-  'Internal transfer', 'Other']
+/* 每条链的手续费用什么币付。表里没有的一律说「按该链的原生币」，
+   不编一个具体数字——编出来的数字会被当成报价。 */
+const FEE: Record<string, string> = {
+  ETH: '~0.002 ETH', POLYGON: '~0.01 POL', ARBITRUM: '~0.0001 ETH',
+  BASE: '~0.0001 ETH', BSC: '~0.0005 BNB', TRON: '~1 TRX', BTC: '~0.0001 BTC',
+}
+/* 地址格式按链走。没列的按 EVM（0x + 40 位十六进制）。 */
+const ADDR_RE: Record<string, RegExp> = {
+  TRON: /^T[1-9A-HJ-NP-Za-km-z]{33}$/,
+  BTC: /^(bc1[ac-hj-np-z02-9]{25,62}|[13][1-9A-HJ-NP-Za-km-z]{25,34})$/,
+}
+const shortAddr = (a: string) => (a.length > 16 ? `${a.slice(0, 8)}…${a.slice(-6)}` : a)
 
 function Sheet({
   title, onClose, children,
@@ -176,6 +183,16 @@ export function PayeesModal({ identity, onClose }: { identity: string; onClose: 
 
 // ── 提现 ────────────────────────────────────────────────────────────
 
+/**
+ * 转账。两步：先选转哪种资产，再填往哪儿转。
+ *
+ * 顺序只能这样——资产决定链，链决定地址长什么样。反过来让地址去猜链，
+ * 0x 地址就得再补一排「ETH / POLYGON」让人选，那是顺序错了的症状。
+ *
+ * 之前那套「只能打到登记地址 + 用途 + 证明文件」是托管所的提币流程：
+ * 托管所能这么要求是因为钱在它手里。我们是非托管的——既拦不住这笔转账，
+ * 也没有立场问「为什么转」。安全层只留一条：转出前把地址完整摊开让人核对。
+ */
 export function SendModal({
   identity, assets, onClose, onDone,
 }: {
@@ -184,53 +201,46 @@ export function SendModal({
   onClose: () => void
   onDone: () => void
 }) {
-  const { data: list } = useApi(() => ep.payees(identity), [identity])
-  const { data: cat } = useApi(() => ep.assets(), [])
   const [step, setStep] = useState(0)
-  const [payee, setPayee] = useState<Payee | null>(null)
+  const [pick, setPick] = useState<WalletAsset | null>(null)
+  const [to, setTo] = useState('')
   const [amount, setAmount] = useState('')
-  const [purpose, setPurpose] = useState('')
-  const [note, setNote] = useState('')
-  const [file, setFile] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
-  const [done, setDone] = useState(false)
+  const [sent, setSent] = useState('')
 
-  /* 资产跟着收款地址所在的网络走——地址定了，能往那儿发什么就定了。
-     没有匹配的就退回目录第一项，而不是让这一格空着。 */
-  const codes = (cat ?? []).map(a => a.code)
-  const asset = codes[0] ?? assets[0]?.asset ?? 'USDT'
-  const bal = assets.find(a => a.asset === asset)?.on_chain ?? '0'
+  /* 余额为 0 的不列：转不出去的东西摆在选择列表里，只会让人点进去才发现。 */
+  const sendable = assets.filter(a => Number(a.on_chain) > 0)
+  const net = pick?.networks?.[0] ?? ''
+  const fee = FEE[net] ?? "paid in the chain's native coin"
 
-  const next = async () => {
-    if (step === 0 && !payee) { setErr('Select an address'); return }
-    if (step === 1 && !(Number(amount) > 0 && Number(amount) <= Number(bal))) {
-      setErr('Must be above 0 and within your balance'); return
+  /* 每条链自己的地址格式；表里没有的按 EVM。 */
+  const okTo = (v: string) => (ADDR_RE[net] ?? /^0x[0-9a-fA-F]{40}$/).test(v.trim())
+
+  const submit = async () => {
+    const v = to.trim()
+    if (!okTo(v)) { setErr(`That is not a ${net} address`); return }
+    const n = Number(amount)
+    if (!(n > 0) || n > Number(pick!.on_chain)) {
+      setErr('Must be above 0 and within what is available'); return
     }
-    if (step === 2 && !purpose) { setErr('Select a purpose'); return }
-    if (step === 3 && !file) { setErr('A document is required'); return }
-    setErr('')
-    if (step < 3) { setStep(s => s + 1); return }
-    setBusy(true)
+    setBusy(true); setErr('')
     try {
-      await ep.createWithdrawal({
-        payee_id: payee!.id, asset, amount,
-        purpose: note.trim() ? `${purpose} — ${note.trim()}` : purpose,
-        doc_upload_id: file,
-      }, identity)
-      setDone(true); onDone()
+      await ep.createWithdrawal(
+        { to_address: v, to_chain: net, asset: pick!.asset, amount }, identity)
+      setSent(v); onDone()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not submit')
+      setErr(e instanceof Error ? e.message : 'Could not sign')
     } finally { setBusy(false) }
   }
 
-  if (done) {
+  if (sent) {
     return (
-      <Sheet title="Withdrawal recorded" onClose={onClose}>
+      <Sheet title="Signed" onClose={onClose}>
         <p className="rnote">
-          The intent and its compliance record are stored. <b>The transfer itself is signed
-          by your own wallet</b> — the platform never moves your coins, so this stays at
-          «submitted» until the transaction is broadcast.
+          {amount} {pick?.asset} → <b className="num">{shortAddr(sent)}</b>.
+          {' '}<b>The transfer is broadcast from your own wallet</b> — the platform never
+          holds your coins, so it only records that you signed this.
         </p>
         <div className="dfoot"><button className="btn btn-primary" onClick={onClose}>Close</button></div>
       </Sheet>
@@ -240,91 +250,74 @@ export function SendModal({
   return (
     <Sheet title="Send" onClose={onClose}>
       <ol className="wsteps">
-        {WD_STEPS.map((t, n) => (
+        {['Asset', 'Recipient'].map((t, n) => (
           <li key={t} className={n === step ? 'on' : n < step ? 'done' : ''}>{n + 1} {t}</li>
         ))}
       </ol>
 
-      {step === 0 && (
-        <div className="sf">
-          <span className="sfl">Send to a registered address</span>
-          {(list ?? []).length ? (
-            <div className="wlist">
-              {(list ?? []).map((p: Payee) => (
-                <button key={p.id} className={'wrow' + (payee?.id === p.id ? ' on' : '')}
-                  onClick={() => setPayee(p)}>
-                  <span className="wnet">{p.chain}</span>
-                  <span className="wtxt"><b>{p.label}</b>
-                    <em>{p.address.slice(0, 10)}…{p.address.slice(-6)}</em></span>
-                  {payee?.id === p.id ? <span className="wok">✓</span> : null}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="fempty">No registered addresses yet — add one under Addresses.</div>
+      {step === 0 ? (
+        <>
+          <div className="walist">
+            {sendable.map(a => (
+              <button type="button" className="warow" key={a.asset}
+                onClick={() => { setPick(a); setTo(''); setAmount(''); setErr(''); setStep(1) }}>
+                <span className="anm"><b>{a.asset}</b>
+                  <em>{a.networks?.[0] ?? ''}
+                    {Number(a.in_escrow) > 0 ? ` · ${a.in_escrow} locked` : ''}</em></span>
+                <span className="waval"><b className="num">{a.on_chain}</b><em>available</em></span>
+                <span className="wago" aria-hidden>›</span>
+              </button>
+            ))}
+          </div>
+          {sendable.length < assets.length && (
+            <p className="rnote">Assets with nothing available are not listed.</p>
           )}
-        </div>
-      )}
-
-      {step === 1 && (
+          {!sendable.length && <div className="fempty">Nothing available to send.</div>}
+        </>
+      ) : (
         <>
-          <div className="sf"><span className="sfl">Amount ({asset})</span>
-            <input type="text" autoFocus value={amount} inputMode="decimal"
-              placeholder={`Available ${bal}`} onChange={e => setAmount(e.target.value)} />
+          <button type="button" className="wpicked" onClick={() => { setStep(0); setErr('') }}>
+            <span className="anm"><b>{pick!.asset}</b>
+              <em>{net} · {pick!.on_chain} available</em></span>
+            <span className="wachg">Change</span>
+          </button>
+
+          <div className="sf"><span className="sfl">To</span>
+            <input type="text" className="mono" autoFocus value={to} spellCheck={false}
+              autoComplete="off" placeholder={`Paste a ${net} address`}
+              onChange={e => { setTo(e.target.value); setErr('') }} />
           </div>
+
+          {/* 地址一旦成形就把话说在这儿。链上转账没有撤回，
+              提醒必须出现在按下确认之前，不是之后。 */}
+          {okTo(to) && (
+            <div className="wnew">
+              <p>Check every character against what the recipient gave you —{' '}
+                <b>an on-chain transfer cannot be undone</b>.</p>
+            </div>
+          )}
+
+          <div className="sf"><span className="sfl">Amount ({pick!.asset})</span>
+            <input type="text" value={amount} inputMode="decimal"
+              placeholder={`Available ${pick!.on_chain}`}
+              onChange={e => { setAmount(e.target.value); setErr('') }} />
+          </div>
+
           <dl className="sfsum">
-            <div><dt>Network</dt><dd>{payee?.chain}</dd></div>
-            <div><dt>Available</dt><dd className="num">{bal} {asset}</dd></div>
+            <div><dt>Network</dt><dd>{net}</dd></div>
+            <div><dt>Network fee</dt><dd className="num">{fee}</dd></div>
           </dl>
-        </>
-      )}
 
-      {step === 2 && (
-        <>
-          <div className="sf"><span className="sfl">Purpose</span>
-            <Chips opts={PURPOSES} on={purpose} onPick={setPurpose} />
-          </div>
-          <div className="sf"><span className="sfl">Note (optional)</span>
-            <input type="text" value={note} placeholder="For reconciliation only"
-              onChange={e => setNote(e.target.value)} />
+          {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
+
+          <div className="dfoot">
+            <button className="btn backbtn" onClick={() => { setStep(0); setErr('') }}>Back</button>
+            <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
+              {busy ? 'Signing…' : 'Review'}
+            </button>
           </div>
         </>
       )}
-
-      {step === 3 && (
-        <>
-          <div className="sf">
-            {/* 反洗钱审查要看的是文件本身，不是一句「已上传」，所以这里真传。 */}
-            <label className={'sfup' + (file ? ' ok' : '')} style={{ cursor: 'pointer' }}>
-              <span><b>Document</b><em>{file || 'Contract, invoice or settlement note'}</em></span>
-              <span className="sfst">{file ? 'Uploaded' : 'Upload'}</span>
-              <input type="file" hidden accept="image/*,application/pdf"
-                onChange={async e => {
-                  const f = e.target.files?.[0]
-                  if (!f) return
-                  try { setFile(await ep.upload(f)) } catch { setErr('Upload failed') }
-                }} />
-            </label>
-          </div>
-          <dl className="sfsum">
-            <div><dt>To</dt><dd>{payee?.label} · {payee?.address.slice(0, 10)}…</dd></div>
-            <div><dt>Amount</dt><dd className="num">{amount} {asset}</dd></div>
-            <div><dt>Purpose</dt><dd>{purpose}</dd></div>
-          </dl>
-        </>
-      )}
-
-      {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
-
-      <div className="dfoot">
-        <span className="dnote">Purpose and document are required</span>
-        {step > 0 && (
-          <button className="btn" onClick={() => { setErr(''); setStep(s => s - 1) }}>Back</button>
-        )}
-        <button className="btn btn-primary" disabled={busy} onClick={() => void next()}>
-          {step === 3 ? 'Submit' : 'Next'}
-        </button>
-      </div>
     </Sheet>
   )
 }

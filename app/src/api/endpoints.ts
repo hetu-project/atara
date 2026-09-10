@@ -218,19 +218,23 @@ export const withdrawals = (as?: string) =>
   api.get<{ withdrawals: Withdrawal[] }>('/withdrawals', { as }).then(r => r.withdrawals ?? [])
 
 export interface WithdrawReq {
-  payee_id: string
+  /** 登记过的收款方。直接打给陌生地址时留空，改给 to_address / to_chain。 */
+  payee_id?: string
+  to_address?: string
+  to_chain?: string
   asset: string
   amount: string
-  purpose: string
+  purpose?: string
   doc_upload_id?: string
 }
 
 /**
- * 提现。链上转账由你自己签，协议只记意图与合规材料——
- * 但动钱必确认照旧适用，要签名档。只能提数字资产，法币不入账。
+ * 转账。链上那一笔由你自己的钱包签，协议只记下这次意图——
+ * 但动钱必确认照旧适用，要签名档。只能转数字资产，法币不入账。
  */
 export const createWithdrawal = (req: WithdrawReq, as?: string) =>
-  withConfirmation('withdraw', [req.payee_id, req.asset, req.amount], 'signature',
+  /* 摘要绑的是目标地址，不是 payee id——直接打给陌生地址时根本没有 id。 */
+  withConfirmation('withdraw', [req.to_address ?? '', req.asset, req.amount], 'signature',
     token => api.post<Withdrawal>('/withdrawals', req, { confirmation: token, as }), as)
 
 /** 回填你自己签出来的那笔转账。没有这一步，提现永远停在 submitted。 */
