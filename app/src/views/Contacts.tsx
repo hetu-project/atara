@@ -1,20 +1,39 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import * as ep from '../api/endpoints'
 import Avatar from '../components/Avatar'
 import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
+import type { Account } from '../api/types'
 
 /**
  * 联系人 = 可以付款的人。
  *
- * 一个字段收名字或地址，不做模糊搜索——那等于开放一个可以遍历用户的接口。
+ * 三段，对应三个不同的问题：
+ *   名册            我认识谁 —— 双方都点过头的
+ *   等对方点头      我请求了谁 —— 加了，但对方还没确认，不能付
+ *   等我点头        谁在请求我 —— 参照把这个放在左栏收件箱里；我们没有那一栏，
+ *                   而请求总得有地方能接受，否则它永远停在 pending
+ *
+ * 单向加不成关系：加完是 pending，对方确认才是 accepted。不这么做的话
+ * 「加了就能付」，而对方从头到尾没说过一句话。
  */
 export default function Contacts({ identity }: { identity: string }) {
   const { data, reload } = useApi(() => ep.contacts(identity), [identity])
+  /* 请求这一栏轮询：对方是在另一个浏览器里点的确认，不轮询就得手动刷新。 */
+  const { data: reqs, reload: reloadReqs } =
+    useApi(() => ep.contactRequests(identity), [identity], 5000)
   const [adding, setAdding] = useState(false)
+  const [busy, setBusy] = useState('')
   const list = data?.contacts ?? []
+  const ok = list.filter(c => c.status !== 'pending')
+  const pend = list.filter(c => c.status === 'pending')
+  const inbox = reqs ?? []
 
-
+  const accept = async (id: string) => {
+    setBusy(id)
+    try { await ep.acceptContact(id, identity); reloadReqs(); reload() }
+    finally { setBusy('') }
+  }
 
   return (
     <div className="view on" id="v-contacts">
@@ -28,19 +47,42 @@ export default function Contacts({ identity }: { identity: string }) {
       </div>
       <div className="vbody" id="cpbody">
         {adding && (
-          <AddContact identity={identity} have={new Set(list.map(c => c.name))}
+          <AddContact identity={identity}
             onClose={() => setAdding(false)}
             onDone={() => { setAdding(false); reload() }} />
         )}
 
-        {list.length ? (
+        {/* 请求排在最上面：它是唯一一件等着我做的事，
+            压在名册下面的话，人得先滚过一屏才看得到。 */}
+        {inbox.length > 0 && (
+          <>
+            <div className="lsec">They want to connect</div>
+            <div className="ctcard" style={{ marginBottom: 22 }}>
+              {inbox.map(c => (
+                <div className="ctrow pend" key={c.id}>
+                  <Avatar name={c.name} cls="ctav" />
+                  <span className="ctn"><em>{c.name}</em>
+                    <i>{sub(c.label, c.address)}</i></span>
+                  <span className="ctacts">
+                    <button className="btn btn-primary btn-sm" disabled={busy === c.id}
+                      onClick={() => void accept(c.id)}>
+                      {busy === c.id ? 'Accepting…' : 'Accept'}
+                    </button>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {ok.length ? (
           <div className="ctcard">
-            {list.map(c => (
+            {ok.map(c => (
               <div className="ctrow" key={c.id} onClick={() => go({ view: 'thread', peer: c.id })}>
                 <Avatar name={c.name} cls="ctav" />
                 <span className="ctn">
                   <em>{c.name}</em>
-                  <i>{c.label} · {c.address ? `${c.address.slice(0, 6)}…${c.address.slice(-4)}` : ''}</i>
+                  <i>{sub(c.label, c.address)}</i>
                 </span>
                 <span className="ctled num">
                   {c.deals ? `${c.deals} settled` : 'No trades yet'}
@@ -54,39 +96,76 @@ export default function Contacts({ identity }: { identity: string }) {
               </div>
             ))}
           </div>
-        ) : (
+        ) : !inbox.length && !pend.length ? (
           <div className="mkempty">No contacts yet — add someone to pay them.</div>
+        ) : null}
+
+        {pend.length > 0 && (
+          <>
+            <div className="lsec" style={{ marginTop: 22 }}>Waiting for them to accept</div>
+            <div className="ctcard pend">
+              {pend.map(c => (
+                <div className="ctrow pend" key={c.id}>
+                  <Avatar name={c.name} cls="ctav" />
+                  <span className="ctn"><em>{c.name}</em>
+                    <i>{sub(c.label, c.address)}</i></span>
+                  <span className="ctled">Invite sent</span>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
   )
 }
 
-
 /**
- * 加联系人。结构逐处对齐参照的 openAddContact：两个 tab，边打边搜。
+ * 加联系人。两个 tab，边打边搜。
  *
- * 参照里没有关系标签的选择器，也没有「Send request」按钮——搜到人直接点
- * 那一行就发请求。原来我做成一张常驻表单，选完关系再点提交，比参照多两步，
- * 而且把「有哪些联系人」这个主体挤下去了。
+ * 搜索走后端 /accounts/search：名字模糊、地址精确。前端不从公开挂单里
+ * 推——那只覆盖「此刻正在挂单的人」，一个真实存在但没挂单的账户会永远
+ * 搜不到，而用户看到的是「查无此人」。谁存在是后端说了算。
  */
 function AddContact({
-  identity, have, onClose, onDone,
+  identity, onClose, onDone,
 }: {
   identity: string
-  have: Set<string>
   onClose: () => void
   onDone: () => void
 }) {
   const [tab, setTab] = useState<'find' | 'past'>('find')
   const [q, setQ] = useState('')
+  const [hits, setHits] = useState<Account[] | null>(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
-  /* 「过去成交过的人」在这套系统里就是挂单方——我们没有单独的成交对手表。 */
-  const { data: offers } = useApi(() => ep.offers('buy'), [])
-  const makers = (offers ?? [])
-    .map(o => ({ name: o.maker.name, deals: o.maker.deals, score: o.maker.trust_score }))
-    .filter((m, i, a) => a.findIndex(x => x.name === m.name) === i && !have.has(m.name))
+  const raw = q.trim()
+
+  /* 边打边搜，250ms 收敛一次。每敲一个字发一次请求的话，回来的顺序不保证，
+     后发的短查询会盖掉先发的长查询——列表就跟输入框对不上了。 */
+  useEffect(() => {
+    if (!raw) { setHits(null); return }
+    let live = true
+    const t = setTimeout(() => {
+      ep.searchAccounts(raw, identity)
+        .then(r => { if (live) setHits(r) })
+        .catch(() => { if (live) setHits([]) })
+    }, 250)
+    return () => { live = false; clearTimeout(t) }
+  }, [raw, identity])
+
+  /* 「过去成交过的人」就是我成交过的对手方——从我自己的工单里来。
+     从公开挂单里推的话，这一栏说的是「正在挂单的人」，跟标题不是一回事。 */
+  const { data: mine } = useApi(() => ep.orders(identity), [identity])
+  const past = Object.values(
+    (mine ?? []).reduce<Record<string, { id: string; name: string; n: number }>>((a, o) => {
+      const id = o.counterparty_id
+      if (!id) return a
+      a[id] ??= { id, name: o.counterparty_name ?? id, n: 0 }
+      a[id].n++
+      return a
+    }, {}),
+  )
 
   const send = async (query: string) => {
     setBusy(true); setErr('')
@@ -98,18 +177,7 @@ function AddContact({
     } finally { setBusy(false) }
   }
 
-  const raw = q.trim()
-  const ADDR = /^(0x[0-9a-fA-F]{40}|T[1-9A-HJ-NP-Za-km-z]{25,40}|bc1[0-9a-z]{8,60})$/
-  const partial = /^(0x|bc1|T[1-9])/.test(raw) && raw.length > 7 && !/\s/.test(raw)
-  const hits = raw && !ADDR.test(raw) && !partial
-    ? makers.filter(m => m.name.toLowerCase().includes(raw.toLowerCase())).slice(0, 6)
-    : []
-
-  const hint = (
-    <p className="acnote">
-      Names are public — addresses are not. They accept before you can pay them.
-    </p>
-  )
+  const looksAddr = /^0x[0-9a-fA-F]{0,40}$/.test(raw)
 
   return (
     <div id="modal" role="dialog" aria-modal="true"
@@ -139,59 +207,56 @@ function AddContact({
                     autoComplete="off" spellCheck={false} />
                 </label>
                 <div className="aclist">
-                  {!raw ? hint
-                    : ADDR.test(raw) ? (
-                      <button className="acrow" disabled={busy} onClick={() => void send(raw)}>
-                        <Avatar name={raw} cls="cpav" />
-                        <span className="n"><em className="num">{short(raw)}</em>
-                          <i>New contact by address</i></span>
-                        <span className="acgo">Send request</span>
+                  {!raw ? (
+                    <p className="acnote">
+                      Names match loosely — addresses must be exact.
+                      They accept before you can pay them.
+                    </p>
+                  ) : hits === null ? (
+                    <p className="acnote">Searching…</p>
+                  ) : hits.length ? hits.map(a => {
+                    /* 已经有关系的人照样列出来，但不给「添加」——按下去
+                       只会拿到一个后端的报错，而错的是这个按钮不该在。 */
+                    const rel = a.relation
+                    return (
+                      <button className="acrow" key={a.id} disabled={busy || !!rel}
+                        onClick={() => { if (!rel) void send(a.address || a.name) }}>
+                        <Avatar name={a.name} cls="cpav" />
+                        <span className="n"><em>{a.name}</em>
+                          <i>{a.deals ? `${a.deals} trades · score ${a.trust_score}` : shortAddr(a.address)}</i>
+                        </span>
+                        <span className="acgo">{
+                          rel === 'accepted' ? 'Already a contact'
+                            : rel === 'pending' ? 'Request sent'
+                              : 'Add'
+                        }</span>
                       </button>
                     )
-                    /* 地址打了一半就搜名字，只会搜出一堆无关的人。
-                       直说还差什么，比给一个空结果强。 */
-                    : partial ? <p className="acnote">Keep typing — the full address is needed.</p>
-                    : (
-                      <>
-                        {hits.map(m => (
-                          <button className="acrow" key={m.name} disabled={busy}
-                            onClick={() => void send(m.name)}>
-                            <Avatar name={m.name} cls="cpav" />
-                            <span className="n"><em>{m.name}</em>
-                              <i>{m.deals} trades · score {m.score}</i></span>
-                            <span className="acgo">Add</span>
-                          </button>
-                        ))}
-                        {/* 建议列表是从公开挂单推出来的，只覆盖「正在挂单的人」。
-                            按它来决定能不能提交，就等于：对方没挂单就永远加不上，
-                            哪怕这个账户真实存在。能不能加是后端说了算——它按
-                            名字或地址解析，找不到会回一句能读的话。 */}
-                        {!hits.some(m => m.name.toLowerCase() === raw.toLowerCase()) && (
-                          <button className="acrow" disabled={busy} onClick={() => void send(raw)}>
-                            <Avatar name={raw} cls="cpav" />
-                            <span className="n"><em>{raw}</em>
-                              <i>{hits.length ? 'Not in the list — try this name' : 'Add by name'}</i></span>
-                            <span className="acgo">Add</span>
-                          </button>
-                        )}
-                      </>
-                    )}
+                  }) : (
+                    /* 地址是精确匹配，差一个字符就是查无此人——说清楚是哪一种，
+                       比一句「没找到」有用：一个是打错了，一个是这人不在。 */
+                    <p className="acnote">
+                      {looksAddr && raw.length < 42
+                        ? 'Keep typing — an address has to be complete to match.'
+                        : `No account matches “${raw}”.`}
+                    </p>
+                  )}
                 </div>
               </>
             ) : (
               <>
-                <p className="acnote">People you have settled with but never added.</p>
+                <p className="acnote">People you have traded with but never added.</p>
                 <div className="aclist">
-                  {makers.slice(0, 4).map(m => (
-                    <button className="acrow" key={m.name} disabled={busy}
+                  {past.slice(0, 6).map(m => (
+                    <button className="acrow" key={m.id} disabled={busy}
                       onClick={() => void send(m.name)}>
                       <Avatar name={m.name} cls="cpav" />
                       <span className="n"><em>{m.name}</em>
-                        <i>{m.deals} trades · score {m.score}</i></span>
+                        <i>{m.n} order{m.n > 1 ? 's' : ''} together</i></span>
                       <span className="acgo">Add</span>
                     </button>
                   ))}
-                  {!makers.length && (
+                  {!past.length && (
                     <p className="acnote">
                       No one yet — people you have traded with show up here.
                       Use the other tab to add someone by name or address.
@@ -209,4 +274,14 @@ function AddContact({
   )
 }
 
-const short = (a: string) => (a.length > 13 ? `${a.slice(0, 6)}…${a.slice(-5)}` : a)
+const shortAddr = (a: string) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '')
+
+/**
+ * 副行：关系标签 · 地址。
+ *
+ * 标签可能是空的——接受请求的那一方从没说过对方是什么人，我们也不该替他
+ * 编一个。空的时候连分隔点一起省掉，否则那行会以「· 0x24cd…」开头，
+ * 看着像前面丢了一个字。
+ */
+const sub = (label: string, addr: string) =>
+  [label, shortAddr(addr)].filter(Boolean).join(' · ')

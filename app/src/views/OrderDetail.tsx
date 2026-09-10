@@ -212,17 +212,47 @@ function Rail({ at, sell }: { at: number; sell: boolean }) {
   )
 }
 
+/** 资质件六项。缺件也照实显示——让对方自己给缺口定价，不替他隐藏。 */
+const DOCS: [string, string][] = [
+  ['kyc', 'KYC'], ['pof', 'PoF'], ['stm', 'Stmts'],
+  ['poa', 'PoA'], ['sow', 'SoW'], ['chain', 'Chain'],
+]
+
 /** 对手方那几行在每个阶段都长一样，抽出来。 */
 function Peer({ o, ccy }: { o: Order; ccy: string }) {
   const name = o.counterparty_name ?? '—'
+  const p = o.peer_profile
   return (
     <dl className="dpay">
       <div><dt>Counterparty</dt>
         <dd><span className="cplink still"><Avatar name={name} />{name}</span></dd></div>
+      {/* 成绩单和资质件是决定要不要跟这个人做这一单的依据，所以摆在
+          金额旁边，不是藏在对方主页里。数据跟工单一起来，两个数同一时刻。 */}
+      {p && (
+        <div><dt>Track record</dt>
+          <dd>{p.deals} trades · {p.disputes} disputes · score {p.trust_score}</dd></div>
+      )}
+      {p?.docs && (
+        <div><dt>Documents</dt>
+          <dd className="dpay-docs">
+            {DOCS.map(([k, label]) => (
+              <span key={k} className={'doc' + (p.docs?.[k] ? ' on' : '')}>
+                {p.docs?.[k] ? '✓' : '✕'} {label}
+              </span>
+            ))}
+          </dd></div>
+      )}
       <div><dt>Settles in</dt>
         <dd><span className="flg">{flag(ccy)}</span>{ccy} — {FIAT_NAME[ccy] ?? ccy}</dd></div>
       <div><dt>Amount</dt>
         <dd>{Number(o.amount.amount).toLocaleString()} {o.amount.asset}</dd></div>
+      {o.fee && Number(o.fee.amount) > 0 && (
+        <div><dt>Fee</dt>
+          {/* 手续费按原样印，不四舍五入到整。money() 是给几万块的金额用的，
+              用在 29.28 上会印成「¥29」——抹掉的正好是这个数的大部分。 */}
+          <dd>{FIAT_SYM[o.fee.currency] ?? ''}{o.fee.amount} {o.fee.currency}{' '}
+            <span className="dreq">{o.fee.bps / 100}%</span></dd></div>
+      )}
       {/* 这一单自己的分，下单那一刻定的。摆在对手方旁边是因为它评的就是
           这笔单跟这个对手方——不是这个人此刻的总体信誉。 */}
       {o.trust_score > 0 && (
@@ -314,6 +344,7 @@ function Waiting({
           )}
         </div>
       )}
+      {o.evidence && <Pack ev={o.evidence} coin={coin} fiat={fiat} ref_={o.ref} />}
       <p className="dmech">{mech[step] ?? ''}</p>
       {step === 's1' && (
         <div className="dfoot">
@@ -323,6 +354,71 @@ function Waiting({
         </div>
       )}
     </>
+  )
+}
+
+/**
+ * 证据包 —— 这单最后凭什么收的口。
+ *
+ * 参照里 s5 那行的「Evidence ›」点开的就是这张卡本身（链接在 .row1 里，
+ * 点击冒泡上去把卡展开），所以它不是另一张卡，是同一张卡的终态。工单接口
+ * 一个就够，用户自己也看出来了：两张截图内容一样，只是状态不同。
+ *
+ * 三样东西，缺哪样就不显示哪样——证据包的意义在于「这些是真的发生过的」，
+ * 补一行占位就把它变成了装饰：
+ *   银行凭证   付款方交上来的那份文件，点开是原件
+ *   链上流水   锁仓 / 绑定 / 放款，每一步带哈希，能到浏览器上自己核
+ *   结算时刻   核验通过的那一刻
+ */
+const KIND: Record<string, string> = {
+  lock: 'Coins locked in escrow',
+  bind: 'Escrow bound to this order',
+  release: 'Escrow released',
+  refund: 'Escrow returned',
+  deposit: 'Deposit received',
+}
+
+function Pack({ ev, coin, fiat, ref_ }: {
+  ev: NonNullable<Order['evidence']>; coin: string; fiat: string; ref_: string
+}) {
+  const done = ev.outcome === 'completed'
+  const rows = ev.chain ?? []
+  if (!ev.receipt_ref && !rows.length) return null
+  return (
+    <div className="eswin evpack">
+      <div className="fal">
+        <span>Evidence pack · {ref_}</span>
+        <b>{done ? `${coin} → ${fiat}` : ev.outcome}</b>
+      </div>
+      {ev.receipt_ref && (
+        <div className="evrow">
+          <i className="ok" />
+          <span>Bank receipt</span>
+          {/* 打开的是当时交上来的原件，不是一个「已上传」的字样 */}
+          <a href={ep.fileURL(ev.receipt_ref)} target="_blank" rel="noopener"
+            /* 链接文字不印 file_ref：那是一个 uuid，对人没有任何意义，
+               而这一行左边已经说了它是什么。 */
+            onClick={e => e.stopPropagation()}>Open original ↗</a>
+          {/* settled_at 是回执核验通过的时刻，不是放款时刻——放款在它之后。
+              单独排一行「Settled」会排在放款下面，时间却更早，整列读下来
+              像时间倒流了。它属于这份回执，就跟着回执。 */}
+          {ev.settled_at && <time>verified {new Date(ev.settled_at).toLocaleString()}</time>}
+        </div>
+      )}
+      {rows.map((c, i) => (
+        <div className="evrow" key={c.tx_hash || c.kind + i}>
+          <i className="ok" />
+          <span>{KIND[c.kind] ?? c.kind}</span>
+          {c.tx_hash && (c.explorer
+            ? <a href={c.explorer} target="_blank" rel="noopener" className="num"
+              onClick={e => e.stopPropagation()}>
+              {c.tx_hash.slice(0, 8)}…{c.tx_hash.slice(-6)} ↗
+            </a>
+            : <em className="num">{c.tx_hash.slice(0, 8)}…{c.tx_hash.slice(-6)}</em>)}
+          <time>{new Date(c.at).toLocaleString()}</time>
+        </div>
+      ))}
+    </div>
   )
 }
 

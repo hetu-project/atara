@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
+import AssessCard from '../components/AssessCard'
 import Avatar from '../components/Avatar'
 import { IAttach, IMic, ISend } from '../components/icons'
 import { useApi } from '../hooks/useApi'
@@ -63,8 +64,15 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
           {stream.map(x => ('msg' in x
             ? <Bubble key={x.msg.id} m={x.msg} />
             /* 工单卡不套页面外壳，直接进流。onBack 在这儿没有意义——
-               卡就在会话里，没有「返回」这回事。 */
-            : <OrderDetail key={x.order.id} id={x.order.id} bare onBack={() => {}} />))}
+               卡就在会话里，没有「返回」这回事。
+               风控卡排在工单卡前面：评估是在下单那一刻跑的，先有判断
+               才有这一单，顺序反了就成了「先成交再审」。 */
+            : (
+              <Fragment key={x.order.id}>
+                {x.order.assessment && <AssessCard a={x.order.assessment} />}
+                <OrderDetail id={x.order.id} bare onBack={() => {}} />
+              </Fragment>
+            )))}
           {!stream.length && (
             <div className="msg sys"><span className="bub">
               Nothing here yet. Orders and messages with {name} land in this stream.

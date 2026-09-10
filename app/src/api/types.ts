@@ -168,7 +168,48 @@ export interface Order {
    * 不重算是有意的：评分是对下单当时的判断，跟着后来的事变就不是判断了。
    */
   trust_score: number
+  /** 对手方的成绩单与资质件。跟工单一起发，两个数才来自同一时刻。 */
+  peer_profile?: PeerProfile
+  /** 这一单的手续费，下单那一刻定死的。 */
+  fee?: { amount: string; currency: string; bps: number }
+  /** 下单前那次风控评估的快照。没跑过就没有。 */
+  assessment?: OrderAssessment
+  /** 终态才有：这单最后靠什么收的口。 */
+  evidence?: Evidence
   created_at: string
+}
+
+export interface PeerProfile {
+  name: string
+  peer_code?: string
+  deals: number
+  disputes: number
+  trust_score: number
+  docs?: Record<string, boolean>
+}
+
+export interface OrderAssessment {
+  score: number
+  passed: number
+  total: number
+  threshold: number
+  summary: string
+  votes: { agent: string; verdict: 'pass' | 'flag'; note: string }[]
+  /** 读了多少来源、多少记录。由评估器报，前端不编。 */
+  sources: number
+  records: number
+}
+
+export interface Evidence {
+  outcome: 'completed' | 'cancelled' | 'expired' | 'disputed'
+  receipt_ref?: string
+  settled_at?: string
+  chain?: {
+    kind: string; amount?: string; tx_hash?: string
+    /** 区块浏览器上这笔交易的地址。mock 链上没有，那时就不给链接。 */
+    explorer?: string
+    memo?: string; at: string
+  }[]
 }
 
 export interface Task {
@@ -372,6 +413,18 @@ export interface MakerApp {
 
 // ── 联系人与会话 ──
 
+/** /accounts/search 的一行。它不是联系人——还没有任何关系，只是「这个人存在」。 */
+export interface Account {
+  id: string
+  address: string
+  name: string
+  kind: string
+  deals: number
+  trust_score: number
+  /** 我跟这个人现在的关系。空=还没有，pending=等他点头，accepted=已经是联系人。 */
+  relation?: '' | 'pending' | 'accepted'
+}
+
 export interface Contact {
   id: string
   address: string
@@ -380,6 +433,8 @@ export interface Contact {
   /** Supplier / Client / Colleague / Friend / My agent */
   label: string
   nickname?: string
+  /** pending 表示还等着对方点头。pending 的人不能被指定为收款方。 */
+  status?: 'pending' | 'accepted'
   deals: number
   fill_rate: string
   /** 往来净额，正数=对方欠我。 */

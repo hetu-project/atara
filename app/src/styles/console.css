@@ -508,6 +508,10 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
 .acrow{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;
   border-radius:var(--r-control);background:none;cursor:pointer;font:inherit;text-align:left}
 .acrow:hover{background:var(--cream)}
+/* 已经是联系人 / 已发出请求：列出来，但不装成可以点。
+   不给 hover 高亮，否则光标一过就像是能点的。 */
+.acrow:disabled{cursor:default;opacity:.6}
+.acrow:disabled:hover{background:transparent}
 .acrow .n{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;line-height:1.3}
 .acrow .n em{font-style:normal;font-size:13px;font-weight:500;color:var(--ink)}
 .acrow .n i{font-style:normal;font-size:11.5px;color:var(--faint)}
@@ -2645,6 +2649,12 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .mcn em{font-style:normal;font-size:var(--rt-meta);color:var(--faint)}
 
 /* 评估结论卡：头部结论 + 四行维度摘要，点头部展开全文 */
+/* 评估跑完之后那份清单。参照那边是右栏里逐条点亮的进度条（.ardv/.ardcols），
+   我们这边是事后回看的静态三行——评估在下单那一刻就跑完了，再演一遍进度
+   是假的。三行必须各占一行：并排排下来会连成一句读不断的话。 */
+.assrun{display:flex;flex-direction:column;gap:3px}
+.assrun span{color:var(--mute);font-size:var(--rt-meta);line-height:1.5}
+
 .asscard{max-width:560px;padding:11px 14px;border-radius:var(--r-card);
   background:var(--paper);box-shadow:var(--ring)}
 .aschead{display:flex;align-items:center;gap:12px;width:100%;
@@ -2702,6 +2712,20 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .esxp:hover{color:var(--accent);background:var(--card)}
 .fal .esxp{margin-left:auto}
 .fal .esxp+.btn,.fal .esxp+button{margin-left:0}
+
+/* 证据包：终态那张卡里的结算记录。沿用 .eswin 的底盒——它跟入金观察窗
+   是同一件事的两头（钱怎么进去的、钱怎么出来的），长得一样才读得出这层关系。
+   每行三段：这一步是什么、链上凭据、什么时候。时间靠右，扫一列就是时间线。 */
+.evrow{display:flex;align-items:baseline;gap:8px;font-size:var(--rt-body);color:var(--mute)}
+.evrow i{flex:none;align-self:center;width:8px;height:8px;border-radius:999px;
+  background:var(--green)}
+.evrow span{flex:none;color:var(--ink)}
+.evrow a{color:var(--accent);text-decoration:none;font-size:12px;
+  padding:1px 5px;border-radius:5px}
+.evrow a:hover{background:var(--card)}
+.evrow em{font-style:normal;color:var(--faint);font-size:12px}
+.evrow time{margin-left:auto;flex:none;color:var(--faint);font-size:var(--rt-meta);
+  white-space:nowrap}
 
 /* ── 入金卡：非托管的第一拍 ── */
 .fund{max-width:520px;padding:14px 16px;border-radius:var(--r-card);

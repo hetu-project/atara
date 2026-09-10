@@ -1,6 +1,6 @@
 import { ApiError, BASE, api, getIdentity, withConfirmation } from './client'
 import type {
-  Allowance, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, EligiblePeer, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
+  Account, Allowance, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, EligiblePeer, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
 } from './types'
 
 // ── 账户 ──
@@ -311,6 +311,34 @@ export const myOffers = (as?: string) =>
 export const delistOffer = (id: string, as?: string) =>
   api.del<{ status: string }>(`/offers/${id}`, { as })
 
+/** 找人加联系人。名字模糊、地址精确——规则在后端一处，前端不再自己推。 */
+export const searchAccounts = (q: string, as?: string) =>
+  api.get<{ accounts: Account[] }>(
+    `/accounts/search?q=${encodeURIComponent(q)}`, { as }).then(r => r.accounts ?? [])
+
+/**
+ * 别人发给我、还没点头的联系人请求。
+ *
+ * 返回的不是 Contact：请求还不是关系，没有成交记录、没有往来净额、
+ * 没有「认识多久了」。照 Contact 的形状声明的话，那几个字段在运行时
+ * 是 undefined，而类型说它们一定在。
+ */
+export interface ContactRequest {
+  id: string
+  address: string
+  name: string
+  kind: string
+  label: string
+  nickname?: string
+  status: string
+}
+export const contactRequests = (as?: string) =>
+  api.get<{ requests: ContactRequest[] }>('/contact-requests', { as })
+    .then(r => r.requests ?? [])
+
+export const acceptContact = (id: string, as?: string) =>
+  api.post<{ status: string }>(`/contact-requests/${id}/accept`, {}, { as })
+
 // ── 联系人与会话 ──
 
 export const contacts = (as?: string) =>
@@ -338,3 +366,9 @@ export const conditionCatalog = () => api.get<ConditionCatalog>('/catalog/condit
 /** 自然语言解析成条件原子。V1 前端不用，端点仍在。 */
 export const parseIntent = (text: string, as?: string) =>
   api.post<unknown>('/orders/parse', { text }, { as })
+
+/**
+ * 上传件的直链。证据包里那份银行凭证要能点开看原件——
+ * 显示一个「已上传」的字样，等于让人相信一份他看不到的东西。
+ */
+export const fileURL = (ref: string) => BASE + '/uploads/' + ref.split('/').pop()
