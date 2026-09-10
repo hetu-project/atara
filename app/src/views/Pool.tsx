@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import * as ep from '../api/endpoints'
+import { ApiError } from '../api/client'
 import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
 import { useAssessment } from '../hooks/useAssessment'
 import { useKycGate } from '../hooks/useKycGate'
+import { useWalletTx } from '../hooks/useWalletTx'
 import type { Offer } from '../api/types'
 
 const FIAT_SYM: Record<string, string> = {
@@ -142,13 +144,29 @@ function OfferCard({
   const ceiling = Math.round(Number(o.fiat_ceiling))
   const docsOn = Object.values(m.docs ?? {}).filter(Boolean).length
 
+  const { data: chain } = useApi(() => ep.chainInfo(), [])
+  const tx = useWalletTx(chain ?? null)
+
   const take = async () => {
     /* 先问身份再切视图：否则用户先被甩进一个空页面，登录门才追上来 */
     if (onNeedSignIn) { onNeedSignIn(); return }
     /* 再过身份门。法币腿点对点走银行，付款方必须可识别——买家也要验。 */
     if (!mine && kyc.require()) return
     if (mine) {
-      await ep.delistOffer(o.id, identity).catch(() => {})
+      /* 下架要把币取回钱包，而合约只认当初锁币的那个地址——后端去调必然
+         revert。所以先让后端说「该你签了」（UNLOCK_REQUIRED），签完再来一次，
+         那一次后端只核验「链上确实解开了」。 */
+      try {
+        await ep.delistOffer(o.id, identity)
+      } catch (e) {
+        if (e instanceof ApiError && e.code === 'UNLOCK_REQUIRED') {
+          const prep = await ep.prepareDelist(o.id, identity)
+          await tx.unlockListing({ escrow: prep.escrow, offerKey: prep.offer_key })
+          await ep.delistOffer(o.id, identity)
+        } else {
+          return
+        }
+      }
       location.reload()
       return
     }

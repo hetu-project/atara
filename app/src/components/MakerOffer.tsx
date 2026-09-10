@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
+import { isWalletTxError, useWalletTx } from '../hooks/useWalletTx'
 import { FIAT_RAILS, FX_IDX } from './kycforms'
 import type { Listing } from './MakerListing'
 import type { Offer } from '../api/types'
+import type { TxStep } from '../hooks/useWalletTx'
 
 /**
  * 一条挂单：一笔量、一个价。
@@ -33,6 +35,11 @@ export default function MakerOffer({
   const { data: cat } = useApi(() => ep.assets(), [])
   const { data: fiatCorridors } = useApi(() => ep.fiats(), [])
   const { data: w } = useApi(() => ep.wallet(identity), [identity])
+  /* 接了链就走真交易：币由做市方自己的钱包锁进托管合约。
+     没接链（mock）时 chain.impl 是 mock，走原来那条后端记账的路。 */
+  const { data: chain } = useApi(() => ep.chainInfo(), [])
+  const tx = useWalletTx(chain ?? null)
+  const onChain = chain?.impl === 'evm'
 
   const [side, setSide] = useState('')
   const [coin, setCoin] = useState('')
@@ -129,15 +136,35 @@ export default function MakerOffer({
       return
     }
     setBad({ id: '' }); setBusy(true)
+    const body = {
+      side: (sell ? 'sell' : 'buy') as 'sell' | 'buy', asset: curCoin, fiat: curFiat,
+      unit_price: String(p), qty: String(q), min_lot: String(m),
+      network: curNet, networks: [curNet],
+    }
     try {
-      const o = await ep.createOffer({
-        side: sell ? 'sell' : 'buy', asset: curCoin, fiat: curFiat,
-        unit_price: String(p), qty: String(q), min_lot: String(m),
-        network: curNet, networks: [curNet],
-      }, identity)
+      /* 卖单在真链上是三步，顺序不能换：
+           ① 要号——lockListing 的 offerId 是合约主键，不先有号就没法锁
+           ② 钱包签 approve + lockListing，币真的进合约
+           ③ 拿着号来建挂单，后端去链上核对锁了什么
+         买单不锁币（法币腿走银行），一步就够。 */
+      let extra: { offer_id?: string; lock_tx?: string } = {}
+      if (onChain && sell) {
+        const prep = await ep.prepareOffer(body, identity)
+        const hash = await tx.lockListing({
+          escrow: prep.escrow, token: prep.token,
+          offerKey: prep.offer_key, amountWei: prep.amount_wei,
+        })
+        extra = { offer_id: prep.offer_id, lock_tx: hash }
+      }
+      const o = await ep.createOffer({ ...body, ...extra }, identity)
+      tx.setStep({ k: 'idle' })
       onPosted(o, sym)
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not post')
+      // 钱包那一侧的错已经在交易进度那里显示过了，别再重复一遍。
+      // 判断靠错误类型而不是 tx.step —— 闭包里那个 step 是这次点击开始时的旧值。
+      if (!isWalletTxError(e)) {
+        setErr(e instanceof Error ? e.message : 'Could not post')
+      }
     } finally { setBusy(false) }
   }
 
@@ -206,6 +233,14 @@ export default function MakerOffer({
           <span className="err">{errMsg('of-min', 'Must be below the listing total')}</span></div>
 
         {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
+        <TxNote step={tx.step} explorer={chain?.explorer ?? ''} />
+
+        {onChain && sell && (
+          <p className="rnote">
+            Posting sends two transactions from your own wallet on {chain?.network}:
+            one to approve the escrow contract, one to lock the coins into it.
+          </p>
+        )}
 
         <div className="dfoot" style={{ marginTop: 14 }}>
           <button className="btn btn-primary" disabled={busy}
@@ -213,6 +248,31 @@ export default function MakerOffer({
         </div>
       </div></div></div>
     </div>
+  )
+}
+
+/**
+ * 钱包那一侧走到哪一步了。
+ *
+ * 要签两次，中间还要等区块——不说清楚的话，第二次弹窗看着像失败重试，
+ * 而等待期间界面一动不动，人会以为卡死了去点第二次。
+ */
+function TxNote({ step, explorer }: { step: TxStep; explorer: string }) {
+  if (step.k === 'idle') return null
+  if (step.k === 'error') {
+    return <p className="dnote" style={{ color: 'var(--warn)' }}>{step.msg}</p>
+  }
+  const hash = 'hash' in step ? step.hash : ''
+  return (
+    <p className="dnote">
+      {step.k === 'wallet' && <>{step.msg} …</>}
+      {step.k === 'mining' && <>{step.msg} — waiting for the transaction to confirm</>}
+      {step.k === 'done' && <>Confirmed on chain</>}
+      {hash && explorer ? (
+        <> · <a className="lnk" href={`${explorer}/tx/${hash}`} target="_blank"
+          rel="noopener">view transaction</a></>
+      ) : null}
+    </p>
   )
 }
 

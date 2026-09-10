@@ -1,6 +1,6 @@
 import { ApiError, BASE, api, getIdentity, withConfirmation } from './client'
 import type {
-  Allowance, Assessment, BankAccount, CatalogAsset, ConditionCatalog, Contact, EligiblePeer, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
+  Allowance, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, EligiblePeer, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
 } from './types'
 
 // ── 账户 ──
@@ -33,6 +33,9 @@ export const assets = () =>
   api.get<{ assets: CatalogAsset[] }>('/catalog/assets').then(r => r.assets)
 
 /** 结算法币，按走廊分组。目录只发这一版支持的——范围由后端声明。 */
+/** 链上合约地址。mock 下回一份空的，前端据此知道这一版不发交易。 */
+export const chainInfo = () => api.get<ChainInfo>('/catalog/chain')
+
 export const fiats = () =>
   api.get<{ corridors: { group: string; assets: CatalogAsset[] }[] }>('/catalog/fiats')
     .then(r => r.corridors)
@@ -288,6 +291,16 @@ export const createOffer = (req: {
   withConfirmation('offer', [req.asset, req.qty],
     req.side === 'sell' ? 'signature' : 'commit',
     token => api.post<Offer>('/offers', req, { confirmation: token, as }), as)
+
+/** 挂卖单第一步：要号，并拿到锁币要用的参数。 */
+export const prepareOffer = (req: {
+  side: 'buy' | 'sell'; asset: string; fiat: string; qty: string
+  unit_price: string; min_lot: string; network: string
+}, as?: string) => api.post<PreparedOffer>('/offers/prepare', req, { as })
+
+/** 下架前要的解锁参数。 */
+export const prepareDelist = (id: string, as?: string) =>
+  api.post<PreparedOffer>(`/offers/${id}/prepare-delist`, {}, { as })
 
 export const myOffers = (as?: string) =>
   api.get<{ offers: Offer[] }>('/offers/mine', { as }).then(r => r.offers ?? [])

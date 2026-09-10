@@ -214,6 +214,34 @@ export interface MatchResult {
 }
 
 /** money.Asset。注意 USDRate 在后端标了 json:"-"，不出参——前端拿不到汇率。 */
+/** 前端自己发交易要用的网络与合约地址。来自 GET /catalog/chain。 */
+export interface ChainInfo {
+  /** mock 时所有地址都是空的——那条链上没有合约可调，这一版不发交易。 */
+  impl: 'mock' | 'evm'
+  network: string
+  chain_id: number
+  rpc_url: string
+  explorer: string
+  escrow: string
+  spending: string
+  tokens: Record<string, { address: string; decimals: number }>
+  updated_at?: string
+}
+
+/** /offers/prepare 的回执：去锁币要用的全部参数。 */
+export interface PreparedOffer {
+  offer_id: string
+  /** 合约里的 bytes32。哈希规则在后端一处，前端原样带走。 */
+  offer_key: string
+  escrow: string
+  token: string
+  decimals: number
+  /** 已按代币精度换算好——前端不自己乘 10^n，算错就是 10^12 倍的差。 */
+  amount_wei: string
+  chain_id: number
+  network: string
+}
+
 export interface CatalogAsset {
   code: string
   kind: 'crypto' | 'fiat'
