@@ -189,6 +189,47 @@ export function useWalletTx(info: ChainRow | null) {
     }
   }, [connect])
 
+  /**
+   * 给支出合约签一笔 approve。
+   *
+   * 额度就是支配权：说「允许这个 agent 每周花 2000」，链上对应的就是
+   * 允许支出合约动这么多币。以前这颗按钮写着「Approve in wallet」，
+   * 实际只是 POST 给后端，由后端拿自己的私钥去签——那批的是后端的币，
+   * 用户钱包里一分没动，链上什么授权都没有。
+   */
+  const approveSpending = useCallback(async (p: {
+    spending: string; token: string; amountWei: string
+  }): Promise<string> => {
+    try {
+      const { account, pub, wallet, chain } = await connect()
+      const amount = BigInt(p.amountWei)
+      const token = p.token as Address
+      const spender = p.spending as Address
+      const allowed = await pub.readContract({
+        address: token, abi: ERC20, functionName: 'allowance', args: [account, spender],
+      })
+      if (allowed >= amount) {
+        // 已经批够了就不再签一次。多弹一次钱包，人会以为上次没成功。
+        setStep({ k: 'idle' })
+        return ''
+      }
+      setStep({ k: 'wallet', msg: 'Approve the spending contract in your wallet' })
+      const h = await wallet.writeContract({
+        address: token, abi: ERC20, functionName: 'approve',
+        args: [spender, amount], chain, account,
+      })
+      setStep({ k: 'mining', msg: 'Approving', hash: h })
+      const rc = await pub.waitForTransactionReceipt({ hash: h })
+      if (rc.status !== 'success') throw new Error('The approval transaction failed')
+      setStep({ k: 'done', hash: h })
+      return h
+    } catch (e) {
+      const msg = readable(e)
+      setStep({ k: 'error', msg })
+      throw new WalletTxError(msg)
+    }
+  }, [connect])
+
   /** 下架：把没被订单绑走的量取回钱包。只有原 maker 能调。 */
   const unlockListing = useCallback(async (p: {
     escrow: string; offerKey: string
@@ -212,5 +253,8 @@ export function useWalletTx(info: ChainRow | null) {
     }
   }, [connect])
 
-  return { step, setStep, lockListing, unlockListing, ready: wallets.length > 0 }
+  return {
+    step, setStep, lockListing, unlockListing, approveSpending,
+    ready: wallets.length > 0,
+  }
 }

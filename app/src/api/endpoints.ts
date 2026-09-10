@@ -188,6 +188,9 @@ export interface AllowanceReq {
   /** '30 days' | '90 days' | '' = 不过期 */
   expires: string
   recipients: string
+  /** 这份授权是对哪条链上的哪个代币。不给就是 USDT、后端连着的那条链。 */
+  asset?: string
+  network?: string
 }
 
 /**

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import * as ep from '../api/endpoints'
+import { isWalletTxError, useWalletTx, type TxStep } from '../hooks/useWalletTx'
 import { useApi } from '../hooks/useApi'
 import { BankAccountsPanel } from './BankAccounts'
 import { ICopy } from './icons'
@@ -78,7 +79,9 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
   const held = w?.assets ?? []
   const list = (cat ?? []).map(a => ({
     asset: a.code,
-    networks: a.networks ?? held.find(h => h.asset === a.code)?.networks ?? [],
+    /* 收款地址按链算：目录说这个币支持哪几条链，就都列出来。
+       持仓那一侧只告诉我们「钱现在在哪条链上」，那是另一件事。 */
+    networks: a.networks ?? [],
   }))
   const [coin, setCoin] = useState('')
   const useCoin = list.some(a => a.asset === coin) ? coin : (list[0]?.asset ?? '')
@@ -96,7 +99,7 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
       </div>
       <div className="sf"><span className="sfl">Network</span>
         <div className="sfchips">
-          {nets.map(n => (
+          {nets.map((n: string) => (
             <button key={n} type="button" className={'sfchip' + (n === useNet ? ' on' : '')}
               onClick={() => setNet(n)}>{netName(n)}</button>
           ))}
@@ -246,7 +249,7 @@ export function SendModal({
 
   /* 余额为 0 的不列：转不出去的东西摆在选择列表里，只会让人点进去才发现。 */
   const sendable = assets.filter(a => Number(a.on_chain) > 0)
-  const net = pick?.networks?.[0] ?? ''
+  const net = pick?.network ?? ''
   const fee = FEE[net] ?? "paid in the chain's native coin"
 
   /* 每条链自己的地址格式；表里没有的按 EVM。 */
@@ -297,7 +300,7 @@ export function SendModal({
               <button type="button" className="warow" key={a.asset}
                 onClick={() => { setPick(a); setTo(''); setAmount(''); setErr(''); setStep(1) }}>
                 <span className="anm"><b>{a.asset}</b>
-                  <em>{a.networks?.[0] ?? ''}
+                  <em>{a.network}
                     {Number(a.in_escrow) > 0 ? ` · ${a.in_escrow} locked` : ''}</em></span>
                 <span className="waval"><b className="num">{a.on_chain}</b><em>available</em></span>
                 <span className="wago" aria-hidden>›</span>
@@ -357,6 +360,26 @@ export function SendModal({
   )
 }
 
+/** 钱包那一侧走到哪一步了。要签名、要等区块，不说清楚人会以为卡死了。 */
+function TxLine({ step, explorer }: { step: TxStep; explorer: string }) {
+  if (step.k === 'idle') return null
+  if (step.k === 'error') {
+    return <p className="dnote" style={{ color: 'var(--warn)' }}>{step.msg}</p>
+  }
+  const hash = 'hash' in step ? step.hash : ''
+  return (
+    <p className="dnote">
+      {step.k === 'wallet' && <>{step.msg} …</>}
+      {step.k === 'mining' && <>{step.msg} — waiting for the transaction to confirm</>}
+      {step.k === 'done' && <>Confirmed on chain</>}
+      {hash && explorer ? (
+        <> · <a className="lnk" href={`${explorer}/tx/${hash}`} target="_blank"
+          rel="noopener">view transaction</a></>
+      ) : null}
+    </p>
+  )
+}
+
 // ── 额度 ────────────────────────────────────────────────────────────
 
 export function AllowanceModal({
@@ -371,28 +394,61 @@ export function AllowanceModal({
   onRevoke?: () => void
 }) {
   const me = edit?.spender === 'Me'
+  const { data: chains } = useApi(() => ep.chainInfo(), [])
+  const { data: cat } = useApi(() => ep.assets(), [])
   const [f, setF] = useState({
     spender: edit?.spender ?? 'New agent',
+    asset: edit?.asset ?? asset ?? 'USDT',
+    network: edit?.network ?? '',
     per_payment: edit?.per_payment ?? '500',
     window_cap: edit?.window_cap ?? '2000',
     cycle: (edit?.cycle ?? 'weekly') as 'weekly' | 'monthly',
     expires: edit?.expires_at ? '90 days' : '90 days',
   })
-  const [err, setErr] = useState('')
+  /* 出错的是哪一行。只在底下挂一句话的话，人盯着按钮以为没反应——
+     截图里那句「Per-payment cap cannot exceed the window cap」就是这样：
+     校验其实跑了、也拦下了，但没人知道该改哪个框。 */
+  const [bad, setBad] = useState<{ id: string; msg: string } | null>(null)
   const [busy, setBusy] = useState(false)
 
+  const coins = (cat ?? []).map(a => a.code)
+  const rows = chains?.chains ?? []
+  const useCoin = coins.includes(f.asset) ? f.asset : (coins[0] ?? 'USDT')
+  const useNet = rows.some(c => c.code === f.network) ? f.network : (rows[0]?.code ?? '')
+  const chain = rows.find(c => c.code === useNet) ?? null
+  const wtx = useWalletTx(chain)
+
   const submit = async () => {
-    if (!f.spender.trim()) { setErr('Spender is required'); return }
-    if (!(Number(f.per_payment) > 0) || !(Number(f.window_cap) > 0)) {
-      setErr('Caps must be positive'); return
+    setBad(null)
+    if (!f.spender.trim()) { setBad({ id: 'spender', msg: 'Spender is required' }); return }
+    if (!(Number(f.per_payment) > 0)) {
+      setBad({ id: 'per', msg: 'Enter a cap above zero' }); return
+    }
+    if (!(Number(f.window_cap) > 0)) {
+      setBad({ id: 'cap', msg: 'Enter a cap above zero' }); return
     }
     if (Number(f.per_payment) > Number(f.window_cap)) {
-      setErr('Per-payment cap cannot exceed the window cap'); return
+      setBad({
+        id: 'per',
+        msg: `Cannot exceed the ${f.cycle} cap of ${Number(f.window_cap).toLocaleString()}`,
+      })
+      return
     }
-    setBusy(true); setErr('')
+    setBusy(true)
     try {
+      /* 外部钱包：额度在链上就是对支出合约的一笔 approve，必须由用户的钱包
+         签。以前这颗按钮写着「Approve in wallet」却只是 POST 给后端，由后端
+         拿自己的私钥去签——批的是后端的币，用户钱包里一分没动。 */
+      const tok = chain?.tokens?.[useCoin]
+      if (walletKind === 'ext' && chain?.deployed && chain.spending && tok?.address) {
+        const wei = BigInt(Math.round(Number(f.window_cap) * 10 ** tok.decimals)).toString()
+        await wtx.approveSpending({
+          spending: chain.spending, token: tok.address, amountWei: wei,
+        })
+      }
       await ep.saveAllowance({
         spender: f.spender.trim(), kind: 'agent',
+        asset: useCoin, network: useNet,
         per_payment: f.per_payment, window_cap: f.window_cap,
         cycle: f.cycle, expires: f.expires === 'Not set' ? '' : f.expires,
         /* 收款方范围这一排参照删掉了。接口还收这个字段，就按「不限」发过去，
@@ -401,7 +457,10 @@ export function AllowanceModal({
       }, edit?.id, identity)
       onDone()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not sign')
+      // 钱包那一侧的错已经在交易进度那里显示过了，别再重复一遍
+      if (!isWalletTxError(e)) {
+        setBad({ id: '', msg: e instanceof Error ? e.message : 'Could not sign' })
+      }
     } finally { setBusy(false) }
   }
 
@@ -409,26 +468,52 @@ export function AllowanceModal({
 
   return (
     <Sheet title={edit ? 'Edit allowance' : 'New allowance'} onClose={onClose}>
-      <div className="sf"><span className="sfl">Spender</span>
+      <div className={'sf' + (bad?.id === 'spender' ? ' bad' : '')}>
+        <span className="sfl">Spender</span>
         {/* 「Me」是自己的支出策略，改名没有意义——那不是一个可以改叫别的名字的对象 */}
         <input type="text" value={f.spender} autoComplete="off" spellCheck={false} disabled={me}
-          onChange={e => setF({ ...f, spender: e.target.value })} /></div>
+          onChange={e => { setBad(null); setF({ ...f, spender: e.target.value }) }} />
+        <span className="err">{bad?.id === 'spender' ? bad.msg : ''}</span></div>
 
-      <div className="sf"><span className="sfl">Max per payment ({asset})</span>
+      {/* 额度是对某条链上某个代币合约的授权，两样都得问清楚。同一个币在
+          四条链上是四份互不相干的授权，不问的话它们会混成一份。 */}
+      <div className="sf"><span className="sfl">Asset</span>
+        <Chips opts={coins} on={useCoin} onPick={c => setF({ ...f, asset: c })} /></div>
+
+      <div className="sf"><span className="sfl">Network</span>
+        <Chips opts={rows.map(c => c.code)} on={useNet}
+          onPick={c => setF({ ...f, network: c })} />
+        {chain && (
+          <span className="ad" style={{ fontSize: 11.5, color: 'var(--faint)' }}>
+            {chain.name} · chain {chain.chain_id}
+            {chain.testnet ? ' · testnet' : ''}
+            {walletKind === 'ext' && !chain.deployed
+              ? ' · no spending contract here yet — nothing will be approved on chain' : ''}
+          </span>
+        )}
+      </div>
+
+      <div className={'sf' + (bad?.id === 'per' ? ' bad' : '')}>
+        <span className="sfl">Max per payment ({useCoin})</span>
         <input type="text" value={f.per_payment} inputMode="numeric"
-          onChange={e => setF({ ...f, per_payment: e.target.value })} /></div>
+          onChange={e => { setBad(null); setF({ ...f, per_payment: e.target.value }) }} />
+        <span className="err">{bad?.id === 'per' ? bad.msg : ''}</span></div>
 
       {/* 周期跟上限是一件事——「每周 2000」拆成两行读起来是两个独立设置 */}
-      <div className="sf"><span className="sfl">Max per window ({asset})</span>
+      <div className={'sf' + (bad?.id === 'cap' ? ' bad' : '')}>
+        <span className="sfl">Max per window ({useCoin})</span>
         <input type="text" value={f.window_cap} inputMode="numeric"
-          onChange={e => setF({ ...f, window_cap: e.target.value })} />
+          onChange={e => { setBad(null); setF({ ...f, window_cap: e.target.value }) }} />
         <Chips opts={['weekly', 'monthly']} on={f.cycle}
           onPick={c => setF({ ...f, cycle: c as 'weekly' | 'monthly' })} />
+        <span className="err">{bad?.id === 'cap' ? bad.msg : ''}</span>
       </div>
 
       <div className="sf"><span className="sfl">Expires</span>
         <Chips opts={['30 days', '90 days', 'Not set']} on={f.expires}
           onPick={c => setF({ ...f, expires: c })} /></div>
+
+      <TxLine step={wtx.step} explorer={chain?.explorer ?? ''} />
 
       <div className="dfoot">
         {edit && onRevoke && (
@@ -436,7 +521,9 @@ export function AllowanceModal({
             {me ? (live ? 'Disable' : 'Enable') : (live ? 'Revoke' : 'Re-issue')}
           </button>
         )}
-        <span className="dnote" style={{ color: 'var(--warn)' }}>{err}</span>
+        <span className="dnote" style={{ color: 'var(--warn)' }}>
+          {bad && !bad.id ? bad.msg : ''}
+        </span>
         <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
           {/* 签在哪儿由钱包类型决定：外部钱包是对支出合约 approve，
               自建钱包才是 passkey 签账户策略。写错就是在教用户找一个不存在的弹窗。 */}

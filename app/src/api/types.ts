@@ -38,10 +38,11 @@ export interface User {
 
 export interface WalletAsset {
   asset: string
+  /** 这笔余额实际所在的链，不是「这个币支持哪些链」。 */
+  network: string
   on_chain: string
   in_escrow: string
   usd_value: string
-  networks: string[]
 }
 
 export interface Wallet {
@@ -283,6 +284,8 @@ export interface Allowance {
   spender: string
   kind: 'person' | 'agent'
   asset: string
+  /** 这份授权在哪条链上。空是旧数据（那时只有一条链）。 */
+  network: string
   per_payment: string
   window_cap: string
   used: string

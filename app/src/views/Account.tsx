@@ -19,6 +19,10 @@ type Tab = 'assets' | 'listings' | 'act'
  * 非托管：余额与托管仓位分开报，因为它们本来就是两个地方——
  * 钱包里的是你的，合约里的是锁着的，加在一起才是总账。
  */
+/** 后端给没起名字的账户用的展示名就是这个形状，比对它来判断「没起过名字」。 */
+const shortAddr = (a: string) =>
+  a.length > 10 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a
+
 export default function Account({ identity }: { identity: string }) {
   const kyc = useKycGate()
   const [tab, setTab] = useState<Tab>('assets')
@@ -76,7 +80,14 @@ export default function Account({ identity }: { identity: string }) {
                   <>
                     <span className="pname">{me?.display_name ?? 'Demo'}</span>
                     <button className="pedit" title="Rename" aria-label="Edit nickname"
-                      onClick={() => { setDraft(me?.display_name ?? ''); setRenaming(true) }}>
+                      /* 没起过名字的账户，展示名就是地址的缩写（0xFC3d…4443）。
+                         把缩写填进输入框等于让人对着省略号改——所以这时填完整
+                         地址。真起过名字的照旧填名字。 */
+                      onClick={() => {
+                        const n = me?.display_name ?? ''
+                        setDraft(n === shortAddr(me?.address ?? '') ? (me?.address ?? '') : n)
+                        setRenaming(true)
+                      }}>
                       <IPen />
                     </button>
                   </>
@@ -246,7 +257,7 @@ function Assets({ rows }: { rows: WalletAsset[] }) {
           <div className="arow3" key={a.asset}>
             <span className="acoin" style={{ background: `hsl(${hue} 45% 40%)` }}>{a.asset.slice(0, 1)}</span>
             <span className="anm"><b>{a.asset}</b>
-              <em>{a.networks?.[0] ?? ''}{locked ? ` · ${fmtAmt(locked)} locked` : ''}</em></span>
+              <em>{a.network}{locked ? ` · ${fmtAmt(locked)} locked` : ''}</em></span>
             <span className="aright">
               <b className="num">${Math.round(usd).toLocaleString()}</b>
               <em className="num">{fmtAmt(Number(a.on_chain))} available</em>
