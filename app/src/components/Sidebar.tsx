@@ -168,11 +168,12 @@ export default function Sidebar({
               onClick={() => { setMenu(false); go({ view: 'account' }) }}>
               <IUser />Profile
             </button>
-            {/* 参照里 Settings 和 Profile 落到同一页（openAcct 只是带个锚点）。
-                与其造一个空的设置页，不如老实指向账户页——那里就是所有
-                可改的东西所在。 */}
+            {/* 参照里 Settings 切的是账户页的另一种模式（ACCT_MODE），
+                只显示 Security 那一段。原来这里直接跳账户页——那不是
+                「不生效」，是把两件事当成了一件：账户页是资产和挂单，
+                安全设置是另一回事。 */}
             <button className="umitem" role="menuitem"
-              onClick={() => { setMenu(false); go({ view: 'account' }) }}>
+              onClick={() => { setMenu(false); go({ view: 'settings' }) }}>
               <IGear />Settings
             </button>
             <div className="umsep" />

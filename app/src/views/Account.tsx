@@ -53,6 +53,9 @@ export default function Account({ identity }: { identity: string }) {
   const cards = allow ?? []
   const card = cards.find(c => c.id === pick) ?? cards[0]
   const assets = w?.assets ?? []
+  /* 还挂着的单：卖完（filled）和下架（delisted）的不算。它们已经不占着钱、
+     也不能被吃，摆在「Your listings」里只会让人以为还在市场上。 */
+  const live = (mine ?? []).filter(o => o.status === 'active')
   const avail = Number(w?.on_chain_usd ?? 0)
   const esc = Number(w?.in_escrow_usd ?? 0)
   const escN = assets.filter(a => Number(a.in_escrow) > 0).length
@@ -175,7 +178,7 @@ export default function Account({ identity }: { identity: string }) {
         {/* 三个分栏：三段内容各自都不多，并排会把页面拉长，叠着又都长一个样 */}
         <div className="rsec">
           <div className="atabs" role="tablist">
-            {([['assets', `Assets`], ['listings', `Listings${mine?.length ? ` · ${mine.length}` : ''}`],
+            {([['assets', `Assets`], ['listings', `Listings${live.length ? ` · ${live.length}` : ''}`],
                ['act', 'Activity']] as [Tab, string][]).map(([k, n]) => (
               <button key={k} className={'atab ' + (tab === k ? 'on' : '')} role="tab"
                 aria-selected={tab === k} onClick={() => setTab(k)}>{n}</button>
@@ -196,9 +199,9 @@ export default function Account({ identity }: { identity: string }) {
             {tab === 'listings' && (
               <>
                 <div className="pmh"><h4>Your listings</h4></div>
-                {mine?.length ? (
+                {live.length ? (
                   <div className="alist2">
-                    {mine.map(o => (
+                    {live.map(o => (
                       <div className="arow3" key={o.id}>
                         <span className="acoin" style={{ background: `hsl(${COIN_HUE[o.asset] ?? 200} 45% 40%)` }}>
                           {o.asset.slice(0, 1)}
@@ -211,7 +214,15 @@ export default function Account({ identity }: { identity: string }) {
                       </div>
                     ))}
                   </div>
-                ) : <p className="rnote">No listings. Post one from Discover.</p>}
+                ) : (
+                  <p className="rnote">
+                    {mine?.length
+                      /* 卖完和下架的单不在这儿列——它们已经不占着钱、也吃不了。
+                         留在列表里只会让人以为还挂着，而那一行写着 0。 */
+                      ? 'Nothing listed right now. Filled and unlisted offers move to Activity.'
+                      : 'No listings. Post one from Discover.'}
+                  </p>
+                )}
               </>
             )}
             {tab === 'act' && (

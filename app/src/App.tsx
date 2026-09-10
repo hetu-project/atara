@@ -8,6 +8,7 @@ import Payments from './views/Payments'
 import Pool from './views/Pool'
 import OrderDetail from './views/OrderDetail'
 import Account from './views/Account'
+import Settings from './views/Settings'
 import { IDENTITY_GONE } from './api/client'
 import { IPanel } from './components/icons'
 import { LockScreen, PwSetup, useSessionLock } from './components/SessionLock'
@@ -84,6 +85,7 @@ export default function App() {
         {route.view === 'contacts' && <Contacts identity={handle} />}
         {route.view === 'payments' && <Payments identity={handle} />}
         {route.view === 'account' && <Account identity={handle} />}
+        {route.view === 'settings' && <Settings identity={handle} />}
         {route.view === 'order' && (
           <div className="view on"><div className="vbody">
             <OrderDetail id={route.id} onBack={() => go({ view: 'payments' })} />
