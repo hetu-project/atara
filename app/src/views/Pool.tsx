@@ -143,6 +143,8 @@ function OfferCard({
   const qty = Number(o.remaining_qty)
   const ceiling = Math.round(Number(o.fiat_ceiling))
   const docsOn = Object.values(m.docs ?? {}).filter(Boolean).length
+  /* 有成交才有分。deals 是 0 的时候那个分数没有来源。 */
+  const scored = m.deals > 0
 
   /* 下架要在挂单所在的那条链上发交易——不是后端连的那条。 */
   const { data: chains } = useApi(() => ep.chainInfo(), [])
@@ -192,24 +194,40 @@ function OfferCard({
           <i className="od-id num">{m.peer_code}</i>
           {mine ? <i className="od-known">Your listing · {o.side === 'sell' ? 'selling' : 'buying'}</i> : null}
         </span>
-        {/* 信任分是选谁交易的第一判断依据 */}
-        <span className={'od-ai ' + (m.trust_score >= 85 ? 'hi' : m.trust_score < 70 ? 'lo' : '')}
-          style={{ ['--p' as string]: m.trust_score }}
-          title="AI risk score — priced from settlement history, fund provenance and dispute record">
-          <span className="od-ring">
-            <svg viewBox="0 0 44 44" aria-hidden>
-              <circle className="trk" cx="22" cy="22" r="18" />
-              <circle className="val" cx="22" cy="22" r="18" />
-            </svg>
-            <b className="num">{m.trust_score}</b>
+        {/* 信任分是选谁交易的第一判断依据。
+            没成交过就没有分——不是 0 分。摆一个 0 出来，读的人看到的是
+            「这家评分很低」，而实际是「还没有可评的东西」，那是两回事，
+            而且前者会让新做市方永远接不到第一单。 */}
+        {scored ? (
+          <span className={'od-ai ' + (m.trust_score >= 85 ? 'hi' : m.trust_score < 70 ? 'lo' : '')}
+            style={{ ['--p' as string]: m.trust_score }}
+            title="AI risk score — priced from settlement history, fund provenance and dispute record">
+            <span className="od-ring">
+              <svg viewBox="0 0 44 44" aria-hidden>
+                <circle className="trk" cx="22" cy="22" r="18" />
+                <circle className="val" cx="22" cy="22" r="18" />
+              </svg>
+              <b className="num">{m.trust_score}</b>
+            </span>
+            <em>AI score</em>
           </span>
-          <em>AI score</em>
-        </span>
+        ) : (
+          <span className="od-ai" style={{ ['--p' as string]: 0 }}
+            title="No score yet — a score is a claim about settlement history, and there is none">
+            <span className="od-ring">
+              <svg viewBox="0 0 44 44" aria-hidden>
+                <circle className="trk" cx="22" cy="22" r="18" />
+              </svg>
+              <b>—</b>
+            </span>
+            <em>No score</em>
+          </span>
+        )}
       </div>
 
       {/* 分数的来源，不能只给分不给依据 */}
       <div className="od-trust">
-        {mine ? <span>New merchant — history builds as trades settle</span> : (
+        {!scored ? <span>New merchant — history builds as trades settle</span> : (
           <>
             <span><b className="num">{m.deals}</b>&nbsp; trades</span>
             <em>·</em><span><b className="num">{m.fill_rate}%</b>&nbsp; completion</span>
