@@ -31,6 +31,10 @@ export default function Account({ identity }: { identity: string }) {
   const [editing, setEditing] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState('')
+  /* 进编辑时填进去的是什么。判断「改没改」要跟它比，不能跟展示名比——
+     没起过名字的账户展示名是缩写、填进去的是完整地址，跟展示名比永远
+     算「改过了」，于是什么都没动、一失焦就把完整地址存成了名字。 */
+  const [initial, setInitial] = useState('')
   const [pick, setPick] = useState<string>('')
   const [flip, setFlip] = useState(false)
   const { data: me, reload: reloadMe } = useApi(() => ep.me(identity), [identity])
@@ -42,7 +46,7 @@ export default function Account({ identity }: { identity: string }) {
   const saveName = async () => {
     const v = draft.trim()
     setRenaming(false)
-    if (!v || v === me?.display_name) return
+    if (!v || v === initial) return
     try { await ep.rename(v, identity); reloadMe() } catch { /* 后端会说原因，这里不吞成静默失败 */ }
   }
 
@@ -69,13 +73,23 @@ export default function Account({ identity }: { identity: string }) {
                     只改展示名——地址才是账户的唯一键，订单、额度、联系人
                     全挂在地址上，改名不影响它们。 */}
                 {renaming ? (
-                  <input className="pname" autoFocus value={draft}
-                    onChange={e => setDraft(e.target.value)}
-                    onBlur={() => void saveName()}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') void saveName()
-                      if (e.key === 'Escape') setRenaming(false)
-                    }} />
+                  /* 样式挂在 `.pname input` 上——参照里 .pname 是外面那个
+                     span，输入框在它里面。写成 <input className="pname"> 的话
+                     那条规则一条都不匹配，剩下浏览器默认的白底白字。 */
+                  <span className="pname">
+                    <input autoFocus value={draft} maxLength={64}
+                      aria-label="Nickname"
+                      /* 11ch 只够放昵称；填进来的可能是 42 个字符的地址 */
+                      style={{ width: `${Math.max(11, draft.length + 1)}ch` }}
+                      onFocus={e => e.currentTarget.select()}
+                      onChange={e => setDraft(e.target.value)}
+                      onBlur={() => void saveName()}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') void saveName()
+                        // Esc 是「算了」——原样退出，不写库
+                        if (e.key === 'Escape') { setDraft(initial); setRenaming(false) }
+                      }} />
+                  </span>
                 ) : (
                   <>
                     <span className="pname">{me?.display_name ?? 'Demo'}</span>
@@ -85,8 +99,8 @@ export default function Account({ identity }: { identity: string }) {
                          地址。真起过名字的照旧填名字。 */
                       onClick={() => {
                         const n = me?.display_name ?? ''
-                        setDraft(n === shortAddr(me?.address ?? '') ? (me?.address ?? '') : n)
-                        setRenaming(true)
+                        const v = n === shortAddr(me?.address ?? '') ? (me?.address ?? '') : n
+                        setDraft(v); setInitial(v); setRenaming(true)
                       }}>
                       <IPen />
                     </button>
