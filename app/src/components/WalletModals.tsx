@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
+import { BankAccountsPanel } from './BankAccounts'
 import { ICopy } from './icons'
 import type { Allowance, Payee, Wallet, WalletAsset } from '../api/types'
 
@@ -162,8 +163,13 @@ export function PayeesModal({ identity, onClose }: { identity: string; onClose: 
 
   return (
     <Sheet title="Addresses" onClose={onClose}>
-      {/* 参照里这个弹窗还有一段银行账户。后端的 Payee 只有链上地址这一种，
-          编一段没有接口支撑的法币卡片，只会让人以为那里真存了银行信息。 */}
+      {/* 两块：法币收款账户（别人怎么把钱打给我）和链上地址（我往哪儿转币）。
+          参照把它们放在同一个弹窗里，因为回答的是同一个问题——「我的收款方式」。 */}
+      <div className="rsec"><h3>Fiat accounts</h3>
+        <BankAccountsPanel identity={identity} />
+      </div>
+
+      <div className="rsec" style={{ marginBottom: 4 }}><h3>Crypto addresses</h3>
       <div className="plist">
         {(list ?? []).map((p: Payee) => (
           <div className="prow" key={p.id}>
@@ -201,10 +207,11 @@ export function PayeesModal({ identity, onClose }: { identity: string; onClose: 
         </div>
       )}
 
-      <p className="rnote">
-        Withdrawals can only go to a registered address — that is what makes a mistyped
-        address a mistake you make once, not every time.
-      </p>
+        <p className="rnote">
+          A saved address is one you do not have to retype — Send also accepts any address
+          you paste.
+        </p>
+      </div>
     </Sheet>
   )
 }

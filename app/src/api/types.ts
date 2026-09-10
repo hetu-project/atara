@@ -250,6 +250,18 @@ export interface Allowance {
 
 // ── 收款方与提现 ──
 
+/** 法币收款账户。account_no 恒为掩码——全量号码从不落库。 */
+export interface BankAccount {
+  id: string
+  holder: string
+  bank: string
+  account_no: string
+  currency: string
+  region: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Payee {
   id: string
   label: string

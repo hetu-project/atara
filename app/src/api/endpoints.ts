@@ -1,9 +1,6 @@
 import { ApiError, BASE, api, getIdentity, withConfirmation } from './client'
 import type {
-  Allowance, Assessment, CatalogAsset, ConditionCatalog, Contact, EligiblePeer, MakerApp,
-  Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary,
-  User, Wallet,
-  Withdrawal,
+  Allowance, Assessment, BankAccount, CatalogAsset, ConditionCatalog, Contact, EligiblePeer, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
 } from './types'
 
 // ── 账户 ──
@@ -204,6 +201,20 @@ export const revokeAllowance = (id: string, as?: string) =>
   api.del<Allowance>(`/allowances/${id}`, { as })
 
 // ── 收款方与提现 ──
+
+// ── 法币收款账户 ──
+
+export const bankAccounts = (as?: string) =>
+  api.get<{ accounts: BankAccount[] }>('/bank-accounts', { as }).then(r => r.accounts ?? [])
+
+/** 提交的是**全量**账号：后端校完就掩码落库，全量不进数据库。 */
+export const saveBankAccount = (
+  body: { holder: string; bank: string; account_no: string; currency: string; region: string },
+  id?: string, as?: string,
+) => api.post<BankAccount>(id ? `/bank-accounts/${id}` : '/bank-accounts', body, { as })
+
+export const deleteBankAccount = (id: string, as?: string) =>
+  api.del<{ status: string }>(`/bank-accounts/${id}`, { as })
 
 export const payees = (as?: string) =>
   api.get<{ payees: Payee[] }>('/payees', { as }).then(r => r.payees ?? [])
