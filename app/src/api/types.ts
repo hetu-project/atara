@@ -162,6 +162,11 @@ export interface Order {
   rail: RailStop[]
   otc?: OtcLeg
   events?: OrderEvent[]
+  /**
+   * 下单那一刻算出来的风控评分（60–99），存在工单上，之后不重算。
+   * 不重算是有意的：评分是对下单当时的判断，跟着后来的事变就不是判断了。
+   */
+  trust_score: number
   created_at: string
 }
 

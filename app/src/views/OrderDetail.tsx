@@ -214,6 +214,19 @@ function Peer({ o, ccy }: { o: Order; ccy: string }) {
         <dd><span className="flg">{flag(ccy)}</span>{ccy} — {FIAT_NAME[ccy] ?? ccy}</dd></div>
       <div><dt>Amount</dt>
         <dd>{Number(o.amount.amount).toLocaleString()} {o.amount.asset}</dd></div>
+      {/* 这一单自己的分，下单那一刻定的。摆在对手方旁边是因为它评的就是
+          这笔单跟这个对手方——不是这个人此刻的总体信誉。 */}
+      {o.trust_score > 0 && (
+        <div><dt>Risk score</dt>
+          <dd>
+            <b className={'num ' + (o.trust_score >= 85 ? 'ok' : o.trust_score < 70 ? 'warn' : '')}>
+              {o.trust_score}
+            </b>
+            <span className="dreq" style={{ marginLeft: 8 }}>
+              scored when the order was placed
+            </span>
+          </dd></div>
+      )}
     </dl>
   )
 }
