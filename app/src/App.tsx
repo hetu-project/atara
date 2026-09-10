@@ -10,6 +10,7 @@ import OrderDetail from './views/OrderDetail'
 import Account from './views/Account'
 import { IDENTITY_GONE } from './api/client'
 import { IPanel } from './components/icons'
+import { LockScreen, PwSetup, useSessionLock } from './components/SessionLock'
 import { AssessmentProvider } from './hooks/useAssessment'
 import { KycProvider } from './hooks/useKycGate'
 import { useIdentity } from './hooks/useIdentity'
@@ -29,10 +30,9 @@ export default function App() {
   /* 右栏是用户自己收起来的——和「这个视图本来就没有右栏」(rout) 分开记，
      否则从 Discover 切回新建单，右栏会莫名其妙地不见。 */
   const [rfold, setRfold] = useState(false)
-  /* 锁屏：离开座位时把界面盖住。不做假的密码校验——参照里那道演示密码
-     是原型件，在一个碰真钱的界面上摆一个不校验任何东西的密码框，
-     传达的安全感是假的。 */
-  const [locked, setLocked] = useState(false)
+  /* 会话锁。密码只解开这个界面，不批准任何东西——转账和额度永远走钱包
+     那一侧的签名。没设过密码就先带他去设，设好再替他锁上，那一下的意图不丢。 */
+  const lk = useSessionLock(signed)
   const [folded, setFolded] = useState(
     () => { try { return localStorage.getItem('atara-left') === '1' } catch { return false } })
 
@@ -71,7 +71,7 @@ export default function App() {
       <Sidebar route={route} go={go} identity={handle} folded={folded} onFold={setFolded}
         signed={signed} onSignIn={login}
         onSignOut={() => { signOutAll(signOut); go({ view: 'discover' }) }}
-        onLock={() => setLocked(true)} />
+        onLock={lk.lock} />
 
       <section id="mid">
         {/* 未登录的起点是市场：能看的东西在这儿，下单页留给登录后 */}
@@ -106,17 +106,13 @@ export default function App() {
       {/* 登录弹窗由 Privy 自己渲染，挂在 body 上——这里不需要留位置 */}
     </main>
 
-    {locked && (
-      <div id="lock" className="show" role="dialog" aria-modal="true" aria-label="Session locked">
-        <div className="lkcard">
-          <h3>Session locked</h3>
-          <p className="acnote">
-            The screen is covered so nothing is readable over your shoulder.
-            Your session is still open — unlocking does not sign you in again.
-          </p>
-          <button className="btn btn-primary" autoFocus onClick={() => setLocked(false)}>Unlock</button>
-        </div>
-      </div>
+    {lk.setup && (
+      <PwSetup why={lk.setup.why} onClose={lk.closeSetup} onDone={lk.finishSetup} />
+    )}
+    {lk.locked && (
+      <LockScreen name={handle}
+        onUnlock={() => lk.setLocked(false)}
+        onSignOut={() => { lk.setLocked(false); signOutAll(signOut); go({ view: 'discover' }) }} />
     )}
     </KycProvider>
     </AssessmentProvider>

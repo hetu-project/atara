@@ -3232,3 +3232,6 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .wnew p{margin:0;line-height:1.45}
 .wnew b{color:var(--ink);font-weight:600}
 .wnew.warn p{margin-bottom:10px}
+
+/* 设置密码弹窗里那句「为什么现在要设」——比正文重，因为它是这次打断的理由 */
+.pwwhy{color:var(--ink)!important;font-weight:500}
