@@ -167,7 +167,11 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit() }
             }}
-            placeholder={'Describe a trade — try “Buy 5,000 USDT with CNY” or “Sell 2,000 USDT for HKD”'} />
+            /* 在 Atara AI 这条对话里，输入框问的是这条对话的事——参照的
+               setPlaceholder() 就是按当前线程换这句话的。 */
+            placeholder={kyc.maker
+              ? 'Message Atara AI — ask about the account, timing or documents'
+              : 'Describe a trade — try “Buy 5,000 USDT with CNY” or “Sell 2,000 USDT for HKD”'} />
           <div className="saytools">
             {/* 附件按钮按产品要求隐藏：它在参照里会走一段文档识别的演示，
                 我们这边没有对应实现，留一个点了没反应的按钮不如不给。 */}

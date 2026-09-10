@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import * as ep from '../api/endpoints'
-import MakerFlow from '../components/MakerFlow'
+import MakerThread from '../components/MakerThread'
 import type { MakerApp } from '../api/types'
 import { useApi } from './useApi'
 import { go } from './useRoute'
@@ -9,6 +9,8 @@ interface Ctx {
   /** 返回 true 表示被拦下了：调用方应当停手，门会自己弹出来。 */
   require: () => boolean
   openMaker: () => void
+  /** 收起准入对话，回到那句「你想结算什么」。侧栏的「New order」用它。 */
+  closeMaker: () => void
   /** 身份是否已经审过。账户页要照实显示，不能写死成「已验证」。 */
   kycOk: boolean
   /** 交过材料但还没审完——这两个状态在界面上不是一回事。 */
@@ -26,8 +28,8 @@ interface Ctx {
   maker: React.ReactNode | null
 }
 const KycCtx = createContext<Ctx>({
-  require: () => false, openMaker: () => {}, kycOk: false, kycPending: false,
-  app: null, maker: null,
+  require: () => false, openMaker: () => {}, closeMaker: () => {},
+  kycOk: false, kycPending: false, app: null, maker: null,
 })
 export const useKycGate = () => useContext(KycCtx)
 
@@ -42,6 +44,10 @@ export function KycProvider({ identity, children }: { identity: string; children
   const { data: app, reload } = useApi(() => ep.makerApp(identity), [identity])
   const [open, setOpen] = useState(false)
   const [why, setWhy] = useState<'trade' | 'maker'>('trade')
+  /* 「为什么要验」那一句已经说过了。原来是把 why 改成 maker 来收起它——
+     副作用是通过之后说的话也跟着变了：本来只想下单的人，会被告知
+     「下一步配置你卖什么」。参照那边这两件事是分开的（KYC_AFTER）。 */
+  const [explained, setExplained] = useState(false)
 
   /* 材料交上去之后，放行是后端隔几秒改的状态——不问它就永远显示「审核中」，
      人只能自己刷页面。所以在审核中这段时间里问一问。
@@ -63,6 +69,7 @@ export function KycProvider({ identity, children }: { identity: string; children
   const require = useCallback(() => {
     if (app?.kyc_ok) return false
     setWhy('trade')
+    setExplained(false)
     setOpen(true)
     return true
   }, [app])
@@ -70,31 +77,30 @@ export function KycProvider({ identity, children }: { identity: string; children
   /* 卡片长在首页的对话区里，所以开之前先把人带回首页——
      否则在 Discover 上点「验证」会什么都看不见。 */
   const openMaker = useCallback(() => { go({ view: 'home' }); setWhy('maker'); setOpen(true) }, [])
+  const closeMaker = useCallback(() => setOpen(false), [])
 
-  const showMaker = open && !(why === 'trade' && !app?.kyc_done)
+  const showMaker = open && (why !== 'trade' || explained || !!app?.kyc_done)
 
   const value = useMemo(() => ({
-    require, openMaker,
+    require, openMaker, closeMaker,
     kycOk: !!app?.kyc_ok,
     kycPending: !!app?.kyc_done && !app?.kyc_ok,
     app: app ?? null,
     maker: showMaker ? (
-      <MakerFlow app={app ?? null} identity={identity} from={why}
-        onClose={() => setOpen(false)}
-        /* 提交后不关：让 app 重新拉一次，卡片自己切成回执/审核中那一态。
-           直接关掉的话，界面一片空白，人会以为没提交成功。 */
-        onDone={reload} />
+      /* 提交后不关：往下追加回执、审核中、通过几条消息。直接关掉的话
+         界面一片空白，人会以为没提交成功。 */
+      <MakerThread app={app ?? null} identity={identity} from={why} onDone={reload} />
     ) : null,
-  }), [require, openMaker, app, showMaker, identity, why, reload])
+  }), [require, openMaker, closeMaker, app, showMaker, identity, why, reload])
 
   return (
     <KycCtx.Provider value={value}>
       {children}
       {/* 不把人默默甩进一张表单：先说清为什么要验，他点了头再进。
           跳转本身不是提示。这一层仍然是弹窗，参照也是。 */}
-      {open && why === 'trade' && !app?.kyc_done && (
+      {open && why === 'trade' && !explained && !app?.kyc_done && (
         <Explain onClose={() => setOpen(false)}
-          onGo={() => { go({ view: 'home' }); setWhy('maker') }} />
+          onGo={() => { go({ view: 'home' }); setExplained(true) }} />
       )}
     </KycCtx.Provider>
   )

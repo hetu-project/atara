@@ -82,6 +82,10 @@ export default function Sidebar({
                    但从用户看就是「我点了 A，你给我 B」。直接弹登录门。 */
                 onClick={() => {
                   if (!signed && n.view !== 'discover') { onSignIn(); return }
+                  /* 「New order」就是开一张新台面：准入那条对话得先收起来，
+                     不然点了它还停在原来那串消息上，看着像没反应。
+                     回得去——Chats 里的 Atara AI 一直在。 */
+                  if (n.view === 'home') kyc.closeMaker()
                   go({ view: n.view } as Route)
                 }}>
                 <span className="ni"><Icon /></span>{n.label}

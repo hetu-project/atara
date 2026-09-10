@@ -87,3 +87,16 @@ export interface Field { k: string; l: string; type: FieldType; opts?: string[] 
 export interface Step { t: string; lead: string; fields: Field[] }
 
 export { KYC_IND, KYC_CORP, LISTING_STEPS }
+
+/* 法币渠道：对手方把钱打到哪里。按走廊分组——22 个选项平铺会把表单撑到
+   卡片边上，所以收进一个分组多选菜单。数据逐条取自参照的 FIAT_RAILS。 */
+export const FIAT_RAILS = [
+  { g: 'Mainland China · CNY', ccy: 'CNY', list: ['ICBC', 'China Merchants Bank', 'Bank of China', 'CCB', 'Agricultural Bank', 'Alipay', 'WeChat Pay'] },
+  { g: 'Hong Kong · HKD', ccy: 'HKD', list: ['HSBC', 'Bank of China (HK)', 'Hang Seng', 'ZA Bank', 'FPS'] },
+  { g: 'Singapore · SGD', ccy: 'SGD', list: ['DBS', 'OCBC', 'UOB', 'PayNow'] },
+  { g: 'UAE · AED', ccy: 'AED', list: ['Emirates NBD', 'FAB', 'Mashreq'] },
+  { g: 'Europe · EUR', ccy: 'EUR', list: ['SEPA transfer', 'Wise', 'Revolut'] },
+]
+
+/** 参考指数（demo 静态）：法币 / USD。定价那一行用它算出「你报多少」。 */
+export const FX_IDX: Record<string, number> = { CNY: 7.28, HKD: 7.80, SGD: 1.34, AED: 3.67, EUR: 0.86 }
