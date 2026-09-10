@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import MakerFlow from './MakerFlow'
+import MakerOffer, { OfferPosted } from './MakerOffer'
 import { KYC_CORP, KYC_IND } from './kycforms'
 import { listingRows, type Listing } from './MakerListing'
-import type { MakerApp } from '../api/types'
+import { go } from '../hooks/useRoute'
+import type { MakerApp, Offer } from '../api/types'
 
 /**
  * 准入是一轮对话，不是一张会变脸的状态卡。
@@ -82,12 +84,14 @@ function forms(raw: string | undefined): { kyc?: Record<string, unknown>; listin
 // ── 主体 ────────────────────────────────────────────────────────────
 
 export default function MakerThread({
-  app, identity, from, onDone,
+  app, identity, from, wantOffer, onDone,
 }: {
   app: MakerApp | null
   identity: string
   /** 从哪儿来的：先要下单（trade）还是直接来入驻（maker）。决定通过后说什么。 */
   from: 'trade' | 'maker'
+  /** Discover 上那颗「Post a listing →」按的次数。变了就把挂单表单铺出来。 */
+  wantOffer: number
   onDone: () => void
 }) {
   /* 用户点了「Set up trading terms →」。审核通过那条消息带的是下一段的入口，
@@ -96,7 +100,15 @@ export default function MakerThread({
   /* 刚提交完的那一秒。参照先发一条「typing…」，1.2 秒后才换成回执——
      回执是平台开的，瞬间蹦出来不像一个人在那头处理。 */
   const [typing, setTyping] = useState<'kyc' | 'listing' | null>(null)
+  /* 挂单表单开着没有。参照那颗「Post your first listing →」点开的就是它。 */
+  const [toOffer, setToOffer] = useState(false)
+  /* 挂出去的单。留在对话里就是这笔挂单的记录——参照的 offerPosted 也是
+     把那张卡换成回执，而不是清掉。 */
+  const [posted, setPosted] = useState<{ o: Offer; sym: string }[]>([])
   const bottom = useRef<HTMLDivElement>(null)
+
+  /* 从 Discover 点过来的：那颗按钮按一次就把表单铺一次。 */
+  useEffect(() => { if (wantOffer) setToOffer(true) }, [wantOffer])
 
   const f = forms(app?.form)
   const kycDone = !!app?.kyc_done
@@ -107,7 +119,7 @@ export default function MakerThread({
   /* 新消息进来就滚到底——不滚的话通过那条消息连同它的按钮都在屏幕外面。 */
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [kycDone, kycOk, listDone, approved, typing, toListing])
+  }, [kycDone, kycOk, listDone, approved, typing, toListing, toOffer, posted.length])
 
   const submitted = (phase: 'kyc' | 'listing') => {
     setTyping(phase)
@@ -115,11 +127,13 @@ export default function MakerThread({
     onDone()
   }
 
-  /* 表单卡什么时候在：还没交身份材料，或者身份过了、点了下一段还没交。 */
-  const card: 'kyc' | 'listing' | null =
+  /* 表单卡什么时候在：还没交身份材料；身份过了、点了下一段还没交；
+     两段都过了、点了挂单。 */
+  const card: 'kyc' | 'listing' | 'offer' | null =
     !kycDone ? 'kyc'
       : kycOk && !listDone && toListing ? 'listing'
-        : null
+        : approved && toOffer ? 'offer'
+          : null
 
   return (
     <>
@@ -180,15 +194,27 @@ export default function MakerThread({
         <Them>
           ✓ Terms approved — you can post listings now. A listing is one offer with an amount
           and a price; posting it locks those coins into the escrow contract.
-          {/* 参照这里还有一颗「Post your first listing →」。挂单的界面这边还没有，
-              放一颗点不动的按钮比不放更糟。 */}
+          {!toOffer && !posted.length && (
+            <span className="rgo">
+              <button className="btn btn-primary btn-sm" onClick={() => setToOffer(true)}>
+                Post your first listing →
+              </button>
+            </span>
+          )}
         </Them>
       )}
 
-      {card && (
+      {posted.map(p => (
+        <OfferPosted key={p.o.id} o={p.o} sym={p.sym} onGo={() => go({ view: 'discover' })} />
+      ))}
+
+      {card === 'offer' ? (
+        <MakerOffer terms={f.listing} identity={identity}
+          onPosted={(o, sym) => { setToOffer(false); setPosted(ps => [...ps, { o, sym }]) }} />
+      ) : card ? (
         <MakerFlow phase={card} identity={identity} onSubmitted={submitted}
           onBackOut={() => setToListing(false)} />
-      )}
+      ) : null}
       <div ref={bottom} />
     </>
   )

@@ -101,7 +101,7 @@ export default function Account({ identity }: { identity: string }) {
               ) : kyc.kycPending ? (
                 <span>Identity in review</span>
               ) : (
-                <button className="lnk" type="button" onClick={kyc.openMaker}>Verify identity →</button>
+                <button className="lnk" type="button" onClick={() => kyc.openMaker()}>Verify identity →</button>
               )}
             </div>
           </div>

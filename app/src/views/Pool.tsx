@@ -123,7 +123,7 @@ function MakerCta() {
   const busy = label === 'Under review…'
   return (
     <button className="lnk" style={{ opacity: busy ? 0.6 : 1 }}
-      onClick={() => kyc.openMaker()}>{label}</button>
+      onClick={() => kyc.openMaker(app?.approved ? 'offer' : undefined)}>{label}</button>
   )
 }
 

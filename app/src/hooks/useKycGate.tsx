@@ -8,7 +8,8 @@ import { go } from './useRoute'
 interface Ctx {
   /** 返回 true 表示被拦下了：调用方应当停手，门会自己弹出来。 */
   require: () => boolean
-  openMaker: () => void
+  /** 打开准入对话。'offer' 表示直接进挂单表单（两段都审过了才有意义）。 */
+  openMaker: (intent?: 'offer') => void
   /** 收起准入对话，回到那句「你想结算什么」。侧栏的「New order」用它。 */
   closeMaker: () => void
   /** 身份是否已经审过。账户页要照实显示，不能写死成「已验证」。 */
@@ -76,7 +77,13 @@ export function KycProvider({ identity, children }: { identity: string; children
 
   /* 卡片长在首页的对话区里，所以开之前先把人带回首页——
      否则在 Discover 上点「验证」会什么都看不见。 */
-  const openMaker = useCallback(() => { go({ view: 'home' }); setWhy('maker'); setOpen(true) }, [])
+  /* 挂单意图记一个计数而不是 true/false：已经开着的时候再点一次
+     「Post a listing →」也得把表单重新铺出来——存布尔的话第二次点没反应。 */
+  const [wantOffer, setWantOffer] = useState(0)
+  const openMaker = useCallback((intent?: 'offer') => {
+    go({ view: 'home' }); setWhy('maker'); setOpen(true)
+    if (intent === 'offer') setWantOffer(n => n + 1)
+  }, [])
   const closeMaker = useCallback(() => setOpen(false), [])
 
   const showMaker = open && (why !== 'trade' || explained || !!app?.kyc_done)
@@ -89,9 +96,10 @@ export function KycProvider({ identity, children }: { identity: string; children
     maker: showMaker ? (
       /* 提交后不关：往下追加回执、审核中、通过几条消息。直接关掉的话
          界面一片空白，人会以为没提交成功。 */
-      <MakerThread app={app ?? null} identity={identity} from={why} onDone={reload} />
+      <MakerThread app={app ?? null} identity={identity} from={why} wantOffer={wantOffer}
+        onDone={reload} />
     ) : null,
-  }), [require, openMaker, closeMaker, app, showMaker, identity, why, reload])
+  }), [require, openMaker, closeMaker, app, showMaker, identity, why, wantOffer, reload])
 
   return (
     <KycCtx.Provider value={value}>
