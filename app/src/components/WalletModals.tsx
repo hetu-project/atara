@@ -76,17 +76,23 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
   /* 资产和网络取自目录，不是持仓。收款的前提恰恰是「还没有」——
      用持仓来填这两排，新账户就是两个空标签，弹窗看着像坏了。 */
   const { data: cat } = useApi(() => ep.assets(), [])
+  const { data: chains } = useApi(() => ep.chainInfo(), [])
   const held = w?.assets ?? []
-  const list = (cat ?? []).map(a => ({
-    asset: a.code,
-    /* 收款地址按链算：目录说这个币支持哪几条链，就都列出来。
-       持仓那一侧只告诉我们「钱现在在哪条链上」，那是另一件事。 */
-    networks: a.networks ?? [],
-  }))
+  const list = (cat ?? []).map(a => ({ asset: a.code, networks: a.networks ?? [] }))
   const [coin, setCoin] = useState('')
   const useCoin = list.some(a => a.asset === coin) ? coin : (list[0]?.asset ?? '')
   const cur = list.find(a => a.asset === useCoin)
-  const nets = cur?.networks ?? []
+
+  /* 只列这一版真的看得见的链。
+     
+     后端只连一条 RPC，余额就只从那条链上读。把四条链都摆出来的话，有人会
+     选 Ethereum、把 USDT 打到这个地址上，然后在界面上永远看不到它——币没丢
+     （EVM 地址是同一个），但这个产品对它一无所知，那比不给这个选项更糟。 */
+  const live = (chains?.chains ?? []).filter(c => c.deployed).map(c => c.code)
+  const all = cur?.networks ?? []
+  const nets = live.length ? all.filter(n => live.includes(n)) : all
+  const hidden = all.length - nets.length
+
   const [net, setNet] = useState(nets[0] ?? '')
   const useNet = nets.includes(net) ? net : (nets[0] ?? '')
   const addr = w?.address ?? ''
@@ -104,6 +110,12 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
               onClick={() => setNet(n)}>{netName(n)}</button>
           ))}
         </div>
+        {hidden > 0 && (
+          <span className="ad" style={{ fontSize: 11.5, color: 'var(--faint)' }}>
+            This build only watches {nets.join(' · ')}. Coins sent on another network
+            stay in your wallet, but will not show up here.
+          </span>
+        )}
       </div>
 
       <div className="depaddr">
@@ -136,7 +148,7 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
         Receives <b>{useCoin}</b> on <b>{netName(useNet)}</b> only.
         {/* 还没有这个币种的余额行时说清楚：钱到了才会长出来，
             否则收完款回到账户页看不到那一行，会以为丢了。 */}
-        {!held.some(h => h.asset === useCoin)
+        {!held.some((h: { asset: string }) => h.asset === useCoin)
           && ` A ${useCoin} balance on ${netName(useNet)} appears once the first deposit confirms.`}
         {' '}Sending another asset or another network cannot be recovered.
       </p>
