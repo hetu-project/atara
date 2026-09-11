@@ -22,29 +22,60 @@ const SUMMARY: [string, string][] = [
   ['Market', 'Velocity check'],
 ]
 
-export default function AssessCard({ a }: { a: OrderAssessment }) {
+export default function AssessCard({ a, peer }: { a: OrderAssessment; peer?: string }) {
   const [open, setOpen] = useState(false)
+  const [steps, setSteps] = useState(true)
   const notes = a.votes.filter(v => v.verdict !== 'pass')
   const cleared = a.votes.length - notes.length
   const ok = a.passed >= a.threshold
 
-  const rows = SUMMARY
+  /* 标题里的秒数只在真的跑过一秒以上时才印。
+     参照那边的「Assessed in 13s」是动画自己跑掉的时间；我们这边评估是
+     算出来的，后端量了多久就是多久。编一个像样的秒数，等于拿一句假话
+     去撑「我们认真查过」这个印象。 */
+  const secs = a.took_ms && a.took_ms >= 1000 ? Math.round(a.took_ms / 1000) : 0
+
+  /* 四行，逐处对着参照的 arunStep 措辞。第一行是「读了这一单」——
+     它交代的是评估的对象，没有它，下面三行的数字悬在半空。 */
+  const rows = [
+    peer ? `Read the order · ${peer}` : 'Read the order',
+    a.sources > 0 ? `Read ${a.sources} sources · ${a.records.toLocaleString()} records` : '',
+    `${cleared} of ${a.total} cleared${notes.length ? ` · ${notes.length} with a note` : ''}`,
+    `${a.passed}/${a.total} agree · needs ${a.threshold} of ${a.total} — ${ok ? 'approved' : 'held'}`,
+  ].filter(Boolean)
+
+  const summary = SUMMARY
     .map(([label, agent]) => [label, a.votes.find(v => v.agent === agent)?.note] as const)
     .filter((x): x is readonly [string, string] => !!x[1])
 
   return (
     <>
-      {/* 跑完之后那份清单。参照跑的时候是逐条点亮的动画，这里是事后回看——
-          评估在下单那一刻就跑完了，再演一遍进度条是假的。 */}
-      <div className="msg sys"><span className="bub">
-        <span className="assrun">
-          {a.sources > 0 && <span>✓ Read {a.sources} sources · {a.records} records</span>}
-          <span>✓ {cleared} of {a.total} cleared{notes.length ? ` · ${notes.length} with a note` : ''}</span>
-          <span>
-            ✓ {a.passed}/{a.total} agree · needs {a.threshold} of {a.total} — {ok ? 'approved' : 'held'}
-          </span>
-        </span>
-      </span></div>
+      {/* 跑完之后那份痕迹，结构与 Thinking.tsx 同一套 .thk。
+      
+          差别在数据来源：Thinking 挂在这一次运行的临时状态上，刷新就没了；
+          这里从工单存下来的 assessment 快照渲染，所以下次进这个会话，
+          当时评了什么、凭什么放行，还在原地。参照那边跑的时候是逐条点亮的
+          动画，这里是事后回看——评估在下单那一刻就跑完了，再演一遍进度条
+          是假的，所以每一行直接是 done。 */}
+      <div className={'thk' + (steps ? ' open' : '')}>
+        <button className="thkh" type="button" aria-expanded={steps}
+          onClick={() => setSteps(v => !v)}>
+          <span className="thksp" aria-hidden>✦</span>
+          <span className="thkl">{secs ? `Assessed in ${secs}s` : 'Assessed'}</span>
+          <span className="thkc" aria-hidden>⌄</span>
+        </button>
+        <div className="thkb"><div className="thkin">
+          <span className="thkline" aria-hidden />
+          <div className="thkrows">
+            {rows.map((text, i) => (
+              <div key={text} className="thkr done" style={{ animationDelay: `${i * 90}ms` }}>
+                <span className="thkri" aria-hidden />
+                <span className="thkrt">{text}</span>
+              </div>
+            ))}
+          </div>
+        </div></div>
+      </div>
 
       <div className="msg sys">
         <div className={'asscard' + (open ? ' open' : '')}>
@@ -63,7 +94,7 @@ export default function AssessCard({ a }: { a: OrderAssessment }) {
           </button>
           {!open && (
             <div className="ascsum">
-              {rows.map(([k, v]) => (
+              {summary.map(([k, v]) => (
                 <div className="ascr" key={k}><i /><span>{k}</span><em>{v}</em></div>
               ))}
             </div>

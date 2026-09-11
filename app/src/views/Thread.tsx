@@ -62,14 +62,14 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
       <div id="log">
         <div className="tfeed">
           {stream.map(x => ('msg' in x
-            ? <Bubble key={x.msg.id} m={x.msg} />
+            ? <Bubble key={x.msg.id} m={x.msg} peer={name} />
             /* 工单卡不套页面外壳，直接进流。onBack 在这儿没有意义——
                卡就在会话里，没有「返回」这回事。
                风控卡排在工单卡前面：评估是在下单那一刻跑的，先有判断
                才有这一单，顺序反了就成了「先成交再审」。 */
             : (
               <Fragment key={x.order.id}>
-                {x.order.assessment && <AssessCard a={x.order.assessment} />}
+                {x.order.assessment && <AssessCard a={x.order.assessment} peer={name} />}
                 <OrderDetail id={x.order.id} bare onBack={() => {}} />
               </Fragment>
             )))}
@@ -100,7 +100,7 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
   )
 }
 
-function Bubble({ m }: { m: Message }) {
+function Bubble({ m, peer }: { m: Message; peer: string }) {
   /* 系统播报不是谁说的话，居中不带气泡；订单卡点得开。 */
   if (m.kind === 'system' || m.kind === 'order') {
     const body = (
@@ -115,10 +115,26 @@ function Bubble({ m }: { m: Message }) {
       </div>
     ) : <div className="msg sys">{body}</div>
   }
+  const at = new Date(m.created_at)
+    .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+  /* 对方的话带头像，自己的不带——参照就是这么分的，而且这么分是对的：
+     一条流里只有一个「对方」，我自己是谁不需要每句话提醒一次。
+     .mrow 把头像和气泡按底对齐；少了它，头像会跟着多行气泡拉长。 */
+  if (m.author === 'me') {
+    return (
+      <div className="msg me">
+        <span className="bub">{m.body}</span>
+        <span className="mt">{at}</span>
+      </div>
+    )
+  }
   return (
-    <div className={'msg ' + (m.author === 'me' ? 'me' : 'them')}>
-      <span className="bub">{m.body}</span>
-      <span className="mt">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+    <div className="msg them">
+      <span className="mrow">
+        <Avatar name={peer} cls="mav" />
+        <span className="bub">{m.body}</span>
+      </span>
+      <span className="mt">{at}</span>
     </div>
   )
 }

@@ -3,7 +3,6 @@ import * as ep from '../api/endpoints'
 import { ApiError } from '../api/client'
 import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
-import { useAssessment } from '../hooks/useAssessment'
 import { useKycGate } from '../hooks/useKycGate'
 import { useWalletTx } from '../hooks/useWalletTx'
 import type { Offer } from '../api/types'
@@ -136,7 +135,6 @@ function OfferCard({
   onNeedSignIn?: () => void
 }) {
   const m = o.maker
-  const { start } = useAssessment()
   const kyc = useKycGate()
   const sym = FIAT_SYM[o.fiat] ?? ''
   const px = Number(o.unit_price)
@@ -175,18 +173,23 @@ function OfferCard({
       location.reload()
       return
     }
-    /* 先评估、后开单：切回中栏看着七票一张张落完，再进工单页。
-       顺序是刻意的——对手方还没评过就把人甩进工单页，那张卡就成了既成事实。 */
-    go({ view: 'home' })
-    await start(o.id, m.name)
+    /* 从大厅点一笔单，落点是**这个人的会话**，不是一张独立的工单页。
+    
+       参照的 showOrder() 就是这么走的：ensureThread(o.peer) → restoreSession
+       → 评估在对话里当着面跑 → 工单卡追加进同一条流。原来这里跳 view:'order'，
+       于是评估、成交、后续的每一句话被劈成三个互不相通的地方——而「我跟这个人
+       做了什么」本来就是一件事。会话是那件事唯一完整的记录。
+    
+       对手方的 id 只有工单回来才知道（Offer.maker 里没有 user id），所以是
+       先下单、再进会话，而不是先进会话等它长出来。 */
     try {
       /* 按币的数量下单：法币金额是换算出来的，整条挂单那一档会因为四舍五入
          比可成交量多出几分，然后被后端拒掉。 */
       const ord = await ep.take(o.id, {
         amount: o.remaining_qty, amount_kind: 'coin', network: o.networks[0] ?? o.network,
       })
-      go({ view: 'order', id: ord.id })
-    } catch { /* 错误由工单页或下一次拉取暴露 */ }
+      go({ view: 'thread', peer: ord.counterparty_id ?? '' })
+    } catch { /* 错误由会话里的工单卡或下一次拉取暴露 */ }
   }
 
   return (

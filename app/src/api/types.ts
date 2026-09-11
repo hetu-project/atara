@@ -198,6 +198,8 @@ export interface OrderAssessment {
   /** 读了多少来源、多少记录。由评估器报，前端不编。 */
   sources: number
   records: number
+  /** 这次评估真正花了多少毫秒。不到一秒就不印秒数——不编一个好看的数。 */
+  took_ms?: number
 }
 
 export interface Evidence {

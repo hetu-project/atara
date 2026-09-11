@@ -45,7 +45,10 @@ export default function Sidebar({
   const { data: allow } = useApi(() => ep.allowances(identity), [identity])
   // 会话列表就是左栏下半区。没有会话时整块（连标题）都不出现——
   // 空标题比没有标题更让人以为是加载失败。
-  const { data: threads } = useApi(() => ep.threads(identity), [identity])
+  /* 轮询：会话列表要跟着两件事变——我刚下的单会新开一条会话，对方发来的
+     消息会顶起一条旧会话。不轮询的话，下完单落到聊天里，左栏却没有这一行，
+     得刷新整页才出现；对方说了话也一样，安安静静地什么都不发生。 */
+  const { data: threads } = useApi(() => ep.threads(identity), [identity], 3000)
 
   const addr = me?.address ?? ''
   const short = addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : ''
@@ -117,7 +120,7 @@ export default function Sidebar({
               参照里它一直在列表上；我们原来只在开向导时临时显示一个标题，
               流程走完就找不回去了，「我的申请审到哪了」没有入口。 */}
           {signed && (
-            <button className={'cp' + (route.view === 'home' ? ' on' : '')} title="Atara AI"
+            <button className={'cp chatrow' + (route.view === 'home' ? ' on' : '')} title="Atara AI"
               onClick={() => { go({ view: 'home' }); kyc.openMaker() }}>
               <span className="cpav deskav" aria-hidden><i /></span>
               {/* 参照里这一行只有名字。别的会话那行小字是「最后一条消息」，
@@ -126,14 +129,21 @@ export default function Sidebar({
             </button>
           )}
           {chats.map(t => (
-            <button key={t.peer_id} className="cp" title={t.peer_name}
+            /* chatrow 不是装饰：头像那条规则是 `#tasklist .chatrow .cpav`，
+               少这个类名，选择器不命中，头像退回 .cpav 的 20px——而设计稿
+               这里是 34px。折叠侧栏时藏名字的那条规则也挂在它上面。
+               CSS 是照参照抄过来的，JSX 没把选择器要求的结构一起抄，
+               于是样式静悄悄地不生效。 */
+            <button key={t.peer_id} className="cp chatrow" title={t.peer_name}
               onClick={() => go({ view: 'thread', peer: t.peer_id })}>
               <Avatar name={t.peer_name} cls="cpav" />
               <span className="n">
                 <em>{t.peer_name}</em>
                 <i>{t.last}</i>
               </span>
-              <span className="cpt">{fmtClock(t.last_at)}</span>
+              {/* .cpt 在两边的 CSS 里都不存在，这个时间一直是没样式的裸文本。
+                  参照用的是 .chmeta 包一个 <time>。 */}
+              <span className="chmeta"><time>{fmtClock(t.last_at)}</time></span>
             </button>
           ))}
         </div>
