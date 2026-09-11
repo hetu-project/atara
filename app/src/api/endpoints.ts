@@ -1,4 +1,4 @@
-import { ApiError, BASE, api, getIdentity, withConfirmation } from './client'
+import { ApiError, BASE, PROFILE_CHANGED, api, getIdentity, withConfirmation } from './client'
 import type {
   Account, Allowance, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, EligiblePeer, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
 } from './types'
@@ -22,8 +22,12 @@ export const connect = (body: {
 export const me = (as?: string) => api.get<User>('/me', { as })
 
 /** 改展示名。地址才是账户的唯一键，所以改名不动任何已有关系。 */
-export const rename = (displayName: string, as?: string) =>
-  api.post<User>('/me', { display_name: displayName }, { as })
+export const rename = async (displayName: string, as?: string) => {
+  const u = await api.post<User>('/me', { display_name: displayName }, { as })
+  // 别处显示这个名字的地方自己去重取——见 PROFILE_CHANGED。
+  dispatchEvent(new CustomEvent(PROFILE_CHANGED))
+  return u
+}
 
 export const wallet = (as?: string) => api.get<Wallet>('/wallet', { as })
 

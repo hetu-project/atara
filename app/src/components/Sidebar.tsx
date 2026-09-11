@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
+import { PROFILE_CHANGED } from '../api/client'
 import { useApi } from '../hooks/useApi'
 import Avatar from './Avatar'
 import { IApi, IChart, IContacts, IDiscover, IGear, IGo, ILock, INewOrder, IPanel, IPayments } from './icons'
@@ -41,7 +42,7 @@ export default function Sidebar({
     addEventListener('keydown', key)
     return () => { clearTimeout(t); removeEventListener('mousedown', away); removeEventListener('keydown', key) }
   }, [menu])
-  const { data: me } = useApi(() => ep.me(identity), [identity])
+  const { data: me, reload: reloadMe } = useApi(() => ep.me(identity), [identity])
   const { data: allow } = useApi(() => ep.allowances(identity), [identity])
   // 会话列表就是左栏下半区。没有会话时整块（连标题）都不出现——
   // 空标题比没有标题更让人以为是加载失败。
@@ -49,6 +50,14 @@ export default function Sidebar({
      消息会顶起一条旧会话。不轮询的话，下完单落到聊天里，左栏却没有这一行，
      得刷新整页才出现；对方说了话也一样，安安静静地什么都不发生。 */
   const { data: threads } = useApi(() => ep.threads(identity), [identity], 3000)
+
+  /* 改完名要立刻变。这份 /me 是左栏自己的，账户页那边 reload 的是它那一份——
+     不听这个广播的话，左下角会一直停在改名前：新账户那就是一串地址，
+     而用户刚刚明明给自己起了名字。 */
+  useEffect(() => {
+    addEventListener(PROFILE_CHANGED, reloadMe)
+    return () => removeEventListener(PROFILE_CHANGED, reloadMe)
+  }, [reloadMe])
 
   const addr = me?.address ?? ''
   const short = addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : ''

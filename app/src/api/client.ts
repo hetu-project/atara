@@ -68,6 +68,19 @@ export function setIdentity(handle: string): void {
  */
 export const IDENTITY_GONE = 'atara:identity-gone'
 
+/**
+ * 自己的资料变了（现在只有改名）。
+ *
+ * 展示名同时出现在好几个地方——左下角的账户位、账户页、菜单里的抬头。
+ * 它们各自拉一份 /me，改完名只有发起的那一处会重取，别处要等到下次挂载
+ * 才更新：左下角会一直显示改名前的样子（新账户那就是一串地址），
+ * 看着像改名没成功。
+ *
+ * 广播一次，谁显示谁自己去重取。轮询也能盖住这件事，但改名是用户刚做完
+ * 的动作，隔几秒才变跟没变一样让人怀疑。
+ */
+export const PROFILE_CHANGED = 'atara:profile-changed'
+
 export function clearIdentity(): void {
   identity = 'demo'
   try {
