@@ -67,11 +67,17 @@ export default function App() {
   return (
     <AssessmentProvider>
     <KycProvider identity={handle}>
-    {/* 右栏只属于「新建一单」这一个视图——参照里是
-        main.classList.toggle('rout', v!=='chat')。其他视图收起它，中栏才拿到
-        整条剩余宽度；.view 的 max-width:960px + align-self:center 这时才起作用，
-        卡片是居中的。不收的话中栏只有一半宽，内容顶在左边。 */}
-    <main className={[route.view === 'home' && signed ? '' : 'rout', folded ? 'lout' : '',
+    {/* 右栏属于「有对话的那两个视图」：新建一单，以及某个人的会话。
+    
+        参照是 main.classList.toggle('rout', v!=='chat')——它那边只有一个 chat
+        视图，composer 和会话都在里面。我们拆成了 home 和 thread 两个，所以
+        条件要写成这两个的并集。原来只判 home，于是从大厅点 Buy 落到会话之后，
+        右栏被 rout 压成 1px，那一单的七票共识一个字都看不见。
+    
+        其他视图收起它，中栏才拿到整条剩余宽度；.view 的 max-width:960px +
+        align-self:center 这时才起作用，卡片是居中的。 */}
+    <main className={[(route.view === 'home' || route.view === 'thread') && signed
+      ? '' : 'rout', folded ? 'lout' : '',
       rfold ? 'rfold' : ''].filter(Boolean).join(' ') || undefined}>
       <Sidebar route={route} go={go} identity={handle} folded={folded} onFold={setFolded}
         signed={signed} onSignIn={login}

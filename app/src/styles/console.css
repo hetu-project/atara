@@ -2105,6 +2105,16 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
   overflow-y:auto;scrollbar-width:none;
   animation:agfadeup .2s var(--ease) both}
 .ardock::-webkit-scrollbar{display:none}
+
+/* 跑完之后那段结论。段落式，不是行式——四句话回答的是下单的人真正在问的
+   四件事，逐票念七遍没人读得完。带 note 的那几条用告警色单独拎出来：
+   记下来和拦下来是两回事，同色混排会让人以为这单出了问题。 */
+.arverd{font-size:var(--rt-body);line-height:1.6;color:var(--mute)}
+.arverd b{color:var(--ink);font-weight:var(--rt-body-w)}
+.arverd ul{margin:8px 0;padding-left:18px}
+.arverd li{margin:5px 0}
+.arverd li.bnote{color:var(--warn)}
+.arverd li.bnote b{color:var(--warn)}
 /* 平铺后滚动裁切要有出口暗示：底部一道渐隐（内容装得下时它自然不出现） */
 .ardock{mask-image:linear-gradient(to bottom,#000 calc(100% - 18px),transparent);
   -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 18px),transparent)}

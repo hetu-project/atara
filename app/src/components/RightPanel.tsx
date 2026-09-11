@@ -6,6 +6,7 @@ import { IPanel } from './icons'
 import { Constellation, Ring } from './Ring'
 import { RISK_AGENTS, agentGlyph } from './agents'
 import { useAssessment } from '../hooks/useAssessment'
+import type { Run } from '../hooks/useAssessment'
 import type { Order } from '../api/types'
 
 /**
@@ -218,13 +219,7 @@ function Assessment({ onFold }: { onFold: () => void }) {
                           <em>{v.note}</em>
                         </div>
                       ))}
-                      {run.done && (
-                        <div className="asby">
-                          {run.flagged
-                            ? 'Held for review — the gate did not clear'
-                            : `Cleared · ${run.votes.filter(v => v.v === 'pass').length}/${run.total} agents agree`}
-                        </div>
-                      )}
+                      {run.done && <Verdict run={run} />}
                     </div>
                   )}
                 </>
@@ -293,6 +288,60 @@ function Assessment({ onFold }: { onFold: () => void }) {
         })()}
       </div>
     </section>
+  )
+}
+
+/**
+ * 跑完之后的结论，一段说人话的话。
+ *
+ * 七票分成四个主题讲：身份和行为合成「对手方」，来源和图谱合成「资金」，
+ * 制裁是「合规」，报价是「市场」。逐票念七遍没人读得完，而这四句正是
+ * 下单的人真正在问的四件事。带 note 的那几票单独拎出来，说清为什么记下
+ * 它却不拦——记下来和拦下来是两回事，混在一起人会以为这单出了问题。
+ *
+ * 成员按**后端那套名字**取，不按下标。下标对不上：RISK_AGENTS 是
+ * Identity / Provenance / Graph / Sanctions / Behavior / Pricing / Velocity，
+ * 而后端发的是 Sanctions screening / Source of funds / Counterparty history…
+ * 两边都是七个，顺序却不同——按下标取会把制裁那一票印成「对手方」那一行，
+ * 每句话都对不上它的理由，而读的人无从发现。
+ *
+ * 名字取不到就不出那一行，不拿别的凑数。
+ */
+const THEMES: [string, string[]][] = [
+  ['Counterparty', ['Counterparty history', 'Dispute record']],
+  ['Funds', ['Source of funds', 'Chain provenance']],
+  ['Compliance', ['Sanctions screening', 'Document integrity']],
+  ['Market', ['Velocity check']],
+]
+
+function Verdict({ run }: { run: Run }) {
+  const notes = run.votes.filter(v => v.v !== 'pass')
+  const ok = run.votes.filter(v => v.v === 'pass').length
+  const pass = ok >= run.threshold
+  const noteOf = (n: string) => run.votes.find(v => v.n === n)?.note?.replace(/\.$/, '')
+
+  return (
+    <div className="arverd">
+      <b>
+        Trust score {run.score}/100 — {pass ? 'clear to proceed' : 'held for review'}.
+      </b>{' '}
+      Higher is safer. {run.total} agents scored this counterparty independently:
+      <ul>
+        {THEMES.map(([t, names]) => {
+          const body = names.map(noteOf).filter(Boolean).join('; ')
+          return body ? <li key={t}><b>{t}</b> — {body}.</li> : null
+        })}
+        {notes.map(v => (
+          <li className="bnote" key={v.n}>
+            <b>⚠ {v.n.replace(/ Agent$/, '')} — note</b>: {v.note}
+          </li>
+        ))}
+      </ul>
+      <b>Verdict:</b> {ok}/{run.total} agents approve (needs {run.threshold} of {run.total}).
+      {notes.length > 0
+        ? ' The note rides with the order record and does not block release.'
+        : ''}
+    </div>
   )
 }
 

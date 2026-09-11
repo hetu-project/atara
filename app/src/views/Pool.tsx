@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import * as ep from '../api/endpoints'
+import { useAssessment } from '../hooks/useAssessment'
 import { ApiError } from '../api/client'
 import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
@@ -135,6 +136,7 @@ function OfferCard({
   onNeedSignIn?: () => void
 }) {
   const m = o.maker
+  const { start } = useAssessment()
   const kyc = useKycGate()
   const sym = FIAT_SYM[o.fiat] ?? ''
   const px = Number(o.unit_price)
@@ -182,6 +184,11 @@ function OfferCard({
     
        对手方的 id 只有工单回来才知道（Offer.maker 里没有 user id），所以是
        先下单、再进会话，而不是先进会话等它长出来。 */
+    /* 右栏的评估跟着一起跑。不 await：它是右栏里逐票落下来的那个过程，
+       而下单不该等它——参照也是同时进行的（thinking 跑着，工单卡已经在
+       流里了）。改成会话落点那次我把这一句删掉了，于是从大厅进来的单在
+       右栏里什么都不发生，七票共识一个字都没有。 */
+    void start(o.id, m.name)
     try {
       /* 按币的数量下单：法币金额是换算出来的，整条挂单那一档会因为四舍五入
          比可成交量多出几分，然后被后端拒掉。 */
