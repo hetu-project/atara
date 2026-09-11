@@ -151,8 +151,17 @@ export default function Sidebar({
                 <i>{t.last}</i>
               </span>
               {/* .cpt 在两边的 CSS 里都不存在，这个时间一直是没样式的裸文本。
-                  参照用的是 .chmeta 包一个 <time>。 */}
-              <span className="chmeta"><time>{fmtClock(t.last_at)}</time></span>
+                  参照用的是 .chmeta 包一个 <time>，未读角标也在这一格里。 */}
+              <span className="chmeta">
+                <time>{fmtClock(t.last_at)}</time>
+                {/* 角标印条数而不是一个圆点：「有新消息」和「攒了七条没看」
+                    是两件事，后者才会让人决定现在就点进去。
+                    侧栏收起时 CSS 会把它变成头像角上的一点（.chatrow:has(.unread)）。 */}
+                {!!t.unread && t.unread > 0 && (
+                  <span className="v dot unread num"
+                    aria-label={`${t.unread} unread`}>{t.unread > 99 ? '99+' : t.unread}</span>
+                )}
+              </span>
             </button>
           ))}
         </div>

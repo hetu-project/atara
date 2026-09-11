@@ -487,6 +487,8 @@ export interface ConditionCatalog {
 
 /** 左栏会话行。后端 /threads 返回的汇总。 */
 export interface ThreadSummary {
+  /** 对方说了、我还没看的条数。只数对方的话，系统播报不算。 */
+  unread?: number
   peer_id: string
   peer_name: string
   last: string
