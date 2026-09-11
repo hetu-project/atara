@@ -43,7 +43,7 @@ export default function Sidebar({
     return () => { clearTimeout(t); removeEventListener('mousedown', away); removeEventListener('keydown', key) }
   }, [menu])
   const { data: me, reload: reloadMe } = useApi(() => ep.me(identity), [identity])
-  const { data: allow } = useApi(() => ep.allowances(identity), [identity])
+  const { data: allow, reload: reloadAllow } = useApi(() => ep.allowances(identity), [identity])
   // 会话列表就是左栏下半区。没有会话时整块（连标题）都不出现——
   // 空标题比没有标题更让人以为是加载失败。
   /* 轮询：会话列表要跟着两件事变——我刚下的单会新开一条会话，对方发来的
@@ -55,9 +55,10 @@ export default function Sidebar({
      不听这个广播的话，左下角会一直停在改名前：新账户那就是一串地址，
      而用户刚刚明明给自己起了名字。 */
   useEffect(() => {
-    addEventListener(PROFILE_CHANGED, reloadMe)
-    return () => removeEventListener(PROFILE_CHANGED, reloadMe)
-  }, [reloadMe])
+    const again = () => { reloadMe(); reloadAllow() }
+    addEventListener(PROFILE_CHANGED, again)
+    return () => removeEventListener(PROFILE_CHANGED, again)
+  }, [reloadMe, reloadAllow])
 
   const addr = me?.address ?? ''
   const short = addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : ''

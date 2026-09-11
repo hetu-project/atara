@@ -201,14 +201,22 @@ export interface AllowanceReq {
  * 签发或改一份额度。**必须签名档**——授予支配权本身就是一次授权动作，
  * 不是一句承诺。
  */
-export const saveAllowance = (req: AllowanceReq, id?: string, as?: string) =>
-  withConfirmation('allowance', [req.spender, req.per_payment, req.window_cap], 'signature',
+export const saveAllowance = async (req: AllowanceReq, id?: string, as?: string) => {
+  const a = await withConfirmation('allowance',
+    [req.spender, req.per_payment, req.window_cap], 'signature',
     token => api.post<Allowance>(id ? `/allowances/${id}` : '/allowances', req, {
       confirmation: token, as,
     }), as)
+  // 左下角那行「N allowances」也显示这个数——见 PROFILE_CHANGED。
+  dispatchEvent(new CustomEvent(PROFILE_CHANGED))
+  return a
+}
 
-export const revokeAllowance = (id: string, as?: string) =>
-  api.del<Allowance>(`/allowances/${id}`, { as })
+export const revokeAllowance = async (id: string, as?: string) => {
+  const a = await api.del<Allowance>(`/allowances/${id}`, { as })
+  dispatchEvent(new CustomEvent(PROFILE_CHANGED))
+  return a
+}
 
 // ── 收款方与提现 ──
 

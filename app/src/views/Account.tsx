@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import * as ep from '../api/endpoints'
-import { CHIP, IArrow, ICheck, ICopy, IFlip, IPen, IPower } from '../components/icons'
+import { CHIP, IArrow, ICheck, ICopy, IPen } from '../components/icons'
 import { useApi } from '../hooks/useApi'
 import { useKycGate } from '../hooks/useKycGate'
 import { AllowanceModal, BankAccountsModal, ReceiveModal, SendModal } from '../components/WalletModals'
@@ -172,7 +172,7 @@ export default function Account({ identity }: { identity: string }) {
             {card ? (
               <Card c={card} all={cards} flip={flip} onFlip={() => setFlip(f => !f)}
                 onPick={setPick} asset={w?.assets?.[0]?.asset ?? 'USDT'}
-                onRevoke={async () => { await ep.revokeAllowance(card.id, identity); reload() }}
+                /* 撤销在编辑弹窗里，不在卡片下面——见 Card 里的注释。 */
                 onEdit={() => { setEditing(true); setSheet('allowance') }} />
             ) : <p className="rnote">No allowances yet.</p>}
           </section>
@@ -305,10 +305,10 @@ function Assets({ rows }: { rows: WalletAsset[] }) {
  * 翻面看完整条件，包括到期与执行方式。
  */
 function Card({
-  c, all, flip, onFlip, onPick, asset, onRevoke, onEdit,
+  c, all, flip, onFlip, onPick, asset, onEdit,
 }: {
   c: Allowance; all: Allowance[]; flip: boolean; onFlip: () => void
-  onPick: (id: string) => void; asset: string; onRevoke: () => void; onEdit: () => void
+  onPick: (id: string) => void; asset: string; onEdit: () => void
 }) {
   const q = Number(c.window_cap)
   const u = Number(c.used)
@@ -320,7 +320,16 @@ function Card({
   return (
     <div className={`card ${live ? '' : 'off'} ${c.kind === 'agent' ? 'kagent' : ''}`}>
       <div className="cdeck">
-        <div className="ccsway"><div className={'ccard' + (flip ? ' flip' : '')}>
+        {/* 卡片本身就是翻面的开关（参照的 .ccard 也是 cursor:pointer + data-p="flip"）。
+            原来是底下一个「Conditions」按钮——那一排本该只有卡片缩略图，
+            挤进三个动作之后，一张额度看上去像有四个东西要选。 */}
+        <div className="ccsway"><div className={'ccard' + (flip ? ' flip' : '')}
+          role="button" tabIndex={0} aria-pressed={flip}
+          aria-label={flip ? 'Show the front' : 'Show the limits'}
+          onClick={onFlip}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onFlip() }
+          }}>
           <div className="ccface front">
             <div className="cctop"><span className="cchip2"><CHIP /></span>
               {c.kind === 'agent' ? <span className="cctag">Agent</span> : null}
@@ -363,20 +372,17 @@ function Card({
             <i /><span>{r.spender}</span>
           </button>
         ))}
-        <span className="cacts">
-          {/* 翻面按钮的文案是「翻到哪一面」，不是「翻面」——参照里正面叫
-              Conditions、背面叫 Front。写死成 Flip 就不知道翻过去是什么。 */}
-          <button className="btn btn-ghost btn-sm" onClick={onFlip}>
-            <IFlip /><span className="fliplbl">{flip ? 'Front' : 'Conditions'}</span>
-          </button>
-          <button className="btn btn-ghost btn-sm" onClick={onEdit}><IPen />Edit</button>
-          {/* 「Me」那张是自己的支出策略，没有可撤销的对象 */}
-          {c.spender !== 'Me' && (
-            <button className={`btn btn-${live ? 'danger' : 'ghost'} btn-sm`} onClick={onRevoke}>
-              <IPower />{live ? 'Revoke' : 'Re-issue'}
-            </button>
-          )}
-        </span>
+      </div>
+      {/* 动作单独一行，而且只有一个。缩略图那一排回答「看哪一张」，
+          这一行回答「拿这一张怎么办」——混在一起时，一张额度看上去像有
+          四个东西要选。撤销搬进了编辑弹窗：它跟改额度是同一件事的两头，
+          而且是不可逆的那一头，不该跟「看一眼」摆在同一排。 */}
+      <div className="cinfo">
+        <div className="cfoot">
+          <span className="cacts">
+            <button className="btn btn-ghost btn-sm" onClick={onEdit}><IPen />Edit</button>
+          </span>
+        </div>
       </div>
     </div>
   )
