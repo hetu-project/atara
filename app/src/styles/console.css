@@ -2715,6 +2715,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 
 /* 卖方确认弹窗的入金方式切换：钱包签名 or 外部钱包打合约地址 */
 .fvia{display:flex;gap:6px;justify-content:center;margin:12px 0 0}
+/* 选中入金方式之后那一段说明。跟着 .fvia 走，居中、字号跟正文一致。 */
+.fviabody{margin:10px 0 0;font-size:var(--rt-body);line-height:1.6;color:var(--faint);text-align:center}
 #confirm .faddr .famono{font-size:11px}
 
 /* 买方确认弹窗里的「你将怎么付」预告：这是承诺书，不是收银台 */

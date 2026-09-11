@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
+import ConfirmSheet from './ConfirmSheet'
 import { isWalletTxError, useWalletTx } from '../hooks/useWalletTx'
 import { FIAT_RAILS, FX_IDX } from './kycforms'
 import type { Listing } from './MakerListing'
@@ -24,6 +25,13 @@ const FIAT_SYM: Record<string, string> = {
 }
 const railCcy = (name: string) => FIAT_RAILS.find(x => x.list.includes(name))?.ccy
 const num = (v: string) => Number(String(v).replace(/[,，\s]/g, ''))
+
+/** 要发给后端的那份挂单。确认框拿着它，确认之后原样发出去。 */
+type OfferBody = {
+  side: 'sell' | 'buy'; asset: string; fiat: string
+  unit_price: string; qty: string; min_lot: string
+  network: string; networks: string[]
+}
 
 export default function MakerOffer({
   terms, identity, onPosted,
@@ -53,6 +61,10 @@ export default function MakerOffer({
   const [bad, setBad] = useState<{ id: string; msg?: string }>({ id: '' })
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  /* 待确认的那一单。非空就是确认框开着——它装的就是要发出去的那份 body，
+     确认之后原样发，中间不再重算一遍（重算意味着人确认的和发出去的可能不是
+     同一个东西）。 */
+  const [confirm, setConfirm] = useState<OfferBody | null>(null)
 
   /* 条款圈的范围 ∩ 目录发的范围。条款没填过就退回目录全集——
      这条路走不到，但空数组会把整张卡渲染成一片空白，那比多写一行糟。 */
@@ -72,6 +84,11 @@ export default function MakerOffer({
      按下标取会拿到空钱包，余额查出来是 0。 */
   const tx = useWalletTx(chain, w?.address)
   const onChain = chains?.impl === 'evm'
+  /* 钱包类型决定确认那一下签在哪儿：外部钱包弹它自己的窗口，Atara 钱包走
+     passkey。用户可以在确认框里改——有人两边都有，挂单时想用哪边是他的事。 */
+  const { data: me } = useApi(() => ep.me(identity), [identity])
+  const [via, setVia] = useState<'atara' | 'ext' | null>(null)
+  const walletKind = via ?? (me?.wallet_kind === 'ext' ? 'ext' : 'atara')
   /* 能结算哪些法币，由配置里选过的收款渠道决定——你没有那个国家的收款
      账户，就不该对外说你收那种钱。 */
   const tradableFiat = (fiatCorridors ?? []).flatMap(c => c.assets.map(a => a.code))
@@ -121,7 +138,7 @@ export default function MakerOffer({
     )
   }
 
-  const post = async () => {
+  const post = () => {
     const p = num(px), q = num(qty), m = num(min)
     setErr('')
     if (!(p > 0)) { setBad({ id: 'of-px' }); return }
@@ -141,12 +158,19 @@ export default function MakerOffer({
       })
       return
     }
-    setBad({ id: '' }); setBusy(true)
-    const body = {
+    setBad({ id: '' })
+    /* 校验过了先停一下让人看清楚：这一下之后币就进合约了，不可撤销。
+       参照在这里也插了一道（requireVerify），而且卖单和买单的措辞不同——
+       卖单锁的是钱，买单只是一句承诺。 */
+    setConfirm({
       side: (sell ? 'sell' : 'buy') as 'sell' | 'buy', asset: curCoin, fiat: curFiat,
       unit_price: String(p), qty: String(q), min_lot: String(m),
       network: curNet, networks: [curNet],
-    }
+    })
+  }
+
+  const send = async (body: OfferBody) => {
+    setBusy(true)
     try {
       /* 卖单在真链上是三步，顺序不能换：
            ① 要号——lockListing 的 offerId 是合约主键，不先有号就没法锁
@@ -164,6 +188,7 @@ export default function MakerOffer({
       }
       const o = await ep.createOffer({ ...body, ...extra }, identity)
       tx.setStep({ k: 'idle' })
+      setConfirm(null)
       onPosted(o, sym)
     } catch (e) {
       // 钱包那一侧的错已经在交易进度那里显示过了，别再重复一遍。
@@ -265,9 +290,46 @@ export default function MakerOffer({
 
         <div className="dfoot" style={{ marginTop: 14 }}>
           <button className="btn btn-primary" disabled={busy}
-            onClick={() => void post()}>Review &amp; post</button>
+            onClick={() => post()}>Review &amp; post</button>
         </div>
       </div></div></div>
+
+      {confirm && (
+        <ConfirmSheet
+          title="Confirm listing"
+          amount={num(qty).toLocaleString()} unit={curCoin}
+          walletKind={walletKind}
+          busy={busy}
+          lead={<>
+            List <b className="num">{num(qty).toLocaleString()} {curCoin}</b>{' '}
+            {sell ? 'for sale' : 'wanted'} at{' '}
+            <b className="num">{sym}{num(px).toLocaleString()}</b> · min lot{' '}
+            <b className="num">{sym}{num(min).toLocaleString()}</b>
+            {sell ? '. Funds stay locked until filled or unlisted.' : '.'}
+          </>}
+          extra={sell ? (
+            <>
+              <div className="fvia">
+                <button type="button" className={'sfchip' + (walletKind !== 'ext' ? ' on' : '')}
+                  onClick={() => setVia('atara')}>Atara wallet</button>
+                <button type="button" className={'sfchip' + (walletKind === 'ext' ? ' on' : '')}
+                  onClick={() => setVia('ext')}>External wallet</button>
+              </div>
+              <div className="fviabody">
+                {walletKind === 'ext'
+                  ? 'Your wallet signs the lock — the coins go straight into the escrow contract.'
+                  : 'Signed from your Atara wallet — straight into the escrow contract, not to Atara.'}
+              </div>
+            </>
+          ) : null}
+          note={sell
+            ? { why: 'Posting locks funds into escrow',
+                how: 'They stay there until someone fills the listing, or you unlist.' }
+            : { why: 'Posting a public listing',
+                how: 'Nothing is locked — a buy listing is a commitment to pay, not an escrow.' }}
+          onConfirm={() => void send(confirm)}
+          onClose={() => setConfirm(null)} />
+      )}
     </div>
   )
 }

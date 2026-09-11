@@ -160,3 +160,20 @@ export const ILock = () => (
     <path d="M5.6 7V5.2a2.4 2.4 0 0 1 4.8 0V7" />
   </svg>
 )
+
+/* 确认弹窗那颗按钮上的图标。两种钥匙分得开：passkey 是生物识别的那把，
+   钱包是外部应用——同一个图标会让人以为两条路是同一件事。 */
+export const IPasskey = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+    strokeWidth="1.5" strokeLinecap="round" aria-hidden>
+    <path d="M8 1.8a4.5 4.5 0 0 1 4.5 4.5c0 2.6-.7 5-2 7" />
+    <path d="M8 4.4a1.9 1.9 0 0 1 1.9 1.9c0 2.3-.6 4.5-1.7 6.4M5.6 3.2A4.5 4.5 0 0 0 3.5 6.3M4.2 8.6c0 1.9-.4 3.5-1 4.9M6.1 7.1c.1 2.7-.4 5-1.3 6.9" />
+  </svg>
+)
+export const IWallet = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+    strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect x="2" y="3.5" width="12" height="9" rx="1.8" />
+    <path d="M2 6.5h12" /><circle cx="11" cy="9.5" r=".9" fill="currentColor" stroke="none" />
+  </svg>
+)
