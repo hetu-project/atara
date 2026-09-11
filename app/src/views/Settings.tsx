@@ -74,12 +74,17 @@ export default function Settings({ identity }: { identity: string }) {
      - 写死的「15 minutes」换成实际的闲置阈值（?lock=N 能改它，写死就成了假话）
      - 参照会把演示密码原样印出来，这里不印。密码是用来挡人的，印在屏幕上
        就挡不住任何人；而且这行字在真环境里会跟着一起上线。 */
-  const lockSub = pw
-    ? `The console locks after ${span} idle · unlock with ${
-      ext ? 'this password' : 'your passkey, or this password'}`
-    : ext
-      ? 'Not set — your wallet approves the transfers; a password here only keeps the console from sitting open.'
-      : 'Not set, and no passkey on this device — set a password so the console can lock at all.'
+  /* 副文案按「有没有东西能开锁」分三种，而不是只看密码设没设：
+     有 passkey 时根本不需要密码，却还写着「Not set」，人会以为锁不上。 */
+  const lockSub = keys.length
+    ? (pw
+      ? `The console locks after ${span} idle · unlock with your passkey, or this password`
+      : `The console locks after ${span} idle · unlock with your passkey`)
+    : pw
+      ? `The console locks after ${span} idle · unlock with this password`
+      : ext
+        ? 'Not set — your wallet approves the transfers; a password here only keeps the console from sitting open.'
+        : 'Not set, and no passkey on this account — add a passkey below, or set a password.'
 
   return (
     <div className="view on" id="v-rules">
@@ -103,7 +108,8 @@ export default function Settings({ identity }: { identity: string }) {
               <div className="secrow">
                 <span className="seci">🔒</span>
                 <span className="sectxt"><b>Session lock</b><em>{lockSub}</em></span>
-                <button className={'btn btn-' + (pw ? 'secondary' : 'primary') + ' btn-sm'}
+                {/* 有 passkey 的时候密码是可选项，不该再用主色按钮催人去设。 */}
+                <button className={'btn btn-' + (pw || keys.length ? 'secondary' : 'primary') + ' btn-sm'}
                   onClick={() => setSetup(true)}>{pw ? 'Change' : 'Set password'}</button>
               </div>
             </div>

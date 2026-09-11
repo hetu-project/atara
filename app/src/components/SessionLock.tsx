@@ -94,19 +94,58 @@ export function PwSetup({
   )
 }
 
+/**
+ * 让用户用 passkey 证明「是本人」。
+ *
+ * 走的是浏览器原生的 WebAuthn，不是 Privy 的 MFA——后者是给交易用的，由
+ * Privy 在需要时自己发起，没法单独调来开一扇界面上的门。
+ *
+ * 不带 allowCredentials：让浏览器列出本域名下所有可发现的 passkey。
+ * linkPasskey() 是在我们自己的页面里跑的，所以那把钥匙就绑在这个域名上。
+ *
+ * 这里**没有**服务端校验，断言的结果只用来开会话锁。这个分寸是有意的：
+ * 会话锁挡的是「人离开座位、屏幕开着」，不是「有人拿着 devtools」。真正
+ * 动钱的那几步各自有自己的确认，不靠这扇门。
+ */
+export async function assertPasskey(): Promise<void> {
+  const challenge = crypto.getRandomValues(new Uint8Array(32))
+  const cred = await navigator.credentials.get({
+    publicKey: { challenge, userVerification: 'required', timeout: 60_000 },
+  })
+  if (!cred) throw new Error('Passkey check was dismissed')
+}
+
 // ── 锁屏 ────────────────────────────────────────────────────────────
 
 export function LockScreen({
-  name, onUnlock, onSignOut,
-}: { name: string; onUnlock: () => void; onSignOut: () => void }) {
+  name, hasPasskey, onUnlock, onSignOut,
+}: {
+  name: string
+  /** 这个账户上有没有 passkey。有就不问密码——那把钥匙比密码强。 */
+  hasPasskey: boolean
+  onUnlock: () => void
+  onSignOut: () => void
+}) {
   const pw = readPw()
   const [v, setV] = useState('')
   const [err, setErr] = useState('')
   const [shake, setShake] = useState(0)
+  const [busy, setBusy] = useState(false)
   const ini = (name.trim()[0] || 'D').toUpperCase()
   const span = LOCK_IDLE >= 60000
     ? `${Math.round(LOCK_IDLE / 60000)} minutes`
     : `${Math.round(LOCK_IDLE / 1000)} seconds`
+
+  const byPasskey = async () => {
+    setBusy(true); setErr('')
+    try {
+      await assertPasskey()
+      onUnlock()
+    } catch (e) {
+      // 用户取消、或者这台设备上没有这把钥匙——都照实说，别只是没反应
+      setErr(e instanceof Error ? e.message : 'Could not verify your passkey')
+    } finally { setBusy(false) }
+  }
 
   const submit = () => {
     if (v !== pw) {
@@ -121,17 +160,33 @@ export function LockScreen({
     <div id="lock" className="show" role="dialog" aria-modal="true" aria-label="Session locked">
       <div className="lksheet">
         <span className="lkav">{ini}</span>
-        <h3>Enter your password</h3>
+        {/* 有 passkey 时标题是「已锁定」而不是「输入你的密码」——
+            这屏上根本没有密码框，标题却在叫人输密码，那是自相矛盾。 */}
+        <h3>{hasPasskey ? 'Session locked' : 'Enter your password'}</h3>
         <p>
           For your security, this session locks after {span} of inactivity.
-          {' '}Enter your password to continue.
+          {hasPasskey
+            ? ' Unlock with your passkey to continue.'
+            : ' Enter your password to continue.'}
         </p>
-        <input type="password" className={'pwin' + (shake ? ' shake' : '')} key={shake}
-          autoFocus autoComplete="off" aria-label="Password" value={v}
-          onChange={e => { setV(e.target.value); setErr('') }}
-          onKeyDown={e => { if (e.key === 'Enter') submit() }} />
-        <div className="pwerr">{err}</div>
-        <button className="btn btn-primary lkok" onClick={submit}>Unlock</button>
+        {hasPasskey ? (
+          <>
+            <div className="pwerr">{err}</div>
+            <button className="btn btn-primary lkok" disabled={busy}
+              onClick={() => void byPasskey()}>
+              {busy ? 'Waiting for your passkey…' : 'Unlock with passkey'}
+            </button>
+          </>
+        ) : (
+          <>
+            <input type="password" className={'pwin' + (shake ? ' shake' : '')} key={shake}
+              autoFocus autoComplete="off" aria-label="Password" value={v}
+              onChange={e => { setV(e.target.value); setErr('') }}
+              onKeyDown={e => { if (e.key === 'Enter') submit() }} />
+            <div className="pwerr">{err}</div>
+            <button className="btn btn-primary lkok" onClick={submit}>Unlock</button>
+          </>
+        )}
         {/* 共用屏幕的场景下，回到座位的可能不是同一个人 */}
         <button className="lkout" onClick={onSignOut}>Not you? Sign out</button>
       </div>
@@ -142,16 +197,18 @@ export function LockScreen({
 /**
  * 把「点了锁」这个意图接住。
  *
- * 没设过密码就先带他去设一把，设好了再替他锁上——**他点这一下的意图不丢**。
- * 直接锁上是不行的：这个账户没有 passkey（钥匙在钱包那一侧，不在我们这儿），
- * 锁完就没有任何东西能打开它，等于把人关在门外。
+ * 锁之前必须先确认「有东西能再打开它」，否则就是把人关在门外。能打开它的
+ * 有两样：账户上的 passkey，或者本机设的密码。有 passkey 就直接锁，不再
+ * 多问一道密码——那把钥匙本来就比密码强，再要一个只是多一件要记的事。
+ * 两样都没有才带他去设一把，设好了再替他锁上，他点那一下的意图不丢。
  */
-export function useSessionLock(signed: boolean) {
+export function useSessionLock(signed: boolean, hasPasskey = false) {
   const [locked, setLocked] = useState(false)
   const [setup, setSetup] = useState<{ why?: string } | null>(null)
+  const canOpen = hasPasskey || !!readPw()
 
   const lock = useCallback(() => {
-    if (!readPw()) {
+    if (!hasPasskey && !readPw()) {
       setSetup({
         why: 'Set a password first — without one, or a passkey, '
           + 'nothing could unlock the console again.',
@@ -159,9 +216,9 @@ export function useSessionLock(signed: boolean) {
       return
     }
     setLocked(true)
-  }, [])
+  }, [hasPasskey])
 
-  useIdleLock(signed && !locked, () => { if (readPw()) setLocked(true) })
+  useIdleLock(signed && !locked, () => { if (canOpen) setLocked(true) })
 
   return {
     locked, setLocked, lock,
