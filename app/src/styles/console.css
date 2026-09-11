@@ -3069,14 +3069,18 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
   background:var(--paper);border-radius:var(--r-panel);box-shadow:var(--sh-overlay)}
 .mhead{display:flex;align-items:center;gap:8px;padding:18px 16px 10px 24px;flex:none}
 .mhead h3{font-size:16px;font-weight:600;color:var(--ink)}
-#mx{margin-left:auto}
+/* 同时认 .mx。规则原样抄自参照，但那边靠的是 id——一页只有一个弹窗节点，
+   id 够用；React 里每个弹窗各渲染一个关闭按钮，挂 id 就得保证全局唯一，
+   而 JSX 里压根没写过这个 id，于是这条规则一次都没命中：按钮贴着标题，
+   不在右上角。加一个类名比要求每处记得写对 id 稳。 */
+#mx,.mx{margin-left:auto}
 .mbody{flex:1;overflow-y:auto;min-height:0;padding:6px 24px 22px}
 .mbody .rsec{margin-bottom:20px}
 /* 一句话一个动作的小对话框：方一点，居中，关闭只靠角上的 ✕ */
 .mcard.msq{max-width:372px;text-align:center}
 .msq .mhead{position:relative;justify-content:center;padding:34px 30px 10px}
 .msq .mhead h3{font-size:19px}
-.msq #mx{position:absolute;right:12px;top:12px;margin:0}
+.msq #mx,.msq .mx{position:absolute;right:12px;top:12px;margin:0}
 .msq .mbody{padding:4px 30px 32px}
 .msq .acnote{margin:0;color:var(--mute);font-size:13px;line-height:1.7}
 .msq .sqi{width:60px;height:60px;margin:0 auto 18px;border-radius:18px;
@@ -3153,6 +3157,11 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .qr{flex:none;display:grid;grid-template-columns:repeat(8,10px);grid-auto-rows:10px;gap:2px;
   padding:10px;background:#fff;border-radius:var(--r-control);box-shadow:var(--ring)}
 .qr i{background:#e9eaec;border-radius:1px}
+/* 真码：版本随地址长度走（EVM 42 字符到版本 3），所以尺寸交给 SVG 自己
+   缩放，不再用固定的 8×8 格子。白底是必须的——多数扫码器认的是
+   「深色码 + 浅色底」这个方向，跟着暗色主题翻过来就扫不出来了。 */
+.qrbox{flex:none;display:block;padding:6px;border-radius:10px;background:#fff}
+.qrbox svg{display:block;width:100%;height:100%}
 .qr i.on{background:#14161a}
 .depmeta{flex:1;min-width:220px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .depmeta code{display:block;width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;

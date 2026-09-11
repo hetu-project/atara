@@ -124,7 +124,7 @@ function Explain({ onClose, onGo }: { onClose: () => void; onGo: () => void }) {
       <div className="mcard msq">
         <header className="mhead">
           <h3>Verify your identity</h3>
-          <button className="sayic" aria-label="Close" onClick={onClose}>
+          <button className="sayic mx" title="Close" aria-label="Close" onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
               strokeWidth="1.5" strokeLinecap="round" aria-hidden><path d="m4 4 8 8M12 4l-8 8" /></svg>
           </button>

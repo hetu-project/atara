@@ -3,6 +3,7 @@ import * as ep from '../api/endpoints'
 import { isWalletTxError, useWalletTx, type TxStep } from '../hooks/useWalletTx'
 import { useApi } from '../hooks/useApi'
 import { BankAccountsPanel } from './BankAccounts'
+import Qr from './Qr'
 import { ICopy } from './icons'
 import type { Allowance, Wallet, WalletAsset } from '../api/types'
 
@@ -46,7 +47,7 @@ function Sheet({
       <div className="mcard">
         <header className="mhead">
           <h3>{title}</h3>
-          <button className="sayic" aria-label="Close" onClick={onClose}>
+          <button className="sayic mx" title="Close" aria-label="Close" onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
               strokeWidth="1.5" strokeLinecap="round" aria-hidden><path d="m4 4 8 8M12 4l-8 8" /></svg>
           </button>
@@ -119,14 +120,8 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
       </div>
 
       <div className="depaddr">
-        {/* 参照里这是一块装饰性的码（aria-hidden），不编码任何内容——
-            扫不出来就是扫不出来，不会把人导到别的地址。地址本身在右边，
-            要转账靠复制那一串，不靠扫这个。 */}
-        <div className="qr" aria-hidden>
-          {Array.from({ length: 64 }, (_, n) => (
-            <i key={n} className={(n * 7 + (n % 5) + useCoin.length + useNet.length) % 3 ? '' : 'on'} />
-          ))}
-        </div>
+        {/* 编码的就是右边那串地址——见 Qr 里的说明。 */}
+        <Qr text={addr} />
         <div className="depmeta">
           <span className="sfl">Your wallet address</span>
           <div className="depline">
