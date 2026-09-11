@@ -4,7 +4,7 @@ import { isWalletTxError, useWalletTx, type TxStep } from '../hooks/useWalletTx'
 import { useApi } from '../hooks/useApi'
 import { BankAccountsPanel } from './BankAccounts'
 import { ICopy } from './icons'
-import type { Allowance, Payee, Wallet, WalletAsset } from '../api/types'
+import type { Allowance, Wallet, WalletAsset } from '../api/types'
 
 /**
  * 账户页那四个动作的弹窗：收款 / 提现 / 收款方 / 额度。
@@ -156,77 +156,27 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
   )
 }
 
-// ── 收款方 ──────────────────────────────────────────────────────────
+// ── 法币收款账户 ────────────────────────────────────────────────────
 
-export function PayeesModal({ identity, onClose }: { identity: string; onClose: () => void }) {
-  const { data: list, reload } = useApi(() => ep.payees(identity), [identity])
-  const [add, setAdd] = useState(false)
-  const [f, setF] = useState({ label: '', chain: 'ETH', address: '' })
-  const [err, setErr] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  const save = async () => {
-    if (!f.label.trim() || !f.address.trim()) { setErr('Label and address are required'); return }
-    setBusy(true); setErr('')
-    try {
-      await ep.addPayee({ ...f, label: f.label.trim(), address: f.address.trim() }, identity)
-      setF({ label: '', chain: 'ETH', address: '' }); setAdd(false); reload()
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not save')
-    } finally { setBusy(false) }
-  }
-
+/**
+ * 法币收款账户 —— 对手方把钱打到哪儿。
+ *
+ * 这一版按已部署的模板收窄成纯法币。原来这张表还带一栏「链上地址簿」，
+ * 两件事摆在一个叫「Addresses」的入口后面，而它们回答的不是同一个问题：
+ * 银行账户是别人怎么把钱给我（法币腿的落点，必须先登记，对手方照着打款）；
+ * 链上地址是我把币转去哪儿（Send 当场输、按网络校验，从来不需要先存）。
+ *
+ * 地址簿因此没有留下：Send 不读它，存一份只是多一处要维护、又会过期的副本。
+ * 后端 /payees 还在，没有界面指向它了。
+ */
+export function BankAccountsModal({ identity, onClose }: { identity: string; onClose: () => void }) {
   return (
-    <Sheet title="Addresses" onClose={onClose}>
-      {/* 两块：法币收款账户（别人怎么把钱打给我）和链上地址（我往哪儿转币）。
-          参照把它们放在同一个弹窗里，因为回答的是同一个问题——「我的收款方式」。 */}
-      <div className="rsec"><h3>Fiat accounts</h3>
-        <BankAccountsPanel identity={identity} />
-      </div>
-
-      <div className="rsec" style={{ marginBottom: 4 }}><h3>Crypto addresses</h3>
-      <div className="plist">
-        {(list ?? []).map((p: Payee) => (
-          <div className="prow" key={p.id}>
-            <span className="pav net">{p.chain.slice(0, 3)}</span>
-            <span className="ptxt"><b>{p.label}</b><em className="mono">{p.address}</em></span>
-            <span className="pmeta">
-              <button className="lnk" type="button"
-                onClick={async () => { await ep.deletePayee(p.id, identity); reload() }}>Remove</button>
-            </span>
-          </div>
-        ))}
-        {!(list ?? []).length && <div className="fempty">No registered addresses yet.</div>}
-      </div>
-
-      {add ? (
-        <>
-          <div className="sf"><span className="sfl">Label</span>
-            <input type="text" value={f.label} autoFocus autoComplete="off"
-              onChange={e => setF({ ...f, label: e.target.value })} /></div>
-          <div className="sf"><span className="sfl">Network</span>
-            <Chips opts={['ETH', 'POLYGON']} on={f.chain} onPick={c => setF({ ...f, chain: c })} /></div>
-          <div className="sf"><span className="sfl">Address</span>
-            <input type="text" value={f.address} spellCheck={false} autoComplete="off"
-              onChange={e => setF({ ...f, address: e.target.value })} /></div>
-          {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
-          <div className="dfoot">
-            <button className="btn btn-ghost btn-sm" style={{ marginRight: 'auto' }}
-              onClick={() => { setAdd(false); setErr('') }}>Cancel</button>
-            <button className="btn btn-primary" disabled={busy} onClick={() => void save()}>Save</button>
-          </div>
-        </>
-      ) : (
-        <div className="dfoot">
-          <button className="btn btn-sm" onClick={() => setAdd(true)}>+ Add address</button>
-        </div>
-      )}
-
-        <p className="rnote">
-          A saved address is one you do not have to retype — Send also accepts any address
-          you paste.
-        </p>
-      </div>
+    <Sheet title="Fiat accounts" onClose={onClose}>
+      <BankAccountsPanel identity={identity} />
+      <p className="rnote">
+        The fiat leg goes bank to bank — Atara never holds it. A counterparty pays the
+        account you point them at, and the receipt is what releases the escrow.
+      </p>
     </Sheet>
   )
 }

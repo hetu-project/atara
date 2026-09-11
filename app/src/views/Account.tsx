@@ -3,7 +3,7 @@ import * as ep from '../api/endpoints'
 import { CHIP, IArrow, ICheck, ICopy, IFlip, IPen, IPower } from '../components/icons'
 import { useApi } from '../hooks/useApi'
 import { useKycGate } from '../hooks/useKycGate'
-import { AllowanceModal, PayeesModal, ReceiveModal, SendModal } from '../components/WalletModals'
+import { AllowanceModal, BankAccountsModal, ReceiveModal, SendModal } from '../components/WalletModals'
 import { go } from '../hooks/useRoute'
 import type { Allowance, WalletAsset } from '../api/types'
 
@@ -27,7 +27,7 @@ export default function Account({ identity }: { identity: string }) {
   const kyc = useKycGate()
   const [tab, setTab] = useState<Tab>('assets')
   /* 钱包那三个按钮和「新建额度」原来是空的——没有 onClick，点了什么都不发生。 */
-  const [sheet, setSheet] = useState<'' | 'receive' | 'send' | 'payees' | 'allowance'>('')
+  const [sheet, setSheet] = useState<'' | 'receive' | 'send' | 'bank' | 'allowance'>('')
   const [editing, setEditing] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState('')
@@ -154,7 +154,10 @@ export default function Account({ identity }: { identity: string }) {
             <div className="aacts">
               <button className="btn btn-secondary" onClick={() => setSheet('receive')}>Receive</button>
               <button className="btn btn-secondary" onClick={() => setSheet('send')}>Send</button>
-              <button className="btn btn-secondary" onClick={() => setSheet('payees')}>Addresses</button>
+              {/* 「Fiat accounts」而不是「Addresses」：这一格管的是法币腿的落点，
+                  而链上地址在 Send 里当场填、按网络校验，从来不需要先登记。
+                  一个含糊的「Addresses」把两件事盖在一起，点进去才知道是哪一件。 */}
+              <button className="btn btn-secondary" onClick={() => setSheet('bank')}>Fiat accounts</button>
             </div>
           </section>
 
@@ -248,7 +251,7 @@ export default function Account({ identity }: { identity: string }) {
           </section>
         </div>
         {sheet === 'receive' && <ReceiveModal w={w ?? null} onClose={() => setSheet('')} />}
-        {sheet === 'payees' && <PayeesModal identity={identity} onClose={() => setSheet('')} />}
+        {sheet === 'bank' && <BankAccountsModal identity={identity} onClose={() => setSheet('')} />}
         {sheet === 'send' && (
           <SendModal identity={identity} assets={assets}
             onClose={() => setSheet('')} onDone={() => {}} />
