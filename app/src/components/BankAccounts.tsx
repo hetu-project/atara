@@ -59,7 +59,11 @@ function checkAcct(raw: string): { s: 'empty' | 'ok' | 'bad'; msg?: string } {
  */
 function BankBox({
   value, ccy, onPick,
-}: { value: string; ccy: string; onPick: (v: string) => void }) {
+}: {
+  value: string; ccy: string
+  /** hit 是目录里命中的那一家；自由输入时为 null。上层据此推国家与币种。 */
+  onPick: (v: string, hit: { n: string; c: string } | null) => void
+}) {
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
 
@@ -83,11 +87,11 @@ function BankBox({
       <input type="text" value={value} role="combobox" aria-expanded={open}
         autoComplete="off" placeholder="Type to search — CMB, HSBC, 招商…"
         onFocus={() => setOpen(true)}
-        onChange={e => { onPick(e.target.value); setOpen(true) }} />
+        onChange={e => { onPick(e.target.value, null); setOpen(true) }} />
       <div className="cblist" role="listbox" hidden={!open || !hits.length}>
         {hits.map(x => (
           <button type="button" className="cbrow" key={x.n} role="option"
-            onMouseDown={e => { e.preventDefault(); onPick(x.n); setOpen(false) }}>
+            onMouseDown={e => { e.preventDefault(); onPick(x.n, x); setOpen(false) }}>
             <span className="cbn">{x.n}</span>
             <span className="cbc">{CTRY[x.c] ?? x.c}</span>
           </button>
@@ -144,12 +148,27 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const [del, setDel] = useState(false)
+  /* 哪一栏没填对。参照的做法是按钮常亮、点了才指出问题——
+     而不是把按钮置灰：灰按钮只说「不行」，不说哪儿不行，人得自己
+     一栏栏回去找。空表单上更糟，四栏都空着，按钮从头灰到尾。 */
+  const [bad, setBad] = useState('')
+  /* 用户自己点过币种没有。点过就不再替他改——选一家香港的银行把币种翻成
+     HKD 是帮忙，但如果他刚刚亲手选了 USD，再翻回去就是跟他较劲。 */
+  const [ccyTouched, setCcyTouched] = useState(false)
 
   const rows = list ?? []
   const acct = rows.find(a => a.id === cur)
   const chk = checkAcct(f.no)
 
   const save = async () => {
+    // 校验顺序跟栏位顺序一致：先指出最上面那一个，人从上往下改就行。
+    if (!f.holder.trim()) { setBad('holder'); return }
+    if (!f.bank.trim()) { setBad('bank'); return }
+    // 编辑时账号留空 = 不改；新增必须填。走 checkAcct，跟边填边提示同一套规则。
+    if (!f.id && chk.s !== 'ok') { setBad('no'); return }
+    if (f.id && f.no.trim() && chk.s !== 'ok') { setBad('no'); return }
+    if (!f.region.trim()) { setBad('region'); return }
+    setBad('')
     setBusy(true); setErr('')
     try {
       const a = await ep.saveBankAccount({
@@ -174,18 +193,35 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
           <span className="wachg">Cancel</span>
         </button>
 
-        <div className="sf"><span className="sfl">Account holder</span>
+        <div className={'sf' + (bad === 'holder' ? ' bad' : '')}>
+          <span className="sfl">Account holder</span>
           <input type="text" value={f.holder} placeholder="Name on the account"
-            onChange={e => setF({ ...f, holder: e.target.value })} /></div>
+            onChange={e => { setF({ ...f, holder: e.target.value }); setBad('') }} />
+          <span className="err">Required</span></div>
 
-        <div className="sf"><span className="sfl">Bank</span>
-          <BankBox value={f.bank} ccy={f.ccy} onPick={v => setF({ ...f, bank: v })} /></div>
+        <div className={'sf' + (bad === 'bank' ? ' bad' : '')}>
+          <span className="sfl">Bank</span>
+          {/* 选中目录里的一家就把国家和币种带出来——不然这个下拉只省了几个
+              字母。地区只在空着时填：人已经写了「Shenzhen, CN」就别改成「China」。 */}
+          <BankBox value={f.bank} ccy={f.ccy}
+            onPick={(v, hit) => {
+              const next = { ...f, bank: v }
+              if (hit) {
+                if (!next.region.trim()) next.region = CTRY[hit.c] ?? hit.c
+                const c = CTRY_CCY[hit.c]
+                if (!ccyTouched && c && CCY.includes(c)) next.ccy = c
+              }
+              setF(next); setBad('')
+            }} />
+          <span className="err">Required</span></div>
 
-        <div className="sf"><span className="sfl">Account number</span>
+        <div className={'sf' + (bad === 'no' ? ' bad' : '')}>
+          <span className="sfl">Account number</span>
           <input type="text" className="mono" value={f.no} autoComplete="off" spellCheck={false}
             placeholder={f.id ? 'Retype it to change it' : 'Account number, or a full IBAN'}
-            onChange={e => { setF({ ...f, no: e.target.value }); setErr('') }} />
-          {chk.msg ? (
+            onChange={e => { setF({ ...f, no: e.target.value }); setErr(''); setBad('') }} />
+          <span className="err">{chk.msg ?? 'At least eight digits'}</span>
+          {chk.msg && bad !== 'no' ? (
             <span className={chk.s === 'bad' ? 'err' : 'cbhint'}
               style={chk.s === 'bad' ? { display: 'block', color: 'var(--warn)' } : undefined}>
               {chk.msg}
@@ -197,20 +233,22 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
           <div className="sfchips">
             {CCY.map(c => (
               <button key={c} type="button" className={'sfchip' + (f.ccy === c ? ' on' : '')}
-                onClick={() => setF({ ...f, ccy: c })}>{c}</button>
+                onClick={() => { setF({ ...f, ccy: c }); setCcyTouched(true) }}>{c}</button>
             ))}
           </div>
         </div>
 
-        <div className="sf"><span className="sfl">Where the bank is</span>
+        <div className={'sf' + (bad === 'region' ? ' bad' : '')}>
+          <span className="sfl">Where the bank is</span>
           <input type="text" value={f.region} placeholder="Shenzhen, CN"
-            onChange={e => setF({ ...f, region: e.target.value })} /></div>
+            onChange={e => { setF({ ...f, region: e.target.value }); setBad('') }} />
+          <span className="err">Required</span></div>
 
         {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
 
         <div className="dfoot">
           <button className="btn backbtn" onClick={() => setView(f.id ? 'detail' : 'list')}>Cancel</button>
-          <button className="btn btn-primary" disabled={busy || chk.s !== 'ok'}
+          <button className="btn btn-primary" disabled={busy}
             onClick={() => void save()}>{f.id ? 'Save changes' : 'Add account'}</button>
         </div>
       </>
@@ -238,7 +276,8 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
           <button className="btn btn-primary" onClick={() => {
             setF({ id: acct.id, holder: acct.holder, bank: acct.bank, no: '',
               ccy: acct.currency, region: acct.region })
-            setView('form')
+            // 编辑已有账户：币种是他当初定的，不该被选银行这个动作翻掉。
+            setBad(''); setCcyTouched(true); setView('form')
           }}>Edit</button>
         </div>
         {del && (
@@ -276,7 +315,9 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
         )}
       </div>
       <button className="btn btn-sm"
-        onClick={() => { setF(blank()); setErr(''); setView('form') }}>+ Add account</button>
+        onClick={() => {
+          setF(blank()); setErr(''); setBad(''); setCcyTouched(false); setView('form')
+        }}>+ Add account</button>
     </>
   )
 }

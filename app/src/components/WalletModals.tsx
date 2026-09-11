@@ -171,12 +171,11 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
  */
 export function BankAccountsModal({ identity, onClose }: { identity: string; onClose: () => void }) {
   return (
+    /* 这张表自己会讲清楚——顶上那句 .fnote 就是「我们从不收法币」。
+       弹窗这一层不要再补一段总结：它会挂在列表的「+ Add account」下面，
+       填表时又挂在「Add account」按钮下面，把两个视图的收尾都推远了一截。 */
     <Sheet title="Fiat accounts" onClose={onClose}>
       <BankAccountsPanel identity={identity} />
-      <p className="rnote">
-        The fiat leg goes bank to bank — Atara never holds it. A counterparty pays the
-        account you point them at, and the receipt is what releases the escrow.
-      </p>
     </Sheet>
   )
 }
