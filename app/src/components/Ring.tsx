@@ -30,7 +30,7 @@ export function Ring({
  * 星座。七个 agent 在轨道上慢转，不表态——「候命」看得见，
  * 比七个灰胶囊有说服力。
  */
-export function Constellation() {
+export function Constellation({ live = false, done = false }: { live?: boolean; done?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const c = ref.current
@@ -44,12 +44,21 @@ export function Constellation() {
       const h = Math.max(150, Math.min(300, (box.clientHeight || 244) - 8))
       if (Math.abs(h - built) < 4) return
       built = h
-      consensusNet(c, RISK_AGENTS, 0, 1050, null, true, h)
+      /* idle=true 的那一版只画点不画线（参照里 `if(!idle) edges.forEach(...)`）。
+         跑过之后要画成网：那些连线说的是「这七个不是各判各的，他们互相对过」，
+         而这正是「共识」这个词在这块面板上的全部含义。原来写死传 true，
+         于是无论跑没跑，星盘永远是一盘散点。
+      
+         跑完了就定格在终帧，不重放：那段动画有十几秒，而窗口一变宽这张图就要
+         重建——每次重建都从头演一遍，人会以为又评了一次。 */
+      const FROZEN = 99_000
+      consensusNet(c, RISK_AGENTS, 0, 1050, done ? FROZEN : null, !live, h)
     }
     const ro = new ResizeObserver(build)
     ro.observe(box)
     return () => ro.disconnect()
-  }, [])
+    // live 变了要整张重画：连线是在 build 里一次性决定的
+  }, [live, done])
   return (
     <div className="rtnetw">
       <canvas ref={ref} className="rtnet" aria-label="Seven risk agents" />

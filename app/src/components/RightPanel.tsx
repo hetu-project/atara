@@ -137,6 +137,9 @@ function Assessment({ onFold }: { onFold: () => void }) {
   /* 点名册里的 agent 打开它的 profile。原来这些按钮没有 onClick，
      名字、职责、这一轮投了什么票，全都只能靠 title 悬停去看。 */
   const [agent, setAgent] = useState<number | null>(null)
+  /* 下面那一格显示哪一步的详情。空着就跟着「最后一个有详情、且已经开跑的步骤」
+     走——刚跑到 agent checks 时看的是票，跑完了自动落到结论。人点过之后就听他的。 */
+  const [pick, setPick] = useState('')
   const { run, running } = useAssessment()
 
   /* 每个 agent 的状态：还没表态 = conferring（跑着）或 idle，表过态就封印。
@@ -146,6 +149,15 @@ function Assessment({ onFold }: { onFold: () => void }) {
      只能按下标配，而顺序一旦不同，Identity 那一格印的就是制裁那一票的理由——
      每句话都挂在错误的标题下，读的人无从发现。名字对齐之后这一整类问题没有了；
      万一哪天又对不上，取不到就是没表态，宁可空着也不显示别人的票。 */
+  /* 哪几步有东西可看。read 只是「读过了」，pull 那一步的来源清单后端没发下来
+     （只给了数量），所以这一版只有 agent checks 和 consensus 两步有详情。 */
+  const hasDetail = (k: string) =>
+    (k === 'check' && (run?.votes.length ?? 0) > 0) || (k === 'cons' && !!run?.done)
+  /* 人点过就听他的；没点过跟着最后一个跑起来的、有详情的步骤走。 */
+  const auto = [...(run?.steps ?? [])].reverse()
+    .find(st => st.st !== 'wait' && hasDetail(st.k))?.k ?? ''
+  const sel = hasDetail(pick) ? pick : auto
+
   const voteAt = (i: number) => {
     const name = RISK_AGENTS[i]?.n.replace(/ Agent$/, '')
     return run?.votes.find(v => v.n === name)
@@ -177,7 +189,7 @@ function Assessment({ onFold }: { onFold: () => void }) {
           <div id="arring"><Ring score={run?.score ?? 0} runId={run?.id} /></div>
           {/* .rstats 在 lay-b 下是 display:none，星盘才是这一格的内容 */}
           <div className="rsplit">
-            <div className="rtable" id="rs-table"><Constellation /></div>
+            <div className="rtable" id="rs-table"><Constellation live={!!run} done={!!run?.done} /></div>
           </div>
           <div className="asfade" />
         </div>
@@ -191,17 +203,28 @@ function Assessment({ onFold }: { onFold: () => void }) {
                     <span className="arht"><b>{run.subject}</b><i>{run.summary || 'Assessing…'}</i></span>
                   </div>
                   <div className="arsteps">
-                    {run.steps.map(st => (
-                      <div className={`arstep ${st.st}`} key={st.k}>
-                        <span className="arsi"><i>{st.st === 'done' ? '✓' : ''}</i></span>
-                        <div className="arsm">
-                          <div className="arst">
-                            <b>{st.n}</b>
-                            {st.line ? <span className="arsl">{st.line}</span> : null}
+                    {run.steps.map(st => {
+                      const can = hasDetail(st.k)
+                      return (
+                        <div className={`arstep ${st.st}${sel === st.k ? ' open' : ''}`} key={st.k}>
+                          <span className="arsi"><i>{st.st === 'done' ? '✓' : ''}</i></span>
+                          <div className="arsm">
+                            {/* 有详情的那几步才可点——点一个没有内容的步骤，
+                                下面什么都不换，人会以为点坏了。 */}
+                            <div className="arst" role={can ? 'button' : undefined}
+                              tabIndex={can ? 0 : undefined}
+                              onClick={can ? () => setPick(st.k) : undefined}
+                              onKeyDown={can ? e => {
+                                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPick(st.k) }
+                              } : undefined}>
+                              <b>{st.n}</b>
+                              {st.line ? <span className="arsl">{st.line}</span> : null}
+                              {can ? <span className="arsx" aria-hidden>⌄</span> : null}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                   {/* 共识的过程，一票一行，落一个长一行。
                   
@@ -212,9 +235,11 @@ function Assessment({ onFold }: { onFold: () => void }) {
                       都没有。七票的分歧本来就是这块面板存在的理由。
                   
                       点一行进那个 agent 的底稿，跟点下面候命排是同一条路。 */}
-                  {run.votes.length > 0 && (
+                  {/* 下面这一格跟着上面选中的那一步走。原来无论点哪一步都是同一
+                      堆票加结论——那等于四个步骤只有一份内容，点它们没有意义。 */}
+                  {sel && (
                     <div className="ardock">
-                      {run.votes.map((v, i) => (
+                      {sel === 'cons' ? <Verdict run={run} /> : run.votes.map((v, i) => (
                         <div className={`ardv ${v.v} can`} key={v.n}
                           role="button" tabIndex={0}
                           onClick={() => setAgent(i)}
@@ -227,7 +252,6 @@ function Assessment({ onFold }: { onFold: () => void }) {
                           <em>{v.note}</em>
                         </div>
                       ))}
-                      {run.done && <Verdict run={run} />}
                     </div>
                   )}
                 </>
@@ -303,11 +327,15 @@ function Assessment({ onFold }: { onFold: () => void }) {
  *
  * 名字取不到就不出那一行，不拿别的凑数。
  */
+/* 成员用的是后端现在发的那七个名字（= 界面上候命排那七个）。上一版写的是
+   后端改名之前那套（Counterparty history / Source of funds…），改完名之后
+   一个都匹配不上，于是这四行全空——而这段话只剩一个开头和一个结论，中间
+   什么都没有。名字改在两处，得两处一起改。 */
 const THEMES: [string, string[]][] = [
-  ['Counterparty', ['Counterparty history', 'Dispute record']],
-  ['Funds', ['Source of funds', 'Chain provenance']],
-  ['Compliance', ['Sanctions screening', 'Document integrity']],
-  ['Market', ['Velocity check']],
+  ['Counterparty', ['Identity', 'Behavior']],
+  ['Funds', ['Provenance', 'Graph']],
+  ['Compliance', ['Sanctions']],
+  ['Market', ['Pricing']],
 ]
 
 function Verdict({ run }: { run: Run }) {
