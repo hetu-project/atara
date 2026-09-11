@@ -119,7 +119,7 @@ export default function Settings({ identity }: { identity: string }) {
         </div>
       </div>
       {backup && (
-        <Backup onClose={() => setBackup(false)}
+        <Backup backedUp={!!backedAt} onClose={() => setBackup(false)}
           onDone={() => {
             try {
               localStorage.setItem(BACKUP_KEY, new Date().toLocaleDateString('en-US',
