@@ -29,9 +29,13 @@ const readBackup = () => {
  */
 export default function Settings({ identity }: { identity: string }) {
   const { data: me } = useApi(() => ep.me(identity), [identity])
-  const { user, linkPasskey } = usePrivy()
+  const { user, authenticated, linkPasskey } = usePrivy()
   const [setup, setSetup] = useState(false)
   const [backup, setBackup] = useState(false)
+  /* 加 passkey 失败的原因。必须显示出来：linkPasskey 的失败是一个异步
+     rejection，不接住的话点下去屏幕上什么都不发生——而「没反应」是最难报的
+     一类故障，用户没法描述，我们也无从查起。 */
+  const [pkErr, setPkErr] = useState('')
   const [, bump] = useState(0)
   const pw = readPw()
   const ext = (me?.wallet_kind ?? 'ext') === 'ext'
@@ -39,6 +43,29 @@ export default function Settings({ identity }: { identity: string }) {
   /* 这个账户上登记了几个 passkey。数来自 Privy，不是我们自己记的一个数字——
      记在自己这边的话，用户在别处删掉一个，我们这儿还显示着。 */
   const keys = (user?.linkedAccounts ?? []).filter(a => a.type === 'passkey')
+
+  /* passkey 是挂在 Privy 账户上的，所以先得有一个 Privy 会话。
+     用演示身份（?as=）进来的人没有，这时点下去 Privy 会抛
+     「User must be authenticated before linking an account」。 */
+  const addPasskey = () => {
+    setPkErr('')
+    if (!authenticated) {
+      setPkErr('This console session was not opened through Privy. '
+        + 'Sign in with Google, Twitter or a wallet, then add a passkey to that account.')
+      return
+    }
+    try {
+      // 类型上是 () => void，运行时返回的是 promise，失败靠它才看得见
+      const r = linkPasskey() as unknown as Promise<unknown> | void
+      if (r && typeof (r as Promise<unknown>).catch === 'function') {
+        void (r as Promise<unknown>).catch((e: unknown) => {
+          setPkErr(e instanceof Error ? e.message : 'Could not add a passkey')
+        })
+      }
+    } catch (e) {
+      setPkErr(e instanceof Error ? e.message : 'Could not add a passkey')
+    }
+  }
   const span = LOCK_IDLE >= 60000
     ? `${Math.round(LOCK_IDLE / 60000)} minutes`
     : `${Math.round(LOCK_IDLE / 1000)} seconds`
@@ -92,9 +119,16 @@ export default function Settings({ identity }: { identity: string }) {
                   ? `${keys.length} device${keys.length > 1 ? 's' : ''} can approve transfers`
                   : 'None on this account — your next transfer will ask you to add one.'}</em></span>
               <button className={'btn btn-' + (keys.length ? 'secondary' : 'primary') + ' btn-sm'}
-                onClick={() => linkPasskey()}>
+                onClick={addPasskey}>
                 {keys.length ? 'Add a device' : 'Add passkey'}
               </button>
+              {pkErr ? (
+                <div className="pkrows"><div className="pkrow">
+                  <span className="pkname" style={{ color: 'var(--warn)', whiteSpace: 'normal' }}>
+                    {pkErr}
+                  </span>
+                </div></div>
+              ) : null}
               {keys.length > 0 && (
                 <div className="pkrows">
                   {keys.map(k => (
