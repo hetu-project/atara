@@ -194,13 +194,37 @@ function Assessment({ onFold }: { onFold: () => void }) {
                       </div>
                     ))}
                   </div>
-                  {run.done && (
+                  {/* 共识的过程，一票一行，落一个长一行。
+                  
+                      参照在这个版式下把「当前那一步的详情」摆进 .ardock，而
+                      agent checks 那一步的详情就是这些行。原来这里只有一句
+                      「Cleared · 6/7 agents agree」，而且要等全部跑完才出现——
+                      中间那十几秒里右栏是空的，最该看的「他们在说什么」一个字
+                      都没有。七票的分歧本来就是这块面板存在的理由。
+                  
+                      点一行进那个 agent 的底稿，跟点下面候命排是同一条路。 */}
+                  {run.votes.length > 0 && (
                     <div className="ardock">
-                      <div className="asby">
-                        {run.flagged
-                          ? 'Held for review — the gate did not clear'
-                          : `Cleared · ${run.votes.filter(v => v.v === 'pass').length}/${run.total} agents agree`}
-                      </div>
+                      {run.votes.map((v, i) => (
+                        <div className={`ardv ${v.v} can`} key={v.n}
+                          role="button" tabIndex={0}
+                          onClick={() => setAgent(i)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAgent(i) }
+                          }}>
+                          <b>{v.n.replace(/ Agent$/, '')}</b>
+                          <span className="ardvv">{v.v}</span>
+                          <span className="ardvx" aria-hidden>›</span>
+                          <em>{v.note}</em>
+                        </div>
+                      ))}
+                      {run.done && (
+                        <div className="asby">
+                          {run.flagged
+                            ? 'Held for review — the gate did not clear'
+                            : `Cleared · ${run.votes.filter(v => v.v === 'pass').length}/${run.total} agents agree`}
+                        </div>
+                      )}
                     </div>
                   )}
                 </>
