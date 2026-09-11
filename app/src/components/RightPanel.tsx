@@ -277,32 +277,11 @@ function Assessment({ onFold }: { onFold: () => void }) {
         </div>
         <div id="afpanel" hidden />
 
-        {/* Agent profile。参照里它占满整块 feed（.agpage），顶上的环和星盘收起——
-            读 profile 的时候那些只是占地方的背景。 */}
-        {agent !== null && (() => {
-          const a = RISK_AGENTS[agent] as { n: string; d: string }
-          const v = voteAt(agent)
-          return (
-            <div className="agpage">
-              <header className="agph2">
-                <span className="agcav" dangerouslySetInnerHTML={{ __html: agentGlyph(agent) }} />
-                <div className="agid">
-                  <b className="agpn">{a.n.replace(/ Agent$/, '')}</b>
-                  <span className="agpr">{a.d}</span>
-                </div>
-                {v ? <span className="ardvv">{v.v}</span>
-                   : <span className="agpidle">{running ? 'checking' : 'standing by'}</span>}
-              </header>
-              <div className="agsep" aria-hidden />
-              <p className="agmeasure">
-                {v?.note || 'No vote in this run yet — this agent has nothing to report.'}
-              </p>
-              <div className="dfoot">
-                <button className="btn btn-ghost btn-sm" onClick={() => setAgent(null)}>Back</button>
-              </div>
-            </div>
-          )
-        })()}
+        {/* 点一个 agent 只是把它标出来，不再展开一张放大的底稿。
+        
+            那张底稿印的是它那一票的理由——而上面那一列已经逐条印着同样的话了。
+            同一句话在同一块面板上出现两遍，第二遍还要把环和星盘挤掉，读的人
+            得先分清哪一份是哪一份。到哪个就标哪个，够了。 */}
       </div>
     </section>
   )
