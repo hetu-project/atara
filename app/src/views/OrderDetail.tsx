@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
+import ConfirmSheet from '../components/ConfirmSheet'
 import Avatar from '../components/Avatar'
 import { useAction, useApi } from '../hooks/useApi'
 import type { Order } from '../api/types'
@@ -36,6 +37,11 @@ export default function OrderDetail({
   const { data: o, error, reload } = useApi(() => ep.order(id), [id], 1000)
   const { run, pending, error: actErr } = useAction()
   const [open, setOpen] = useState(true)
+  /* 下单前那一道确认。开着的时候装的就是这一单——不另存一份参数，
+     人看到的和发出去的必须是同一个东西。 */
+  const [ask, setAsk] = useState(false)
+  const { data: me } = useApi(() => ep.me(), [])
+  const walletKind = me?.wallet_kind === 'ext' ? 'ext' : 'atara'
   const file = useRef<HTMLInputElement>(null)
 
   const wrap = (node: React.ReactNode) =>
@@ -124,8 +130,10 @@ export default function OrderDetail({
                 <div className="dfoot">
                   <a href="#" className="dcancel lnk"
                     onClick={e => { e.preventDefault(); void act(() => ep.cancel(o.id)) }}>Drop</a>
+                  {/* 确认之前再停一下：这一下之后付款窗口就开始走，错过会
+                      记进你的成绩单。参照在这里也插了一道。 */}
                   <button className="btn btn-primary" disabled={pending}
-                    onClick={() => void act(() => ep.accept(o))}>Confirm</button>
+                    onClick={() => setAsk(true)}>Confirm</button>
                 </div>
               </>
             ) : step === 's3' && o.phase === 'pay' ? (
@@ -192,6 +200,39 @@ export default function OrderDetail({
       </div>
 
       {actErr ? <div className="mkempty">{actErr.message}</div> : null}
+
+      {ask && (
+        <ConfirmSheet
+          title="Confirm order"
+          amount={money(Number(o.otc?.fiat_amount ?? 0), ccy).replace(/\s.*$/, '')}
+          walletKind={walletKind}
+          /* 买方接单不动自己的钱——对方的币早锁在合约里了，我之后才去银行
+             转账。所以是普通按钮。卖方接单要把币锁进合约，那一下才走签名。 */
+          plain={sell ? undefined : 'Confirm order'}
+          busy={pending}
+          lead={<>
+            {sell ? 'Sell' : 'Buy'} <b className="num">{coin}</b>{' '}
+            {sell ? 'to' : 'from'} <b>{o.counterparty_name ?? 'them'}</b>.{' '}
+            {sell
+              ? 'Your coins lock into escrow when you confirm.'
+              : 'Their coins are already escrowed — locked when they listed.'}
+          </>}
+          rows={[
+            { k: 'You pay',
+              v: sell
+                ? <>{coin} · into escrow</>
+                : <>{fiat} · bank transfer, outside Atara</> },
+            { k: sell ? 'They pay' : 'Their account',
+              v: sell ? <>{fiat} · to your registered account</> : <>Full details on the next step</> },
+            /* 窗口是这张卡上唯一一个「错过有后果」的数，所以它单独一行，
+               而不是塞进上面那句话里。 */
+            /* 4 小时与轨道上那一站写的是同一个窗口。写死在两处是有风险的，
+               但这个数现在只由后端的 demo/real 计时决定，接口上没有发下来。 */
+            { k: 'Window', v: <>4 h · missing it marks your record</> },
+          ]}
+          onConfirm={() => { setAsk(false); void act(() => ep.accept(o)) }}
+          onClose={() => setAsk(false)} />
+      )}
     </>,
   )
 }

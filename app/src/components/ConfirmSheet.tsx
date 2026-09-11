@@ -21,7 +21,7 @@ import { IPasskey, IWallet } from './icons'
 export interface ConfirmRow { k: string; v: React.ReactNode }
 
 export default function ConfirmSheet({
-  title, amount, unit, lead, rows, extra, note, walletKind, busy, onConfirm, onClose,
+  title, amount, unit, lead, rows, extra, note, walletKind, plain, busy, onConfirm, onClose,
 }: {
   title: string
   /** 大数。挂单是币量，吃单是要付的法币。 */
@@ -34,6 +34,14 @@ export default function ConfirmSheet({
   /** ⚠ 那一句：这一下到底会发生什么。 */
   note?: { why: string; how: string }
   walletKind: string
+  /**
+   * 这一下不动钱，只是一句承诺——那就用普通按钮，别摆 passkey。
+   *
+   * 买方接单就是这种：对方的币早就锁在合约里了，我这边什么都没出，之后才
+   * 去银行转账。摆一个「用 passkey 签」会让人以为这一下就把钱划走了。
+   * 真正动钱的那几步（挂单锁币、卖方入金）才走签名。
+   */
+  plain?: string
   busy?: boolean
   onConfirm: () => void
   onClose: () => void
@@ -42,7 +50,9 @@ export default function ConfirmSheet({
   const ext = walletKind === 'ext'
   const hasPk = (user?.linkedAccounts ?? []).some(a => a.type === 'passkey')
 
-  const [icon, label] = ext
+  const [icon, label] = plain
+    ? [null, plain]
+    : ext
     ? [<IWallet key="w" />, 'Sign in your wallet']
     : hasPk
       ? [<IPasskey key="p" />, 'Confirm with passkey']
