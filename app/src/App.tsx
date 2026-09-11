@@ -104,7 +104,11 @@ export default function App() {
         {route.view === 'thread' && <Thread identity={handle} peer={route.peer} />}
       </section>
 
-      <RightPanel identity={handle} onOpen={id => go({ view: 'order', id })}
+      <RightPanel identity={handle}
+        /* 没有对手方的单（还没撮合上）只能去工单页——没有会话可进。 */
+        onOpen={o => (o.counterparty_id
+          ? go({ view: 'thread', peer: o.counterparty_id })
+          : go({ view: 'order', id: o.id }))}
         onFold={() => setRfold(true)} />
 
       {/* 收起之后要能还原。参照里这颗按钮只在「用户收起了、而且这个视图

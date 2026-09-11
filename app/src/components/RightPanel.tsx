@@ -17,7 +17,7 @@ import type { Order } from '../api/types'
  */
 export default function RightPanel({
   identity, onOpen, onFold,
-}: { identity: string; onOpen: (id: string) => void; onFold: () => void }) {
+}: { identity: string; onOpen: (o: Order) => void; onFold: () => void }) {
   return (
     <aside id="right" className="lay-b" aria-label="Assessment and agent status">
       <div className="rgrid" id="rgrid">
@@ -54,7 +54,7 @@ function label(o: Order): string {
 
 function OrderStatus({
   identity, onOpen,
-}: { identity: string; onOpen: (id: string) => void }) {
+}: { identity: string; onOpen: (o: Order) => void }) {
   const [filt, setFilt] = useState<Filt>('all')
   // 工单状态由后端调度器推进，不轮询就看不到变化。
   const { data } = useApi(() => ep.orders(identity), [identity], 2000)
@@ -98,7 +98,11 @@ function OrderStatus({
           const amt = Math.round(Number(o.amount?.amount ?? 0))
           const who = o.counterparty_name ?? ''
           return (
-            <button key={o.id} className={`rocard ${tone}`} onClick={() => onOpen(o.id)}>
+            /* 点一张卡进这一单的会话，不是另开一个工单页。参照就是这么做的
+               （restoreSession(t.sess) + switchView('chat')）。会话里有这一单
+               完整的记录：当时那七票、工单卡、后来说过的每一句话。另开一页
+               只能看到卡，看不到它是怎么来的。 */
+            <button key={o.id} className={`rocard ${tone}`} onClick={() => onOpen(o)}>
               <span className="roc-st"><i />{label(o)}</span>
               {amt
                 ? <b className={`roc-big num ${dir}`}>{dir === 'out' ? '−' : '+'}${amt.toLocaleString()}</b>
@@ -243,8 +247,13 @@ function Assessment({ onFold }: { onFold: () => void }) {
           {RISK_AGENTS.map((a: { n: string; d: string }, i: number) => {
             const st = stateOf(i)
             const note = voteAt(i)?.note ?? ''
+            /* sel 是「正在看这一个」，不是它的投票结果，所以单独挂一个类。
+               原来点完只剩浏览器的 focus 环，而 focus 还把 hover 那套头像挤压
+               动画一直开着——那个跳动读起来像「这一个在跑」，而它只是被选中了。
+               参照是一个静态的框。 */
             return (
-              <button type="button" className={`ragp ${st}`} key={a.n} title={note || `${a.n} · ${a.d}`}
+              <button type="button" className={`ragp ${st}${agent === i ? ' sel' : ''}`}
+                key={a.n} title={note || `${a.n} · ${a.d}`}
                 onClick={() => setAgent(i)}>
                 <span className="ragav" dangerouslySetInnerHTML={{ __html: agentGlyph(i) }} />
                 <span className="ragt">

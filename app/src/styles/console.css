@@ -2176,6 +2176,10 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 /* 选中态：这一排现在是选择器，不只是状态灯 */
 .ragp.sel{background:var(--canvas);box-shadow:inset 0 0 0 1px var(--line-strong)}
 .ragp.sel .ragt b{color:var(--ink)}
+/* 选中的那个不跟着 hover/focus 一起抖：静止才读得出「就是这一个」。
+   hover 的挤压动画是用来表示「这一个在干活」的，选中不是干活。 */
+.ragp.sel .ragav .gart,.ragp.sel:hover .ragav .gart,.ragp.sel:focus-visible .ragav .gart{animation:none}
+.ragp.sel .ragav .geyes,.ragp.sel:hover .ragav .geyes,.ragp.sel:focus-visible .ragav .geyes{animation:none}
 .ragp:focus-visible{outline:var(--focus-w) solid var(--focus-c);outline-offset:1px}
 /* ── agent 标识的状态 ──
    角色不换，换神态：闲着褪色打盹 → checking 眼神左右扫、身体弹性起伏 →
