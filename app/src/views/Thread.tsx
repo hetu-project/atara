@@ -107,7 +107,7 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
             : (
               <Fragment key={x.order.id}>
                 {x.order.assessment && <AssessCard a={x.order.assessment} peer={name} />}
-                <OrderDetail id={x.order.id} bare onBack={() => {}} />
+                <OrderDetail id={x.order.id} bare identity={identity} onBack={() => {}} />
               </Fragment>
             )))}
           {!stream.length && (

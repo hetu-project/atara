@@ -98,7 +98,7 @@ export default function App() {
         {route.view === 'settings' && <Settings identity={handle} />}
         {route.view === 'order' && (
           <div className="view on"><div className="vbody">
-            <OrderDetail id={route.id} onBack={() => go({ view: 'payments' })} />
+            <OrderDetail id={route.id} identity={handle} onBack={() => go({ view: 'payments' })} />
           </div></div>
         )}
         {route.view === 'thread' && <Thread identity={handle} peer={route.peer} />}

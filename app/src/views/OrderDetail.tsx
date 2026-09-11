@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import ConfirmSheet from '../components/ConfirmSheet'
+import DisputeForm from '../components/DisputeForm'
+import DocView, { DOC_META } from '../components/DocView'
 import Avatar from '../components/Avatar'
 import { useAction, useApi } from '../hooks/useApi'
 import type { Order } from '../api/types'
@@ -32,14 +34,15 @@ const money = (v: number, c: string) =>
  *   还等着凭证」摆在一起才对得上号。
  */
 export default function OrderDetail({
-  id, onBack, bare,
-}: { id: string; onBack: () => void; bare?: boolean }) {
+  id, onBack, bare, identity,
+}: { id: string; onBack: () => void; bare?: boolean; identity?: string }) {
   const { data: o, error, reload } = useApi(() => ep.order(id), [id], 1000)
   const { run, pending, error: actErr } = useAction()
   const [open, setOpen] = useState(true)
   /* 下单前那一道确认。开着的时候装的就是这一单——不另存一份参数，
      人看到的和发出去的必须是同一个东西。 */
   const [ask, setAsk] = useState(false)
+  const [disp, setDisp] = useState(false)
   const { data: me } = useApi(() => ep.me(), [])
   const walletKind = me?.wallet_kind === 'ext' ? 'ext' : 'atara'
   const file = useRef<HTMLInputElement>(null)
@@ -164,6 +167,10 @@ export default function OrderDetail({
                 <div className="dfoot">
                   <a href="#" className="lnk ecancel" style={{ marginRight: 'auto' }}
                     onClick={e => { e.preventDefault(); void act(() => ep.cancel(o.id)) }}>Cancel order</a>
+                  {/* 付款这一步是最容易出事的一步——钱已经出去了，对方却说没收到。
+                      出口得在这儿，而不是等人去找客服。 */}
+                  <a href="#" className="lnk dspx"
+                    onClick={e => { e.preventDefault(); setDisp(true) }}>Report a problem</a>
                   <input type="file" ref={file} hidden accept="image/*,application/pdf"
                     onChange={() => void upload()} />
                   <button className="btn btn-primary" disabled={pending}
@@ -200,6 +207,15 @@ export default function OrderDetail({
       </div>
 
       {actErr ? <div className="mkempty">{actErr.message}</div> : null}
+
+      {disp && (
+        <DisputeForm orderId={o.id} ref_={o.ref}
+          who={o.counterparty_name ?? '—'}
+          amount={`${coin} · ${fiat}`}
+          identity={identity ?? ''}
+          onClose={() => setDisp(false)}
+          onDone={() => { setDisp(false); reload() }} />
+      )}
 
       {ask && (
         <ConfirmSheet
@@ -263,6 +279,8 @@ const DOCS: [string, string][] = [
 function Peer({ o, ccy }: { o: Order; ccy: string }) {
   const name = o.counterparty_name ?? '—'
   const p = o.peer_profile
+  /* 点开的是这份材料的说明——它是什么、谁出的、这一家交没交。 */
+  const [doc, setDoc] = useState('')
   return (
     <dl className="dpay">
       <div><dt>Counterparty</dt>
@@ -277,9 +295,11 @@ function Peer({ o, ccy }: { o: Order; ccy: string }) {
         <div><dt>Documents</dt>
           <dd className="dpay-docs">
             {DOCS.map(([k, label]) => (
-              <span key={k} className={'doc' + (p.docs?.[k] ? ' on' : '')}>
+              <button key={k} type="button" className={'doc' + (p.docs?.[k] ? ' on' : '')}
+                title={DOC_META[k]?.n} onClick={e => { e.stopPropagation(); setDoc(k) }}>
                 {p.docs?.[k] ? '✓' : '✕'} {label}
-              </span>
+                <span className="docgo" aria-hidden>›</span>
+              </button>
             ))}
           </dd></div>
       )}
@@ -293,6 +313,9 @@ function Peer({ o, ccy }: { o: Order; ccy: string }) {
               用在 29.28 上会印成「¥29」——抹掉的正好是这个数的大部分。 */}
           <dd>{FIAT_SYM[o.fee.currency] ?? ''}{o.fee.amount} {o.fee.currency}{' '}
             <span className="dreq">{o.fee.bps / 100}%</span></dd></div>
+      )}
+      {doc && (
+        <DocView doc={doc} has={!!p?.docs?.[doc]} peer={name} onClose={() => setDoc('')} />
       )}
       {/* 这一单自己的分，下单那一刻定的。摆在对手方旁边是因为它评的就是
           这笔单跟这个对手方——不是这个人此刻的总体信誉。 */}

@@ -2173,6 +2173,9 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
   border:0;background:none;cursor:pointer;text-align:left;
   border-radius:var(--r-control);transition:background var(--dur-fast) var(--ease)}
 .ragp:hover{background:var(--canvas)}
+/* 鼠标落在哪一个身上要看得出来。原来只换了个底色，在这块暗底上几乎看不见；
+   加一圈很浅的描边——比选中态（.sel 那圈实线）淡一档，两种状态分得开。 */
+.ragp:hover{box-shadow:inset 0 0 0 1px var(--hairline-2)}
 /* 选中态：这一排现在是选择器，不只是状态灯 */
 .ragp.sel{background:var(--canvas);box-shadow:inset 0 0 0 1px var(--line-strong)}
 .ragp.sel .ragt b{color:var(--ink)}

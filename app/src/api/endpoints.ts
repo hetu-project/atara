@@ -145,6 +145,18 @@ export const receipt = (orderId: string, fileRef: string, as?: string) =>
 export const verifyReceipt = (orderId: string, ok: boolean, reason = '', as?: string) =>
   api.post<Order>(`/orders/${orderId}/verify-receipt`, { ok, reason }, { as })
 
+/**
+ * 开一张争议案卷。
+ *
+ * 分类和经过都发给后端存进这一单的事件流——收下来才算数。经过是必填的：
+ * 案子要交给人看，空的没法看。
+ */
+export const dispute = (
+  orderId: string,
+  body: { kind: string; details: string; file_ref?: string },
+  as?: string,
+) => api.post<Order>(`/orders/${orderId}/dispute`, body, { as })
+
 export const cancel = (orderId: string, as?: string) =>
   api.post<Order>(`/orders/${orderId}/cancel`, {}, { as })
 
