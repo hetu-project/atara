@@ -160,6 +160,9 @@ function LiveCard({ o }: { o: Order }) {
   /* 托管三步：钱进合约 → 条件成立 → 放款。
      争议把第三步换成复核，不是新增一段流程——争议就发生在放款判定这一步上。 */
   const at = tone === 'disp' ? 2 : 1
+  const open = (x: Order) => (x.counterparty_id
+    ? go({ view: 'thread', peer: x.counterparty_id })
+    : go({ view: 'order', id: x.id }))
   const steps: [string, number][] = [
     ['Funded', 0],
     [tone === 'you' ? 'Your call' : 'Condition', 1],
@@ -168,8 +171,11 @@ function LiveCard({ o }: { o: Order }) {
 
   return (
     <div className={`pcard ${tone}`} role="button" tabIndex={0}
-      onClick={() => go({ view: 'order', id: o.id })}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go({ view: 'order', id: o.id }) } }}>
+      /* 点一笔单进这一单的会话，不是另开一个工单页。会话里有这一单完整的
+         记录——当时那七票、工单卡、后来说过的每一句话——另开一页只看得到卡，
+         看不到它是怎么来的。还没撮合上的单没有对手方，也就没有会话可进。 */
+      onClick={() => open(o)}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(o) } }}>
       <span className="roc-st"><i />{label(o)}<time>{ago(o.created_at)}</time></span>
       {amt
         ? <b className={`roc-big num ${dir}`}>{dir === 'out' ? '−' : '+'}${amt.toLocaleString()}</b>
@@ -189,7 +195,7 @@ function LiveCard({ o }: { o: Order }) {
         {who ? <span className="roc-who">{who}</span> : null}
         {act ? (
           <button className={`btn btn-${tone === 'disp' ? 'secondary' : 'primary'} btn-sm`}
-            onClick={e => { e.stopPropagation(); go({ view: 'order', id: o.id }) }}>{act}</button>
+            onClick={e => { e.stopPropagation(); open(o) }}>{act}</button>
         ) : null}
       </span>
     </div>

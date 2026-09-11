@@ -1,8 +1,10 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
+import ActionBar, { type Act, type ActKind } from '../components/ActionBar'
+import { useAssessment } from '../hooks/useAssessment'
 import AssessCard from '../components/AssessCard'
 import Avatar from '../components/Avatar'
-import { IAttach, IMic, ISend } from '../components/icons'
+import { IAttach, IBuy, IMic, ISell, ISend } from '../components/icons'
 import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
 import OrderDetail from './OrderDetail'
@@ -19,6 +21,18 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
   const { data, reload } = useApi(() => ep.thread(peer, identity), [peer, identity], 3000)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
+  /* 在这个人的会话里直接下单。参照的 composer 和会话本来就是同一个视图，
+     所以这一排在对话里一直都在；我们拆成了两个视图，拆的时候把它落下了。
+     而「正在跟这个人说话」恰恰是最该能直接下单的地方。 */
+  const [act, setAct] = useState<Act | null>(null)
+  const [err, setErr] = useState('')
+  const { start } = useAssessment()
+  const { data: cdata } = useApi(() => ep.contacts(identity), [identity])
+
+  /* 对手方预填成「正在说话的这个人」——在他的会话里下单，不该再选一次。 */
+  const mk = (k: ActKind): Act => ({
+    k, amt: k === 'buy' ? 5000 : 3000, coin: 'USDT', fiat: 'CNY', peer: name, conds: [],
+  })
   const end = useRef<HTMLDivElement>(null)
   const msgs = data?.messages ?? []
   const name = data?.peer?.display_name ?? peer
@@ -36,6 +50,29 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
   ].sort((a, b) => a.t - b.t)
 
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }) }, [msgs.length])
+
+  /* 对手方是写死的——你就在跟他说话。Home 那边要先撮合出一个人来，
+     这里不用，也不该让人再选一次。 */
+  const order = async (a: Act) => {
+    setBusy(true); setErr('')
+    try {
+      const m = await ep.match({
+        intent: a.k, amount: String(a.amt), amount_kind: 'coin',
+        asset: a.coin, fiat: a.fiat, counterparty_id: peer,
+      })
+      if (m.violation) { setErr(m.violation.message); return }
+      const pick = m.candidates?.[0]
+      if (!pick) { setErr(`${name} has nothing live on that side right now`); return }
+      const ord = await ep.take(pick.offer_id, {
+        amount: pick.coin_amount, amount_kind: 'coin', network: '',
+      })
+      // 右栏回放这一单存下来的那份评估——见 useAssessment.start 的说明
+      void start(pick.offer_id, pick.name, ord.id)
+      setAct(null); reload()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not open that order')
+    } finally { setBusy(false) }
+  }
 
   const send = async () => {
     const b = text.trim()
@@ -82,17 +119,43 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
         </div>
       </div>
 
-      <div id="say">
+      <div id="say" className={act ? 'actopen' : ''}>
+        <div id="actions" role="group" aria-label="Actions">
+          <button className={'act' + (act?.k === 'buy' ? ' on' : '')}
+            onClick={() => setAct(a => (a?.k === 'buy' ? null : mk('buy')))}>
+            <span className="acti"><IBuy /></span>Buy
+          </button>
+          <button className={'act' + (act?.k === 'sell' ? ' on' : '')}
+            onClick={() => setAct(a => (a?.k === 'sell' ? null : mk('sell')))}>
+            <span className="acti"><ISell /></span>Sell
+          </button>
+        </div>
+        {err ? <p className="roempty" style={{ textAlign: 'center' }}>{err}</p> : null}
         <div className="sayrow">
+          {act && (
+            <ActionBar act={act} onChange={setAct} onClose={() => setAct(null)}
+              contacts={cdata?.contacts ?? []} />
+          )}
           <textarea id="free" rows={1} aria-label={`Message ${name}`}
             value={text} onChange={e => setText(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send() } }}
-            placeholder={`Message ${name}`} />
+            /* 动作面板开着的时候回车是「下这一单」，不是发这句话——面板本身
+               就是那句话，再把输入框里的内容当消息发一遍是发两次。 */
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                if (act) void order(act); else void send()
+              }
+            }}
+            placeholder={act
+              ? `Press Enter to place this order with ${name}`
+              : `Message ${name}`} />
           <div className="saytools">
             <button className="sayic" title="Attach" aria-label="Attach"><IAttach /></button>
             <button className="sayic" title="Voice" aria-label="Voice" aria-pressed={false}><IMic /></button>
-            <button id="send" title="Send (Enter)" aria-label="Send"
-              disabled={!text.trim() || busy} onClick={() => void send()}><ISend /></button>
+            <button id="send" title={act ? 'Place this order (Enter)' : 'Send (Enter)'}
+              aria-label={act ? 'Place this order' : 'Send'}
+              disabled={busy || (!act && !text.trim())}
+              onClick={() => (act ? void order(act) : void send())}><ISend /></button>
           </div>
         </div>
       </div>
