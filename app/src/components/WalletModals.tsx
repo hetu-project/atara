@@ -33,6 +33,10 @@ const NET_NAME: Record<string, string> = {
   BTC: 'Bitcoin', ETH: 'Ethereum', POLYGON: 'Polygon', TRON: 'TRON',
   BSC: 'BNB Chain', ARBITRUM: 'Arbitrum', BASE: 'Base', OPTIMISM: 'Optimism',
 }
+/* 兜底用的短名。正经的显示名来自后端 /catalog/chain 的 name 字段——
+   这张表只覆盖后端没发的那几个码（资产目录里还留着 TRON/BTC 之类）。
+   靠这张表当主力会漏：后端发的是 ETHEREUM，表里写的是 ETH，于是那一格
+   直接印出大写的代码；BSC-TESTNET 更是压根没有。 */
 const netName = (n: string) => NET_NAME[n] ?? n
 /* 地址格式按链族走，不按币种——同一条链上所有代币共用一个地址。
    按币种算是上一版的 bug：USDT 和 USDC 都在 Polygon 上，却给出两个地址。 */
@@ -84,15 +88,19 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
   const useCoin = list.some(a => a.asset === coin) ? coin : (list[0]?.asset ?? '')
   const cur = list.find(a => a.asset === useCoin)
 
-  /* 只列这一版真的看得见的链。
-     
-     后端只连一条 RPC，余额就只从那条链上读。把四条链都摆出来的话，有人会
-     选 Ethereum、把 USDT 打到这个地址上，然后在界面上永远看不到它——币没丢
-     （EVM 地址是同一个），但这个产品对它一无所知，那比不给这个选项更糟。 */
+  /* 网络这一排全部来自后端：/catalog/assets 说这个币在哪几条链上，
+     /catalog/chain 说哪几条链上真的部署了合约。两份都照发，不在前端裁。
+  
+     原来只列「已部署」的那几条，于是这里只剩一个 BSC-TESTNET——而这是**你
+     自己的地址**，主网上的 USDT 打过来一样在你钱包里（EVM 地址是同一个）。
+     把选项藏掉并不能阻止别人往这个地址打款，只会让人以为这个账户收不了主网
+     的币。该说的是另一件事：哪几条链这个控制台会去查余额。所以全列出来，
+     没索引的那几条在底下照实讲清楚。 */
   const live = (chains?.chains ?? []).filter(c => c.deployed).map(c => c.code)
-  const all = cur?.networks ?? []
-  const nets = live.length ? all.filter(n => live.includes(n)) : all
-  const hidden = all.length - nets.length
+  const nets = cur?.networks ?? []
+  // 链名以后端为准，前端那张表只是兜底。
+  const byCode = new Map((chains?.chains ?? []).map(c => [c.code, c.name]))
+  const name = (n: string) => byCode.get(n) ?? netName(n)
 
   const [net, setNet] = useState(nets[0] ?? '')
   const useNet = nets.includes(net) ? net : (nets[0] ?? '')
@@ -108,13 +116,16 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
         <div className="sfchips">
           {nets.map((n: string) => (
             <button key={n} type="button" className={'sfchip' + (n === useNet ? ' on' : '')}
-              onClick={() => setNet(n)}>{netName(n)}</button>
+              onClick={() => setNet(n)}>{name(n)}</button>
           ))}
         </div>
-        {hidden > 0 && (
+        {live.length > 0 && live.length < nets.length && (
           <span className="ad" style={{ fontSize: 11.5, color: 'var(--faint)' }}>
-            This build only watches {nets.join(' · ')}. Coins sent on another network
-            stay in your wallet, but will not show up here.
+            {/* 说的是「这儿看不看得到」，不是「能不能收」。地址是你自己的，
+                任何一条 EVM 链上打过来的币都在你钱包里。 */}
+            Balances are read from {live.map(name).join(' · ')} in this build.
+            Coins received on another network are still yours — they just will not
+            appear in this console.
           </span>
         )}
       </div>
@@ -140,11 +151,11 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
 
       <p className="rnote depnote">
         Your own address — funds land in your wallet, not with us.
-        Receives <b>{useCoin}</b> on <b>{netName(useNet)}</b> only.
+        Receives <b>{useCoin}</b> on <b>{name(useNet)}</b> only.
         {/* 还没有这个币种的余额行时说清楚：钱到了才会长出来，
             否则收完款回到账户页看不到那一行，会以为丢了。 */}
         {!held.some((h: { asset: string }) => h.asset === useCoin)
-          && ` A ${useCoin} balance on ${netName(useNet)} appears once the first deposit confirms.`}
+          && ` A ${useCoin} balance on ${name(useNet)} appears once the first deposit confirms.`}
         {' '}Sending another asset or another network cannot be recovered.
       </p>
     </Sheet>
