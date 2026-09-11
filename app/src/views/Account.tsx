@@ -337,27 +337,32 @@ function Card({
             <div className="ccnum"><b className="cq num">{u.toLocaleString()}</b>
               <span className="cqt num">/ {q.toLocaleString()}{suf} · {c.cycle}</span></div>
             <div className="ccbar"><i style={{ width: `${pct}%` }} /></div>
+            {/* 正面只留一行。收款方范围在参照里根本没上卡面——它是「这张卡
+                能付给谁」，而卡面回答的是「还能花多少」。两个问题挤在一起，
+                最该一眼看到的额度反而被挤小了。 */}
             <div className="cccond">
               <span>Up to <b className="num cper">{per ? per.toLocaleString() + suf : 'any amount'}</b> per payment</span>
-              <span>To <b>{c.recipients}</b></span>
             </div>
             <div className="ccfoot"><span className="ccn">{c.spender}</span></div>
           </div>
           <div className="ccface back">
-            <div className="cctop"><span className="cctag" style={{ marginLeft: 0 }}>Conditions</span></div>
+            {/* 背面叫 Limits，不叫 Conditions：这一面列的就是几条上限。
+                原来还排着 Release / Recipients / Enforced 五行——那些在
+                编辑弹窗里都有，堆在一张卡背上只会让人一条也记不住。 */}
+            <div className="cctop"><span className="cctag" style={{ marginLeft: 0 }}>Limits</span></div>
             <div className="ccb">
-              <div className="ccbrow"><span className="ccbk">Release</span><b>{c.template || 'Any'}</b></div>
-              <div className="ccbrow"><span className="ccbk">Recipients</span><b>{c.recipients}</b></div>
+              <div className="ccbrow"><span className="ccbk">Window</span>
+                <b className="num">{q ? q.toLocaleString() + suf : 'Any amount'} · {c.cycle}</b></div>
               <div className="ccbrow"><span className="ccbk">Per payment</span>
                 <b className="num">{per ? per.toLocaleString() + suf : 'Any amount'}</b></div>
-              <div className="ccbrow"><span className="ccbk">Expires</span>
-                <b>{c.expires_at ? new Date(c.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set'}</b></div>
-              {/* 执行方式随钱包类型分叉：外部钱包是 approve，内置是账户合约策略 */}
-              <div className="ccbrow"><span className="ccbk">Enforced</span>
-                <b>{c.wallet_kind === 'ext' ? 'On-chain · by the contract' : 'Policy · account contract'}</b></div>
+              {c.expires_at && (
+                <div className="ccbrow"><span className="ccbk">Expires</span>
+                  <b>{new Date(c.expires_at).toLocaleDateString('en-US',
+                    { month: 'short', day: 'numeric', year: 'numeric' })}</b></div>
+              )}
             </div>
             <div className="ccfoot"><span className="ccn">{c.spender}</span>
-              <span className="ccy">{c.note}</span></div>
+              <span className="ccy">{live ? 'Active' : 'Revoked'}</span></div>
           </div>
         </div></div>
       </div>
