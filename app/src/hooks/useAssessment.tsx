@@ -78,6 +78,8 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       n: v.agent,
       v: v.verdict === 'pass' ? 'pass' : /note/i.test(v.note) ? 'note' : 'flag',
       note: v.note,
+      // 每个 agent 自己那个分，由后端按工单号算——同一单稳定，不同单散开。
+      sc: v.score,
     }))
 
     const step = (k: string, st: StepState, line?: string) =>

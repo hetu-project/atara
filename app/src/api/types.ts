@@ -194,7 +194,7 @@ export interface OrderAssessment {
   total: number
   threshold: number
   summary: string
-  votes: { agent: string; verdict: 'pass' | 'flag'; note: string }[]
+  votes: { agent: string; verdict: 'pass' | 'flag'; note: string; score?: number }[]
   /** 读了多少来源、多少记录。由评估器报，前端不编。 */
   sources: number
   records: number
@@ -501,6 +501,8 @@ export interface AgentVote {
   agent: string
   verdict: 'pass' | 'flag'
   note: string
+  /** 这个 agent 单独给的分。后端按工单号算，同一单稳定、不同单散开。 */
+  score?: number
 }
 
 /** 对手方评估。threshold 是放行门槛——passed 不到它就是拦下转人工。 */

@@ -140,12 +140,16 @@ function Assessment({ onFold }: { onFold: () => void }) {
   const { run, running } = useAssessment()
 
   /* 每个 agent 的状态：还没表态 = conferring（跑着）或 idle，表过态就封印。
-     
-     按序号对应，不按名字：后端那套名字（Sanctions screening / Source of funds…）
-     是 mock 实现自己取的，前端这七个名字才是产品对外的身份。两边都是七个、
-     同一顺序，索引是它们之间唯一稳定的关系。接真模型时应当由后端直接返回
-     这七个名字，那时这里改回按名字匹配。 */
-  const voteAt = (i: number) => run?.votes[i]
+  
+     **按名字取，不按下标。** 后端现在发的就是界面上这七个名字。以前两边各
+     有一套（Sanctions screening / Source of funds… 对 Identity / Provenance…），
+     只能按下标配，而顺序一旦不同，Identity 那一格印的就是制裁那一票的理由——
+     每句话都挂在错误的标题下，读的人无从发现。名字对齐之后这一整类问题没有了；
+     万一哪天又对不上，取不到就是没表态，宁可空着也不显示别人的票。 */
+  const voteAt = (i: number) => {
+    const name = RISK_AGENTS[i]?.n.replace(/ Agent$/, '')
+    return run?.votes.find(v => v.n === name)
+  }
   const stateOf = (i: number): string => {
     const v = voteAt(i)
     if (v) return v.v
@@ -258,7 +262,11 @@ function Assessment({ onFold }: { onFold: () => void }) {
                 <span className="ragav" dangerouslySetInnerHTML={{ __html: agentGlyph(i) }} />
                 <span className="ragt">
                   <b>{a.n.replace(/ Agent$/, '')}</b>
+                  {/* 表过态就印分。参照那一排下面是数字不是「pass」——七个数
+                      一眼扫得出谁低，七个「pass」得一个个读。拿不到分才退回
+                      文字，不编一个数。 */}
                   {st === 'conferring' ? <i>comparing notes</i>
+                    : voteAt(i)?.sc ? <i>{voteAt(i)!.sc}</i>
                     : st === 'pass' ? <i>pass</i>
                     : st === 'note' ? <i>pass · note</i>
                     : st === 'flag' ? <i>flagged</i> : null}
