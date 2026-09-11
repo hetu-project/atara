@@ -184,17 +184,20 @@ function OfferCard({
     
        对手方的 id 只有工单回来才知道（Offer.maker 里没有 user id），所以是
        先下单、再进会话，而不是先进会话等它长出来。 */
-    /* 右栏的评估跟着一起跑。不 await：它是右栏里逐票落下来的那个过程，
-       而下单不该等它——参照也是同时进行的（thinking 跑着，工单卡已经在
-       流里了）。改成会话落点那次我把这一句删掉了，于是从大厅进来的单在
-       右栏里什么都不发生，七票共识一个字都没有。 */
-    void start(o.id, m.name)
     try {
       /* 按币的数量下单：法币金额是换算出来的，整条挂单那一档会因为四舍五入
          比可成交量多出几分，然后被后端拒掉。 */
       const ord = await ep.take(o.id, {
         amount: o.remaining_qty, amount_kind: 'coin', network: o.networks[0] ?? o.network,
       })
+      /* 先下单再起跑，而且回放的是**这一单存下来的**那一份评估。
+      
+         反过来（先按挂单评一次再下单）会出现两组分：后端按种子算分，挂单号
+         和工单号是两个种子。而下单之后两处同时在屏幕上——右栏在跑，会话里
+         那张卡已经在流里了——同一单显示两组数，人只能当它是乱编的。
+      
+         不 await：逐票落下来是给人看的过程，进会话不该等它。 */
+      void start(o.id, m.name, ord.id)
       go({ view: 'thread', peer: ord.counterparty_id ?? '' })
     } catch { /* 错误由会话里的工单卡或下一次拉取暴露 */ }
   }

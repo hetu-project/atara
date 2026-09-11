@@ -32,7 +32,7 @@ const STEP_MS = 620
 interface Ctx {
   run: Run | null
   running: boolean
-  start: (offerId: string, subject: string) => Promise<void>
+  start: (offerId: string, subject: string, orderId?: string) => Promise<void>
   reset: () => void
 }
 const AssessmentCtx = createContext<Ctx>({
@@ -49,7 +49,17 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
   const clear = () => { timers.current.forEach(clearTimeout); timers.current = [] }
   const reset = useCallback(() => { clear(); setRun(null); setRunning(false) }, [])
 
-  const start = useCallback(async (offerId: string, subject: string) => {
+  /**
+   * 起跑一次评估。
+   *
+   * orderId 给了就回放**那一单存下来的**那一份，不再另算一次。这一点很重要：
+   * 后端按种子算分，挂单接口用的是挂单号、工单快照用的是工单号——两次算出来
+   * 的是两组数。而下单之后两处会同时出现在屏幕上（右栏在跑，会话里那张卡已经
+   * 在流里了），同一单显示两组分，人只能当它是乱编的。
+   *
+   * 没有 orderId 的场合是「还没下单，先看一眼这个对手方」，那时按挂单号算。
+   */
+  const start = useCallback(async (offerId: string, subject: string, orderId?: string) => {
     clear()
     const blank: Run = {
       id: `r-${Date.now()}`, subject,
@@ -62,7 +72,13 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
 
     let a: Awaited<ReturnType<typeof ep.assessment>>
     try {
-      a = await ep.assessment(offerId)
+      if (orderId) {
+        const o = await ep.order(orderId)
+        if (!o.assessment) throw new Error('no assessment on that order')
+        a = o.assessment
+      } else {
+        a = await ep.assessment(offerId)
+      }
     } catch {
       // 取不到票就别演一段假的：说清楚拿不到，比编一组分数诚实
       setRun(r => r && { ...r, done: true, summary: 'Could not reach the assessment service' })
