@@ -177,3 +177,12 @@ export const IWallet = () => (
     <path d="M2 6.5h12" /><circle cx="11" cy="9.5" r=".9" fill="currentColor" stroke="none" />
   </svg>
 )
+
+/** 重试：一圈带箭头的弧线。用在 AI 回答失败之后。 */
+export const IRetry = () => (
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+    strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" />
+    <path d="M13.5 2.5v3h-3" />
+  </svg>
+)

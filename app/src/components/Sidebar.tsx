@@ -6,7 +6,7 @@ import Avatar from './Avatar'
 import { IApi, IChart, IContacts, IDiscover, IGear, IGo, ILock, INewOrder, IPanel, IPayments } from './icons'
 import { useKycGate } from '../hooks/useKycGate'
 import type { Icon } from './icons'
-import type { Route } from '../hooks/useRoute'
+import { NEW_ORDER, type Route } from '../hooks/useRoute'
 
 /** 导航四项 + 两条外链，顺序与 console.html 一致。 */
 const NAVS: { view: Route['view']; label: string; icon: Icon }[] = [
@@ -65,7 +65,11 @@ export default function Sidebar({
   /* 新建的钱包没有名字，后端就拿短地址当展示名——那时再拼一次地址
      会写成「Tc72vq…tnhc · Tc72vq…tnhc」。名字就是地址时不重复。 */
   const named = !!me?.display_name && me.display_name !== short
-  const chats = threads ?? []
+  /* 把 Atara AI 那条线程从列表里剔掉：它下面已经有一行常驻的入口了。
+     desk 现在是库里一个真实的 agent 账号（messages.peer_id 要外键），
+     所以一旦跟它说过话，会话列表里就会自动多出同名的一行——同一条对话
+     在侧栏出现两次，点哪一个都对，但看着像是有两条。 */
+  const chats = (threads ?? []).filter(t => t.peer_id !== ep.DESK_ID)
 
   return (
     <nav id="left" aria-label="Navigation">
@@ -97,8 +101,15 @@ export default function Sidebar({
                   if (!signed && n.view !== 'discover') { onSignIn(); return }
                   /* 「New order」就是开一张新台面：准入那条对话得先收起来，
                      不然点了它还停在原来那串消息上，看着像没反应。
-                     回得去——Chats 里的 Atara AI 一直在。 */
-                  if (n.view === 'home') kyc.closeMaker()
+                     回得去——Chats 里的 Atara AI 一直在。
+
+                     还要喊一声 NEW_ORDER：评估状态挂在 App 级的 provider 上，
+                     跨视图一直活着，而人本来就在首页时点这颗按钮，路由不变、
+                     Home 不重挂——上一单的评估痕迹就会一直留在新台面上。 */
+                  if (n.view === 'home') {
+                    kyc.closeMaker()
+                    dispatchEvent(new CustomEvent(NEW_ORDER))
+                  }
                   go({ view: n.view } as Route)
                 }}>
                 <span className="ni"><Icon /></span>{n.label}

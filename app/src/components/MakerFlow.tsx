@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import * as ep from '../api/endpoints'
+import FilePick from './FilePick'
 import { KYC_CORP, KYC_IND, LISTING_STEPS, type Field, type Step } from './kycforms'
 import {
   DEMO_LISTING, ListingStep, badListingField, blankListing, type Listing,
@@ -7,6 +8,17 @@ import {
 
 /* Demo fill 的样本数据，逐字取自参照。演示时没人愿意手打九步表单——
    这个按钮不是玩具，它决定了这条流程能不能当着人走完。 */
+/**
+ * 这个值是不是一个真的 file_ref。
+ *
+ * Demo fill 给上传字段塞的是字面量 'Uploaded'——它只是为了让演示能一路点下去，
+ * 不是一份真文件。旧的界面把它当文字显示，看不出破绽；但 FilePick 会拿 ref
+ * 去拼一个「查看文件」的链接，塞进去就变成一条点开是 404 的链接。
+ *
+ * 真的 ref 形如 `<uuid>.png`——认扩展名就够，不必把 uuid 也校验一遍。
+ */
+const isRef = (v: unknown): v is string => typeof v === 'string' && /\.[a-z0-9]{2,5}$/i.test(v)
+
 const DEMO_TXT: Record<string, string> = {
   surname: 'Liu', firstname: 'Ellie', idno: 'H12345678', phone: '+852 6123 4567',
   email: 'demo@atara.example', addr: '12 Harbour Rd, Wan Chai, HK', tin: 'HK-98765432',
@@ -191,21 +203,13 @@ export default function MakerFlow({
 function UploadRow({
   f, v, bad, onSet,
 }: { f: Field; v: string | string[] | undefined; bad: boolean; onSet: (v: string) => void }) {
-  const pick = useRef<HTMLInputElement>(null)
   return (
     <div className={'sf' + (bad ? ' bad' : '')}>
-      <button type="button" className={'sfup' + (v ? ' ok' : '')}
-        onClick={() => pick.current?.click()}>
-        <span><b>{f.l}</b><em>{typeof v === 'string' && v ? v : 'Tap to upload'}</em></span>
-        <span className="sfst">{v ? 'Uploaded' : 'Upload'}</span>
-      </button>
-      {/* 真上传：审核员要看到的是文件，不是一个占位字符串 */}
-      <input type="file" hidden ref={pick} accept="image/*,application/pdf"
-        onChange={async e => {
-          const file = e.target.files?.[0]
-          if (!file) return
-          try { onSet(await ep.upload(file)) } catch { /* 失败就保持未附 */ }
-        }} />
+      {/* 真上传：审核员要看到的是文件，不是一个占位字符串。
+          原来这里的 catch 是空的——传失败界面上一个字都不说，人只会
+          一直点同一个按钮。现在失败有提示，也能重传。 */}
+      <FilePick label={f.l} value={isRef(v) ? v : undefined}
+        hint="Tap to upload" onDone={onSet} />
       <span className="err">{errFor(f)}</span>
     </div>
   )

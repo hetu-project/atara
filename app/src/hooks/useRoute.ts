@@ -44,6 +44,15 @@ function parse(): Route {
   return { view: 'home' }
 }
 
+/**
+ * 「开一张新台面」的信号。
+ *
+ * 光靠 go({view:'home'}) 不够：人本来就在首页时点 New order，路由没变化，
+ * Home 不会重挂，上一单留下的评估和撮合卡片就一直挂在那儿。
+ * 所以侧栏那一下除了切路由，还要明确地喊一声「重新开始」。
+ */
+export const NEW_ORDER = 'atara:new-order'
+
 export function go(r: Route): void {
   location.hash =
     r.view === 'order' ? `/order/${r.id}`

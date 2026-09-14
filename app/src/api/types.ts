@@ -447,7 +447,10 @@ export interface Contact {
 export interface Message {
   id: string
   peer_id: string
-  author: 'me' | 'peer' | 'system'
+  /* 后端发的是 'them' 不是 'peer'（见 store.PostBothTx：副本那条写的就是 them）。
+     这里原本写的 'peer'，谁按它分支就永远不命中，而 TS 一句话都不会说——
+     现有的 Thread.tsx 是靠「不是 me 就当对方」躲过去的。 */
+  author: 'me' | 'them' | 'system'
   kind: 'chat' | 'system' | 'order' | 'assessment'
   body: string
   order_id?: string

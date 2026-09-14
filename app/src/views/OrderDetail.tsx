@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import * as ep from '../api/endpoints'
 import ConfirmSheet from '../components/ConfirmSheet'
 import DisputeForm from '../components/DisputeForm'
+import FilePick from '../components/FilePick'
 import DocView, { DOC_META } from '../components/DocView'
 import Avatar from '../components/Avatar'
 import { useAction, useApi } from '../hooks/useApi'
@@ -45,7 +46,6 @@ export default function OrderDetail({
   const [disp, setDisp] = useState(false)
   const { data: me } = useApi(() => ep.me(), [])
   const walletKind = me?.wallet_kind === 'ext' ? 'ext' : 'atara'
-  const file = useRef<HTMLInputElement>(null)
 
   const wrap = (node: React.ReactNode) =>
     bare ? <>{node}</> : <Shell onBack={onBack}>{node}</Shell>
@@ -89,17 +89,6 @@ export default function OrderDetail({
     s5: <><b className="amt">{coin}</b> credited · performance written back to score</>,
     dead: <>Payment window missed · their {coin} was returned</>,
   } as Record<string, JSX.Element>)[step]
-
-  const upload = async () => {
-    const f = file.current?.files?.[0]
-    if (!f) return
-    /* 放款依据是这份银行凭证，所以它必须真的存在——
-       编一个 file_ref 交上去，等于让「核验回执」核验一个空气。 */
-    await act(async () => {
-      const ref = await ep.upload(f)
-      return ep.receipt(o.id, ref)
-    })
-  }
 
   return wrap(
     <>
@@ -171,10 +160,11 @@ export default function OrderDetail({
                       出口得在这儿，而不是等人去找客服。 */}
                   <a href="#" className="lnk dspx"
                     onClick={e => { e.preventDefault(); setDisp(true) }}>Report a problem</a>
-                  <input type="file" ref={file} hidden accept="image/*,application/pdf"
-                    onChange={() => void upload()} />
-                  <button className="btn btn-primary" disabled={pending}
-                    onClick={() => file.current?.click()}>Upload receipt</button>
+                  {/* 选完就传，传完直接提交回执。中间那几秒进度画在按钮上——
+                      原来这一步从点击到成功界面完全不动，而回执经常是几 MB 的
+                      手机照片。 */}
+                  <FilePick variant="button" label="Upload receipt" disabled={pending}
+                    identity={identity} onDone={ref => void act(() => ep.receipt(o.id, ref))} />
                 </div>
               </>
             ) : step === 's3v' && o.phase === 'verify' ? (

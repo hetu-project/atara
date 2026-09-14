@@ -1,6 +1,6 @@
 import { ApiError, BASE, PROFILE_CHANGED, api, getIdentity, withConfirmation } from './client'
 import type {
-  Account, Allowance, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, EligiblePeer, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
+  Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, EligiblePeer, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
 } from './types'
 
 // ── 账户 ──
@@ -407,3 +407,72 @@ export const fileURL = (ref: string) => BASE + '/uploads/' + ref.split('/').pop(
  */
 export const iflytekToken = (as?: string) =>
   api.get<{ url: string; app_id: string }>('/voice/iflytek-token', { as })
+
+// ── Atara AI 对话台 ──
+
+/* 流式收发单独一个模块：它不走 api.post（那个把整段 JSON 读完才返回），
+   而是自己解 SSE。这里重新导出，调用方仍然只认 endpoints 一个入口。 */
+export { deskSend, deskInfo, DeskError, DESK_ID } from './desk'
+export type { DeskInfo, DeskHandlers } from './desk'
+
+/** 后端的单文件上限（`maxUpload = 16 << 20`）。 */
+export const MAX_UPLOAD = 16 * 1024 * 1024
+
+export interface Uploaded {
+  file_ref: string
+  filename: string
+  size_bytes: number
+  url: string
+}
+
+/**
+ * 带进度的上传。
+ *
+ * 用 XHR 不用 fetch：fetch 拿不到上传进度（`duplex: 'half'` 的请求流各家浏览器
+ * 支持还不一致）。传一张几 MB 的照片要好几秒，没有进度那几秒里界面是死的。
+ *
+ * 返回一个可取消的句柄——传到一半改主意是常事，而一个取消不掉的上传会
+ * 一直占着连接，还会在完成后把已经不需要的 ref 写回表单。
+ */
+export function uploadProgress(
+  file: File,
+  onProgress: (pct: number) => void,
+  as?: string,
+): { done: Promise<Uploaded>; abort: () => void } {
+  const xhr = new XMLHttpRequest()
+  const done = new Promise<Uploaded>((resolve, reject) => {
+    xhr.upload.onprogress = e => {
+      /* lengthComputable 为假时别硬算：那时 e.total 是 0，算出来是 Infinity，
+         进度条会直接窜到底再卡住，比没有进度更糟。 */
+      if (e.lengthComputable && e.total > 0) onProgress(Math.round((e.loaded / e.total) * 100))
+    }
+    xhr.onload = () => {
+      let body: unknown = null
+      try { body = JSON.parse(xhr.responseText) } catch { /* 不是 JSON */ }
+      if (xhr.status >= 200 && xhr.status < 300 && body && 'file_ref' in (body as object)) {
+        onProgress(100)
+        resolve(body as Uploaded)
+        return
+      }
+      const err = body && typeof body === 'object' && 'error' in body
+        ? (body as { error: ApiErrorBody }).error
+        : { code: 'UPLOAD_FAILED', message: `Upload failed (${xhr.status})` }
+      reject(new ApiError(xhr.status, err))
+    }
+    /* 网络断了和被取消要分开：前者该提示重传，后者是用户自己的意思，
+       报一句「上传失败」只会让人以为出了错。 */
+    xhr.onerror = () => reject(new ApiError(0, {
+      code: 'UPLOAD_NETWORK', message: 'Lost the connection while uploading',
+    }))
+    xhr.onabort = () => reject(new ApiError(0, { code: 'UPLOAD_ABORTED', message: 'Upload cancelled' }))
+  })
+
+  const fd = new FormData()
+  fd.append('file', file)
+  xhr.open('POST', BASE + '/uploads')
+  xhr.setRequestHeader('X-Atara-User', as ?? getIdentity())
+  // 不设 Content-Type——boundary 由浏览器生成
+  xhr.send(fd)
+
+  return { done, abort: () => xhr.abort() }
+}

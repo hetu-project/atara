@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import * as ep from '../api/endpoints'
+import FilePick from './FilePick'
 
 /**
  * 开一张争议案卷。两步：先说清楚会发生什么，再填表。
@@ -38,13 +39,6 @@ export default function DisputeForm({
   const [bad, setBad] = useState(false)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
-  const pick = useRef<HTMLInputElement>(null)
-
-  const attach = async () => {
-    const f = pick.current?.files?.[0]
-    if (!f) return
-    try { setFile(await ep.upload(f, identity)) } catch { setErr('Could not attach that file') }
-  }
 
   const submit = async () => {
     if (!text.trim()) { setBad(true); return }
@@ -117,14 +111,9 @@ export default function DisputeForm({
         </div>
 
         <div className="sf">
-          <input type="file" ref={pick} hidden accept="image/*,application/pdf"
-            onChange={() => void attach()} />
-          <button type="button" className={'sfup' + (file ? ' ok' : '')}
-            onClick={() => pick.current?.click()}>
-            <span><b>Evidence <em style={{ fontStyle: 'normal', color: 'var(--faint)' }}>optional</em></b>
-              <em>{file ? file.split('/').pop() : 'Bank receipt, screenshot, chat export'}</em></span>
-            <span className="sfst">{file ? 'Attached' : 'Attach'}</span>
-          </button>
+          <FilePick label="Evidence (optional)" identity={identity} value={file || undefined}
+            hint="Bank receipt, screenshot, chat export"
+            onDone={ref => { setFile(ref); setErr('') }} />
         </div>
 
         {err ? <p className="acnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}

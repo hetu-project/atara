@@ -3008,6 +3008,47 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 
 
 
+/* ══ Dither 加载动画 ══
+   4×4 格子按 Bayer 有序抖动的相位此起彼伏。相位由内联的 animation-delay 给，
+   这里只定义「一格怎么呼吸」。 */
+.dither{display:inline-grid;line-height:0;color:var(--faint)}
+.dither i{background:currentColor;border-radius:1px;opacity:.1;
+  animation-name:dither;animation-timing-function:var(--ease);
+  animation-iteration-count:infinite}
+@keyframes dither{0%,100%{opacity:.1}50%{opacity:1}}
+/* 减少动效下**不能**整个停掉——它是加载指示器，停了就只剩一小块几乎看不见的
+   灰斑，和「坏了」分不出来。
+   文件末尾那条 `*{animation:none!important}` 太一刀切：位移和缩放该关，
+   而透明度变化不会引发前庭不适。这里按名字重新声明一次盖回去——
+   `!important` 之间比的是特异性，`.dither i`（0,1,1）压得过 `*`（0,0,0），
+   跟它俩在文件里谁先谁后无关。
+   散点相位改成同步：闪烁感最强的是「此起彼伏」那一部分，而「有东西在动」
+   这个信息不需要靠它传达。 */
+@media (prefers-reduced-motion:reduce){
+  .dither i{animation-name:dithercalm!important;animation-delay:0s!important;
+    animation-duration:1.8s!important;animation-iteration-count:infinite!important}
+}
+@keyframes dithercalm{0%,100%{opacity:.35}50%{opacity:.85}}
+
+/* 等待气泡：里面装的是 Dither 方阵，不是文字。
+   inline 元素要按基线排版，行盒比 22px 的方阵高出一截，而那段空白全落在
+   方阵上方——气泡因此比需要的高十来个像素。flex 不走基线，气泡就正好裹住它。 */
+.bub.bubwait{display:flex;line-height:0}
+/* 这一行改成按中线对齐。底对齐是为文字气泡定的（文字本来就贴着底边），
+   而方阵在气泡里是居中的，再按底对齐就会整体比头像高出半个身位。 */
+.mrow:has(.bubwait){align-items:center}
+
+/* 回答正在生成时跟在文字末尾的光标。
+   它不是装饰：模型想第一句话要一两秒，那段时间气泡是空的——没有东西在动的话，
+   「在想」和「卡住了」在屏幕上长得一模一样。 */
+.tcur{display:inline-block;width:2px;height:1em;margin-left:2px;vertical-align:-.14em;
+  background:currentColor;opacity:.7;animation:tcurb 1s steps(2,start) infinite}
+@keyframes tcurb{0%,50%{opacity:.7}50.01%,100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  /* 闪烁停掉，但光标本身留着——它还要负责说明「这段还没说完」。 */
+  .tcur{animation:none}
+}
+
 /* ══ 录音条 ══
    录音中整条工具行换成它：波形 + 取消 + 完成。
    高度锁 32 和 .sayic / #send 一致——换的时候盒子不能变高，
@@ -3119,6 +3160,29 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
   padding:3px 10px;border-radius:var(--r-chip);border:1px solid var(--hairline);background:var(--paper)}
 .sfup.ok .sfst{color:var(--accent);border-color:var(--accent);background:transparent}
 .sfup:hover .sfst{border-color:var(--accent);color:var(--accent)}
+
+/* ══ 带进度的上传（FilePick）══
+   沿用 .sfup 的外观，只补三样它没有的：失败态、进度条、以及文件名太长时的截断。 */
+.fpick{display:flex;flex-direction:column;gap:6px;width:100%}
+/* 名字那一行必须能截断：手机拍的照片文件名动辄四五十个字符，
+   不截的话整行会把右边那个状态标签挤出去。 */
+.fpbtn .fptx{min-width:0;flex:1}
+.fpbtn .fptx em{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sfup.bad{border-style:solid;border-color:var(--warn)}
+.sfup.bad em{color:var(--warn)}
+.sfup.bad .sfst{color:var(--warn);border-color:var(--warn);background:transparent}
+/* 进度条。高度只有 3px——它是个附注，不该比它描述的那个文件还显眼 */
+.fpbar{height:3px;border-radius:2px;background:var(--card);overflow:hidden}
+.fpbar i{display:block;height:100%;background:var(--accent);
+  transition:width var(--dur-fast) linear}
+/* 按钮形态的进度：一层深色底从左往右推。页脚那一行放不下独立的进度条，
+   而进度画在按钮自己身上，「点它=取消」这件事也就不用再解释。 */
+.fpbtn1.uping{position:relative;overflow:hidden}
+.fpbtn1.uping::before{content:'';position:absolute;inset:0;width:var(--pct,0%);
+  background:rgba(0,0,0,.22);transition:width var(--dur-fast) linear}
+.fpbtn1.uping > *{position:relative}
+.fplink{align-self:flex-start;font-size:11px;color:var(--accent);text-decoration:none}
+.fplink:hover{text-decoration:underline}
 .sfsum{display:flex;flex-direction:column;gap:0}
 .sfsum>div{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--hairline);font-size:12px}
 .sfsum>div:last-child{border-bottom:0}
@@ -3286,12 +3350,100 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .ptag.alt{background:var(--card);color:var(--mute)}
 .pmeta{flex:none;font-size:11px;color:var(--faint)}
 
-/* toast */
-#ftoast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,12px);
-  padding:11px 18px;border-radius:var(--r-control);background:var(--ink);color:var(--on-inverse);
-  font-size:13px;font-weight:500;box-shadow:var(--sh-overlay);z-index:70;
-  opacity:0;pointer-events:none;transition:opacity var(--dur-normal) var(--ease),transform var(--dur-normal) var(--ease)}
-#ftoast.show{opacity:1;transform:translate(-50%,0)}
+/* ══ 消息下面那一行 ══
+   时间常驻，按钮悬停才出。
+   分开处理是因为两者的性质不同：时间是这条消息的一部分，一眼扫过去就该看到；
+   按钮是「你可能想做的事」，每条底下都常驻一排的话，眼睛没法只看内容。
+   高度固定——按钮淡入时如果撑高这一行，整条消息流会往下顶一下。 */
+.mact{display:flex;align-items:center;gap:2px;padding-left:32px;height:22px}
+/* 时间归零那一层内距，并且要压得过 `.msg.them .mt{padding-left:35px}`——
+   那条是给 Thread 的结构写的（那边 .mt 是 .msg 的直接子元素，35px 是用来
+   让开头像的）。这里 .mt 在 .mact 里面，而 .mact 自己已经有 32px，
+   两层叠起来时间就被推到 367，比气泡文字还靠右，不对齐任何东西。
+   保留 .msg .mt 自带的 3px 左右内距——我方那一侧也是靠它和气泡边缘留出
+   同样的 3px，两边才对称。 */
+.msg.them .mact .mt{padding-left:3px}
+/* 这一行整体上提 4px。.mact 高 22px、时间行高 14px，居中就在上方多出 4px——
+   而 .msg 本身已经有 4px 的 gap，于是 AI 侧气泡到时间是 8px，我方只有 4px。
+   同一条流里两侧的呼吸不一样，看起来就是「这个时间掉下去了」。 */
+.msg.them .mact{margin-top:-4px}
+.mactb{opacity:0;transition:opacity var(--dur-fast) var(--ease)}
+.msg:hover .mactb,.mact:focus-within .mactb{opacity:1}
+.mactb{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 7px;
+  border:0;border-radius:var(--r-chip);background:none;color:var(--faint);
+  font:inherit;font-size:11.5px;font-weight:500;cursor:pointer;
+  transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.mactb:hover{background:var(--card);color:var(--ink)}
+/* 失败的那条气泡：描边而不是实心，它不是一句回答，是一条说明 */
+.bub.bubfail{background:none;border:1px dashed var(--line-strong);color:var(--faint)}
+
+/* 生成中的停止键。方块是通用的「停」符号，比一个 × 更准确——
+   × 读起来像「关掉」，而这里是「说到这儿为止」。 */
+#send.stopping{background:var(--ink);color:var(--paper)}
+#send.stopping:hover{background:var(--ink)}
+.stopsq{width:9px;height:9px;border-radius:2px;background:currentColor;display:block}
+
+/* ══ 图标交换（beui 的 Action Swap）══
+   两个图标叠在同一个位置，靠 opacity + 一点位移交换。
+   两个都留在 DOM 里而不是条件渲染：换的时候盒子尺寸不能变，
+   否则旁边的东西会跟着抖一下。 */
+.swapbtn{position:relative}
+.swapbtn .swapa,.swapbtn .swapb{display:inline-flex;
+  transition:opacity var(--dur-fast) var(--ease),transform var(--dur-fast) var(--ease)}
+/* 待命的那个绝对定位，让按钮的尺寸由当前显示的那个决定 */
+.swapbtn .swapb{position:absolute;inset:0;align-items:center;justify-content:center;
+  opacity:0;transform:translateY(4px) scale(.86)}
+.swapbtn.on .swapa{opacity:0;transform:translateY(-4px) scale(.86)}
+.swapbtn.on .swapb{opacity:1;transform:none;color:var(--green)}
+
+/* ══ 操作反馈 ══
+   原来这儿只有一条 #ftoast 的样式，而 JSX 里从没有人用过它——抄样式时漏了
+   实现那一半。现在换成真的堆叠：同时最多三条，新的在下面（离视线最近）。
+   视觉语言沿用原来那条：底部居中、深色药丸。 */
+/* 右上角，从上往下堆。
+   原来放底部居中——那是从旧样式继承来的位置，但在这个布局里它正好压在
+   输入框上方，看起来像是「聊天面板自己的东西」，而它报的是全局的事。
+   right 用 20px 和 .rshow 对齐；那颗按钮也在这个角上（top:16px;right:20px），
+   所以下面用 :has() 在它出现时把 toast 让下去。 */
+.tsts{position:fixed;top:16px;right:20px;z-index:70;
+  display:flex;flex-direction:column;gap:8px;align-items:flex-end;
+  pointer-events:none;max-width:min(92vw,420px);
+  transition:top var(--dur-normal) var(--ease)}
+/* 右栏被收起时 .rshow 占着这个角。它不是 hidden 的时候把 toast 推到它下面——
+   两个都是 fixed，谁也不会给谁让位，不推就直接叠在一起。 */
+body:has(.rshow:not([hidden])) .tsts{top:54px}
+.tst{pointer-events:auto;display:flex;align-items:center;gap:10px;
+  padding:10px 10px 10px 14px;border-radius:var(--r-control);
+  background:var(--ink);color:var(--on-inverse);
+  font-size:13px;font-weight:500;box-shadow:var(--sh-overlay);
+  animation:tstin var(--dur-normal) var(--ease) both}
+/* 出场：不是简单地淡掉，还要往下走一点——和进场反向，读起来是「收回去了」 */
+.tst.out{animation:tstout var(--dur-fast) var(--ease) both}
+@keyframes tstin{from{opacity:0;transform:translateY(-10px) scale(.97)}
+  to{opacity:1;transform:none}}
+@keyframes tstout{from{opacity:1;transform:none}
+  to{opacity:0;transform:translateY(-8px) scale(.97)}}
+/* 状态只用一个小圆点区分，不整条染色：底部那条药丸本身已经很显眼，
+   再把整条刷成红的会盖过页面上真正要看的内容。 */
+.tsti{flex:none;width:18px;height:18px;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;line-height:1;
+  background:rgba(255,255,255,.16);color:var(--on-inverse)}
+.tst-ok .tsti{background:var(--green);color:#fff}
+.tst-err .tsti{background:var(--warn);color:#fff}
+.tstx{min-width:0;flex:1}
+/* 动作按钮（比如「重试」）。描边而不是实心：它是可选项，
+   不该比旁边那句话还抢眼。 */
+.tsta{flex:none;padding:5px 10px;border-radius:var(--r-chip);
+  border:1px solid rgba(255,255,255,.24);background:none;color:inherit;
+  font:inherit;font-size:12px;font-weight:600;cursor:pointer;
+  transition:background var(--dur-fast) var(--ease)}
+.tsta:hover{background:rgba(255,255,255,.12)}
+.tstc{flex:none;width:22px;height:22px;border-radius:var(--r-control);
+  display:inline-flex;align-items:center;justify-content:center;
+  border:0;background:none;color:inherit;opacity:.5;cursor:pointer;font-size:11px;
+  transition:opacity var(--dur-fast) var(--ease)}
+.tstc:hover{opacity:1}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}
   .sayrow:focus-within{border-color:var(--accent)}
