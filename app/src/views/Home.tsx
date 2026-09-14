@@ -1,14 +1,26 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import ActionBar, { type Act, type ActKind } from '../components/ActionBar'
 import { liveParse } from '../components/actlang'
 import { IBuy, IMic, ISell, ISend } from '../components/icons'
 import Thinking from '../components/Thinking'
+import VoiceBar from '../components/VoiceBar'
 import { useApi } from '../hooks/useApi'
 import { useAssessment } from '../hooks/useAssessment'
 import { useKycGate } from '../hooks/useKycGate'
 import { go } from '../hooks/useRoute'
+import { IFlytekStreamer, VoiceError, type VoiceFailure } from '../services/iflytek'
 import type { MatchCandidate } from '../api/types'
+
+/** 语音起不来的几种原因，各自能做的事不同——所以不共用一句话。 */
+const VOICE_MSG: Record<VoiceFailure, string> = {
+  insecure: 'Voice needs a secure page — open this over HTTPS or on localhost',
+  unsupported: 'This browser cannot record audio — try Chrome',
+  denied: 'Microphone access was refused — allow it in the address bar and try again',
+  'no-token': 'Voice is not switched on for this server',
+  service: 'The voice service refused the request',
+  network: 'Lost connection to the voice service',
+}
 
 /**
  * 首页 = 一张空台面加一句问话。
@@ -19,6 +31,13 @@ import type { MatchCandidate } from '../api/types'
  */
 const a0 = (a: { coin: string } | null) => a?.coin ?? 'USDT'
 
+/** 把说的接在打的后面。已经有空白结尾就不再补一个，不然会越接越松。 */
+const join = (had: string, said: string) => {
+  if (!had) return said
+  if (!said) return had
+  return /\s$/.test(had) ? had + said : had + ' ' + said
+}
+
 export default function Home({ identity }: { identity: string; onNeedSignIn?: () => void }) {
   const [text, setText] = useState('')
   const [act, setAct] = useState<Act | null>(null)
@@ -26,9 +45,15 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   const [err, setErr] = useState('')
   const [cands, setCands] = useState<MatchCandidate[]>([])
   const [chosen, setChosen] = useState<MatchCandidate | null>(null)
-  /* 语音按钮：参照里它只是一个按下态开关（micbtn.onclick 切 .on 和
-     aria-pressed），没有接语音识别。原来我们连这个都没接，点了完全没反应。 */
+  /* 语音：mic 是「正在听」，同时驱动按钮的 .on 和 aria-pressed。
+     streamer 放 ref 不放 state——它不参与渲染，进 state 只会让每一帧
+     音频回调都触发一次重绘。 */
   const [mic, setMic] = useState(false)
+  const voice = useRef<IFlytekStreamer | null>(null)
+  /* before：开录那一刻的输入框内容，× 要退回到这里。
+     dropped：这次已经被取消了，之后再回来的识别结果一律丢掉。 */
+  const before = useRef('')
+  const dropped = useRef(false)
 
   const { run, start } = useAssessment()
   const kyc = useKycGate()
@@ -70,6 +95,57 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
       }
     })
   }
+
+  /**
+   * 麦克风开关。
+   *
+   * 转写出来的文字走 onType 而不是 setText——说出来的和打出来的走同一条路，
+   * 下面那排胶囊才会跟着长出来。语音要是绕开它，同一句话打出来有反应、
+   * 说出来没有。
+   */
+  const toggleMic = async () => {
+    if (voice.current) { voice.current.stop(); return }
+
+    /* 开录前把输入框存一份。× 的语义是「当我没说过」——边说边写的界面里，
+       不把文字退回去的取消等于什么都没取消。 */
+    before.current = text
+    dropped.current = false
+
+    const s = new IFlytekStreamer({ language: 'zh_cn' })
+    /* 接在原文后面，不是覆盖整个框。覆盖有两处会咬人：框里本来打了半句的
+       会被说话吞掉；而讯飞那一包识别为空时（停录瞬间常有），整个框会被清空。
+       接着写则两种情况都退化成「原文没动」。
+       点了 × 之后讯飞还会把最后一包发回来，dropped 挡住它飘回输入框。 */
+    s.onResult(r => { if (!dropped.current) onType(join(before.current, r.text)) })
+    s.onError(e => setErr(VOICE_MSG[e.kind]))
+    /* onStop 是唯一的回到 idle 的路径：用户点停、讯飞判定说完、出错，
+       三条最后都汇到这里，界面状态只在一个地方改。 */
+    s.onStop(() => { voice.current = null; setMic(false) })
+
+    voice.current = s
+    setMic(true)
+    setErr('')
+    try {
+      await s.start(() => ep.iflytekToken(identity))
+    } catch (e) {
+      /* start 抛出时 onStop 还没接上音频管线，得自己收尾。 */
+      voice.current = null
+      setMic(false)
+      setErr(e instanceof VoiceError ? VOICE_MSG[e.kind] : 'Could not start voice input')
+    }
+  }
+
+  /** × 丢弃这次录音，输入框退回开录前。 */
+  const cancelMic = () => {
+    dropped.current = true
+    voice.current?.stop()
+    onType(before.current)
+    setErr('')
+  }
+
+  /* 离开首页时把麦克风关掉。不然标签页上那个录音红点会一直亮着，
+     而界面上已经没有任何东西表示还在录。 */
+  useEffect(() => () => voice.current?.stop(), [])
 
   const submit = async () => {
     if (busy) return
@@ -173,12 +249,22 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
               ? 'Message Atara AI — ask about the account, timing or documents'
               : 'Describe a trade — try “Buy 5,000 USDT with CNY” or “Sell 2,000 USDT for HKD”'} />
           <div className="saytools">
-            {/* 附件按钮按产品要求隐藏：它在参照里会走一段文档识别的演示，
-                我们这边没有对应实现，留一个点了没反应的按钮不如不给。 */}
-            <button className={'sayic' + (mic ? ' on' : '')} title="Voice" aria-label="Voice"
-              aria-pressed={mic} onClick={() => setMic(m => !m)}><IMic /></button>
-            <button id="send" title="Compose (Enter)" aria-label="Compose"
-              disabled={busy || (!act && !text.trim())} onClick={() => void submit()}><ISend /></button>
+            {/* 录音中整条工具行换成波形胶囊：正在录的时候，能做的事只有
+                「丢掉」和「说完了」——把麦克风和发送留在那里只是多两个
+                此刻按了会出错的东西。 */}
+            {mic && voice.current ? (
+              <VoiceBar streamer={voice.current} onCancel={cancelMic}
+                onConfirm={() => voice.current?.stop()} />
+            ) : (
+              <>
+                {/* 附件按钮按产品要求隐藏：它在参照里会走一段文档识别的演示，
+                    我们这边没有对应实现，留一个点了没反应的按钮不如不给。 */}
+                <button className="sayic" title="Voice" aria-label="Voice"
+                  aria-pressed={false} onClick={() => void toggleMic()}><IMic /></button>
+                <button id="send" title="Compose (Enter)" aria-label="Compose"
+                  disabled={busy || (!act && !text.trim())} onClick={() => void submit()}><ISend /></button>
+              </>
+            )}
           </div>
         </div>
       </div>

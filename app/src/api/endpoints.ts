@@ -396,3 +396,14 @@ export const parseIntent = (text: string, as?: string) =>
  * 显示一个「已上传」的字样，等于让人相信一份他看不到的东西。
  */
 export const fileURL = (ref: string) => BASE + '/uploads/' + ref.split('/').pop()
+
+// ── 语音听写 ──
+
+/**
+ * 换一枚讯飞的鉴权 WSS URL。
+ *
+ * 签名是短时的（讯飞那边约五分钟），**不要缓存**——每次开录音都重新拿。
+ * 密钥只在后端，这里拿到的只是一枚签好的地址。
+ */
+export const iflytekToken = (as?: string) =>
+  api.get<{ url: string; app_id: string }>('/voice/iflytek-token', { as })

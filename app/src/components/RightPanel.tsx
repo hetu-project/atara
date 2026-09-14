@@ -1,13 +1,21 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
 import Avatar from './Avatar'
 import { IPanel } from './icons'
 import { Constellation, Ring } from './Ring'
 import { RISK_AGENTS, agentGlyph } from './agents'
+import AgentProfile from './AgentProfile'
 import { useAssessment } from '../hooks/useAssessment'
 import type { Run } from '../hooks/useAssessment'
 import type { Order } from '../api/types'
+
+function agentIndex(n: string): number {
+  const short = n.replace(/ Agent$/, '')
+  return (RISK_AGENTS as { n: string }[]).findIndex(
+    a => a.n === n || a.n.replace(/ Agent$/, '') === short,
+  )
+}
 
 /**
  * 右栏三块，顺序与 console.html 的 #rgrid 一致：
@@ -134,13 +142,46 @@ const IDLE_STEPS = ['Read the order', 'Collected evidence', 'Agent checks', 'Con
  * 跑起来之后票一张一张落：七个一起转圈没有信息量，票本来就是一个一个落的。
  */
 function Assessment({ onFold }: { onFold: () => void }) {
-  /* 点名册里的 agent 打开它的 profile。原来这些按钮没有 onClick，
-     名字、职责、这一轮投了什么票，全都只能靠 title 悬停去看。 */
+  /* 点名册里的 agent：整条 Assessment 换成它的档案页（arunAgentPane）。
+     再点同一个或按 Back 回来。 */
   const [agent, setAgent] = useState<number | null>(null)
   /* 下面那一格显示哪一步的详情。空着就跟着「最后一个有详情、且已经开跑的步骤」
      走——刚跑到 agent checks 时看的是票，跑完了自动落到结论。人点过之后就听他的。 */
   const [pick, setPick] = useState('')
   const { run, running } = useAssessment()
+  const rosterRef = useRef<HTMLDivElement>(null)
+  const runsRef = useRef<HTMLDivElement>(null)
+  const [rosterMore, setRosterMore] = useState(false)
+  const [runsMore, setRunsMore] = useState(false)
+
+  useEffect(() => {
+    const el = rosterRef.current
+    if (!el) return
+    const check = () => setRosterMore(el.scrollWidth - el.clientWidth > 8)
+    check()
+    el.addEventListener('scroll', check, { passive: true })
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => { el.removeEventListener('scroll', check); ro.disconnect() }
+  }, [agent, run?.done])
+
+  useEffect(() => {
+    const el = runsRef.current
+    if (!el) return
+    const check = () =>
+      setRunsMore(el.scrollHeight - el.scrollTop - el.clientHeight > 8)
+    check()
+    el.addEventListener('scroll', check, { passive: true })
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => { el.removeEventListener('scroll', check); ro.disconnect() }
+  }, [agent, run, run?.votes.length])
+
+  const openAgent = (i: number) => setAgent(cur => (cur === i ? null : i))
+  const openAgentByName = (n: string) => {
+    const i = agentIndex(n)
+    if (i >= 0) openAgent(i)
+  }
 
   /* 每个 agent 的状态：还没表态 = conferring（跑着）或 idle，表过态就封印。
   
@@ -160,7 +201,7 @@ function Assessment({ onFold }: { onFold: () => void }) {
 
   const voteAt = (i: number) => {
     const name = RISK_AGENTS[i]?.n.replace(/ Agent$/, '')
-    return run?.votes.find(v => v.n === name)
+    return run?.votes.find(v => v.n.replace(/ Agent$/, '') === name)
   }
   const stateOf = (i: number): string => {
     const v = voteAt(i)
@@ -171,20 +212,33 @@ function Assessment({ onFold }: { onFold: () => void }) {
   return (
     <section className="rmod" id="rm-feed">
       <div className="rmh">
-        {/* 收起右栏。原来这颗按钮没有 onClick，点了完全没反应。
+        <h3>Assessment</h3>
+        <span className={'aflive' + (running ? ' on' : '')}>
+          <i /><em>{running ? 'running' : run?.done ? 'done' : 'idle'}</em>
+        </span>
+        {/* 收起右栏。常驻显示——原来它站在标题前面、静止时宽度为 0，
+            非得把鼠标停在标题行上才露出来；要摸索才找得到的开关等于没有。
+            改站行尾解决了当初把它藏起来的那个理由：它不再插在标题左边，
+            Assessment 和下面的 Order status 自然对得齐。顺带重开按钮
+            (.rshow) 也在右上角，收起和展开落在同一个位置。
             状态和视图级的 rout 分开记：rout 是「这个视图没有右栏」，
             rfold 是「用户自己收起来了」，两者不该互相覆盖。 */}
         <button className="rfoldx" type="button" title="Collapse panel" aria-label="Collapse panel"
           onClick={onFold}>
           <IPanel mirror />
         </button>
-        <h3>Assessment</h3>
-        <span className={'aflive' + (running ? ' on' : '')}>
-          <i /><em>{running ? 'running' : run?.done ? 'done' : 'idle'}</em>
-        </span>
       </div>
       <div className="rmb">
-        <div className="agtop" hidden />
+        <div className="agtop" hidden={agent === null}>
+          <button className="agback" type="button" onClick={() => setAgent(null)}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+              strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M10 3.5 5.5 8l4.5 4.5" />
+            </svg>
+            Back
+          </button>
+          <span className="agth">Agent profile</span>
+        </div>
         <div className="assplit">
           <div id="arring"><Ring score={run?.score ?? 0} runId={run?.id} /></div>
           {/* .rstats 在 lay-b 下是 display:none，星盘才是这一格的内容 */}
@@ -193,8 +247,11 @@ function Assessment({ onFold }: { onFold: () => void }) {
           </div>
           <div className="asfade" />
         </div>
-        <div className="aswrap">
-          <div id="afruns">
+        <div className={'aswrap' + (runsMore ? ' more' : '')}>
+          <div id="afruns" ref={runsRef}>
+            {agent !== null ? (
+              <AgentProfile i={agent} run={run} running={running} vote={voteAt(agent)} />
+            ) : (
             <div className={'arun open' + (run ? '' : ' aidle')}>
               {run ? (
                 <>
@@ -226,25 +283,17 @@ function Assessment({ onFold }: { onFold: () => void }) {
                       )
                     })}
                   </div>
-                  {/* 共识的过程，一票一行，落一个长一行。
-                  
-                      参照在这个版式下把「当前那一步的详情」摆进 .ardock，而
-                      agent checks 那一步的详情就是这些行。原来这里只有一句
-                      「Cleared · 6/7 agents agree」，而且要等全部跑完才出现——
-                      中间那十几秒里右栏是空的，最该看的「他们在说什么」一个字
-                      都没有。七票的分歧本来就是这块面板存在的理由。
-                  
-                      点一行进那个 agent 的底稿，跟点下面候命排是同一条路。 */}
-                  {/* 下面这一格跟着上面选中的那一步走。原来无论点哪一步都是同一
-                      堆票加结论——那等于四个步骤只有一份内容，点它们没有意义。 */}
+                  {/* 点一行进那个 agent 的档案，跟点下面候命排是同一条路。 */}
                   {sel && (
                     <div className="ardock">
-                      {sel === 'cons' ? <Verdict run={run} /> : run.votes.map((v, i) => (
+                      {sel === 'cons' ? <Verdict run={run} /> : run.votes.map(v => (
                         <div className={`ardv ${v.v} can`} key={v.n}
                           role="button" tabIndex={0}
-                          onClick={() => setAgent(i)}
+                          onClick={() => openAgentByName(v.n)}
                           onKeyDown={e => {
-                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAgent(i) }
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault(); openAgentByName(v.n)
+                            }
                           }}>
                           <b>{v.n.replace(/ Agent$/, '')}</b>
                           <span className="ardvv">{v.v}</span>
@@ -269,26 +318,25 @@ function Assessment({ onFold }: { onFold: () => void }) {
                 </>
               )}
             </div>
+            )}
+          </div>
+          <div className="asfade">
+            <button className="asdn" type="button" aria-label="Scroll for more"
+              onClick={() => runsRef.current?.scrollBy({ top: 160, behavior: 'smooth' })} />
           </div>
         </div>
-        <div className="roster" id="rs-roster">
+        <div className={'roster' + (rosterMore ? ' more' : '')} id="rs-roster" ref={rosterRef}>
           {RISK_AGENTS.map((a: { n: string; d: string }, i: number) => {
             const st = stateOf(i)
             const note = voteAt(i)?.note ?? ''
-            /* sel 是「正在看这一个」，不是它的投票结果，所以单独挂一个类。
-               原来点完只剩浏览器的 focus 环，而 focus 还把 hover 那套头像挤压
-               动画一直开着——那个跳动读起来像「这一个在跑」，而它只是被选中了。
-               参照是一个静态的框。 */
             return (
               <button type="button" className={`ragp ${st}${agent === i ? ' sel' : ''}`}
                 key={a.n} title={note || `${a.n} · ${a.d}`}
-                onClick={() => setAgent(i)}>
+                aria-pressed={agent === i}
+                onClick={() => openAgent(i)}>
                 <span className="ragav" dangerouslySetInnerHTML={{ __html: agentGlyph(i) }} />
                 <span className="ragt">
                   <b>{a.n.replace(/ Agent$/, '')}</b>
-                  {/* 表过态就印分。参照那一排下面是数字不是「pass」——七个数
-                      一眼扫得出谁低，七个「pass」得一个个读。拿不到分才退回
-                      文字，不编一个数。 */}
                   {st === 'conferring' ? <i>comparing notes</i>
                     : voteAt(i)?.sc ? <i>{voteAt(i)!.sc}</i>
                     : st === 'pass' ? <i>pass</i>
@@ -300,12 +348,6 @@ function Assessment({ onFold }: { onFold: () => void }) {
           })}
         </div>
         <div id="afpanel" hidden />
-
-        {/* 点一个 agent 只是把它标出来，不再展开一张放大的底稿。
-        
-            那张底稿印的是它那一票的理由——而上面那一列已经逐条印着同样的话了。
-            同一句话在同一块面板上出现两遍，第二遍还要把环和星盘挤掉，读的人
-            得先分清哪一份是哪一份。到哪个就标哪个，够了。 */}
       </div>
     </section>
   )

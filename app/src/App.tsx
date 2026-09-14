@@ -111,11 +111,16 @@ export default function App() {
           : go({ view: 'order', id: o.id }))}
         onFold={() => setRfold(true)} />
 
-      {/* 收起之后要能还原。参照里这颗按钮只在「用户收起了、而且这个视图
-          本来有右栏」时出现——视图本来就没有右栏时给一颗展开按钮，
-          点了什么也不会发生。 */}
+      {/* 收起之后要能还原。这颗按钮只在「用户收起了、而且这个视图本来有
+          右栏」时出现——视图本来就没有右栏时给一颗展开按钮，点了什么也
+          不会发生。
+
+          条件必须和上面 main 那个 rout 判断用同一个并集（home + thread）。
+          原来这里只判 home：在首页收起右栏、再走进某个人的会话，那边右栏
+          照样是收起的，而这颗重开按钮被判没了——会话页里再没有任何入口能
+          把它拉回来，只能退回首页展开再走一遍。 */}
       <button className="rshow" type="button" title="Show panel" aria-label="Show panel"
-        hidden={!rfold || !(route.view === 'home' && signed)}
+        hidden={!rfold || !((route.view === 'home' || route.view === 'thread') && signed)}
         onClick={() => setRfold(false)}>
         <IPanel mirror />
       </button>

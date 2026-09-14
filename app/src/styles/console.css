@@ -265,16 +265,29 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 main{position:relative;display:grid;
   grid-template-columns:var(--lw) minmax(0,1fr) minmax(0,1fr);
   grid-template-rows:minmax(0,1fr);
-  height:100%;min-height:0;overflow:hidden;--lw:268px}
-main.rout,main.rfold{grid-template-columns:var(--lw) 1fr 0}
+  height:100%;min-height:0;overflow:hidden;--lw:268px;
+  /* 收起/展开走动画，右栏是滑出去的，不是啪地消失。
+     列宽能不能插值有个前提：两个状态的 track 写法要同构——所以下面收起态
+     写 minmax(0,0fr) 而不是 0，中栏两边都写 minmax(0,1fr)。写成 `1fr 0`
+     的话浏览器认为两份 track 列表不可插值，直接硬切回原样。
+     同一条也让左栏折叠（--lw 268→68）跟着有了过渡，那边本来也是硬切。 */
+  transition:grid-template-columns var(--dur-panel) var(--ease);
+  --dur-panel:340ms}
+main.rout,main.rfold{grid-template-columns:var(--lw) minmax(0,1fr) minmax(0,0fr)}
+@media (prefers-reduced-motion:reduce){main{transition:none}}
 main.lout{--lw:68px}
 /* 窄屏先让中栏活下来——对话比旁观机器干活重要 */
 @media (max-width:1440px){main{grid-template-columns:var(--lw) minmax(0,1fr) minmax(0,1.08fr)}}
 @media (max-width:1240px){main{grid-template-columns:var(--lw) minmax(0,1fr) 360px}}
 /* 面板保持自身宽度，列宽归零时向右滑出被 main 裁掉——比压缩内容干净。
    visibility 是兜底：列宽动画在部分浏览器不支持，但收起后必须真的不可见、不可点 */
-#right{width:100%;max-width:1040px;justify-self:end;transition:opacity var(--dur-fast) var(--ease)}
-main.rout #right,main.rfold #right{visibility:hidden;opacity:0;pointer-events:none}
+#right{width:100%;max-width:1040px;justify-self:end;
+  transition:opacity var(--dur-panel) var(--ease),visibility 0s}
+/* visibility 不可插值，但可以延迟：收起时等淡出走完再真的隐藏，
+   否则内容在第一帧就消失，只剩一条空栏在那儿收窄。展开时不延迟——
+   要先看得见，才谈得上淡入。 */
+main.rout #right,main.rfold #right{visibility:hidden;opacity:0;pointer-events:none;
+  transition:opacity var(--dur-panel) var(--ease),visibility 0s linear var(--dur-panel)}
 
 /* 左栏顶部品牌区 · 与官网 index.html 的 .brand-mark 完全同构（十字 + 三点），点击回官网 */
 .lbrandrow{display:flex;align-items:center;gap:8px;padding:14px 12px 10px 12px;flex:none}
@@ -345,15 +358,15 @@ main.lout .lbrandrow{justify-content:center;gap:0;padding:14px 0 10px}
 main.lout .lbrand{gap:0}
 main.lout .lbrandrow .sayic{margin:0}
 
-/* 收起按钮：跟左栏那颗同一颗图标。站在标题前面，但静止时不占位——
-   否则 Assessment 会比下面的 Order status 缩进一截，两个模块标题就对不齐了 */
-.rfoldx{width:0;height:26px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+/* 收起按钮：跟左栏那颗同一颗图标，常驻在标题行尾。
+   原来它站在标题前面、静止时 width:0，悬停标题行才长出来——藏起来是为了
+   Assessment 不比下面的 Order status 缩进一截。改站行尾同样对得齐，
+   而且不用再藏：要摸索才找得到的开关等于没有。行尾也正是重开按钮
+   (.rshow) 所在的角，收起和展开落在同一个位置。 */
+.rfoldx{width:26px;height:26px;flex:none;display:inline-flex;align-items:center;justify-content:center;
   border:0;border-radius:var(--r-control);background:none;color:var(--faint);cursor:pointer;
-  opacity:0;overflow:hidden;margin-right:calc(-1 * var(--sp-2));
-  transition:width var(--dur-fast) var(--ease),opacity var(--dur-fast) var(--ease),
-    margin var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
-.rmh:hover .rfoldx,.rfoldx:focus-visible{width:26px;opacity:1;margin-right:0}
-.rfoldx:hover{background:var(--card);color:var(--ink)}
+  transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.rfoldx:hover,.rfoldx:focus-visible{background:var(--card);color:var(--ink)}
 .rfoldx svg{flex:none}
 /* 收起后的重开入口：一颗灯 + 一个词。灯亮着就是它在干活 */
 .rshow{position:fixed;top:16px;right:20px;z-index:30;
@@ -2121,6 +2134,10 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 /* Agent profile 占一整页：进了这一层，顶排的环和星盘都收起——
    读 profile 的时候它们只是占地方的背景 */
 #right.lay-b #rm-feed .rmb:has(.agpage) .assplit{display:none}
+/* 档案页从顶往下排，不要套空态那套「整块居中」——名片头必须贴顶。
+   agpage 按内容长高，滚动交给 #afruns；flex:1 + min-height:0 会把长底稿裁掉。 */
+#right.lay-b #afruns:has(.agpage){justify-content:flex-start}
+#right.lay-b #afruns .agpage{flex:none}
 /* 一张纸，不是三张卡：模块之间原来留 10px 的缝让底色透出来，
    在暗色下那就是三条黑杠。改成共用一个表面，分区交给一条发丝线和留白。 */
 .rgrid{flex:1;min-height:0;display:grid;gap:0;padding:0;background:var(--paper);
@@ -2788,6 +2805,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 /* 证据默认收着：这栏是余光扫的，展开是主动动作 */
 .afev{display:none;margin-top:var(--sp-2);padding:var(--sp-3);border-radius:var(--r-card);
   background:var(--canvas);box-shadow:var(--ring)}
+/* 档案页里的证据不是折叠行：必须盖过上面的 display:none */
+.agpage .agwork>.afev{display:grid}
 .afrow.open .afev{display:block;animation:agfadeup .22s var(--ease) both}
 .afsec{font-size:var(--rt-meta);font-weight:var(--rt-meta-w);letter-spacing:0;
   color:var(--faint-2);margin:var(--sp-5) 0 var(--sp-2)}
@@ -2988,7 +3007,37 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 
 
 
-.sayic.on{background:var(--ink);color:var(--paper)}
+
+/* ══ 录音条 ══
+   录音中整条工具行换成它：波形 + 取消 + 完成。
+   高度锁 32 和 .sayic / #send 一致——换的时候盒子不能变高，
+   否则输入框会跟着弹一下，像是出了错。 */
+.vrec{display:flex;align-items:center;gap:6px;width:100%;height:32px}
+.vwave{flex:1;min-width:0;height:32px;display:flex;align-items:center;gap:2px;
+  padding:0 12px;border-radius:999px;background:var(--card);overflow:hidden}
+/* 柱子：静止时是一条细横线（scaleY 起点 .08），有声才长起来。
+   transform 不触发布局，60fps 写它是安全的；写 height 就不是。 */
+.vwave i{flex:1;min-width:2px;max-width:3px;height:16px;border-radius:1px;
+  background:var(--faint);transform:scaleY(.08);transform-origin:center;
+  transition:transform .08s linear}
+/* 取消：低一档的存在感。丢弃是次要出口，不该和「完成」抢眼睛 */
+.vx{width:32px;height:32px;flex:none;border-radius:var(--r-control);
+  display:inline-flex;align-items:center;justify-content:center;
+  border:0;background:transparent;color:var(--faint);cursor:pointer;
+  transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.vx:hover{background:var(--card);color:var(--ink)}
+.vx:active{background:var(--cream)}
+/* 完成：主出口，实心圆，站在发送键原来的位置上——录完就该按发送，
+   两颗按钮落在同一个点，手不用重新找 */
+.vok{width:32px;height:32px;flex:none;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:0;background:var(--ink);color:var(--paper);cursor:pointer;
+  transition:transform var(--dur-fast) var(--ease),opacity var(--dur-fast) var(--ease)}
+.vok:hover{opacity:.88}
+.vok:active{transform:scale(.94)}
+@media (prefers-reduced-motion:reduce){
+  .vwave i{transition:none}
+}
 .saycond{color:var(--mute)}
 .saycond:hover{background:var(--card);color:var(--ink)}
 .saycond:active{background:var(--cream)}
