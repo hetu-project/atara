@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as ep from '../api/endpoints'
-import FilePick from './FilePick'
 import { useApi } from '../hooks/useApi'
 import IdCheck from './IdCheck'
 import {
