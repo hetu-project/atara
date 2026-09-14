@@ -349,20 +349,7 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   return (
     <div className="view on" id="v-chat">
       <div id="log" ref={log}>
-        {/* 准入向导：参照里它是 Atara AI 这个会话里的一张卡片，不是弹窗。
-            所以带上那条线程头，位置和外观都跟参照一致。 */}
-        {kyc.maker ? (
-          <>
-            {/* 样式挂在 #thhead 上，而且要 .show 才 display:flex——
-                写成 class 的话头像会掉到文字上面一行。 */}
-            <div id="thhead" className="show">
-              <span className="thav deskav" aria-hidden><i /></span>
-              <span className="thwho"><b>Atara AI</b><span>Verification and listing desk</span></span>
-            </div>
-            {kyc.maker}
-          </>
-        ) : null}
-        {/* 和 Atara AI 的对话。和准入卡片同一条流——它们本来就是同一个台面上
+        {/* 和 Atara AI 的对话。和准入那块同一条流——它们本来就是同一个台面上
             的两种消息：那边是流程播报，这边是你问它答。 */}
         {chat.map(m => (
           <div key={m.id} className={'msg ' + m.author}>
@@ -447,6 +434,28 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
         {run ? <Thinking /> : (!cands.length && !kyc.maker && !chat.length && streaming === null &&
           <div id="empty"><h3>What would you like to settle?</h3></div>)}
         {err ? <p className="roempty" style={{ textAlign: 'center' }}>{err}</p> : null}
+        {/* 准入整块排在对话最后，不按时间混进消息流。
+            参照里它是 Atara AI 这个会话里的一张卡片，不是弹窗，所以带上那条
+            线程头；但它不是一条「发生在某个时刻」的消息，而是你手上没做完的
+            那件事——它有表单要填、有按钮要按，位置得由「还没做完」决定，
+            不由「什么时候发生的」决定。
+
+            排在开头试过：跟 AI 聊几句，那颗要按的按钮就滚出了屏幕，而且点了
+            之后表单长在半空中，画面还得往上跳。沉到底之后这两件事一起没了——
+            要按的、要填的，都在你眼皮底下。代价是后来的聊天记录排在它上面，
+            这个代价是对的：聊天是流水，这块是待办。 */}
+        {kyc.maker ? (
+          <>
+            {/* 样式挂在 #thhead 上，而且要 .show 才 display:flex——
+                写成 class 的话头像会掉到文字上面一行。 */}
+            <div id="thhead" className="show mkhead">
+              <span className="thav deskav" aria-hidden><i /></span>
+              <span className="thwho"><b>Atara AI</b><span>Verification and listing desk</span></span>
+            </div>
+            {kyc.maker}
+          </>
+        ) : null}
+        {kyc.progress}
       </div>
 
       <div id="say" className={act ? 'actopen' : ''}>

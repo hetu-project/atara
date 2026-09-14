@@ -15,6 +15,7 @@ import { LockScreen, PwSetup, useSessionLock } from './components/SessionLock'
 import { AssessmentProvider } from './hooks/useAssessment'
 import { KycProvider } from './hooks/useKycGate'
 import { ToastProvider } from './components/Toast'
+import Tooltip from './components/Tooltip'
 import { useIdentity } from './hooks/useIdentity'
 import { usePrivy } from '@privy-io/react-auth'
 import { usePrivyAuth } from './hooks/usePrivyAuth'
@@ -141,6 +142,8 @@ export default function App() {
     )}
     </KycProvider>
     </AssessmentProvider>
+    {/* 挂一次就够：它用事件委托接管全局的 title，不需要包住谁。 */}
+    <Tooltip />
     </ToastProvider>
   )
 }

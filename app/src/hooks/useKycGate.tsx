@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import * as ep from '../api/endpoints'
-import MakerThread from '../components/MakerThread'
+import MakerThread, { MakerProgress } from '../components/MakerThread'
 import type { MakerApp } from '../api/types'
 import { useApi } from './useApi'
 import { go } from './useRoute'
@@ -8,8 +8,8 @@ import { go } from './useRoute'
 interface Ctx {
   /** 返回 true 表示被拦下了：调用方应当停手，门会自己弹出来。 */
   require: () => boolean
-  /** 打开准入对话。'offer' 表示直接进挂单表单（两段都审过了才有意义）。 */
-  openMaker: (intent?: 'offer') => void
+  /** 打开准入对话。带 intent 就直接把那一段的表单铺出来。 */
+  openMaker: (intent?: 'listing' | 'offer') => void
   /** 收起准入对话，回到那句「你想结算什么」。侧栏的「New order」用它。 */
   closeMaker: () => void
   /** 身份是否已经审过。账户页要照实显示，不能写死成「已验证」。 */
@@ -22,6 +22,15 @@ interface Ctx {
    * 那一份会一直停在「审核中」。 */
   app: MakerApp | null
   /**
+   * 三段进度条，挂在对话最后一条。
+   *
+   * 准入卡是写死排在会话最前面的，跟 AI 聊几句，那颗「下一段」的按钮就
+   * 滚出了屏幕——而它是这条路上唯一要动手的地方。找不到的操作等于不存在
+   * 的操作。所以位置和动作合成一条、排在整条对话的末尾：新消息进来它仍然
+   * 在最后，不会再被顶上去。
+   */
+  progress: React.ReactNode | null
+  /**
    * 准入向导那张卡。参照里它不是弹窗，是挂在 Atara AI 会话里的一张卡片
    * （console.html 的 paintMaker），所以由首页把它渲染进对话区，
    * 而不是在这里盖一层 overlay。
@@ -30,7 +39,7 @@ interface Ctx {
 }
 const KycCtx = createContext<Ctx>({
   require: () => false, openMaker: () => {}, closeMaker: () => {},
-  kycOk: false, kycPending: false, app: null, maker: null,
+  kycOk: false, kycPending: false, app: null, progress: null, maker: null,
 })
 export const useKycGate = () => useContext(KycCtx)
 
@@ -42,7 +51,14 @@ export const useKycGate = () => useContext(KycCtx)
  * 能不能下单，以及做市准入走到了哪一步。
  */
 export function KycProvider({ identity, children }: { identity: string; children: React.ReactNode }) {
-  const { data: app, reload } = useApi(() => ep.makerApp(identity), [identity])
+  const { data: app, reload: reloadApp } = useApi(() => ep.makerApp(identity), [identity])
+  /* 第三段「发布挂单」做没做完，得看这个人名下有没有挂单——不能只看
+     MakerThread 里那份 posted：刷新一次它就空了，待办条会再问一遍已经
+     做过的事。没批下来之前不问，那一问对绝大多数人都是白问。 */
+  const approved = !!app?.approved
+  const { data: mine, loading: mineLoading, reload: reloadOffers } =
+    useApi(() => (approved ? ep.myOffers() : Promise.resolve([])), [identity, approved])
+  const reload = useCallback(() => { reloadApp(); reloadOffers() }, [reloadApp, reloadOffers])
   const [open, setOpen] = useState(false)
   const [why, setWhy] = useState<'trade' | 'maker'>('trade')
   /* 「为什么要验」那一句已经说过了。原来是把 why 改成 maker 来收起它——
@@ -77,29 +93,44 @@ export function KycProvider({ identity, children }: { identity: string; children
 
   /* 卡片长在首页的对话区里，所以开之前先把人带回首页——
      否则在 Discover 上点「验证」会什么都看不见。 */
-  /* 挂单意图记一个计数而不是 true/false：已经开着的时候再点一次
-     「Post a listing →」也得把表单重新铺出来——存布尔的话第二次点没反应。 */
-  const [wantOffer, setWantOffer] = useState(0)
-  const openMaker = useCallback((intent?: 'offer') => {
+  /* 两段表单开着没有。这两个状态原来在 MakerThread 内部，外面只能靠一个
+     计数器隔空去点它；挪上来之后，输入框上方那条待办和对话里那颗按钮读的
+     是同一份状态——表单已经铺开时待办条就该闭嘴，而它得看得见才知道。
+     计数器也就不需要了：状态只有一处，设 true 就是开。 */
+  const [toListing, setToListing] = useState(false)
+  const [toOffer, setToOffer] = useState(false)
+  const openMaker = useCallback((intent?: 'listing' | 'offer') => {
     go({ view: 'home' }); setWhy('maker'); setOpen(true)
-    if (intent === 'offer') setWantOffer(n => n + 1)
+    if (intent === 'listing') setToListing(true)
+    if (intent === 'offer') setToOffer(true)
   }, [])
   const closeMaker = useCallback(() => setOpen(false), [])
 
   const showMaker = open && (why !== 'trade' || explained || !!app?.kyc_done)
+  /* null = 还没问到。空数组和「没问过」是两回事，见下面待办的取舍。
+
+     必须带上 loading：approved 由 false 翻成 true 那一拍会重取，而 useApi
+     在重取期间留着上一次的值（没批下来时那是个空数组）。只看 mine 的话，
+     一个已经挂过单的人刷新页面，会先被问一句「去挂第一单吧」再自己消失。 */
+  const listed = mineLoading || !mine ? null : mine.length > 0
 
   const value = useMemo(() => ({
     require, openMaker, closeMaker,
     kycOk: !!app?.kyc_ok,
     kycPending: !!app?.kyc_done && !app?.kyc_ok,
     app: app ?? null,
+    progress: showMaker
+      ? <MakerProgress app={app ?? null} listed={!!listed} from={why} />
+      : null,
     maker: showMaker ? (
       /* 提交后不关：往下追加回执、审核中、通过几条消息。直接关掉的话
          界面一片空白，人会以为没提交成功。 */
-      <MakerThread app={app ?? null} identity={identity} from={why} wantOffer={wantOffer}
-        onDone={reload} />
+      <MakerThread app={app ?? null} identity={identity} from={why}
+        toListing={toListing} toOffer={toOffer}
+        setToListing={setToListing} setToOffer={setToOffer} onDone={reload} />
     ) : null,
-  }), [require, openMaker, closeMaker, app, showMaker, identity, why, wantOffer, reload])
+  }), [require, openMaker, closeMaker, app, showMaker, identity, why, reload,
+    listed, toListing, toOffer])
 
   return (
     <KycCtx.Provider value={value}>

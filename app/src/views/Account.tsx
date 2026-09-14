@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import CountUp from '../components/CountUp'
 import * as ep from '../api/endpoints'
 import { CHIP, IArrow, ICheck, ICopy, IPen } from '../components/icons'
 import { useApi } from '../hooks/useApi'
@@ -138,16 +139,16 @@ export default function Account({ identity }: { identity: string }) {
         <div className="pgrid pg-a">
           <section className="pmod">
             <div className="pmh"><h4>Wallet</h4><span className="ad">Non-custodial</span></div>
-            <div className="atot"><b className="av num">${Math.round(avail + esc).toLocaleString()}</b></div>
+            <div className="atot"><b className="av num">$<CountUp value={avail + esc} /></b></div>
             <div className="aalloc" title="Available vs in escrow">
               <i className="aa-av" style={{ width: `${(avail / (avail + esc || 1) * 100).toFixed(1)}%` }} />
               <i className="aa-es" style={{ width: `${(esc / (avail + esc || 1) * 100).toFixed(1)}%` }} />
             </div>
             <div className="asplit">
               <div><span className="al">In your wallet</span>
-                <b className="num">${Math.round(avail).toLocaleString()}</b></div>
+                <b className="num">$<CountUp value={avail} /></b></div>
               <div><span className="al">In escrow contracts</span>
-                <b className="num">${Math.round(esc).toLocaleString()}</b>
+                <b className="num">$<CountUp value={esc} /></b>
                 <span className="ad">{escN} trades locked ·{' '}
                   <a href="#/payments" className="lnk">View ›</a></span></div>
             </div>
@@ -218,13 +219,7 @@ export default function Account({ identity }: { identity: string }) {
                     ))}
                   </div>
                 ) : (
-                  <p className="rnote">
-                    {mine?.length
-                      /* 卖完和下架的单不在这儿列——它们已经不占着钱、也吃不了。
-                         留在列表里只会让人以为还挂着，而那一行写着 0。 */
-                      ? 'Nothing listed right now. Filled and unlisted offers move to Activity.'
-                      : 'No listings. Post one from Discover.'}
-                  </p>
+                  <ListingsEmpty everListed={!!mine?.length} />
                 )}
               </>
             )}
@@ -389,6 +384,64 @@ function Card({
           </span>
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * 「我的挂单」的空态。
+ *
+ * 原来是一句写死的「No listings. Post one from Discover.」——三种人看到同一句，
+ * 而它对其中两种是错的：还没申请做市的人去了 Discover 也挂不了，交了在审的人
+ * 去了只会看到一颗按不动的按钮。
+ *
+ * 参照（console.html 的 myListingsHTML）在这里的注释写得很准：
+ * **空态不是句号，是入口**——能挂就给挂单的门，不能挂就给入驻的门。
+ * 审核中那一态刻意不给按钮：那时候没有任何可点的动作，给一个只会让人反复提交。
+ *
+ * 这也是目前界面上唯一能看出「我到底是不是商家」的地方。做市方资格不摆在
+ * 账户页顶部那一行，是参照就定下的分寸：身份核验是账户级的、吃单的人也会做，
+ * 而绝大多数用户根本不打算做市——把它做成常驻状态，等于对所有人宣布
+ * 「你还有一件事没做」。
+ */
+function ListingsEmpty({ everListed }: { everListed: boolean }) {
+  const { app, openMaker } = useKycGate()
+  const approved = !!app?.approved
+  /* 「交了在审」要同时认身份那一段和条款那一段：任何一段在审都还挂不了单。 */
+  const review = (!!app?.listing_done && !approved) || (!!app?.kyc_done && !app?.kyc_ok)
+
+  if (approved) {
+    return (
+      <div className="lsempty">
+        <p className="rnote">
+          {everListed
+            /* 卖完和下架的单不在这儿列——它们已经不占着钱、也吃不了。
+               留在列表里只会让人以为还挂着，而那一行写着 0。 */
+            ? 'Nothing listed right now. Filled and unlisted offers move to Activity.'
+            : 'Post an offer and the coins lock into escrow until it fills.'}
+        </p>
+        <button className="btn btn-primary btn-sm" onClick={() => openMaker('offer')}>
+          Create a listing →
+        </button>
+      </div>
+    )
+  }
+  if (review) {
+    return (
+      <div className="lsempty">
+        <p className="rnote">Your trading terms are under review — you can post once they clear.</p>
+      </div>
+    )
+  }
+  return (
+    <div className="lsempty">
+      <p className="rnote">
+        Listings are how makers put their own price in the pool. Get approved once,
+        then post whenever you like.
+      </p>
+      <button className="btn btn-primary btn-sm" onClick={() => openMaker()}>
+        Become a maker →
+      </button>
     </div>
   )
 }

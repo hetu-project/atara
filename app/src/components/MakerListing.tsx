@@ -239,13 +239,18 @@ export function ListingStep({
 
 /** 回执里那张「交易条款」表，六行，取自参照的 receiptCard。 */
 export function listingRows(d: Listing): [string, string][] {
+  /* 每一项都要兜底。这份 d 是后端 form_json 原样发回来的，而后端不校验它的
+     形状——用旧版表单交过、或者直接走 API 提交的账号，这里少哪个字段都可能。
+     少一个 `?? []` 的后果不是缺一行，是 undefined.join 把整个准入对话炸成白屏，
+     而那条对话恰恰是他查「我的申请审到哪了」的唯一入口。 */
+  const list = (v: string[] | undefined) => (v?.length ? v.join(' · ') : '—')
   return [
-    ['Side', d.dir.join(' · ')],
-    ['Assets', d.coins.join(' · ')],
+    ['Side', list(d.dir)],
+    ['Assets', list(d.coins)],
     ['Limits', `${num(d.lo).toLocaleString()} – ${num(d.hi).toLocaleString()} CNY`],
-    ['Networks', d.nets.join(' · ')],
+    ['Networks', list(d.nets)],
     ['Pricing', d.pricing === 'Float'
-      ? `Index ${num(d.spread) >= 0 ? '+' : ''}${d.spread}%` : `Fixed · ${d.fixed}`],
-    ['Payment rails', d.rails.join(' · ')],
+      ? `Index ${num(d.spread) >= 0 ? '+' : ''}${d.spread}%` : `Fixed · ${d.fixed || '—'}`],
+    ['Payment rails', list(d.rails)],
   ]
 }

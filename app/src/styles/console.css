@@ -1386,6 +1386,8 @@ a.dspx{color:#d0574d}
   margin-bottom:8px;padding:0 2px 9px;background:none;
   border-radius:0;box-shadow:none;border-bottom:1px solid var(--hairline)}
 #thhead.show{display:flex}
+/* 准入那块排在聊天记录下面，得跟上面那条消息拉开，不然像是同一段的续文 */
+#thhead.mkhead{margin-top:20px}
 /* 平台会话：Atara 的方块标识，跟人的头像一眼分得开 */
 .deskav{background:var(--blue)!important;border-radius:8px!important;
   display:flex;align-items:center;justify-content:center}
@@ -1418,9 +1420,22 @@ a.dspx{color:#d0574d}
 .msg.typing .bub{color:var(--faint);font-style:italic}
 /* 消息里的提交记录：默认收起，点开核对 */
 .rcpt{margin-top:8px;min-width:min(300px,70vw)}
-.rcpt summary{cursor:pointer;font-size:12px;font-weight:500;opacity:.85;list-style:none}
-.rcpt summary::before{content:'▸ '}
-.rcpt[open] summary::before{content:'▾ '}
+/* 折叠块（Fold）。原来用的是原生 <details>：瞬间弹开，没有高度过渡。 */
+.fold .foldsum{display:flex;align-items:center;gap:6px;padding:0;
+  border:0;background:none;cursor:pointer;color:inherit;font:inherit;
+  font-size:12px;font-weight:500;opacity:.85;text-align:left}
+.fold .foldsum:hover{opacity:1}
+/* 三角用 border 画，靠 transform 转——用 ▸/▾ 两个字符互换的话，
+   不同字体下这两个字宽度不一样，标题会横向抖一下。 */
+.foldmk{flex:none;width:0;height:0;border-left:4px solid currentColor;
+  border-top:3.5px solid transparent;border-bottom:3.5px solid transparent;
+  transition:transform var(--dur-fast) var(--ease)}
+.fold.on .foldmk{transform:rotate(90deg)}
+/* 0fr → 1fr 撑开。对任意高度都准，不用猜 max-height。 */
+.fold .foldwrap{display:grid;grid-template-rows:0fr;
+  transition:grid-template-rows var(--dur-normal) var(--ease)}
+.fold.on .foldwrap{grid-template-rows:1fr}
+.fold .foldin{overflow:hidden;min-height:0}
 .rcpt .sfsum{margin-top:6px}
 .rcpt .rgrp{margin-top:10px}
 .rcpt .rgrp>em{display:block;font-style:normal;font-size:11px;font-weight:600;
@@ -1429,6 +1444,35 @@ a.dspx{color:#d0574d}
 .msg.me .rcpt .sfsum dt{color:#ffffffb0}
 .msg.me .rcpt .sfsum dd{color:#fff}
 .msg .rgo{display:block;margin-top:10px}
+
+/* ── 准入三段进度 ──────────────────────────────────────
+   三段只有走在里面的人看不见全貌。摆在对话最前面，方位这件事就不用再解释。
+   done / now / review / wait 四态，review（在等我们审）必须跟 now（等你动手）
+   长得不一样——否则等审核的人会一直去戳一个戳不动的东西。 */
+.mksteps{display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  list-style:none;margin:0;padding:0}
+.mkstep{display:inline-flex;align-items:center;gap:7px;
+  font-size:12.5px;color:var(--faint)}
+.mkstep+.mkstep::before{content:'';flex:none;width:16px;height:1px;
+  margin-right:2px;background:var(--line-strong)}
+.mkstep b{font-weight:500}
+.mkstep i{font-style:normal;font-size:11px;color:var(--warn)}
+.mkdot{display:grid;place-items:center;flex:none;width:18px;height:18px;
+  border-radius:50%;font-size:10.5px;font-weight:600;line-height:1;
+  border:1px solid var(--line-strong);background:var(--paper);color:var(--faint)}
+.mkstep.done{color:var(--mute)}
+.mkstep.done .mkdot{background:var(--green);border-color:var(--green);color:#fff}
+.mkstep.now{color:var(--ink)}
+.mkstep.now .mkdot{background:var(--blue);border-color:var(--blue);color:#fff}
+.mkstep.review{color:var(--warn)}
+.mkstep.review .mkdot{background:var(--warn-wash);border-color:var(--warn);color:var(--warn)}
+
+/* 只报位置，不带动作——动作在上面那条消息里。 */
+.mkprog{display:flex;align-items:center;margin:10px 0 2px;padding:9px 13px;
+  border:1px solid var(--hairline);border-radius:var(--r-control);
+  background:var(--canvas);animation:agfadeup .22s var(--ease) both}
+.mkprog .mksteps{flex:1;min-width:0;margin:0}
+@media (prefers-reduced-motion:reduce){.mkprog{animation:none}}
 /* 托管卡 v2：状态行 + 执行轨道 + 撤销脚注 */
 .esc2{flex-direction:column;align-items:stretch;gap:10px}
 .erow{display:flex;align-items:center;gap:10px}
@@ -3139,8 +3183,29 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .sf input[type=text]:hover{border-color:var(--line-strong)}
 .sf input[type=text]:focus{border-color:var(--accent)}
 .sf input.inv{border-color:var(--neg)}
-.sf .err{display:none;margin-top:5px;font-size:11px;color:var(--neg)}
-.sf.bad .err{display:block}
+/* 错误行：撑开而不是凭空出现。
+   原来是 display:none → block，那一下整个表单下方的内容全部瞬移。准入向导
+   九步，每步填漏一次就跳一次，而准入是新用户的第一段体验。
+
+   用 max-height 而不是「永远留一行空槽」：留槽会让每个字段无条件长高 21px，
+   九步表单加起来很可观，而问题本来是「跳」不是「没地方」。
+   32px 正好是两行（行高 16px）。给得太宽的话，单行错误在动画走到一半时
+   就已经到位，后半段是空走的；给得太窄会把第二行裁掉。 */
+.sf .err{display:block;max-height:0;opacity:0;overflow:hidden;margin-top:0;
+  font-size:11px;line-height:16px;color:var(--neg);
+  transition:max-height var(--dur-normal) var(--ease),margin-top var(--dur-normal) var(--ease),
+    opacity var(--dur-fast) var(--ease)}
+.sf.bad .err{max-height:32px;opacity:1;margin-top:5px}
+/* 出错时字段抖一下。这套做法项目里已经有两处（.pwin.shake 锁屏密码框、
+   .achip.shake 胶囊），这里是把它铺到表单上，不是新发明一种。 */
+/* 抖的是这个字段的控件区，不是逐个列控件类型。
+   原来写成 input/select/.sfup 三选一，结果最常出错的那种字段反而不抖——
+   国籍、行业这些是胶囊选择（.sfchips），根本不在那三种里。
+   表单里控件形态有五六种，逐个列早晚漏；抖「除了标签和错误行之外的部分」
+   才是这条规则真正想表达的意思。 */
+.sf.bad > *:not(.sfl):not(.err){animation:sfshake .3s var(--ease)}
+@keyframes sfshake{0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-4px)}60%{transform:translateX(3px)}80%{transform:translateX(-2px)}}
 .sfrow{display:flex;align-items:center;gap:8px}
 .sfrow span{font-size:12px;color:var(--faint);flex:none}
 .sfchips{display:flex;flex-wrap:wrap;gap:6px}
@@ -3396,6 +3461,23 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .swapbtn.on .swapa{opacity:0;transform:translateY(-4px) scale(.86)}
 .swapbtn.on .swapb{opacity:1;transform:none;color:var(--green)}
 
+/* ══ 提示气泡 ══ 接管原生 title。
+   pointer-events:none 是关键：它跟着鼠标出现在元素上方，能接事件的话
+   会把 mouseout 打在自己身上，气泡一出来就把自己关掉。 */
+.tip{position:fixed;z-index:90;pointer-events:none;
+  transform:translate(-50%,-100%);
+  max-width:min(280px,80vw);padding:5px 9px;border-radius:var(--r-chip);
+  background:var(--ink);color:var(--on-inverse);
+  font-size:11.5px;font-weight:500;line-height:1.45;text-align:center;
+  box-shadow:var(--sh-overlay);
+  animation:tipin var(--dur-fast) var(--ease) both}
+.tip.below{transform:translate(-50%,0)}
+@keyframes tipin{from{opacity:0;transform:translate(-50%,-100%) scale(.94)}
+  to{opacity:1}}
+/* 翻到下方时入场方向也要反过来，不然它是从元素里「钻出来」的 */
+.tip.below{animation-name:tipinb}
+@keyframes tipinb{from{opacity:0;transform:translate(-50%,0) scale(.94)}
+  to{opacity:1}}
 /* ══ 操作反馈 ══
    原来这儿只有一条 #ftoast 的样式，而 JSX 里从没有人用过它——抄样式时漏了
    实现那一半。现在换成真的堆叠：同时最多三条，新的在下面（离视线最近）。
