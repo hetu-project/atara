@@ -397,6 +397,50 @@ export interface Market {
  * 做市申请。四个状态位驱动前端那颗按钮的三种文案：
  * approved → 「挂单」；listing_done 未审 → 「审核中」；其余 → 「成为做市方」。
  */
+/** 证件上读出来、可以摆在界面上的那几项。证件号已经在后端打过码。 */
+export interface KycIdentity {
+  first_name?: string
+  last_name?: string
+  full_name?: string
+  doc_type?: string
+  /** 已打码，只剩末四位。全号留在后端——见后端 kyc.maskDoc。 */
+  doc_number?: string
+  dob?: string
+  issued?: string
+  expiry?: string
+  sex?: string
+  nationality?: string
+  country?: string
+}
+
+/** 一条没通过的检查。severity 与 decision 由 ID Analyzer 的配置档算出来。 */
+export interface KycWarning {
+  code: string
+  description: string
+  severity?: string
+  confidence?: number
+  decision?: string
+}
+
+export interface KycStatus {
+  /** none 从没开过 · pending 开了还没结论 · accept/review/reject 是结论 */
+  state: 'none' | 'pending' | 'accept' | 'review' | 'reject'
+  reference?: string
+  identity?: KycIdentity
+  warnings?: KycWarning[]
+  kyc_ok: boolean
+  concluded_at?: string
+  /** 这台机器配没配 ID Analyzer。没配时要照实说，不能摆一颗按不动的按钮。 */
+  configured: boolean
+}
+
+/** 开一次核验会话拿到的东西。API key 不在里面，也永远不会在里面。 */
+export interface KycSession {
+  reference: string
+  url: string
+  qr_code?: string
+}
+
 export interface MakerApp {
   user_id: string
   phase: 'kyc' | 'listing'

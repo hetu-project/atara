@@ -32,11 +32,6 @@ export const blankListing = (): Listing => ({
   spread: '0.8', fixed: '', rails: [], agree: false,
 })
 
-export const DEMO_LISTING: Partial<Listing> = {
-  dir: ['Sell crypto', 'Buy crypto'], coins: ['USDT', 'BTC'], lo: '1000', hi: '50000',
-  nets: ['BSC', 'BSC-TESTNET'], rails: ['ICBC', 'China Merchants Bank', 'HSBC', 'DBS'], agree: true,
-}
-
 const num = (v: string) => Number(String(v).replace(/[,，\s]/g, ''))
 
 /** 校验规则逐条取自参照的 sellerValid()。返回出错那一行的 id，全对返回空。 */

@@ -3160,6 +3160,57 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
   padding:3px 10px;border-radius:var(--r-chip);border:1px solid var(--hairline);background:var(--paper)}
 .sfup.ok .sfst{color:var(--accent);border-color:var(--accent);background:transparent}
 .sfup:hover .sfst{border-color:var(--accent);color:var(--accent)}
+/* ── 身份核验（DocuPass）── */
+/* 这一步不是一个输入框，是「去做一件事」，所以版式跟 .sfup 一族同源：
+   一段说明、一颗动作按钮，做完之后换成读数。 */
+.idck{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.idck .btn{flex:none}
+.sfnote{margin:0;font-size:12px;color:var(--faint);line-height:1.55}
+.sfnote code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+  padding:1px 5px;border-radius:4px;background:var(--canvas);color:var(--mute)}
+.sfnote.bad{color:var(--neg)}
+/* 结论条。三档各自一个颜色——「通过」「要人看一眼」「没过」在界面上
+   长得一样的话，中间那一档会被当成通过读。 */
+.idbn{width:100%;display:flex;flex-direction:column;gap:3px;
+  padding:10px 12px;border-radius:var(--r-control);
+  border:1px solid var(--hairline);background:var(--canvas)}
+.idbn b{font-size:13px;font-weight:600;color:var(--ink)}
+.idbn em{font-style:normal;font-size:11.5px;color:var(--faint);line-height:1.5}
+.idbn.ok{border-color:var(--green);background:var(--green-wash)}
+.idbn.ok b{color:var(--green)}
+.idbn.warn{border-color:var(--warn);background:var(--warn-wash)}
+.idbn.warn b{color:var(--warn)}
+.idbn.bad{border-color:var(--neg);background:var(--warn-wash)}
+.idbn.bad b{color:var(--neg)}
+/* DocuPass 那个流程嵌在自己的弹窗里：左边是内嵌的托管页，右边是扫码走手机那条路。
+   够窄就上下排——横排时那个 iframe 会被压到没法拍照。 */
+/* .mcard 那条 max-width:520px 在后面，同权重按顺序就赢了——
+   这里用 .mcard.dpcard 提一级权重压过它，而不是靠调整声明顺序：
+   顺序是会被后来的编辑打乱的，权重不会。 */
+.mcard.dpcard{width:min(880px,94vw);max-width:none}
+.dpbody{display:flex;gap:var(--sp-4);align-items:stretch}
+.dpframe{flex:1;min-width:0;height:min(620px,72vh);border:0;border-radius:var(--r-card);
+  background:var(--canvas);box-shadow:inset 0 0 0 1px var(--hairline)}
+.dpside{flex:none;width:190px;display:flex;flex-direction:column;gap:var(--sp-3);
+  align-items:flex-start;justify-content:center}
+.dpside .qrbox{flex:none;border-radius:var(--r-control);background:#fff;
+  padding:6px;box-shadow:0 0 0 1px var(--hairline)}
+.dpside .qrbox svg{display:block;width:100%;height:100%}
+@media (max-width:720px){
+  .dpbody{flex-direction:column}
+  .dpside{width:100%;flex-direction:row;flex-wrap:wrap;align-items:center}
+  .dpside .qrbox{width:110px!important;height:110px!important}
+}
+/* 证件上读出来的那几项。复用 .afc 的行式（名目左、读数右）。 */
+.idkv{width:100%;display:flex;flex-direction:column}
+.idwarn{width:100%;margin:0;padding:0 0 0 16px;font-size:11.5px;color:var(--faint);line-height:1.6}
+.idwarn b{font-weight:600;color:var(--mute)}
+/* 已核验的字段：显示成只读读数，不再是输入框。
+   留成可编辑的话，人能把核验出来的姓名改掉再提交，而界面上还写着「已核验」。 */
+.sfvfd{display:flex;align-items:baseline;gap:8px;width:100%;padding:9px 12px;
+  border-radius:var(--r-control);border:1px solid var(--hairline);background:var(--canvas)}
+.sfvfd b{font-size:13px;font-weight:500;color:var(--ink)}
+.sfvfd em{margin-left:auto;flex:none;font-style:normal;font-size:11px;color:var(--green)}
 
 /* ══ 带进度的上传（FilePick）══
    沿用 .sfup 的外观，只补三样它没有的：失败态、进度条、以及文件名太长时的截断。 */
