@@ -4,7 +4,7 @@ import ActionBar, { type Act, type ActKind } from '../components/ActionBar'
 import { useAssessment } from '../hooks/useAssessment'
 import AssessCard from '../components/AssessCard'
 import Avatar from '../components/Avatar'
-import { IAttach, IBuy, IMic, ISell, ISend } from '../components/icons'
+import Composer from '../components/Composer'
 import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
 import OrderDetail from './OrderDetail'
@@ -119,46 +119,27 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
         </div>
       </div>
 
-      <div id="say" className={act ? 'actopen' : ''}>
-        <div id="actions" role="group" aria-label="Actions">
-          <button className={'act' + (act?.k === 'buy' ? ' on' : '')}
-            onClick={() => setAct(a => (a?.k === 'buy' ? null : mk('buy')))}>
-            <span className="acti"><IBuy /></span>Buy
-          </button>
-          <button className={'act' + (act?.k === 'sell' ? ' on' : '')}
-            onClick={() => setAct(a => (a?.k === 'sell' ? null : mk('sell')))}>
-            <span className="acti"><ISell /></span>Sell
-          </button>
-        </div>
-        {err ? <p className="roempty" style={{ textAlign: 'center' }}>{err}</p> : null}
-        <div className="sayrow">
-          {act && (
-            <ActionBar act={act} onChange={setAct} onClose={() => setAct(null)}
-              contacts={cdata?.contacts ?? []} />
-          )}
-          <textarea id="free" rows={1} aria-label={`Message ${name}`}
-            value={text} onChange={e => setText(e.target.value)}
-            /* 动作面板开着的时候回车是「下这一单」，不是发这句话——面板本身
-               就是那句话，再把输入框里的内容当消息发一遍是发两次。 */
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                if (act) void order(act); else void send()
-              }
-            }}
-            placeholder={act
-              ? `Press Enter to place this order with ${name}`
-              : `Message ${name}`} />
-          <div className="saytools">
-            <button className="sayic" title="Attach" aria-label="Attach"><IAttach /></button>
-            <button className="sayic" title="Voice" aria-label="Voice" aria-pressed={false}><IMic /></button>
-            <button id="send" title={act ? 'Place this order (Enter)' : 'Send (Enter)'}
-              aria-label={act ? 'Place this order' : 'Send'}
-              disabled={busy || (!act && !text.trim())}
-              onClick={() => (act ? void order(act) : void send())}><ISend /></button>
-          </div>
-        </div>
-      </div>
+      {err ? <p className="roempty" style={{ textAlign: 'center' }}>{err}</p> : null}
+      <Composer
+        identity={identity}
+        text={text}
+        onChange={q => { setText(q); setErr('') }}
+        ariaLabel={`Message ${name}`}
+        placeholder={act
+          ? `Press Enter to place this order with ${name}`
+          : `Message ${name}`}
+        actOn={act?.k ?? null}
+        onToggle={k => setAct(a => (a?.k === k ? null : mk(k)))}
+        panel={act ? (
+          <ActionBar act={act} onChange={setAct} onClose={() => setAct(null)}
+            contacts={cdata?.contacts ?? []} />
+        ) : null}
+        busy={busy}
+        onSubmit={() => { if (act) void order(act); else void send() }}
+        sendTitle={act ? 'Place this order (Enter)' : 'Send (Enter)'}
+        sendLabel={act ? 'Place this order' : 'Send'}
+        onVoiceError={setErr}
+      />
     </div>
   )
 }

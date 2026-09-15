@@ -88,69 +88,34 @@ function forms(raw: string | undefined): { kyc?: Record<string, unknown>; listin
   try { return raw ? JSON.parse(raw) : {} } catch { return {} }
 }
 
-// ── 三段进度 ────────────────────────────────────────────────────────
-
-const STEPS: [string, string][] = [
-  ['kyc', 'Identity'], ['listing', 'Trading terms'], ['offer', 'First listing'],
-]
-
-type StepSt = 'done' | 'now' | 'review' | 'wait'
-
 /**
- * review 和 now 必须分开画。
+ * 打回修改。
  *
- * 两者都「停在这一段」，但一个是等你动手、一个是等我们审——人只在前一种
- * 情况下需要做点什么。混成一个样子，等审核的人会一直去戳一个戳不动的东西。
+ * 它不是「你被拒了」——措辞、颜色、后面跟着什么，三样都要说明这一点：
+ * 说完话表单就在下面重新铺开，带着上次填的内容。终局的拒绝没有下文，
+ * 打回有；两者在屏幕上长得一样，人只会理解成前者。
  */
-function stepStates(app: MakerApp | null, listed: boolean): StepSt[] {
-  const kycDone = !!app?.kyc_done, kycOk = !!app?.kyc_ok
-  const listDone = !!app?.listing_done, approved = !!app?.approved
-  return [
-    kycOk ? 'done' : kycDone ? 'review' : 'now',
-    !kycOk ? 'wait' : approved ? 'done' : listDone ? 'review' : 'now',
-    !approved ? 'wait' : listed ? 'done' : 'now',
-  ]
+function Revise({ reason }: { reason: string }) {
+  return (
+    <Them>
+      <b className="mkrevh">A few things need changing before this can go through</b>
+      <span className="mkrevb">{reason}</span>
+      <span className="mkrevf">Your answers are still below — edit and send again.</span>
+    </Them>
+  )
 }
 
 /**
- * 准入是三段，但走在里面的人只看得见当前这一段。
+ * 哪一段被打回了。没有就是空。
  *
- * 不知道后面还有没有、还剩几段，每做完一步都要重新猜一次「是不是完了」。
- * 三个点一摆，「这是什么、要经过什么」就不必再解释——落地那一刻缺的是
- * 方位，不是理由，而方位用一行就能给，不值得为它挡一个弹窗：这条路是要
- * 反复进出的（交完条款回来挂单、挂完再挂第二个），给反复走的通道加一道
- * 确认，是在惩罚熟练的人。
- *
- * 它只报位置，不带按钮。动作留在对话里那条消息上（「Set up trading terms →」）：
- * 那颗按钮紧跟着解释它的那句话，而这里只有一个孤零零的「Set up →」。
- *
- * 当初给这一条也配过按钮，因为准入那块排在对话开头，聊几句那颗按钮就滚出了
- * 屏幕。整块沉到对话末尾之后，那个理由没有了——而理由没有了的补丁就该拆掉，
- * 否则屏幕上两颗按钮做同一件事，人得先分辨它们是不是同一件事。
- *
- * **只画给来做市的人。** 为了下单才去验身份的那条路，验完就回去下单，
- * 全程只有身份这一件事；对他画三段做市流程，等于告诉一个没打算做市的人
- * 「你卡在第二步」——而那一步在他那条路上根本不存在，连按钮都不会有。
+ * reject_reason 只有一列，两段共用——不会有歧义，因为「交过了但没过」
+ * 同一时刻只可能是其中一段：身份没过就交不了挂单配置（后端拦着）。
  */
-export function MakerProgress({
-  app, listed, from,
-}: { app: MakerApp | null; listed: boolean; from: 'trade' | 'maker' }) {
-  if (from === 'trade') return null
-  const st = stepStates(app, listed)
-  return (
-    <div className="mkprog">
-      <ol className="mksteps" aria-label="Maker onboarding progress">
-        {STEPS.map(([k, n], i) => (
-          <li key={k} className={'mkstep ' + st[i]}
-            aria-current={st[i] === 'now' ? 'step' : undefined}>
-            <span className="mkdot" aria-hidden>{st[i] === 'done' ? '✓' : i + 1}</span>
-            <b>{n}</b>
-            {st[i] === 'review' ? <i>under review</i> : null}
-          </li>
-        ))}
-      </ol>
-    </div>
-  )
+export function reviseAt(app: MakerApp | null): '' | 'kyc' | 'listing' {
+  if (!app?.reject_reason) return ''
+  if (app.kyc_done && !app.kyc_ok) return 'kyc'
+  if (app.listing_done && !app.approved) return 'listing'
+  return ''
 }
 
 // ── 主体 ────────────────────────────────────────────────────────────
@@ -185,6 +150,7 @@ export default function MakerThread({
   const kycOk = !!app?.kyc_ok
   const listDone = !!app?.listing_done
   const approved = !!app?.approved
+  const revise = reviseAt(app)
 
   /* 新消息进来就滚到底——不滚的话通过那条消息连同它的按钮都在屏幕外面。 */
   useEffect(() => {
@@ -197,13 +163,17 @@ export default function MakerThread({
     onDone()
   }
 
-  /* 表单卡什么时候在：还没交身份材料；身份过了、点了下一段还没交；
-     两段都过了、点了挂单。 */
+  /* 表单卡什么时候在：还没交身份材料；被打回的那一段；身份过了、点了
+     下一段还没交；两段都过了、点了挂单。
+
+     被打回的那一段不用等人再点一次「去修改」——评语就在上面一条消息里，
+     让他对着评语改，中间再插一次点击只是多一道手续。 */
   const card: 'kyc' | 'listing' | 'offer' | null =
-    !kycDone ? 'kyc'
-      : kycOk && !listDone && toListing ? 'listing'
-        : approved && toOffer ? 'offer'
-          : null
+    revise ? revise
+      : !kycDone ? 'kyc'
+        : kycOk && !listDone && toListing ? 'listing'
+          : approved && toOffer ? 'offer'
+            : null
 
   return (
     <>
@@ -217,12 +187,13 @@ export default function MakerThread({
                 Received — your identity application is under review. Usually cleared within
                 one business day{' '}
                 <em style={{ fontStyle: 'normal', color: 'var(--faint)' }}>(demo: seconds)</em>.
-                {app?.reject_reason ? <><br /><b>Returned:</b> {app.reject_reason}</> : null}
                 {f.kyc ? <Receipt groups={kycGroups(f.kyc)} /> : null}
               </Them>
             )}
         </>
       )}
+
+      {revise === 'kyc' ? <Revise reason={app?.reject_reason ?? ''} /> : null}
 
       {kycOk && (
         /* 通过那两条话逐字取自参照：为下单来验的只说「可以交易了」，
@@ -260,6 +231,8 @@ export default function MakerThread({
         </>
       )}
 
+      {revise === 'listing' ? <Revise reason={app?.reject_reason ?? ''} /> : null}
+
       {approved && (
         <Them>
           ✓ Terms approved — you can post listings now. A listing is one offer with an amount
@@ -286,7 +259,9 @@ export default function MakerThread({
             setToOffer(false); setPosted(ps => [...ps, { o, sym }]); onDone()
           }} />
       ) : card ? (
-        <MakerFlow phase={card} identity={identity} onSubmitted={submitted}
+        <MakerFlow phase={card} identity={identity}
+          initial={card === 'kyc' ? f.kyc : (f.listing as unknown as Record<string, unknown>)}
+          onSubmitted={submitted}
           onBackOut={() => setToListing(false)} />
       ) : null}
       <div ref={bottom} />

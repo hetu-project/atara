@@ -2,28 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import ActionBar, { type Act, type ActKind } from '../components/ActionBar'
 import { liveParse } from '../components/actlang'
-import { IBuy, IMic, IRetry, ISell, ISend } from '../components/icons'
+import { IRetry } from '../components/icons'
+import Composer from '../components/Composer'
 import CopyButton from '../components/CopyButton'
 import Dither from '../components/Dither'
 import Thinking from '../components/Thinking'
-import VoiceBar from '../components/VoiceBar'
 import { useToast } from '../components/Toast'
 import { useApi } from '../hooks/useApi'
 import { useAssessment } from '../hooks/useAssessment'
 import { useKycGate } from '../hooks/useKycGate'
-import { NEW_ORDER, go } from '../hooks/useRoute'
-import { IFlytekStreamer, VoiceError, type VoiceFailure } from '../services/iflytek'
+import { NEW_ORDER, OPEN_DESK, go, isDeskOpen, setDeskOpen } from '../hooks/useRoute'
 import type { MatchCandidate } from '../api/types'
-
-/** 语音起不来的几种原因，各自能做的事不同——所以不共用一句话。 */
-const VOICE_MSG: Record<VoiceFailure, string> = {
-  insecure: 'Voice needs a secure page — open this over HTTPS or on localhost',
-  unsupported: 'This browser cannot record audio — try Chrome',
-  denied: 'Microphone access was refused — allow it in the address bar and try again',
-  'no-token': 'Voice is not switched on for this server',
-  service: 'The voice service refused the request',
-  network: 'Lost connection to the voice service',
-}
 
 /**
  * 首页 = 一张空台面加一句问话。
@@ -38,13 +27,6 @@ const a0 = (a: { coin: string } | null) => a?.coin ?? 'USDT'
 const clock = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 
-/** 把说的接在打的后面。已经有空白结尾就不再补一个，不然会越接越松。 */
-const join = (had: string, said: string) => {
-  if (!had) return said
-  if (!said) return had
-  return /\s$/.test(had) ? had + said : had + ' ' + said
-}
-
 export default function Home({ identity }: { identity: string; onNeedSignIn?: () => void }) {
   const [text, setText] = useState('')
   const [act, setAct] = useState<Act | null>(null)
@@ -52,15 +34,6 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   const [err, setErr] = useState('')
   const [cands, setCands] = useState<MatchCandidate[]>([])
   const [chosen, setChosen] = useState<MatchCandidate | null>(null)
-  /* 语音：mic 是「正在听」，同时驱动按钮的 .on 和 aria-pressed。
-     streamer 放 ref 不放 state——它不参与渲染，进 state 只会让每一帧
-     音频回调都触发一次重绘。 */
-  const [mic, setMic] = useState(false)
-  const voice = useRef<IFlytekStreamer | null>(null)
-  /* before：开录那一刻的输入框内容，× 要退回到这里。
-     dropped：这次已经被取消了，之后再回来的识别结果一律丢掉。 */
-  const before = useRef('')
-  const dropped = useRef(false)
 
   /* Atara AI 这条对话。chat 是已经定稿的消息，streaming 是正在长出来的那一段——
      分开存是因为后者每收到几个字就要重画一次，混进 chat 会让整段列表跟着重渲染。
@@ -99,6 +72,23 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
 
+  /* 屏幕上收起了前面多少条。0 = 全都显示。
+   *
+   * 「New order」按字面意思是开一张新台面，可这条对话是持久化的——只要跟
+   * Atara AI 说过一句话，屏幕上就永远挂着那串消息，那颗按钮点下去什么也
+   * 不会变。所以这里把已有的那些**从屏幕上**收起来，不是删：服务端那份
+   * 一直在，Chats 里的 Atara AI 点回来就全看得到（侧栏那条注释说的就是
+   * 这条退路，只是当时对话还只活在一次会话里，不需要专门收）。
+   *
+   * 记条数而不是记一个布尔：收起之后新说的话要照常出现在屏幕上，
+   * 而它们和历史在同一个数组里。 */
+  const [folded, setFolded] = useState(0)
+  /* fresh 不能依赖 chat——它挂在一个 mount 就跑的 effect 上，
+     进 deps 会变成每来一条消息就重置一次台面。 */
+  const chatLen = useRef(0)
+  chatLen.current = chat.length
+  const shown = folded ? chat.slice(folded) : chat
+
   /* 新内容到了就跟到底（前提是用户还在底部）。流式回答每来一段都会触发，
      所以不能用 smooth——那会让滚动永远追不上正在生成的文字。 */
   useEffect(() => { if (stick.current) toBottom(false) }, [chat.length, streaming])
@@ -128,6 +118,10 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     /* 已经开始说话了就不接管。历史是在挂载时拉的，要是这期间用户已经发出
        一句，拿历史整个覆盖会把那句吞掉（服务端那份还没回来）。 */
     setChat(c => (c.length ? c : past))
+    /* 默认收起：首页就是「新建一单」那张台面，对话是从 Chats 里的 Atara AI
+       走进来才展开的。不收的话，只要跟它说过一句话，「你想结算什么」那句
+       空态标题就再也不出现——而那正是这个页面的起点。 */
+    setFolded(isDeskOpen() ? 0 : past.length)
     requestAnimationFrame(() => toBottom(false))
   }, [hist, identity])
 
@@ -149,16 +143,28 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     setCands([])
     setChosen(null)
     setErr('')
+    /* 只收屏幕，不碰 isDeskOpen：那个标志归侧栏所有（它在 Home 挂载之前就
+       表过态了）。这里跟着改的话，从 Chats 点进来的那一下会被 mount 时的
+       这次调用抹掉——刚说要看对话，转头又被收起来。 */
+    setFolded(chatLen.current)
   }, [reset])
 
   /* 两个入口都要堵：
      —— 从别处走进首页（组件重挂），
      —— 人已经在首页时点 New order（路由不变、不重挂，只有事件能通知到）。 */
+  /* 展开回来。Chats 里的 Atara AI 和 New order 都落在 #/home，路由分不开
+     它们，所以各喊各的信号。 */
+  const openDesk = useCallback(() => { setDeskOpen(true); setFolded(0) }, [])
+
   useEffect(() => {
     fresh()
     addEventListener(NEW_ORDER, fresh)
-    return () => removeEventListener(NEW_ORDER, fresh)
-  }, [fresh])
+    addEventListener(OPEN_DESK, openDesk)
+    return () => {
+      removeEventListener(NEW_ORDER, fresh)
+      removeEventListener(OPEN_DESK, openDesk)
+    }
+  }, [fresh, openDesk])
   const kyc = useKycGate()
   const { data: cdata } = useApi(() => ep.contacts(identity), [identity])
   const contacts = cdata?.contacts ?? []
@@ -174,7 +180,8 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     setAct(a => (a && a.k === k && !a.auto ? null : { ...blank(k), auto: false }))
   }
 
-  /** 边打字边填句。清空输入就把自动开出来的句子收起。 */
+  /** 边打字边填句。清空输入就把自动开出来的句子收起。
+      语音转写也走这里：说出来的和打出来的同一条路，下面那排胶囊才会跟着长。 */
   const onType = (q: string) => {
     setText(q)
     setErr('')
@@ -199,60 +206,9 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     })
   }
 
-  /**
-   * 麦克风开关。
-   *
-   * 转写出来的文字走 onType 而不是 setText——说出来的和打出来的走同一条路，
-   * 下面那排胶囊才会跟着长出来。语音要是绕开它，同一句话打出来有反应、
-   * 说出来没有。
-   */
-  const toggleMic = async () => {
-    if (voice.current) { voice.current.stop(); return }
-
-    /* 开录前把输入框存一份。× 的语义是「当我没说过」——边说边写的界面里，
-       不把文字退回去的取消等于什么都没取消。 */
-    before.current = text
-    dropped.current = false
-
-    const s = new IFlytekStreamer({ language: 'zh_cn' })
-    /* 接在原文后面，不是覆盖整个框。覆盖有两处会咬人：框里本来打了半句的
-       会被说话吞掉；而讯飞那一包识别为空时（停录瞬间常有），整个框会被清空。
-       接着写则两种情况都退化成「原文没动」。
-       点了 × 之后讯飞还会把最后一包发回来，dropped 挡住它飘回输入框。 */
-    s.onResult(r => { if (!dropped.current) onType(join(before.current, r.text)) })
-    s.onError(e => setErr(VOICE_MSG[e.kind]))
-    /* onStop 是唯一的回到 idle 的路径：用户点停、讯飞判定说完、出错，
-       三条最后都汇到这里，界面状态只在一个地方改。 */
-    s.onStop(() => { voice.current = null; setMic(false) })
-
-    voice.current = s
-    setMic(true)
-    setErr('')
-    try {
-      await s.start(() => ep.iflytekToken(identity))
-    } catch (e) {
-      /* start 抛出时 onStop 还没接上音频管线，得自己收尾。 */
-      voice.current = null
-      setMic(false)
-      setErr(e instanceof VoiceError ? VOICE_MSG[e.kind] : 'Could not start voice input')
-    }
-  }
-
-  /** × 丢弃这次录音，输入框退回开录前。 */
-  const cancelMic = () => {
-    dropped.current = true
-    voice.current?.stop()
-    onType(before.current)
-    setErr('')
-  }
-
-  /* 离开首页时把麦克风关掉，顺手掐掉还在生成的回答。
-     麦克风留着的话标签页上那个录音红点会一直亮；回答留着的话，没人看的字
-     还在一段一段地生成，而每一段都在花钱。 */
-  useEffect(() => () => {
-    voice.current?.stop()
-    deskAbort.current?.abort()
-  }, [])
+  /* 离开首页时掐掉还在生成的回答。没人看的字还在一段一段地生成，每一段都在花钱。
+     麦克风由 Composer 自己在卸载时关掉。 */
+  useEffect(() => () => { deskAbort.current?.abort() }, [])
 
   /**
    * 把一句话发给 Atara AI，边收边显示。
@@ -351,7 +307,7 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
       <div id="log" ref={log}>
         {/* 和 Atara AI 的对话。和准入那块同一条流——它们本来就是同一个台面上
             的两种消息：那边是流程播报，这边是你问它答。 */}
-        {chat.map(m => (
+        {shown.map(m => (
           <div key={m.id} className={'msg ' + m.author}>
             {m.author === 'me' ? (
               <>
@@ -431,7 +387,7 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
             条件里必须带上对话：不带的话，没开准入向导就直接开聊的人，会在
             自己那串消息**下面**看到一句「你想结算什么」——台面上明明已经有
             东西了，它还在问你要不要开始。 */}
-        {run ? <Thinking /> : (!cands.length && !kyc.maker && !chat.length && streaming === null &&
+        {run ? <Thinking /> : (!cands.length && !kyc.maker && !shown.length && streaming === null &&
           <div id="empty"><h3>What would you like to settle?</h3></div>)}
         {err ? <p className="roempty" style={{ textAlign: 'center' }}>{err}</p> : null}
         {/* 准入整块排在对话最后，不按时间混进消息流。
@@ -455,63 +411,30 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
             {kyc.maker}
           </>
         ) : null}
-        {kyc.progress}
       </div>
 
-      <div id="say" className={act ? 'actopen' : ''}>
-        <div id="actions" role="group" aria-label="Actions">
-          <button className={'act' + (act?.k === 'buy' ? ' on' : '')} onClick={() => toggle('buy')}>
-            <span className="acti"><IBuy /></span>Buy
-          </button>
-          <button className={'act' + (act?.k === 'sell' ? ' on' : '')} onClick={() => toggle('sell')}>
-            <span className="acti"><ISell /></span>Sell
-          </button>
-        </div>
-        <div className="sayrow">
-          {act && (
-            <ActionBar act={act} onChange={setAct} onClose={() => setAct(null)}
-              contacts={contacts} />
-          )}
-          <textarea id="free" rows={1} aria-label="Describe a payment"
-            value={text}
-            onChange={e => onType(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit() }
-            }}
-            /* 在 Atara AI 这条对话里，输入框问的是这条对话的事——参照的
-               setPlaceholder() 就是按当前线程换这句话的。 */
-            placeholder={kyc.maker
-              ? 'Message Atara AI — ask about the account, timing or documents'
-              : 'Describe a trade — try “Buy 5,000 USDT with CNY” or “Sell 2,000 USDT for HKD”'} />
-          <div className="saytools">
-            {/* 录音中整条工具行换成波形胶囊：正在录的时候，能做的事只有
-                「丢掉」和「说完了」——把麦克风和发送留在那里只是多两个
-                此刻按了会出错的东西。 */}
-            {mic && voice.current ? (
-              <VoiceBar streamer={voice.current} onCancel={cancelMic}
-                onConfirm={() => voice.current?.stop()} />
-            ) : (
-              <>
-                {/* 附件按钮按产品要求隐藏：它在参照里会走一段文档识别的演示，
-                    我们这边没有对应实现，留一个点了没反应的按钮不如不给。 */}
-                <button className="sayic" title="Voice" aria-label="Voice"
-                  aria-pressed={false} onClick={() => void toggleMic()}><IMic /></button>
-                {/* 正在生成时发送键变成停止键。占同一个位置：那一刻唯一
-                    该做的事就是叫停，再摆一颗按不了的发送键只是占地方。 */}
-                {streaming !== null ? (
-                  <button id="send" className="stopping" title="Stop generating"
-                    aria-label="Stop generating" onClick={stopAsk}>
-                    <span className="stopsq" aria-hidden />
-                  </button>
-                ) : (
-                  <button id="send" title="Compose (Enter)" aria-label="Compose"
-                    disabled={busy || (!act && !text.trim())} onClick={() => void submit()}><ISend /></button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+      <Composer
+        identity={identity}
+        text={text}
+        onChange={onType}
+        ariaLabel="Describe a payment"
+        placeholder={kyc.maker
+          ? 'Message Atara AI — ask about the account, timing or documents'
+          : 'Describe a trade — try “Buy 5,000 USDT with CNY” or “Sell 2,000 USDT for HKD”'}
+        actOn={act?.k ?? null}
+        onToggle={toggle}
+        panel={act ? (
+          <ActionBar act={act} onChange={setAct} onClose={() => setAct(null)}
+            contacts={contacts} />
+        ) : null}
+        busy={busy}
+        onSubmit={() => void submit()}
+        sendTitle="Compose (Enter)"
+        sendLabel="Compose"
+        streaming={streaming !== null}
+        onStop={stopAsk}
+        onVoiceError={setErr}
+      />
     </div>
   )
 }

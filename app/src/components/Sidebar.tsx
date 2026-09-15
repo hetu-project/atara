@@ -6,7 +6,7 @@ import Avatar from './Avatar'
 import { IApi, IChart, IContacts, IDiscover, IGear, IGo, ILock, INewOrder, IPanel, IPayments } from './icons'
 import { useKycGate } from '../hooks/useKycGate'
 import type { Icon } from './icons'
-import { NEW_ORDER, type Route } from '../hooks/useRoute'
+import { NEW_ORDER, OPEN_DESK, setDeskOpen, type Route } from '../hooks/useRoute'
 
 /** 导航四项 + 两条外链，顺序与 console.html 一致。 */
 const NAVS: { view: Route['view']; label: string; icon: Icon }[] = [
@@ -108,6 +108,10 @@ export default function Sidebar({
                      Home 不重挂——上一单的评估痕迹就会一直留在新台面上。 */
                   if (n.view === 'home') {
                     kyc.closeMaker()
+                    /* 两个都要：变量管「首页还没挂载」那条路（从别的视图点过来，
+                       事件发出去时监听器还不存在，直接丢），事件管「人已经在
+                       首页」那条路（路由不变，不重挂，只有事件通知得到）。 */
+                    setDeskOpen(false)
                     dispatchEvent(new CustomEvent(NEW_ORDER))
                   }
                   go({ view: n.view } as Route)
@@ -142,7 +146,14 @@ export default function Sidebar({
               流程走完就找不回去了，「我的申请审到哪了」没有入口。 */}
           {signed && (
             <button className={'cp chatrow' + (route.view === 'home' ? ' on' : '')} title="Atara AI"
-              onClick={() => { go({ view: 'home' }); kyc.openMaker() }}>
+              onClick={() => {
+                /* 和 New order 相反的一下：这条入口就是「我要看那条对话」。
+                   同样两个都发，理由见上面那条注释。 */
+                setDeskOpen(true)
+                dispatchEvent(new CustomEvent(OPEN_DESK))
+                go({ view: 'home' })
+                kyc.openMaker()
+              }}>
               <span className="cpav deskav" aria-hidden><i /></span>
               {/* 参照里这一行只有名字。别的会话那行小字是「最后一条消息」，
                   这里塞一句固定副标题会把名字挤到截断。 */}

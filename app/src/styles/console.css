@@ -263,7 +263,14 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
    一半是你在跟谁谈，一半是机器替你查到了什么。
    下限 420 保证证据条两列排得开；上限 820 免得超宽屏上一条流水拉成一行字。 */
 main{position:relative;display:grid;
-  grid-template-columns:var(--lw) minmax(0,1fr) minmax(0,1fr);
+  /* 右栏列宽抽成 --rw，是为了让用户能拖：拖动时 PanelGrip 往 main 上写一个
+     px 值，别处（包括下面两条 media query）都只改这一个变量，不再各写一份
+     grid-template-columns——写全式的话内联变量压不过它们，拖出来的宽度在
+     1440 以下会莫名其妙地不生效。
+     --rwout 是收起态的对应写法，必须跟 --rw 成对：见下面那段关于同构的注释。 */
+  --rw:minmax(0,1fr);
+  --rwout:minmax(0,0fr);
+  grid-template-columns:var(--lw) minmax(0,1fr) var(--rw);
   grid-template-rows:minmax(0,1fr);
   height:100%;min-height:0;overflow:hidden;--lw:268px;
   /* 收起/展开走动画，右栏是滑出去的，不是啪地消失。
@@ -273,12 +280,12 @@ main{position:relative;display:grid;
      同一条也让左栏折叠（--lw 268→68）跟着有了过渡，那边本来也是硬切。 */
   transition:grid-template-columns var(--dur-panel) var(--ease);
   --dur-panel:340ms}
-main.rout,main.rfold{grid-template-columns:var(--lw) minmax(0,1fr) minmax(0,0fr)}
+main.rout,main.rfold{grid-template-columns:var(--lw) minmax(0,1fr) var(--rwout)}
 @media (prefers-reduced-motion:reduce){main{transition:none}}
 main.lout{--lw:68px}
 /* 窄屏先让中栏活下来——对话比旁观机器干活重要 */
-@media (max-width:1440px){main{grid-template-columns:var(--lw) minmax(0,1fr) minmax(0,1.08fr)}}
-@media (max-width:1240px){main{grid-template-columns:var(--lw) minmax(0,1fr) 360px}}
+@media (max-width:1440px){main{--rw:minmax(0,1.08fr)}}
+@media (max-width:1240px){main{--rw:360px}}
 /* 面板保持自身宽度，列宽归零时向右滑出被 main 裁掉——比压缩内容干净。
    visibility 是兜底：列宽动画在部分浏览器不支持，但收起后必须真的不可见、不可点 */
 #right{width:100%;max-width:1040px;justify-self:end;
@@ -1445,34 +1452,13 @@ a.dspx{color:#d0574d}
 .msg.me .rcpt .sfsum dd{color:#fff}
 .msg .rgo{display:block;margin-top:10px}
 
-/* ── 准入三段进度 ──────────────────────────────────────
-   三段只有走在里面的人看不见全貌。摆在对话最前面，方位这件事就不用再解释。
-   done / now / review / wait 四态，review（在等我们审）必须跟 now（等你动手）
-   长得不一样——否则等审核的人会一直去戳一个戳不动的东西。 */
-.mksteps{display:flex;align-items:center;gap:9px;flex-wrap:wrap;
-  list-style:none;margin:0;padding:0}
-.mkstep{display:inline-flex;align-items:center;gap:7px;
-  font-size:12.5px;color:var(--faint)}
-.mkstep+.mkstep::before{content:'';flex:none;width:16px;height:1px;
-  margin-right:2px;background:var(--line-strong)}
-.mkstep b{font-weight:500}
-.mkstep i{font-style:normal;font-size:11px;color:var(--warn)}
-.mkdot{display:grid;place-items:center;flex:none;width:18px;height:18px;
-  border-radius:50%;font-size:10.5px;font-weight:600;line-height:1;
-  border:1px solid var(--line-strong);background:var(--paper);color:var(--faint)}
-.mkstep.done{color:var(--mute)}
-.mkstep.done .mkdot{background:var(--green);border-color:var(--green);color:#fff}
-.mkstep.now{color:var(--ink)}
-.mkstep.now .mkdot{background:var(--blue);border-color:var(--blue);color:#fff}
-.mkstep.review{color:var(--warn)}
-.mkstep.review .mkdot{background:var(--warn-wash);border-color:var(--warn);color:var(--warn)}
+/* ── 打回那条消息 ──────────────────────────────────────
+   它是一条要人动手的消息，所以标题实、评语正常字重、末尾一句说清
+   「表就在下面，不用重填」——被打回的人第一反应是「我是不是得从头再来」。 */
+.mkrevh{display:block;margin-bottom:5px}
+.mkrevb{display:block;white-space:pre-wrap}
+.mkrevf{display:block;margin-top:7px;font-size:12px;color:var(--faint)}
 
-/* 只报位置，不带动作——动作在上面那条消息里。 */
-.mkprog{display:flex;align-items:center;margin:10px 0 2px;padding:9px 13px;
-  border:1px solid var(--hairline);border-radius:var(--r-control);
-  background:var(--canvas);animation:agfadeup .22s var(--ease) both}
-.mkprog .mksteps{flex:1;min-width:0;margin:0}
-@media (prefers-reduced-motion:reduce){.mkprog{animation:none}}
 /* 托管卡 v2：状态行 + 执行轨道 + 撤销脚注 */
 .esc2{flex-direction:column;align-items:stretch;gap:10px}
 .erow{display:flex;align-items:center;gap:10px}
@@ -2002,7 +1988,31 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .tcard .amt{margin-left:auto;color:var(--ink);font-weight:600}
 
 /* ── 右栏 · 上：球在谁手里；下：我给出的授权规则 ── */
-#right{border-left:1px solid var(--hairline);background:var(--paper);display:flex;flex-direction:column;min-height:0}
+/* position:relative 是给拖拽把手当定位参照的——把手要贴在这条 border-left 上，
+   而那条缝在超宽屏上并不等于第三条 track 的左边界（#right 有 max-width + 
+   justify-self:end，宽到一定程度它左边是留白）。栏里原有的绝对定位元素
+   （.afrow / .afhop / .arstep / .agcav / .thkin 的子元素）各自都有 relative 的
+   父级，不会被这一条接管。 */
+#right{position:relative;border-left:1px solid var(--hairline);background:var(--paper);display:flex;flex-direction:column;min-height:0}
+
+/* ══ 右栏拖拽把手 ══
+   贴在 #right 的 border-left 上。平时不露面——那条边框已经是缝了，再画一条
+   就是把同一件事说两遍；指上去才亮出来，告诉你这儿能抓。
+   宽 9px 而边框只有 1px：1px 的命中区谁也抓不住，往左探 4px 是让光标在缝的
+   两侧都能拿到它。 */
+.rgrip{position:absolute;left:-4px;top:0;bottom:0;width:9px;z-index:12;
+  cursor:col-resize;
+  /* 触屏上不写这一条，按下去会被当成滚动手势，拖不动 */
+  touch-action:none}
+.rgrip::after{content:'';position:absolute;left:3px;top:0;bottom:0;width:3px;
+  background:var(--accent);opacity:0;
+  transition:opacity var(--dur-fast) var(--ease)}
+.rgrip:hover::after,.rgrip:focus-visible::after,main.rdrag .rgrip::after{opacity:1}
+.rgrip:focus-visible{outline:none}
+/* 拖动期间：列宽的过渡要关（否则面板慢光标 340ms），整页禁选（否则一拖就
+   选中一片文字），光标锁成 col-resize（否则划过正文会变成 I 形）。 */
+main.rdrag{transition:none;cursor:col-resize;user-select:none}
+@media (max-width:1240px){.rgrip{display:none}}
 
 /* ══ 右栏字号阶梯 ══
    之前这一栏有 21 种 字号/字重 组合（7.5–15.5px，同一字号跨三种字重），

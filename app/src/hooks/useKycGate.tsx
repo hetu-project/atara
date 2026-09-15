@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import * as ep from '../api/endpoints'
-import MakerThread, { MakerProgress } from '../components/MakerThread'
+import MakerThread from '../components/MakerThread'
 import type { MakerApp } from '../api/types'
 import { useApi } from './useApi'
 import { go } from './useRoute'
@@ -22,15 +22,6 @@ interface Ctx {
    * 那一份会一直停在「审核中」。 */
   app: MakerApp | null
   /**
-   * 三段进度条，挂在对话最后一条。
-   *
-   * 准入卡是写死排在会话最前面的，跟 AI 聊几句，那颗「下一段」的按钮就
-   * 滚出了屏幕——而它是这条路上唯一要动手的地方。找不到的操作等于不存在
-   * 的操作。所以位置和动作合成一条、排在整条对话的末尾：新消息进来它仍然
-   * 在最后，不会再被顶上去。
-   */
-  progress: React.ReactNode | null
-  /**
    * 准入向导那张卡。参照里它不是弹窗，是挂在 Atara AI 会话里的一张卡片
    * （console.html 的 paintMaker），所以由首页把它渲染进对话区，
    * 而不是在这里盖一层 overlay。
@@ -39,7 +30,7 @@ interface Ctx {
 }
 const KycCtx = createContext<Ctx>({
   require: () => false, openMaker: () => {}, closeMaker: () => {},
-  kycOk: false, kycPending: false, app: null, progress: null, maker: null,
+  kycOk: false, kycPending: false, app: null, maker: null,
 })
 export const useKycGate = () => useContext(KycCtx)
 
@@ -119,9 +110,6 @@ export function KycProvider({ identity, children }: { identity: string; children
     kycOk: !!app?.kyc_ok,
     kycPending: !!app?.kyc_done && !app?.kyc_ok,
     app: app ?? null,
-    progress: showMaker
-      ? <MakerProgress app={app ?? null} listed={!!listed} from={why} />
-      : null,
     maker: showMaker ? (
       /* 提交后不关：往下追加回执、审核中、通过几条消息。直接关掉的话
          界面一片空白，人会以为没提交成功。 */

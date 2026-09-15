@@ -119,9 +119,14 @@ function MakerCta() {
   /* 用门那一份，不自己再拉一遍：放行是后端隔几秒改的，只有门那份在轮询。
      自己拉的那份没人再问它，通过之后按钮会一直停在「Under review…」。 */
   const { app, ...kyc } = useKycGate()
+  /* 被打回的那一段，球在用户手里。这一格原来会落进「审核中」——打回之后
+     `*_done` 不再清零，不单独认它的话，等着他去改的东西会显示成
+     「我们还在审」，而那正是这次要消灭的那种误导。 */
+  const revise = !!app?.reject_reason && !app?.approved
   const label = app?.approved ? 'Post a listing →'
-    : (app?.listing_done || (app?.kyc_done && !app.kyc_ok)) ? 'Under review…'
-    : 'Become a maker →'
+    : revise ? 'Changes requested →'
+      : (app?.listing_done || (app?.kyc_done && !app.kyc_ok)) ? 'Under review…'
+        : 'Become a maker →'
   const busy = label === 'Under review…'
   return (
     <button className="lnk" style={{ opacity: busy ? 0.6 : 1 }}
@@ -212,8 +217,13 @@ function OfferCard({
         {/* 信任分是选谁交易的第一判断依据。
             没成交过就没有分——不是 0 分。摆一个 0 出来，读的人看到的是
             「这家评分很低」，而实际是「还没有可评的东西」，那是两回事，
-            而且前者会让新做市方永远接不到第一单。 */}
-        {scored ? (
+            而且前者会让新做市方永远接不到第一单。
+
+            没有分的时候这个角落就空着，不摆占位符：下面那行
+            「New merchant — history builds as trades settle」已经把这件事
+            说清楚了，再摆一个空心环等于同一张卡上讲两遍，而且占的是右上角
+            最重的位置。有环 / 没环本身就是「有没有成交历史」最直接的信号。 */}
+        {scored && (
           <span className={'od-ai ' + (m.trust_score >= 85 ? 'hi' : m.trust_score < 70 ? 'lo' : '')}
             style={{ ['--p' as string]: m.trust_score }}
             title="AI risk score — priced from settlement history, fund provenance and dispute record">
@@ -225,17 +235,6 @@ function OfferCard({
               <b className="num">{m.trust_score}</b>
             </span>
             <em>AI score</em>
-          </span>
-        ) : (
-          <span className="od-ai" style={{ ['--p' as string]: 0 }}
-            title="No score yet — a score is a claim about settlement history, and there is none">
-            <span className="od-ring">
-              <svg viewBox="0 0 44 44" aria-hidden>
-                <circle className="trk" cx="22" cy="22" r="18" />
-              </svg>
-              <b>—</b>
-            </span>
-            <em>No score</em>
           </span>
         )}
       </div>

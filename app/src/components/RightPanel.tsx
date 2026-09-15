@@ -6,6 +6,7 @@ import { IPanel } from './icons'
 import { Constellation, Ring } from './Ring'
 import { RISK_AGENTS, agentGlyph } from './agents'
 import AgentProfile from './AgentProfile'
+import PanelGrip from './PanelGrip'
 import { useAssessment } from '../hooks/useAssessment'
 import type { Run } from '../hooks/useAssessment'
 import type { Order } from '../api/types'
@@ -28,6 +29,10 @@ export default function RightPanel({
 }: { identity: string; onOpen: (o: Order) => void; onFold: () => void }) {
   return (
     <aside id="right" className="lay-b" aria-label="Assessment and agent status">
+      {/* 把手贴在这一栏的 border-left 上。放在栏里而不是放在 main 里，是因为
+          收起、未登录这两种状态下右栏的 pointer-events/display 已经把它一起
+          关掉了——放外面就得再写两条规则去追同一件事。 */}
+      <PanelGrip />
       <div className="rgrid" id="rgrid">
         {/* DOM 顺序无所谓：grid-area 指定位置。
             lay-b 下 Assessment 吃掉 Agent status（后者 display:none），

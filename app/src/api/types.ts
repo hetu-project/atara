@@ -432,6 +432,13 @@ export interface KycStatus {
   concluded_at?: string
   /** 这台机器配没配 ID Analyzer。没配时要照实说，不能摆一颗按不动的按钮。 */
   configured: boolean
+  /**
+   * 这一步是模拟的（后端 ATARA_KYC=false）。
+   *
+   * 必须在界面上显式说出来：一个「已通过」的绿勾背后是真核验还是本地开关，
+   * 看的人有权知道——藏起来的话，谁截个图就能拿去当作「我们验过了」。
+   */
+  simulated?: boolean
 }
 
 /** 开一次核验会话拿到的东西。API key 不在里面，也永远不会在里面。 */

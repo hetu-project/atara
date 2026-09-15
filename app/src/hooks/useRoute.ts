@@ -53,6 +53,24 @@ function parse(): Route {
  */
 export const NEW_ORDER = 'atara:new-order'
 
+/**
+ * 「把 Atara AI 那条对话打开」的信号。
+ *
+ * 和 NEW_ORDER 是一对：两个入口都落在 #/home，路由分不开它们，只能各喊各的。
+ * New order 收起已有的对话开一张新台面，Chats 里的 Atara AI 把它展开回来——
+ * 收起的只是屏幕，服务端那份历史一直都在。
+ */
+export const OPEN_DESK = 'atara:open-desk'
+
+/* 进首页时要不要展开那条对话。
+ *
+ * 放模块变量而不是 React state：两个入口都要在 Home 还**没挂载**的时候
+ * 就表态——从别的视图点 New order，事件发出去那一刻首页还不存在，监听器
+ * 收不到。事件只解决「人已经在首页」那一半，这个变量解决另一半。 */
+let deskOpen = false
+export const setDeskOpen = (v: boolean): void => { deskOpen = v }
+export const isDeskOpen = (): boolean => deskOpen
+
 export function go(r: Route): void {
   location.hash =
     r.view === 'order' ? `/order/${r.id}`

@@ -103,6 +103,7 @@ export default function IdCheck({
   }
 
   const st = status?.state ?? 'none'
+  const sim = !!status?.simulated
 
   if (st === 'accept') return <Verified status={status!} />
 
@@ -131,18 +132,29 @@ export default function IdCheck({
 
   return (
     <div className="idck">
-      <p className="sfnote">
-        {st === 'pending'
-          ? 'Verification is in progress. Finish it in the window that opened, or start over.'
-          : 'Photograph your ID and take a short selfie. The capture runs on ID Analyzer — your images do not pass through Atara.'}
-      </p>
-      {/* 走完之后这里不说「已通过」——那句话得后端说。 */}
-      {watching && <p className="sfnote">Waiting for the result…</p>}
+      {/* 模拟模式先把话说在前面：这一步不会验任何东西。
+          放在按钮上方而不是下方——说明要在动作之前读到才有用。 */}
+      {sim ? (
+        <Banner tone="warn" title="Identity checks are switched off on this server"
+          note="Nothing will be verified — this passes the step with a placeholder document. Local development only." />
+      ) : (
+        <p className="sfnote">
+          {st === 'pending'
+            ? 'Verification is in progress. Finish it in the window that opened, or start over.'
+            : 'Photograph your ID and take a short selfie. The capture runs on ID Analyzer — your images do not pass through Atara.'}
+        </p>
+      )}
+      {/* 走完之后这里不说「已通过」——那句话得后端说。
+          模拟模式没有「等结果」这回事：后端当场就落了结论。 */}
+      {watching && !sim && <p className="sfnote">Waiting for the result…</p>}
       <button className="btn btn-primary" disabled={busy} onClick={() => void start()}>
-        {busy ? 'Opening…' : st === 'pending' ? 'Start over' : 'Verify my identity'}
+        {busy ? 'Opening…'
+          : sim ? 'Skip verification'
+            : st === 'pending' ? 'Start over' : 'Verify my identity'}
       </button>
       {err ? <p className="sfnote bad">{err}</p> : null}
-      {sess && <DocuPassSheet sess={sess} onClose={() => setSess(null)} />}
+      {/* 模拟会话没有 URL，弹出来是一张空白页。 */}
+      {sess?.url && <DocuPassSheet sess={sess} onClose={() => setSess(null)} />}
     </div>
   )
 }
@@ -196,6 +208,9 @@ function DocuPassSheet({ sess, onClose }: { sess: KycSession; onClose: () => voi
 /** 通过之后显示证件上读出来的那几项——用户不用再手打一遍。 */
 function Verified({ status }: { status: KycStatus }) {
   const id = status.identity
+  /* 模拟出来的「已通过」必须带着标签活下去，不只是在点的那一刻说一句。
+     这张卡是之后一直看得到的那一张——标在这里，任何时候看都知道它的来历。 */
+  const sim = !!status.simulated
   const name = [id?.first_name, id?.last_name].filter(Boolean).join(' ') || id?.full_name
   const rows: [string, string | undefined][] = [
     ['Name', name],
@@ -206,6 +221,10 @@ function Verified({ status }: { status: KycStatus }) {
   ]
   return (
     <div className="idck">
+      {sim ? (
+        <Banner tone="warn" title="Simulated — nothing was verified"
+          note="Identity checks are switched off on this server (ATARA_KYC=false)." />
+      ) : null}
       <Banner tone="ok" title="Identity verified"
         note="Read from your document — nothing here was typed in." />
       <div className="idkv">

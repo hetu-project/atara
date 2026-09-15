@@ -19,20 +19,37 @@ import { ListingStep, badListingField, blankListing, type Listing } from './Make
  * 弹窗，关掉它等于把刚说过的话删了。
  */
 export default function MakerFlow({
-  phase, identity, onSubmitted, onBackOut,
+  phase, identity, initial, onSubmitted, onBackOut,
 }: {
   phase: 'kyc' | 'listing'
   identity: string
+  /** 上次交上来的那份。被打回时表要带着原内容重开——让人对着评语改，
+      而不是从头再填一遍九步。没有上一次就是 undefined。 */
+  initial?: Record<string, unknown>
   /** 提交成功。form 交回去是给回执用的——那张「查看提交内容」要照着它画。 */
   onSubmitted: (phase: 'kyc' | 'listing', form: Record<string, unknown>) => void
   /** 交易条款第一步的返回。参照那颗箭头退回身份表单，我们这边身份已经交了、
       表单不在了，所以退回对话——「先不弄」是个真实的意图，得有地方去。 */
   onBackOut?: () => void
 }) {
-  const [kind, setKind] = useState<'Individual' | 'Corporate'>('Individual')
+  /* 初值从上次那份里拆出来。提交时 kyc 段发的是 { kind, ...form }，
+     所以 kind 要单独挑出来，剩下的才是表单字段本身。
+     惰性初始化（useState(() => …)）而不是 useEffect 回填：回填会让表先
+     空着渲染一帧再跳成有值的，九步表单那一跳很显眼。 */
+  const [kind, setKind] = useState<'Individual' | 'Corporate'>(
+    () => (initial?.kind === 'Corporate' ? 'Corporate' : 'Individual'),
+  )
   const [step, setStep] = useState(0)
-  const [form, setForm] = useState<Record<string, string | string[]>>({})
-  const [lst, setLst] = useState<Listing>(blankListing)
+  const [form, setForm] = useState<Record<string, string | string[]>>(() => {
+    if (phase !== 'kyc' || !initial) return {}
+    const { kind: _k, ...rest } = initial
+    return rest as Record<string, string | string[]>
+  })
+  const [lst, setLst] = useState<Listing>(
+    () => (phase === 'listing' && initial
+      ? { ...blankListing(), ...(initial as unknown as Listing) }
+      : blankListing()),
+  )
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   /* 出错的是哪一行。参照给那个 .sf 加 .bad，让它预置的 .err 显出来——
