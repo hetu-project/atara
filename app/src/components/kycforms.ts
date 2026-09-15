@@ -13,7 +13,12 @@ const F=(k,l,type,extra)=>Object.assign({k,l,type:type||'text'},extra||{});
 
 const KYC_IND=[
  {t:'Account type', lead:'Individuals and companies follow different paths.', fields:[]},
- {t:'Basic profile', lead:'Must match your ID exactly.',              /* 本步全部字段 [抄] */
+ /* 核验放在最前：证件上那些字段（姓名、生日、证件号、有效期）应当是**读出来的**，
+    不是手打的。先验再填，下一步就只剩证件上没有的东西要问。
+    原来这一步叫「ID check」摆在第九步，是三个上传框——那不是核验，那是收图。 */
+ {t:'Identity verification', lead:'A live check against your government ID.',
+  fields:[F('idcheck','Identity verification','idcheck')]},
+ {t:'Basic profile', lead:'Read from your document — check it and fill in the rest.', /* 本步全部字段 [抄] */
   fields:[F('nationality','Nationality','pick',{opts:['China','Hong Kong','Singapore','United States','Other']}),
           F('gender','Gender','pick',{opts:['Male','Female']}),
           F('surname','Last name'), F('firstname','First name'),
@@ -37,9 +42,6 @@ const KYC_IND=[
           F('ustax','US tax resident','pick',{opts:['No','Yes']})]},
  {t:'Signature', lead:'Signing confirms the declarations above.', /* 步骤名 [抄]，字段 [补] */
   fields:[F('sign','Signature','sign')]},
- {t:'ID check', lead:'Upload your ID and complete the liveness check.', /* 步骤名 [抄]，字段 [补] */
-  fields:[F('idfront','ID front','upload'), F('idback','ID back','upload'),
-          F('liveness','Liveness check','upload')]},
 ];
 
 const KYC_CORP=[
@@ -61,7 +63,11 @@ const KYC_CORP=[
   fields:[F('sanction','Subject to sanctions','pick',{opts:['No','Yes']}),
           F('highrisk','Operates in high-risk jurisdictions','pick',{opts:['No','Yes']}),
           F('amlpolicy','Internal AML policy','pick',{opts:['Yes','No']})]},
- {t:'Authorised representative', lead:'Who signs and operates the account.', /* 步骤名 [抄]，字段 [补] */
+ /* 企业主体也要验一个自然人：签字、操作账户的是他。受益人最终必须落到
+    自然人身上，这一步就是那个落点。 */
+ {t:'Identity verification', lead:'The person who signs for the company.',
+  fields:[F('idcheck','Identity verification','idcheck')]},
+ {t:'Authorised representative', lead:'Read from the document above — fill in the rest.', /* 步骤名 [抄]，字段 [补] */
   fields:[F('repname','Name'), F('reptitle','Title'),
           F('repid','ID number'), F('repphone','Phone')]},
  {t:'Directors', lead:'All directors.', /* 步骤名 [抄]，字段 [补] */
@@ -82,7 +88,24 @@ const LISTING_STEPS=[
  {t:'Confirm', lead:'Once approved you can post listings — buying, selling, or both.'},
 ];
 
-export type FieldType = 'text' | 'date' | 'pick' | 'multi' | 'sign' | 'upload'
+/* idcheck 不是一个输入框：它是把人交给 DocuPass 托管流程的那一步，
+   填没填由后端的核验状态说了算，不看这张表单里有没有值。 */
+export type FieldType = 'text' | 'date' | 'pick' | 'multi' | 'sign' | 'idcheck'
+
+/**
+ * 证件上读得出来的字段 → 我们表单里的 key。核验过之后这些不该再手打。
+ *
+ * 选项类（nationality / gender / idtype）也在里面，但只有读出来的值正好是
+ * 我们给的选项之一时才预填——DocuPass 认得的国家和证件类型比我们这张表
+ * 列的多得多。读出来一个「Bermuda」硬塞进只有五项的列表里，要么显示成一个
+ * 选不中的值，要么被悄悄改成「Other」。对不上就留给人自己选。
+ */
+export const VERIFIED_FIELDS: Record<string, keyof import('../api/types').KycIdentity> = {
+  surname: 'last_name', firstname: 'first_name', idno: 'doc_number',
+  birthday: 'dob', idissue: 'issued', iddue: 'expiry',
+  nationality: 'nationality', gender: 'sex', idtype: 'doc_type',
+  repname: 'full_name', repid: 'doc_number',
+}
 export interface Field { k: string; l: string; type: FieldType; opts?: string[] }
 export interface Step { t: string; lead: string; fields: Field[] }
 

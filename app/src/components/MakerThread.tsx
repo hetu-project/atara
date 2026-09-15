@@ -52,12 +52,19 @@ const show = (v: unknown) => {
   return s || '—'
 }
 
-/** 身份材料按步骤分组展开全部字段——记录要全，不是三行摘要。 */
+/**
+ * 身份材料按步骤分组展开全部字段——记录要全，不是三行摘要。
+ *
+ * 核验那一步不在里面：它不是一个填进表单的值，过没过存在 kyc_verifications 里。
+ * 不滤掉的话回执上会多出一行「Identity verification —」，看着像有一项没填。
+ */
 function kycGroups(form: Record<string, unknown>): Group[] {
   const steps = form.kind === 'Corporate' ? KYC_CORP : KYC_IND
   return steps
-    .filter(st => (st.fields ?? []).length)
-    .map(st => [st.t, (st.fields ?? []).map(f => [f.l, show(form[f.k])] as [string, string])])
+    .map(st => [st.t, (st.fields ?? [])
+      .filter(f => f.type !== 'idcheck')
+      .map(f => [f.l, show(form[f.k])] as [string, string])] as Group)
+    .filter(([, rows]) => rows.length)
 }
 
 function Receipt({ groups }: { groups: Group[] }) {

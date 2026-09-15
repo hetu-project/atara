@@ -1,38 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import * as ep from '../api/endpoints'
-import FilePick from './FilePick'
-import { KYC_CORP, KYC_IND, LISTING_STEPS, type Field, type Step } from './kycforms'
+import { useApi } from '../hooks/useApi'
+import IdCheck from './IdCheck'
 import {
-  DEMO_LISTING, ListingStep, badListingField, blankListing, type Listing,
-} from './MakerListing'
-
-/* Demo fill 的样本数据，逐字取自参照。演示时没人愿意手打九步表单——
-   这个按钮不是玩具，它决定了这条流程能不能当着人走完。 */
-/**
- * 这个值是不是一个真的 file_ref。
- *
- * Demo fill 给上传字段塞的是字面量 'Uploaded'——它只是为了让演示能一路点下去，
- * 不是一份真文件。旧的界面把它当文字显示，看不出破绽；但 FilePick 会拿 ref
- * 去拼一个「查看文件」的链接，塞进去就变成一条点开是 404 的链接。
- *
- * 真的 ref 形如 `<uuid>.png`——认扩展名就够，不必把 uuid 也校验一遍。
- */
-const isRef = (v: unknown): v is string => typeof v === 'string' && /\.[a-z0-9]{2,5}$/i.test(v)
-
-const DEMO_TXT: Record<string, string> = {
-  surname: 'Liu', firstname: 'Ellie', idno: 'H12345678', phone: '+852 6123 4567',
-  email: 'demo@atara.example', addr: '12 Harbour Rd, Wan Chai, HK', tin: 'HK-98765432',
-  industry: 'Cross-border trade', employer: 'Self-employed',
-  company: 'Huachuang Trading Ltd', regno: 'CR-2019-88123', street: '12 Harbour Rd',
-  city: 'Hong Kong', province: 'HK', zip: '999077', bizindustry: 'Electronics export',
-  bizscope: 'Component sourcing', mainrev: 'Component resale', repname: 'Ellie Liu',
-  reptitle: 'Director', repid: 'H12345678', repphone: '+852 6123 4567',
-  dirname: 'Ellie Liu', dirid: 'H12345678', ubo: 'Ellie Liu', uboshare: '100',
-  uboid: 'H12345678',
-}
-const DEMO_DATE: Record<string, string> = {
-  idissue: '2019-06-01', iddue: '2031-06-01', birthday: '1992-04-16', estdate: '2019-03-12',
-}
+  KYC_CORP, KYC_IND, LISTING_STEPS, VERIFIED_FIELDS, type Field, type Step,
+} from './kycforms'
+import { ListingStep, badListingField, blankListing, type Listing } from './MakerListing'
 
 
 /**
@@ -66,6 +39,42 @@ export default function MakerFlow({
      错误话说在出错的字段上，不是卡片底下一句泛泛的提示。 */
   const [bad, setBad] = useState('')
 
+  /* 身份核验的状态。只有 kyc 那一段要它——挂单配置跟证件无关。
+     这里不自己轮询：IdCheck 在人真的开了流程之后才让它转，没开之前
+     每几秒问一次后端是白问，而后端每次问都会去上游拉一遍（按次计费）。 */
+  const { data: kyc, reload: reloadKyc } =
+    useApi(() => (phase === 'kyc' ? ep.kycStatus(identity) : Promise.resolve(null)), [identity, phase])
+
+  /* 证件上读出来的那几项写回表单：核验过之后这些不该再手打。
+     写进 form 而不是只在渲染时替换，是因为提交的就是 form——
+     只改显示的话，交上去的还是空的。 */
+  const verified = useMemo(() => {
+    const id = kyc?.state === 'accept' ? kyc.identity : null
+    if (!id) return {}
+    /* 选项类字段要先问一句「这个值在我们的选项里吗」。DocuPass 认得的国家和
+       证件类型比这张表列的多得多——读出来一个不在列表里的值硬塞进去，
+       结果是一行选不中的值，或者被悄悄改成「Other」。 */
+    const opts = new Map<string, string[] | undefined>()
+    for (const st of (kind === 'Corporate' ? KYC_CORP : KYC_IND) as Step[]) {
+      for (const f of st.fields ?? []) {
+        if (f.type === 'pick' || f.type === 'multi') opts.set(f.k, f.opts)
+      }
+    }
+    const out: Record<string, string> = {}
+    for (const [k, src] of Object.entries(VERIFIED_FIELDS)) {
+      const v = id[src]
+      if (typeof v !== 'string' || !v) continue
+      if (opts.has(k) && !(opts.get(k) ?? []).includes(v)) continue
+      out[k] = v
+    }
+    return out
+  }, [kyc, kind])
+
+  useEffect(() => {
+    if (!Object.keys(verified).length) return
+    setForm(f => ({ ...verified, ...f, ...verified }))
+  }, [verified])
+
   const steps: Step[] = phase === 'kyc'
     ? (kind === 'Corporate' ? KYC_CORP : KYC_IND)
     : LISTING_STEPS.map(s => ({ ...s, fields: [] }))
@@ -77,6 +86,12 @@ export default function MakerFlow({
   /** 身份那一段：缺项、日期格式。返回出错字段的 id。 */
   const badKyc = (): string => {
     for (const f of cur?.fields ?? []) {
+      /* 核验那一步过没过由后端说了算。前端记一个「我点过了」再放行，
+         等于把这道门的钥匙交给了任何一个打开控制台的人。 */
+      if (f.type === 'idcheck') {
+        if (kyc?.state !== 'accept') return 'sf-' + f.k
+        continue
+      }
       const v = form[f.k]
       const empty = f.type === 'multi' ? !(Array.isArray(v) && v.length) : !v
       if (empty) return 'sf-' + f.k
@@ -100,23 +115,6 @@ export default function MakerFlow({
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not submit')
     } finally { setBusy(false) }
-  }
-
-  const fill = () => {
-    if (phase === 'listing') { setBad(''); setLst({ ...lst, ...DEMO_LISTING }); return }
-    const next: Record<string, string | string[]> = { ...form }
-    for (const st of steps) {
-      for (const f of st.fields ?? []) {
-        if (next[f.k]) continue
-        if (f.type === 'pick') next[f.k] = f.opts?.[0] ?? ''
-        else if (f.type === 'multi') next[f.k] = f.opts?.[0] ? [f.opts[0]] : []
-        else if (f.type === 'date') next[f.k] = DEMO_DATE[f.k] ?? '2020-01-01'
-        else if (f.type === 'sign') next[f.k] = 'Signed'
-        else if (f.type === 'upload') next[f.k] = 'Uploaded'
-        else next[f.k] = DEMO_TXT[f.k] ?? 'Demo'
-      }
-    }
-    setBad(''); setForm(next)
   }
 
   const tag = phase === 'kyc'
@@ -156,14 +154,27 @@ export default function MakerFlow({
                   <div className="sfchips">
                     {(['Individual', 'Corporate'] as const).map(k => (
                       <button key={k} type="button" className={'sfchip' + (kind === k ? ' on' : '')}
-                        onClick={() => { setKind(k); setForm({}) }}>{k}</button>
+                        /* 换主体类型清空表单：两条路的字段完全不同，留着上一条路
+                           填的东西会串到这一条路的同名字段上。但证件读出来的那几项
+                           不是「填的」——清掉它们，下一步会变回一排要手打的空框。 */
+                        onClick={() => { setKind(k); setForm({ ...verified }) }}>{k}</button>
                     ))}
                   </div>
                 </div>
               )}
               {(cur?.fields ?? []).map(f => (
-                <FieldRow key={f.k} f={f} v={form[f.k]} bad={bad === 'sf-' + f.k}
-                  onSet={v => { setBad(''); set(f.k, v) }} />
+                f.type === 'idcheck' ? (
+                  /* 这一步过没过不写在表单里，所以也没有 FieldRow 那个 .err 可用。
+                     不补一句的话，点 Next 是一颗死按钮：没反应、也没说为什么。 */
+                  <div key={f.k} className={'sf' + (bad === 'sf-' + f.k ? ' bad' : '')}>
+                    <IdCheck identity={identity} status={kyc ?? null} onDone={reloadKyc} />
+                    <span className="err">{errFor(f)}</span>
+                  </div>
+                ) : (
+                  <FieldRow key={f.k} f={f} v={form[f.k]} bad={bad === 'sf-' + f.k}
+                    locked={f.k in verified}
+                    onSet={v => { setBad(''); set(f.k, v) }} />
+                )
               ))}
             </>
           )}
@@ -171,8 +182,6 @@ export default function MakerFlow({
           {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
 
           <div className="dfoot">
-            <button className="btn btn-ghost btn-sm" onClick={fill}
-              title="Fill every step with sample data">Demo fill</button>
             {(step > 0 || (phase === 'listing' && onBackOut)) && (
               <button className="btn btn-icon backbtn" title="Back" aria-label="Back"
                 onClick={() => {
@@ -195,41 +204,39 @@ export default function MakerFlow({
   )
 }
 
-/**
- * 上传行。用 <button> 而不是包着 input 的 <label>——样式表里有一条
- * `.sf>label{display:block}`，优先级比 .sfup 高，会把这一行从 flex 压成
- * block，右边那颗状态胶囊就贴到文字后面去了，推不到最右。
- */
-function UploadRow({
-  f, v, bad, onSet,
-}: { f: Field; v: string | string[] | undefined; bad: boolean; onSet: (v: string) => void }) {
-  return (
-    <div className={'sf' + (bad ? ' bad' : '')}>
-      {/* 真上传：审核员要看到的是文件，不是一个占位字符串。
-          原来这里的 catch 是空的——传失败界面上一个字都不说，人只会
-          一直点同一个按钮。现在失败有提示，也能重传。 */}
-      <FilePick label={f.l} value={isRef(v) ? v : undefined}
-        hint="Tap to upload" onDone={onSet} />
-      <span className="err">{errFor(f)}</span>
-    </div>
-  )
-}
-
-/* 错误话跟着控件类型走——上传类说 Enter 不通。不小写化：会把 ID / TIN
-   这类缩写弄坏。逐字取自参照。 */
+/* 错误话跟着控件类型走。不小写化：会把 ID / TIN 这类缩写弄坏。逐字取自参照。 */
 const VERB: Record<string, string> = {
-  text: 'Enter', date: 'Enter', pick: 'Select', multi: 'Select', upload: 'Upload', sign: 'Sign',
+  text: 'Enter', date: 'Enter', pick: 'Select', multi: 'Select', sign: 'Sign',
 }
 const errFor = (f: Field) =>
-  f.type === 'sign' ? 'Signature required' : `${VERB[f.type] ?? 'Enter'} ${f.l}`
+  f.type === 'sign' ? 'Signature required'
+    : f.type === 'idcheck' ? 'Finish the identity check first'
+      : `${VERB[f.type] ?? 'Enter'} ${f.l}`
 
 function FieldRow({
-  f, v, bad, onSet,
+  f, v, bad, locked, onSet,
 }: {
   f: Field; v: string | string[] | undefined; bad: boolean
+  /** 这一项是从证件上读出来的。锁住不给改——改了就不是证件上那个人了。 */
+  locked?: boolean
   onSet: (v: string | string[]) => void
 }) {
-  const cls = 'sf' + (bad ? ' bad' : '')
+  const cls = 'sf' + (bad ? ' bad' : '') + (locked ? ' vfd' : '')
+
+  /* 已核验的项一律显示成一行只读的读数，不管它本来是什么控件。
+     留成可编辑的输入框，等于让人把核验出来的姓名改掉再提交——
+     那份材料就跟证件对不上了，而界面上还写着「已核验」。 */
+  if (locked) {
+    return (
+      <div className={cls}>
+        <span className="sfl">{f.l}</span>
+        <div className="sfvfd">
+          <b>{Array.isArray(v) ? v.join(', ') : v}</b>
+          <em>from your document</em>
+        </div>
+      </div>
+    )
+  }
   if (f.type === 'pick') {
     return (
       <div className={cls}><span className="sfl">{f.l}</span>
@@ -272,7 +279,6 @@ function FieldRow({
       </div>
     )
   }
-  if (f.type === 'upload') return <UploadRow f={f} v={v} bad={bad} onSet={onSet} />
   /* 日期不用原生 <input type="date">：它按浏览器语言渲染，中文系统上会显示
      「年/月/日」，跟这套全英文界面对不上。参照用的就是普通文本框 +
      YYYY-MM-DD 占位符，格式由这里自己校验。 */

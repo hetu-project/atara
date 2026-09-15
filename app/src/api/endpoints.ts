@@ -1,6 +1,6 @@
 import { ApiError, BASE, PROFILE_CHANGED, api, getIdentity, withConfirmation } from './client'
 import type {
-  Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, EligiblePeer, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
+  Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, EligiblePeer, KycSession, KycStatus, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
 } from './types'
 
 // ── 账户 ──
@@ -288,6 +288,26 @@ export const markets = () =>
   api.get<{ markets: Market[] }>('/discover/markets').then(r => r.markets)
 
 export const makerApp = (as?: string) => api.get<MakerApp>('/maker/application', { as })
+
+// ── 身份核验（ID Analyzer / DocuPass）──
+//
+// 浏览器这一侧只碰 reference。API key 留在后端——ID Analyzer 自己的文档把
+// 这条写成硬规矩：应用绝不可直接调 POST /docupass 或 GET /docupass/{reference}。
+// 托管流程跑完时那个 onFinish 也只是「用户点完了」的 UI 信号，不是结论；
+// 结论一律回来问 kycStatus，那一份是后端从 webhook 或主动拉取落定的。
+
+/** 开一次核验会话。每条链接单次有效——v3 已经废掉了可复用链接。 */
+export const startKyc = (as?: string) => api.post<KycSession>('/kyc/session', {}, { as })
+
+/**
+ * 查当前状态。
+ *
+ * 默认让后端顺手去上游拉一次：本地开发和用内置预设时根本收不到 webhook，
+ * 只等回调的话状态会永远停在 pending。列表页那种不关心实时性的地方
+ * 传 refresh=false，省一次上游往返。
+ */
+export const kycStatus = (as?: string, refresh = true) =>
+  api.get<KycStatus>('/kyc/status' + (refresh ? '' : '?refresh=0'), { as })
 
 export const submitMakerApp = (phase: 'kyc' | 'listing', form: unknown, as?: string) =>
   api.post<MakerApp>('/maker/application', { phase, form }, { as })
