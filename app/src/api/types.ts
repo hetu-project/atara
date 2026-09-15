@@ -422,6 +422,10 @@ export interface KycWarning {
   decision?: string
 }
 
+/** 一条法币收款渠道。由后端目录发,不在前端写死——见 useRails 的说明。 */
+export interface Rail { name: string; fiat: string }
+export interface RailGroup { group: string; fiat: string; rails: Rail[] }
+
 export interface KycStatus {
   /** none 从没开过 · pending 开了还没结论 · accept/review/reject 是结论 */
   state: 'none' | 'pending' | 'accept' | 'review' | 'reject'
@@ -448,6 +452,14 @@ export interface KycSession {
   qr_code?: string
 }
 
+/** 预审的一条指摘。fields 是表单字段 key，一定非空——指不到字段的意见后端已经丢掉了。 */
+export interface ReviewIssue {
+  fields: string[]
+  says: string
+  ask: string
+  route?: 'revise' | 'escalate'
+}
+
 export interface MakerApp {
   user_id: string
   phase: 'kyc' | 'listing'
@@ -457,6 +469,17 @@ export interface MakerApp {
   approved: boolean
   form: string
   reject_reason?: string
+  /**
+   * 最近一次预审逐项的问题。每条都指到表单字段的 key——界面据此把话
+   * 标在出问题的那一项上，而不是让人对着一段摘要自己回表里翻。
+   */
+  review_issues?: ReviewIssue[]
+  /** Who made the last call: 'rule' | 'ai' | 'human'. Shown as attribution. */
+  review_source?: 'rule' | 'ai' | 'human'
+  review_model?: string
+  /** 已经申诉过了。非空表示这一份在等人看，界面上不该再给第二颗申诉按钮。 */
+  appeal_note?: string
+  appealed_at?: string
   submitted_at?: string
   reviewed_at?: string
   reviewer_id?: string

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 /**
- * 全局提示气泡，接管原生 `title`。
+ * 全局提示气泡，接管原生 `title`，也接管 `.info` 上的 `data-tip`。
  *
  * 原生 title 有三个毛病：停上去约一秒才出、样式由操作系统画（和界面完全两套）、
  * 触屏上根本不出。项目里有 41 处在用它。
@@ -14,6 +14,10 @@ import { useEffect, useRef, useState } from 'react'
  * `title=` 全改成 `data-tip=` 并逐个补 aria-label——改动面大得多，而且
  * 给本来就有可见文字的元素补 aria-label 会覆盖掉那段文字作为无障碍名，
  * 读屏念出来的和屏幕上写的会对不上。
+ *
+ * `data-tip` 是另一路：console.html 用全局 `.info-pop` 读它。React 抄了
+ * 属性和 `.info-pop` 样式，没把那段 JS 搬过来，所以 Account 上的小 i
+ * 悬停一直是空的。这里并进同一套气泡，不再单独养一层。
  */
 
 /* 出现前的停顿。原生大约一秒；120ms 已经足够滤掉「鼠标划过去」，
@@ -41,7 +45,7 @@ export default function Tooltip() {
     const restore = () => {
       const h = held.current
       if (h) {
-        h.el.setAttribute('title', h.title)
+        if (h.title) h.el.setAttribute('title', h.title)
         held.current = null
       }
     }
@@ -54,15 +58,22 @@ export default function Tooltip() {
     const enter = (e: Event) => {
       const t = e.target
       if (!(t instanceof Element)) return
-      const el = t.closest('[title]')
+      const el = t.closest('[data-tip], [title]')
       if (!el || el === held.current?.el) return
-      const title = el.getAttribute('title')
-      if (!title) return
+      /* data-tip 是故意写长说明的（Account 小 i）；title 是短标签。
+         两者都有时认 data-tip，避免短 title 把长说明盖掉。 */
+      const text = el.getAttribute('data-tip') || el.getAttribute('title')
+      if (!text) return
 
       hide()
-      /* 先摘下来：不摘的话浏览器过一秒还会把自己那个灰框叠上来。 */
-      el.removeAttribute('title')
-      held.current = { el, title }
+      const native = el.getAttribute('title')
+      if (native) {
+        /* 先摘下来：不摘的话浏览器过一秒还会把自己那个灰框叠上来。 */
+        el.removeAttribute('title')
+        held.current = { el, title: native }
+      } else {
+        held.current = { el, title: '' }
+      }
 
       clearTimeout(timer.current)
       timer.current = setTimeout(() => {
@@ -71,7 +82,7 @@ export default function Tooltip() {
            气泡会被裁在视口外，等于没有。 */
         const below = r.top < 56
         setShow({
-          text: title,
+          text,
           x: Math.round(r.left + r.width / 2),
           y: Math.round(below ? r.bottom + GAP : r.top - GAP),
           below,
@@ -112,7 +123,9 @@ export default function Tooltip() {
 
   if (!show) return null
   return (
-    <div ref={bubble} className={'tip' + (show.below ? ' below' : '')} role="tooltip"
+    <div ref={bubble}
+      className={'tip' + (show.below ? ' below' : '') + (show.text.length > 60 ? ' long' : '')}
+      role="tooltip"
       style={{ left: show.x, top: show.y }}>
       {show.text}
     </div>

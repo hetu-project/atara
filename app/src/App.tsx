@@ -32,8 +32,10 @@ export default function App() {
   const { login, signOutAll } = usePrivyAuth(signed, signIn)
   const { route } = useRoute()
   /* 右栏是用户自己收起来的——和「这个视图本来就没有右栏」(rout) 分开记，
-     否则从 Discover 切回新建单，右栏会莫名其妙地不见。 */
-  const [rfold, setRfold] = useState(false)
+     否则从 Discover 切回新建单，右栏会莫名其妙地不见。
+     键名跟 console.html 一样：在那边收过，这边打开也还是收着。 */
+  const [rfold, setRfold] = useState(
+    () => { try { return localStorage.getItem('atara-rfold') === '1' } catch { return false } })
   /* 会话锁。密码只解开这个界面，不批准任何东西——转账和额度永远走钱包
      那一侧的签名。没设过密码就先带他去设，设好再替他锁上，那一下的意图不丢。 */
   /* 有 passkey 就不必再设密码：锁上之后那把钥匙能打开它。 */
@@ -65,6 +67,9 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem('atara-left', folded ? '1' : '0') } catch { /* 隐身窗口 */ }
   }, [folded])
+  useEffect(() => {
+    try { localStorage.setItem('atara-rfold', rfold ? '1' : '0') } catch { /* 隐身窗口 */ }
+  }, [rfold])
 
   return (
     /* Toast 放在最外层：任何一层里的任何动作都可能需要报一句，

@@ -42,14 +42,7 @@ export const useKycGate = () => useContext(KycCtx)
  * 能不能下单，以及做市准入走到了哪一步。
  */
 export function KycProvider({ identity, children }: { identity: string; children: React.ReactNode }) {
-  const { data: app, reload: reloadApp } = useApi(() => ep.makerApp(identity), [identity])
-  /* 第三段「发布挂单」做没做完，得看这个人名下有没有挂单——不能只看
-     MakerThread 里那份 posted：刷新一次它就空了，待办条会再问一遍已经
-     做过的事。没批下来之前不问，那一问对绝大多数人都是白问。 */
-  const approved = !!app?.approved
-  const { data: mine, loading: mineLoading, reload: reloadOffers } =
-    useApi(() => (approved ? ep.myOffers() : Promise.resolve([])), [identity, approved])
-  const reload = useCallback(() => { reloadApp(); reloadOffers() }, [reloadApp, reloadOffers])
+  const { data: app, reload } = useApi(() => ep.makerApp(identity), [identity])
   const [open, setOpen] = useState(false)
   const [why, setWhy] = useState<'trade' | 'maker'>('trade')
   /* 「为什么要验」那一句已经说过了。原来是把 why 改成 maker 来收起它——
@@ -98,12 +91,6 @@ export function KycProvider({ identity, children }: { identity: string; children
   const closeMaker = useCallback(() => setOpen(false), [])
 
   const showMaker = open && (why !== 'trade' || explained || !!app?.kyc_done)
-  /* null = 还没问到。空数组和「没问过」是两回事，见下面待办的取舍。
-
-     必须带上 loading：approved 由 false 翻成 true 那一拍会重取，而 useApi
-     在重取期间留着上一次的值（没批下来时那是个空数组）。只看 mine 的话，
-     一个已经挂过单的人刷新页面，会先被问一句「去挂第一单吧」再自己消失。 */
-  const listed = mineLoading || !mine ? null : mine.length > 0
 
   const value = useMemo(() => ({
     require, openMaker, closeMaker,
@@ -118,7 +105,7 @@ export function KycProvider({ identity, children }: { identity: string; children
         setToListing={setToListing} setToOffer={setToOffer} onDone={reload} />
     ) : null,
   }), [require, openMaker, closeMaker, app, showMaker, identity, why, reload,
-    listed, toListing, toOffer])
+    toListing, toOffer])
 
   return (
     <KycCtx.Provider value={value}>

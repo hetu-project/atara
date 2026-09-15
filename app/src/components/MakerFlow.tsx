@@ -6,6 +6,7 @@ import {
   KYC_CORP, KYC_IND, LISTING_STEPS, VERIFIED_FIELDS, type Field, type Step,
 } from './kycforms'
 import { ListingStep, badListingField, blankListing, type Listing } from './MakerListing'
+import type { ReviewIssue } from '../api/types'
 
 
 /**
@@ -18,14 +19,45 @@ import { ListingStep, badListingField, blankListing, type Listing } from './Make
  * 卡上没有关闭按钮，参照也没有：它是这条对话里的一条内容，不是盖在上面的
  * 弹窗，关掉它等于把刚说过的话删了。
  */
+/**
+ * Index of the earliest step containing a field the review flagged.
+ *
+ * Returns 0 when nothing is flagged, so a first submission is unaffected.
+ * Field keys the form does not have (a model naming something we never sent,
+ * or a stale issue after the form changed) simply match nothing — they must
+ * not push the applicant to a step that has no problem on it.
+ */
+function firstFlaggedStep(
+  phase: 'kyc' | 'listing',
+  initial: Record<string, unknown> | undefined,
+  issues: ReviewIssue[] | undefined,
+): number {
+  if (phase !== 'kyc' || !issues?.length) return 0
+  const want = new Set(issues.flatMap(i => i.fields).filter(k => k !== '*'))
+  if (!want.size) return 0
+  const steps = (initial?.kind === 'Corporate' ? KYC_CORP : KYC_IND) as Step[]
+  const at = steps.findIndex(st => (st.fields ?? []).some(f => want.has(f.k)))
+  return at < 0 ? 0 : at
+}
+
 export default function MakerFlow({
-  phase, identity, initial, onSubmitted, onBackOut,
+  phase, identity, initial, issues, onPending, onSubmitted, onBackOut,
 }: {
   phase: 'kyc' | 'listing'
   identity: string
+  /** 上一次预审指出来的问题。标在出问题的那几项上，不是丢一段摘要让人自己找。 */
+  issues?: ReviewIssue[]
   /** 上次交上来的那份。被打回时表要带着原内容重开——让人对着评语改，
       而不是从头再填一遍九步。没有上一次就是 undefined。 */
   initial?: Record<string, unknown>
+  /**
+   * Fired the moment the request goes out, before anything comes back.
+   *
+   * The review runs server-side and takes a few seconds (rules are instant,
+   * the model is not). Without this the thread has nothing to show for that
+   * whole wait: the form just sits there with a dead button.
+   */
+  onPending?: (phase: 'kyc' | 'listing') => void
   /** 提交成功。form 交回去是给回执用的——那张「查看提交内容」要照着它画。 */
   onSubmitted: (phase: 'kyc' | 'listing', form: Record<string, unknown>) => void
   /** 交易条款第一步的返回。参照那颗箭头退回身份表单，我们这边身份已经交了、
@@ -39,7 +71,17 @@ export default function MakerFlow({
   const [kind, setKind] = useState<'Individual' | 'Corporate'>(
     () => (initial?.kind === 'Corporate' ? 'Corporate' : 'Individual'),
   )
-  const [step, setStep] = useState(0)
+  /*
+    Open on the step that has the first problem, not on step one.
+
+    The summary sits at the top of the thread and the per-field note sits
+    inside the step it belongs to; with nine steps between them, someone who
+    was sent back to fix two fields can see neither. Moving the summary below
+    the form would not help — the distance is the problem, not the side.
+
+    Nothing flagged (a first submission) starts at the beginning as before.
+  */
+  const [step, setStep] = useState(() => firstFlaggedStep(phase, initial, issues))
   const [form, setForm] = useState<Record<string, string | string[]>>(() => {
     if (phase !== 'kyc' || !initial) return {}
     const { kind: _k, ...rest } = initial
@@ -55,6 +97,26 @@ export default function MakerFlow({
   /* 出错的是哪一行。参照给那个 .sf 加 .bad，让它预置的 .err 显出来——
      错误话说在出错的字段上，不是卡片底下一句泛泛的提示。 */
   const [bad, setBad] = useState('')
+
+  /* 预审指出来的问题，摊成「字段 → 要你做什么」。
+  
+     一条指摘可以指到好几个字段（「国籍写香港、税务居民写中国」指的是两项），
+     那两项都要标——只标第一项的话，另一项看着是好的，人改完一项再提交，
+     又被同一条打回来。
+  
+     改过的项要立刻不再标红：人已经动手了，红着不动等于说他改了也没用。
+     所以 touched 一旦包含这个 key 就不再标它。 */
+  const [touched, setTouched] = useState<Set<string>>(() => new Set())
+  const flagged = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const i of issues ?? []) {
+      for (const k of i.fields) {
+        if (k === '*' || touched.has(k)) continue
+        m.set(k, i.ask)
+      }
+    }
+    return m
+  }, [issues, touched])
 
   /* 身份核验的状态。只有 kyc 那一段要它——挂单配置跟证件无关。
      这里不自己轮询：IdCheck 在人真的开了流程之后才让它转，没开之前
@@ -127,10 +189,16 @@ export default function MakerFlow({
       const payload = phase === 'kyc'
         ? { kind, ...form }
         : { ...lst } as unknown as Record<string, unknown>
+      // Tell the thread we are waiting *before* awaiting, not after it lands.
+      onPending?.(phase)
       await ep.submitMakerApp(phase, payload, identity)
       onSubmitted(phase, payload)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not submit')
+      /* The request failed, so nothing is in flight any more. Leaving the
+         thread on "checking…" would have it wait forever on a reply that
+         is never coming. */
+      onSubmitted(phase, {})
     } finally { setBusy(false) }
   }
 
@@ -154,9 +222,18 @@ export default function MakerFlow({
         <div className="dsteps" role="progressbar" aria-valuenow={step + 1}
           aria-valuemin={1} aria-valuemax={steps.length}
           aria-label={`Step ${step + 1} of ${steps.length}: ${cur?.t ?? ''}`}>
-          {steps.map((s2, i) => (
-            <i key={s2.t} className={i < step ? 'on' : i === step ? 'now' : ''} title={`${i + 1}. ${s2.t}`} />
-          ))}
+          {/* A step still holding a flagged field is marked, so "how much is
+              left to fix" is readable without walking every step. The mark
+              clears as soon as the field is edited — see `flagged`. */}
+          {steps.map((s2, i) => {
+            const needs = (s2.fields ?? []).some(f => flagged.has(f.k))
+            const cls = [i < step ? 'on' : i === step ? 'now' : '', needs ? 'todo' : '']
+              .filter(Boolean).join(' ')
+            return (
+              <i key={s2.t} className={cls}
+                title={`${i + 1}. ${s2.t}${needs ? ' — needs a change' : ''}`} />
+            )
+          })}
         </div>
         <div className="pad">
           <p className="sellm-lead">{cur?.lead}</p>
@@ -190,7 +267,15 @@ export default function MakerFlow({
                 ) : (
                   <FieldRow key={f.k} f={f} v={form[f.k]} bad={bad === 'sf-' + f.k}
                     locked={f.k in verified}
-                    onSet={v => { setBad(''); set(f.k, v) }} />
+                    flagged={flagged.get(f.k)}
+                    onSet={v => {
+                      setBad('')
+                      /* 动过的项不再标红——人已经在改了。 */
+                      if (flagged.has(f.k)) {
+                        setTouched(t => new Set(t).add(f.k))
+                      }
+                      set(f.k, v)
+                    }} />
                 )
               ))}
             </>
@@ -212,7 +297,9 @@ export default function MakerFlow({
               </button>
             )}
             <button className="btn btn-primary" disabled={busy} onClick={() => void next()}>
-              {last ? 'Submit' : 'Next'}
+              {/* Say what it is doing. A button that only greys out looks
+                  broken when the wait runs into seconds. */}
+              {busy ? 'Checking…' : last ? 'Submit' : 'Next'}
             </button>
           </div>
         </div>
@@ -231,21 +318,24 @@ const errFor = (f: Field) =>
       : `${VERB[f.type] ?? 'Enter'} ${f.l}`
 
 function FieldRow({
-  f, v, bad, locked, onSet,
+  f, v, bad, locked, flagged, onSet,
 }: {
   f: Field; v: string | string[] | undefined; bad: boolean
   /** 这一项是从证件上读出来的。锁住不给改——改了就不是证件上那个人了。 */
   locked?: boolean
+  /** 预审指着这一项说的话。有值就把它标出来并把话摆在下面。 */
+  flagged?: string
   onSet: (v: string | string[]) => void
 }) {
   const cls = 'sf' + (bad ? ' bad' : '') + (locked ? ' vfd' : '')
+    + (flagged ? ' flagged' : '')
 
   /* 已核验的项一律显示成一行只读的读数，不管它本来是什么控件。
      留成可编辑的输入框，等于让人把核验出来的姓名改掉再提交——
      那份材料就跟证件对不上了，而界面上还写着「已核验」。 */
   if (locked) {
     return (
-      <div className={cls}>
+      <div className={cls} data-flag={flagged}>
         <span className="sfl">{f.l}</span>
         <div className="sfvfd">
           <b>{Array.isArray(v) ? v.join(', ') : v}</b>
@@ -256,7 +346,7 @@ function FieldRow({
   }
   if (f.type === 'pick') {
     return (
-      <div className={cls}><span className="sfl">{f.l}</span>
+      <div className={cls} data-flag={flagged}><span className="sfl">{f.l}</span>
         <div className="sfchips">
           {(f.opts ?? []).map(o => (
             <button key={o} type="button" className={'sfchip' + (v === o ? ' on' : '')}
@@ -270,7 +360,7 @@ function FieldRow({
   if (f.type === 'multi') {
     const arr = Array.isArray(v) ? v : []
     return (
-      <div className={cls}><span className="sfl">{f.l}</span>
+      <div className={cls} data-flag={flagged}><span className="sfl">{f.l}</span>
         <div className="sfchips">
           {(f.opts ?? []).map(o => (
             <button key={o} type="button" className={'sfchip' + (arr.includes(o) ? ' on' : '')}
@@ -286,7 +376,7 @@ function FieldRow({
      做成小芯片会跟旁边的多选芯片长得一样，读的人分不出哪个是动作。 */
   if (f.type === 'sign') {
     return (
-      <div className={cls}>
+      <div className={cls} data-flag={flagged}>
         <button type="button" className={'sfup' + (v ? ' ok' : '')}
           onClick={() => onSet(v ? '' : 'Signed')}>
           <span><b>{f.l}</b><em>{typeof v === 'string' && v ? v : 'Tap to sign'}</em></span>
@@ -301,7 +391,7 @@ function FieldRow({
      YYYY-MM-DD 占位符，格式由这里自己校验。 */
   const isDate = f.type === 'date'
   return (
-    <div className={cls}><span className="sfl">{f.l}</span>
+    <div className={cls} data-flag={flagged}><span className="sfl">{f.l}</span>
       <input type="text" value={typeof v === 'string' ? v : ''}
         placeholder={isDate ? 'YYYY-MM-DD' : 'Enter'}
         inputMode={isDate ? 'numeric' : undefined}

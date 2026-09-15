@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
-import { FIAT_RAILS, FX_IDX } from './kycforms'
+import { FX_IDX } from './kycforms'
+import { useRailFiat, useRails } from '../hooks/useRails'
 
 /**
  * 挂单配置的表单，逐处对着参照的 paintMaker() 里 phase==='listing' 那一支写。
@@ -72,6 +73,7 @@ const Chips = ({
 function RailMenu({
   sel, onToggle,
 }: { sel: string[]; onToggle: (v: string) => void }) {
+  const groups = useRails()
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -93,18 +95,21 @@ function RailMenu({
         onClick={() => setOpen(o => !o)}><span>{label}</span><i>⌄</i></button>
       {open && (
         <div className="ddmenu railmenu">
-          {FIAT_RAILS.map(gr => (
-            <div key={gr.g}>
-              <div className="rmg">{gr.g}</div>
-              {gr.list.map(x => (
-                <button type="button" key={x}
-                  className={'asopt rmi' + (sel.includes(x) ? ' on' : '')}
-                  onClick={() => onToggle(x)}>
-                  <b>{x}</b><span className="rmk">✓</span>
+          {/* 菜单内容来自后端目录：后端结算不了的法币,这里根本不出现。
+              选不到,就构造不出「配置审过了却永远撮合不到」那种单。 */}
+          {groups.map(gr => (
+            <div key={gr.group}>
+              <div className="rmg">{gr.group}</div>
+              {gr.rails.map(x => (
+                <button type="button" key={x.name}
+                  className={'asopt rmi' + (sel.includes(x.name) ? ' on' : '')}
+                  onClick={() => onToggle(x.name)}>
+                  <b>{x.name}</b><span className="rmk">✓</span>
                 </button>
               ))}
             </div>
           ))}
+          {!groups.length && <div className="rmg">Loading…</div>}
         </div>
       )}
     </div>
@@ -127,6 +132,28 @@ export function ListingStep({
     arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]
   const cls = (id: string) => 'sf' + (bad === id ? ' bad' : '')
 
+  /* Assets come from the catalogue, not from a list written into this file.
+  
+     The hardcoded one offered BTC and ETH, which this version cannot settle:
+     picking either got you through the form, through submit, through a
+     several-second review, and only then a rejection. Anything the platform
+     cannot honour should not be offerable — the server-side check stays as a
+     backstop against a hand-rolled request, not as the way users find out. */
+  const { data: cat } = useApi(() => ep.assets(), [])
+  const coinCodes = (cat ?? []).map(a => a.code)
+
+  /* Which fiat these terms are actually in — read off the rails they picked,
+     not written into the page.
+  
+     It said "CNY" no matter what: someone settling in Hong Kong dollars was
+     shown a CNY limit box and a CNY index, and nothing on the page admitted
+     it was the wrong currency. Two rails from different corridors is a real
+     combination, so say so rather than silently picking one. */
+  const railFiat = useRailFiat()
+  const fiats = [...new Set(d.rails.map(railFiat).filter(Boolean) as string[])]
+  const fiat = fiats.length === 1 ? fiats[0] : ''
+  const idxFiat = fiat || 'CNY'
+
   const { data: chains } = useApi(() => ep.chainInfo(), [])
   const rows = chains?.chains ?? []
   const netCodes = rows.map(c => c.code)
@@ -148,7 +175,7 @@ export function ListingStep({
           <div><dt>Side</dt><dd>{d.dir.join(' · ')}</dd></div>
           <div><dt>Assets</dt><dd>{d.coins.join(' · ')}</dd></div>
           <div><dt>Limits</dt><dd className="num">
-            {num(d.lo).toLocaleString()} – {num(d.hi).toLocaleString()} CNY</dd></div>
+            {num(d.lo).toLocaleString()} – {num(d.hi).toLocaleString()}{fiat ? ` ${fiat}` : ''}</dd></div>
           <div><dt>Networks</dt><dd>{d.nets.join(' · ')}</dd></div>
           <div><dt>Pricing</dt><dd>{px}</dd></div>
           <div><dt>Rails</dt><dd>{d.rails.join(' · ')}</dd></div>
@@ -165,7 +192,7 @@ export function ListingStep({
     )
   }
 
-  const idx = FX_IDX.CNY ?? 7.28
+  const idx = FX_IDX[idxFiat] ?? FX_IDX.CNY ?? 7.28
   return (
     <>
       <div className={cls('sf-dir')}><span className="sfl">Side</span>
@@ -174,11 +201,14 @@ export function ListingStep({
         <span className="err">Select a side</span></div>
 
       <div className={cls('sf-coins')}><span className="sfl">Assets</span>
-        <Chips opts={['USDT', 'USDC', 'BTC', 'ETH']} sel={d.coins}
+        <Chips opts={coinCodes} sel={d.coins}
           onPick={v => set({ coins: flip(d.coins, v) })} />
         <span className="err">Select at least one asset</span></div>
 
-      <div className={cls('sf-limit')}><span className="sfl">Per-trade limits (CNY)</span>
+      <div className={cls('sf-limit')}><span className="sfl">
+        {/* No rail chosen yet, or rails from two corridors: say "fiat" rather
+            than name a currency these terms are not necessarily in. */}
+        Per-trade limits{fiat ? ` (${fiat})` : ''}</span>
         <div className="sfrow">
           <input type="text" value={d.lo} placeholder="Min" inputMode="numeric"
             onChange={e => set({ lo: e.target.value })} />
@@ -208,7 +238,7 @@ export function ListingStep({
             <input type="text" value={d.spread} inputMode="decimal" placeholder="0.8"
               style={{ maxWidth: 110 }} onChange={e => set({ spread: e.target.value })} />
             <span style={{ fontSize: 12, color: 'var(--faint)' }}>
-              % over index — e.g. USDT/CNY index {idx} → you quote{' '}
+              % over index — e.g. USDT/{idxFiat} index {idx} → you quote{' '}
               {(idx * (1 + (parseFloat(d.spread) || 0) / 100)).toFixed(2)}
             </span>
           </div>
@@ -217,7 +247,7 @@ export function ListingStep({
             <input type="text" value={d.fixed} inputMode="decimal" placeholder={String(idx)}
               style={{ maxWidth: 110 }} onChange={e => set({ fixed: e.target.value })} />
             <span style={{ fontSize: 12, color: 'var(--faint)' }}>
-              CNY per USDT — index is {idx} right now
+              {idxFiat} per USDT — index is {idx} right now
             </span>
           </div>
         )}
@@ -233,16 +263,27 @@ export function ListingStep({
 }
 
 /** 回执里那张「交易条款」表，六行，取自参照的 receiptCard。 */
-export function listingRows(d: Listing): [string, string][] {
+export function listingRows(
+  d: Listing,
+  /* Rail → fiat. Optional because the receipt can be rendered before the
+     catalogue has loaded; without it the limits print without a currency,
+     which is honest. Naming a currency we have not established would not be. */
+  railFiat?: (rail: string) => string | undefined,
+): [string, string][] {
   /* 每一项都要兜底。这份 d 是后端 form_json 原样发回来的，而后端不校验它的
      形状——用旧版表单交过、或者直接走 API 提交的账号，这里少哪个字段都可能。
      少一个 `?? []` 的后果不是缺一行，是 undefined.join 把整个准入对话炸成白屏，
      而那条对话恰恰是他查「我的申请审到哪了」的唯一入口。 */
   const list = (v: string[] | undefined) => (v?.length ? v.join(' · ') : '—')
+  const ccy = (() => {
+    if (!railFiat) return ''
+    const f = [...new Set((d.rails ?? []).map(railFiat).filter(Boolean) as string[])]
+    return f.length === 1 ? ` ${f[0]}` : ''
+  })()
   return [
     ['Side', list(d.dir)],
     ['Assets', list(d.coins)],
-    ['Limits', `${num(d.lo).toLocaleString()} – ${num(d.hi).toLocaleString()} CNY`],
+    ['Limits', `${num(d.lo).toLocaleString()} – ${num(d.hi).toLocaleString()}${ccy}`],
     ['Networks', list(d.nets)],
     ['Pricing', d.pricing === 'Float'
       ? `Index ${num(d.spread) >= 0 ? '+' : ''}${d.spread}%` : `Fixed · ${d.fixed || '—'}`],

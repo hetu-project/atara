@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import * as ep from '../api/endpoints'
 import Fold from './Fold'
 import MakerFlow from './MakerFlow'
 import MakerOffer, { OfferPosted } from './MakerOffer'
-import { KYC_CORP, KYC_IND } from './kycforms'
+import { FIELD_LABELS, KYC_CORP, KYC_IND } from './kycforms'
 import { listingRows, type Listing } from './MakerListing'
+import { useRailFiat } from '../hooks/useRails'
 import { go } from '../hooks/useRoute'
 import type { MakerApp, Offer } from '../api/types'
 
@@ -29,6 +31,18 @@ import type { MakerApp, Offer } from '../api/types'
 
 const Me = ({ children }: { children: React.ReactNode }) => (
   <div className="msg me"><span className="bub">{children}</span></div>
+)
+
+/*
+  Three dots, the chat idiom for "the other side is composing".
+
+  Written in CSS rather than pulled from a motion library: the animation is
+  one keyframe and three delays, while the library it comes from wants
+  framer-motion, Next and Tailwind — none of which this app has. Borrowing
+  the idea is free; borrowing the dependency is not.
+*/
+const Dots = () => (
+  <span className="tdots" aria-hidden><i /><i /><i /></span>
 )
 
 /* 平台的回执也是「对方」发的：挂 Atara 的方块标识，跟人的圆头像分得开。 */
@@ -95,14 +109,113 @@ function forms(raw: string | undefined): { kyc?: Record<string, unknown>; listin
  * 说完话表单就在下面重新铺开，带着上次填的内容。终局的拒绝没有下文，
  * 打回有；两者在屏幕上长得一样，人只会理解成前者。
  */
-function Revise({ reason }: { reason: string }) {
+function Revise({
+  reason, app, identity, onDone,
+}: {
+  reason: string
+  app: MakerApp | null
+  identity: string
+  onDone: () => void
+}) {
+  /* 申诉是个**次要**出口，所以默认收着：绝大多数打回是真的有东西要改，
+     把「我觉得你判错了」和「去改」摆得一样显眼，会让人先去点那颗更省事的。 */
+  const [open, setOpen] = useState(false)
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const appealed = !!app?.appeal_note
+  const issues = (app?.review_issues ?? []).filter(i => !i.fields.includes('*'))
+
+  const send = async () => {
+    const b = note.trim()
+    if (!b || busy) return
+    setBusy(true); setErr('')
+    try {
+      await ep.appealMakerApp(b, identity)
+      setOpen(false); setNote(''); onDone()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not send that')
+    } finally { setBusy(false) }
+  }
+
   return (
     <Them>
-      <b className="mkrevh">A few things need changing before this can go through</b>
-      <span className="mkrevb">{reason}</span>
+      {/*
+        Framed as a record, not as a remark.
+
+        It used to be an ordinary chat bubble — same avatar, same background,
+        same shape as the assistant making conversation. But this is a
+        decision that stops the application, so it has to read like one:
+        what it is, how many things it found, and who found them.
+      */}
+      <div className="mkverd">
+        <div className="mkvh">
+          <span className="mkvt">Review</span>
+          <span className="mkvn">
+            {issues.length ? `${issues.length} to change` : 'Needs a change'}
+          </span>
+        </div>
+
+        {issues.length ? (
+          <ol className="mkvl">
+            {issues.map((it, n) => (
+              <li key={n}>
+                {/* Name the fields it is about. A verdict you cannot trace
+                    back to a field is one you cannot check. */}
+                <span className="mkvf">{it.fields.map(labelOf).join(' · ')}</span>
+                <p className="mkvs">{it.says}</p>
+                <p className="mkva">{it.ask}</p>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          // Older records kept only the joined summary; still show it.
+          <p className="mkvs">{reason}</p>
+        )}
+
+        {/* Attribution. A decision that blocks someone must say who made it —
+            without it a machine's call is indistinguishable from small talk. */}
+        <div className="mkvby">
+          {app?.review_source === 'ai'
+            ? `Checked by Atara AI${app.review_model ? ` · ${app.review_model}` : ''}`
+            : app?.review_source === 'human' ? 'Reviewed by a person'
+              : 'Checked against the listing rules'}
+          {app?.reviewed_at ? ` · ${clockOf(app.reviewed_at)}` : ''}
+        </div>
+      </div>
+
       <span className="mkrevf">Your answers are still below — edit and send again.</span>
+      {/* 已经申诉过就不再给第二颗按钮：重复递交同一件事，只会让队列里
+          多几条一模一样的条目，而他并不会因此更快被看到。 */}
+      {appealed ? (
+        <span className="mkrevf">We have your note — a person will look at this.</span>
+      ) : open ? (
+        <span className="mkapp">
+          <textarea rows={3} value={note} autoFocus
+            placeholder="What do you think we got wrong?"
+            onChange={e => setNote(e.target.value)} />
+          <span className="mkappb">
+            <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>Cancel</button>
+            <button className="btn btn-primary btn-sm" disabled={busy || !note.trim()}
+              onClick={() => void send()}>{busy ? 'Sending…' : 'Send to a person'}</button>
+          </span>
+          {err ? <em className="mkapperr">{err}</em> : null}
+        </span>
+      ) : (
+        <button className="mkapplink" type="button" onClick={() => setOpen(true)}>
+          I think this is wrong
+        </button>
+      )}
     </Them>
   )
+}
+
+/** Field key → the label on the form. Unknown keys print as-is rather than vanish. */
+const labelOf = (k: string) => FIELD_LABELS[k] ?? k
+
+const clockOf = (iso: string) => {
+  const d = new Date(iso)
+  return Number.isNaN(+d) ? '' : d.toTimeString().slice(0, 5)
 }
 
 /**
@@ -137,9 +250,15 @@ export default function MakerThread({
   setToOffer: (v: boolean) => void
   onDone: () => void
 }) {
-  /* 刚提交完的那一秒。参照先发一条「typing…」，1.2 秒后才换成回执——
-     回执是平台开的，瞬间蹦出来不像一个人在那头处理。 */
-  const [typing, setTyping] = useState<'kyc' | 'listing' | null>(null)
+  /*
+    Which stage is waiting on the server right now.
+
+    This used to be a 1.2s timer started *after* the reply came back — it
+    simulated a delay that had already happened, while the real wait (rules
+    plus a model call, a few seconds) showed nothing at all. Now it covers
+    the actual request: set when it goes out, cleared when it lands.
+  */
+  const [pending, setPending] = useState<'kyc' | 'listing' | null>(null)
   /* 挂出去的单。留在对话里就是这笔挂单的记录——参照的 offerPosted 也是
      把那张卡换成回执，而不是清掉。 */
   const [posted, setPosted] = useState<{ o: Offer; sym: string }[]>([])
@@ -151,15 +270,17 @@ export default function MakerThread({
   const listDone = !!app?.listing_done
   const approved = !!app?.approved
   const revise = reviseAt(app)
+  /* The receipt prints the limits with their currency, and which currency
+     that is depends on the rails they picked. */
+  const railFiat = useRailFiat()
 
   /* 新消息进来就滚到底——不滚的话通过那条消息连同它的按钮都在屏幕外面。 */
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [kycDone, kycOk, listDone, approved, typing, toListing, toOffer, posted.length])
+  }, [kycDone, kycOk, listDone, approved, pending, toListing, toOffer, posted.length])
 
   const submitted = (phase: 'kyc' | 'listing') => {
-    setTyping(phase)
-    setTimeout(() => setTyping(null), 1200)
+    setPending(cur => (cur === phase ? null : cur))
     onDone()
   }
 
@@ -177,11 +298,14 @@ export default function MakerThread({
 
   return (
     <>
-      {kycDone && (
+      {/* Render as soon as it is in flight, not only once it has landed:
+          the applicant's own message should appear the moment they hit
+          Submit, the same as in any chat. */}
+      {(kycDone || pending === 'kyc') && (
         <>
           <Me>Submitted identity verification</Me>
-          {typing === 'kyc'
-            ? <Them typing>typing…</Them>
+          {pending === 'kyc'
+            ? <Them typing><Dots />Reading your answers…</Them>
             : (
               <Them>
                 Received — your identity application is under review. Usually cleared within
@@ -193,7 +317,9 @@ export default function MakerThread({
         </>
       )}
 
-      {revise === 'kyc' ? <Revise reason={app?.reject_reason ?? ''} /> : null}
+      {revise === 'kyc'
+        ? <Revise reason={app?.reject_reason ?? ''} app={app} identity={identity} onDone={onDone} />
+        : null}
 
       {kycOk && (
         /* 通过那两条话逐字取自参照：为下单来验的只说「可以交易了」，
@@ -215,23 +341,27 @@ export default function MakerThread({
         </Them>
       )}
 
-      {listDone && (
+      {(listDone || pending === 'listing') && (
         <>
           <Me>Submitted trading terms</Me>
-          {typing === 'listing'
-            ? <Them typing>typing…</Them>
+          {pending === 'listing'
+            ? <Them typing><Dots />Reading your terms…</Them>
             : (
               <Them>
                 Received — your trading terms are under review. Usually cleared within one
                 business day{' '}
                 <em style={{ fontStyle: 'normal', color: 'var(--faint)' }}>(demo: seconds)</em>.
-                {f.listing ? <Receipt groups={[['Trading terms', listingRows(f.listing)]]} /> : null}
+                {f.listing
+                  ? <Receipt groups={[['Trading terms', listingRows(f.listing, railFiat)]]} />
+                  : null}
               </Them>
             )}
         </>
       )}
 
-      {revise === 'listing' ? <Revise reason={app?.reject_reason ?? ''} /> : null}
+      {revise === 'listing'
+        ? <Revise reason={app?.reject_reason ?? ''} app={app} identity={identity} onDone={onDone} />
+        : null}
 
       {approved && (
         <Them>
@@ -253,14 +383,16 @@ export default function MakerThread({
 
       {card === 'offer' ? (
         <MakerOffer terms={f.listing} identity={identity}
-          /* onDone 顺手把「名下有没有挂单」也重取一遍：不重取的话单子都挂
-             出去了，待办条还停在「去挂第一单」。 */
+          /* 挂完重取一次申请：挂单会动到账户状态（币锁进合约），
+             这条对话里别处显示的还是挂之前那一份。 */
           onPosted={(o, sym) => {
             setToOffer(false); setPosted(ps => [...ps, { o, sym }]); onDone()
           }} />
       ) : card ? (
         <MakerFlow phase={card} identity={identity}
           initial={card === 'kyc' ? f.kyc : (f.listing as unknown as Record<string, unknown>)}
+          issues={app?.review_issues}
+          onPending={setPending}
           onSubmitted={submitted}
           onBackOut={() => setToListing(false)} />
       ) : null}

@@ -839,7 +839,8 @@ main.lout .navtag,main.lout .navgo{display:none}
 .pname input{font:inherit;color:var(--ink);background:var(--canvas);border:1px solid var(--blue);
   border-radius:var(--r-chip);padding:0 6px;width:11ch;outline:none}
 .pedit,.pcopy{border:0;background:none;cursor:pointer;color:var(--faint-2);padding:4px;
-  border-radius:var(--r-chip);display:inline-flex;transition:color var(--dur-fast) var(--ease)}
+  border-radius:var(--r-chip);display:inline-flex;align-items:center;justify-content:center;
+  transition:color var(--dur-fast) var(--ease)}
 .pedit:hover,.pcopy:hover{color:var(--ink);background:var(--canvas)}
 .pmeta{display:flex;align-items:center;gap:6px;margin-top:2px;font-size:12.5px;color:var(--faint)}
 .pmeta .pidno{letter-spacing:.04em}
@@ -1232,11 +1233,6 @@ a.dspx{color:#d0574d}
   width:13px;height:13px;margin-left:5px;border:1px solid currentColor;border-radius:50%;
   font-size:9px;font-style:normal;line-height:1;opacity:.5;cursor:help;vertical-align:1px}
 .ainfo:hover,.ainfo:focus-visible{opacity:.9}
-.ainfo::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:-6px;
-  width:230px;padding:8px 10px;border-radius:8px;background:var(--paper);color:var(--ink);
-  font-size:12px;line-height:1.5;text-align:left;white-space:normal;box-shadow:var(--sh-overlay);
-  opacity:0;visibility:hidden;transition:opacity var(--dur-fast) var(--ease);pointer-events:none;z-index:30}
-.ainfo:hover::after,.ainfo:focus-visible::after{opacity:1;visibility:visible}
 .alead.asub{text-align:right}   /* 续行的 and 靠右贴住选项框,选项框与上一行左对齐 */
 /* 条件组合:静态名 + 联动控件成组,添加钮虚线 */
 .acgrp{display:inline-flex;align-items:center;gap:6px}
@@ -1425,6 +1421,21 @@ a.dspx{color:#d0574d}
 .msg.sys{align-self:center;align-items:center;max-width:100%}
 .msg.sys .bub{background:transparent;padding:4px 12px;font-size:12px;color:var(--faint);text-align:center}
 .msg.typing .bub{color:var(--faint);font-style:italic}
+
+/* Three dots while the other side is composing.
+   One keyframe and three delays — no motion library for this. */
+.tdots{display:inline-flex;align-items:center;gap:3px;margin-right:7px;
+  vertical-align:middle}
+.tdots i{width:4px;height:4px;border-radius:50%;background:currentColor;
+  opacity:.35;animation:tdot 1.1s var(--ease) infinite}
+.tdots i:nth-child(2){animation-delay:.15s}
+.tdots i:nth-child(3){animation-delay:.3s}
+@keyframes tdot{30%{opacity:1;transform:translateY(-2px)}}
+/* Reduced motion keeps the dots visible but still — the bubble's own
+   wording already says what is happening, so nothing is lost. */
+@media (prefers-reduced-motion:reduce){
+  .tdots i{animation:none;opacity:.6}
+}
 /* 消息里的提交记录：默认收起，点开核对 */
 .rcpt{margin-top:8px;min-width:min(300px,70vw)}
 /* 折叠块（Fold）。原来用的是原生 <details>：瞬间弹开，没有高度过渡。 */
@@ -1452,12 +1463,65 @@ a.dspx{color:#d0574d}
 .msg.me .rcpt .sfsum dd{color:#fff}
 .msg .rgo{display:block;margin-top:10px}
 
+/* ── 预审指出来的那几项 ────────────────────────────────
+   话要标在出问题的那一项上。摘要那一串只能让人自己回九步表单里翻，
+   而问题本来就是指着字段说的。
+
+   用 ::after 取 data-flag，而不是在每个分支里插一个节点：FieldRow 有
+   五六条 return（只读 / 单选 / 多选 / 签名 / 输入…），逐个插一遍，
+   以后加一种控件就会漏一个。 */
+.sf.flagged{position:relative}
+.sf.flagged::after{content:attr(data-flag);display:block;margin-top:6px;
+  padding-left:10px;border-left:2px solid var(--warn);
+  font-size:12px;line-height:1.5;color:var(--warn)}
+/* 标签也提一下，免得一屏字里找不到是哪一项 */
+.sf.flagged>.sfl{color:var(--warn)}
+
 /* ── 打回那条消息 ──────────────────────────────────────
    它是一条要人动手的消息，所以标题实、评语正常字重、末尾一句说清
    「表就在下面，不用重填」——被打回的人第一反应是「我是不是得从头再来」。 */
+/* ── The review verdict, framed as a record ────────────
+   It used to look exactly like the assistant making conversation: same
+   avatar, same bubble, same shape. But it stops the application, so it has
+   to read like a decision — a label, a count, numbered items, and a line
+   saying who made the call. */
+.mkverd{margin:-2px 0 2px;border-radius:var(--r-control);
+  border:1px solid var(--line-strong);background:var(--canvas);overflow:hidden}
+.mkvh{display:flex;align-items:baseline;gap:8px;padding:8px 12px;
+  border-bottom:1px solid var(--hairline);background:var(--card)}
+.mkvt{font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink)}
+.mkvn{font-size:11.5px;color:var(--warn)}
+.mkvl{margin:0;padding:10px 12px 10px 30px;display:flex;flex-direction:column;gap:12px}
+.mkvl li::marker{color:var(--faint);font-size:11.5px;font-weight:600}
+/* 指到的字段名。它是这条指摘能不能被复核的关键——看得到是哪几项，
+   才谈得上判断它说得对不对。 */
+.mkvf{display:block;font-size:11px;font-weight:600;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--warn);margin-bottom:3px}
+.mkvs{margin:0;font-size:13px;line-height:1.55;color:var(--ink)}
+.mkva{margin:4px 0 0;font-size:12.5px;line-height:1.5;color:var(--mute)}
+.mkvby{padding:7px 12px;border-top:1px solid var(--hairline);
+  font-size:11px;color:var(--faint)}
+
 .mkrevh{display:block;margin-bottom:5px}
 .mkrevb{display:block;white-space:pre-wrap}
 .mkrevf{display:block;margin-top:7px;font-size:12px;color:var(--faint)}
+
+/* ── 申诉 ──────────────────────────────────────────────
+   次要出口，所以是一行浅色的字而不是一颗按钮：绝大多数打回是真的有东西
+   要改，把「我觉得你判错了」和「去改」摆得一样显眼，人会先去点更省事的
+   那一颗。但它必须在——判错了却没有路推翻，人就被永久锁在门外了。 */
+.mkapplink{display:inline-block;margin-top:8px;padding:0;border:0;background:none;
+  font:inherit;font-size:12px;color:var(--faint);text-decoration:underline;
+  text-underline-offset:2px;cursor:pointer}
+.mkapplink:hover{color:var(--mute)}
+.mkapp{display:block;margin-top:9px}
+.mkapp textarea{width:100%;box-sizing:border-box;padding:8px 10px;resize:vertical;
+  border-radius:var(--r-control);border:1px solid var(--line-strong);
+  background:var(--paper);color:var(--ink);font:inherit;font-size:13px;line-height:1.55}
+.mkapp textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.mkappb{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.mkapperr{display:block;margin-top:6px;font-style:normal;font-size:12px;color:var(--neg)}
 
 /* 托管卡 v2：状态行 + 执行轨道 + 撤销脚注 */
 .esc2{flex-direction:column;align-items:stretch;gap:10px}
@@ -1930,6 +1994,12 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .dsteps i{height:2px;flex:1;background:var(--hairline);border-radius:2px}
 .dsteps i.on{background:var(--blue)}
 .dsteps i.now{background:var(--blue);box-shadow:0 0 0 2px var(--blue-wash)}
+/* A step that still holds something the review asked to change.
+   Amber beats the blue "done/current" state: those say where you are,
+   this says where you still have to go back to. */
+.dsteps i.todo{background:var(--warn)}
+.dsteps i.todo.now{background:var(--warn);
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--warn) 22%,transparent)}
 .dwhy{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--accent);padding:12px 20px 8px}
 .dlede{font-size:16px;font-weight:300;line-height:1.65;letter-spacing:-.01em;margin-bottom:14px}
 .dlede b{font-weight:600}
@@ -3539,6 +3609,7 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
 .tip.below{animation-name:tipinb}
 @keyframes tipinb{from{opacity:0;transform:translate(-50%,0) scale(.94)}
   to{opacity:1}}
+.tip.long{text-align:left;font-weight:400;line-height:1.5;padding:8px 10px}
 /* ══ 操作反馈 ══
    原来这儿只有一条 #ftoast 的样式，而 JSX 里从没有人用过它——抄样式时漏了
    实现那一半。现在换成真的堆叠：同时最多三条，新的在下面（离视线最近）。

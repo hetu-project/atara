@@ -1,6 +1,6 @@
 import { ApiError, BASE, PROFILE_CHANGED, api, getIdentity, withConfirmation } from './client'
 import type {
-  Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, EligiblePeer, KycSession, KycStatus, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
+  Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, EligiblePeer, KycSession, KycStatus, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, RailGroup, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
 } from './types'
 
 // ── 账户 ──
@@ -39,6 +39,16 @@ export const assets = () =>
 /** 结算法币，按走廊分组。目录只发这一版支持的——范围由后端声明。 */
 /** 链上合约地址。mock 下回一份空的，前端据此知道这一版不发交易。 */
 export const chainInfo = () => api.get<ChainInfo>('/catalog/chain')
+
+/**
+ * 法币收款渠道。**必须问后端,不能在前端写死。**
+ *
+ * 写死那一版列了 SGD / AED / EUR 三档,而后端只结算 CNY / HKD / USD。
+ * 只勾了 SGD 的商户配置照样审过,然后永远撮合不到单——他收不到任何报错,
+ * 只是没有生意。目录归后端,这一整类问题才不会再出现。
+ */
+export const rails = () =>
+  api.get<{ groups: RailGroup[] }>('/catalog/rails').then(r => r.groups ?? [])
 
 export const fiats = () =>
   api.get<{ corridors: { group: string; assets: CatalogAsset[] }[] }>('/catalog/fiats')
@@ -286,6 +296,16 @@ export const broadcastWithdrawal = (id: string, txHash: string, as?: string) =>
 
 export const markets = () =>
   api.get<{ markets: Market[] }>('/discover/markets').then(r => r.markets)
+
+/**
+ * 申诉：告诉我们预审判错了。
+ *
+ * 不重跑模型——同一份材料再问一次多半得到同一个答案，那只会让人以为自己
+ * 被敷衍了。申辩是新的信息，读懂它并决定要不要采信，正是一开始就没交给
+ * 模型的那类判断。
+ */
+export const appealMakerApp = (note: string, as?: string) =>
+  api.post<MakerApp>('/maker/application/appeal', { note }, { as })
 
 export const makerApp = (as?: string) => api.get<MakerApp>('/maker/application', { as })
 

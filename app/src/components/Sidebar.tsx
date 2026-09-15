@@ -33,6 +33,28 @@ export default function Sidebar({
   const kyc = useKycGate()
   const row = useRef<HTMLDivElement>(null)
 
+  /* 悬停就展开，不用点。
+   *
+   * 菜单是 .luserrow 的子节点（CSS 里它 position:absolute 挂在这一格上），
+   * 所以鼠标从这一格移到菜单上不会触发 leave——中间不存在要跨过去的空档，
+   * 不需要为此留延时。这里那 120ms 只防边缘抖动：贴着边框走的时候
+   * enter/leave 会连着来好几对，不缓一下菜单会闪。
+   *
+   * 只认鼠标：触屏上点一下会先发一个 pointerenter，菜单弹开，紧接着 click
+   * 又把它 toggle 回去——净效果是「点了没反应」。那条路留给下面的 onClick。 */
+  const shut = useRef(0)
+  const hoverIn = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'mouse' || !signed) return
+    clearTimeout(shut.current)
+    setMenu(true)
+  }
+  const hoverOut = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'mouse') return
+    clearTimeout(shut.current)
+    shut.current = window.setTimeout(() => setMenu(false), 120)
+  }
+  useEffect(() => () => clearTimeout(shut.current), [])
+
   // 点外面或 Esc 关掉菜单
   useEffect(() => {
     if (!menu) return
@@ -192,7 +214,8 @@ export default function Sidebar({
 
       {/* 未登录时账户位就是登录入口——那一格本来就在讲「你是谁」；
           登录后它是账户菜单，退出也在这里。 */}
-      <div className="luserrow" ref={row}>
+      <div className="luserrow" ref={row}
+        onPointerEnter={hoverIn} onPointerLeave={hoverOut}>
         <button className="luser" aria-haspopup="menu" aria-expanded={menu}
           onClick={() => (signed ? setMenu(m => !m) : onSignIn())}>
           <span className="lav">{signed ? (me?.display_name || 'D').charAt(0).toUpperCase() : '+'}</span>

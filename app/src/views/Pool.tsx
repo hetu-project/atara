@@ -3,6 +3,7 @@ import * as ep from '../api/endpoints'
 import { useAssessment } from '../hooks/useAssessment'
 import { ApiError } from '../api/client'
 import { useApi } from '../hooks/useApi'
+import { useToast } from '../components/Toast'
 import { go } from '../hooks/useRoute'
 import { useKycGate } from '../hooks/useKycGate'
 import { useWalletTx } from '../hooks/useWalletTx'
@@ -154,6 +155,7 @@ function OfferCard({
   /* 下架要在挂单所在的那条链上发交易——不是后端连的那条。 */
   const { data: chains } = useApi(() => ep.chainInfo(), [])
   const { data: myWallet } = useApi(() => ep.wallet(identity), [identity])
+  const { toast } = useToast()
   const tx = useWalletTx(
     (chains?.chains ?? []).find(c => c.code === o.network) ?? null, myWallet?.address)
 
@@ -170,10 +172,22 @@ function OfferCard({
         await ep.delistOffer(o.id, identity)
       } catch (e) {
         if (e instanceof ApiError && e.code === 'UNLOCK_REQUIRED') {
-          const prep = await ep.prepareDelist(o.id, identity)
-          await tx.unlockListing({ escrow: prep.escrow, offerKey: prep.offer_key })
-          await ep.delistOffer(o.id, identity)
+          /* The coins were locked by the maker's own wallet, so only that
+             wallet can release them. Ask for the signature, then come back —
+             the second call only verifies the chain actually opened. */
+          try {
+            const prep = await ep.prepareDelist(o.id, identity)
+            await tx.unlockListing({ escrow: prep.escrow, offerKey: prep.offer_key })
+            await ep.delistOffer(o.id, identity)
+          } catch (e2) {
+            toast(msgOf(e2, 'Could not unlock those coins'), { kind: 'err' })
+            return
+          }
         } else {
+          /* This used to `return` in silence. Unlisting is the only way to get
+             locked coins back, so a button that fails without a word leaves
+             someone believing their money is stuck with no way to ask why. */
+          toast(msgOf(e, 'Could not unlist that offer'), { kind: 'err' })
           return
         }
       }
@@ -345,4 +359,9 @@ function FiatPicker({
       </div>
     </div>
   )
+}
+
+/** Error → something worth showing. Keeps the server's wording when it has one. */
+function msgOf(e: unknown, fallback: string): string {
+  return e instanceof Error && e.message ? e.message : fallback
 }

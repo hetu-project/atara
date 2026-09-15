@@ -109,17 +109,25 @@ export const VERIFIED_FIELDS: Record<string, keyof import('../api/types').KycIde
 export interface Field { k: string; l: string; type: FieldType; opts?: string[] }
 export interface Step { t: string; lead: string; fields: Field[] }
 
+/**
+ * Field key → the label the applicant actually sees.
+ *
+ * A review points at keys (`taxcountry`); the person reading it knows the
+ * form by its labels ("Tax residency"). Printing the raw key would make the
+ * verdict look like a stack trace.
+ */
+export const FIELD_LABELS: Record<string, string> = Object.fromEntries(
+  [...KYC_IND, ...KYC_CORP, ...LISTING_STEPS]
+    .flatMap((st: any) => (st.fields ?? []) as { k: string; l: string }[])
+    .map(f => [f.k, f.l]),
+)
+
 export { KYC_IND, KYC_CORP, LISTING_STEPS }
 
-/* 法币渠道：对手方把钱打到哪里。按走廊分组——22 个选项平铺会把表单撑到
-   卡片边上，所以收进一个分组多选菜单。数据逐条取自参照的 FIAT_RAILS。 */
-export const FIAT_RAILS = [
-  { g: 'Mainland China · CNY', ccy: 'CNY', list: ['ICBC', 'China Merchants Bank', 'Bank of China', 'CCB', 'Agricultural Bank', 'Alipay', 'WeChat Pay'] },
-  { g: 'Hong Kong · HKD', ccy: 'HKD', list: ['HSBC', 'Bank of China (HK)', 'Hang Seng', 'ZA Bank', 'FPS'] },
-  { g: 'Singapore · SGD', ccy: 'SGD', list: ['DBS', 'OCBC', 'UOB', 'PayNow'] },
-  { g: 'UAE · AED', ccy: 'AED', list: ['Emirates NBD', 'FAB', 'Mashreq'] },
-  { g: 'Europe · EUR', ccy: 'EUR', list: ['SEPA transfer', 'Wise', 'Revolut'] },
-]
+/* 法币渠道那张表已经搬到后端（/catalog/rails），前端从 useRails 取。
+   搬走的理由：写死在这里的那一版列了 SGD / AED / EUR 三档，而后端只结算
+   CNY / HKD / USD——只勾了 SGD 渠道的商户配置照样审过，然后永远撮合不到
+   任何一单，而他收不到任何报错。目录归后端，这一整类漂移才不会再发生。 */
 
 /** 参考指数（demo 静态）：法币 / USD。定价那一行用它算出「你报多少」。 */
 export const FX_IDX: Record<string, number> = { CNY: 7.28, HKD: 7.80, SGD: 1.34, AED: 3.67, EUR: 0.86 }

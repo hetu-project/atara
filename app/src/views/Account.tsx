@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import CountUp from '../components/CountUp'
 import * as ep from '../api/endpoints'
-import { CHIP, IArrow, ICheck, ICopy, IPen } from '../components/icons'
+import CopyButton from '../components/CopyButton'
+import { CHIP, IArrow, ICheck, IPen } from '../components/icons'
 import { useApi } from '../hooks/useApi'
 import { useKycGate } from '../hooks/useKycGate'
 import { AllowanceModal, BankAccountsModal, ReceiveModal, SendModal } from '../components/WalletModals'
@@ -115,8 +116,10 @@ export default function Account({ identity }: { identity: string }) {
                 <span className="num" title="Your wallet address is your account">
                   {addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : ''}
                 </span>
-                <button className="pcopy" title="Copy address" aria-label="Copy wallet address"
-                  onClick={() => navigator.clipboard?.writeText(addr)}><ICopy /></button>
+                {addr ? (
+                  <CopyButton text={addr} label="Copy address" done="Address copied"
+                    className="pcopy" />
+                ) : null}
                 {me?.email ? <>·<span title="Notification email — codes and notices, not a login">{me.email}</span></> : null}
               </div>
             </div>

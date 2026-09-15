@@ -3,7 +3,8 @@ import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
 import ConfirmSheet from './ConfirmSheet'
 import { isWalletTxError, useWalletTx } from '../hooks/useWalletTx'
-import { FIAT_RAILS, FX_IDX } from './kycforms'
+import { FX_IDX } from './kycforms'
+import { useRailFiat } from '../hooks/useRails'
 import type { Listing } from './MakerListing'
 import type { Offer } from '../api/types'
 import type { TxStep } from '../hooks/useWalletTx'
@@ -23,7 +24,6 @@ import type { TxStep } from '../hooks/useWalletTx'
 const FIAT_SYM: Record<string, string> = {
   CNY: '¥', HKD: 'HK$', SGD: 'S$', JPY: '¥', EUR: '€', USD: '$', AED: 'د.إ', GBP: '£',
 }
-const railCcy = (name: string) => FIAT_RAILS.find(x => x.list.includes(name))?.ccy
 const num = (v: string) => Number(String(v).replace(/[,，\s]/g, ''))
 
 /** 要发给后端的那份挂单。确认框拿着它，确认之后原样发出去。 */
@@ -40,6 +40,8 @@ export default function MakerOffer({
   identity: string
   onPosted: (o: Offer, sym: string) => void
 }) {
+  /* 渠道收什么币,问后端那份目录——前端不再留副本。 */
+  const railCcy = useRailFiat()
   const { data: cat } = useApi(() => ep.assets(), [])
   const { data: fiatCorridors } = useApi(() => ep.fiats(), [])
   const { data: w } = useApi(() => ep.wallet(identity), [identity])
