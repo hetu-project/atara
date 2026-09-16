@@ -17,7 +17,11 @@ import { useToast } from './Toast'
 type State =
   | { s: 'idle' }
   | { s: 'up'; name: string; pct: number }
-  | { s: 'ok'; name: string; ref: string }
+  /* url is the signed link the upload came back with. It is separate from ref
+     because ref names the file and url is permission to open it — and when the
+     component starts from a ref handed in through `value`, there is no url yet
+     and no link to show. */
+  | { s: 'ok'; name: string; ref: string; url?: string }
   | { s: 'bad'; name: string; why: string }
 
 export default function FilePick({
@@ -75,7 +79,7 @@ export default function FilePick({
     job.current = j
     j.done.then(u => {
       job.current = null
-      setSt({ s: 'ok', name: f.name, ref: u.file_ref })
+      setSt({ s: 'ok', name: f.name, ref: u.file_ref, url: u.url })
       onDone(u.file_ref)
     }).catch((e: unknown) => {
       job.current = null
@@ -144,8 +148,8 @@ export default function FilePick({
 
       {/* 传上去的东西要能点开看。显示一句「已上传」等于让人相信一份他看不到的
           文件——这条在别处（证据包）已经是既定做法，这里保持一致。 */}
-      {st.s === 'ok' && (
-        <a className="fplink" href={ep.fileURL(st.ref)} target="_blank" rel="noopener">View file</a>
+      {st.s === 'ok' && st.url && (
+        <a className="fplink" href={st.url} target="_blank" rel="noopener">View file</a>
       )}
     </div>
   )

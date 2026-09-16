@@ -5,6 +5,7 @@ import { avHue, avInit } from './Avatar'
 import { ACT_DEF, ATOMS, DATA_METRICS, MAX_CONDS } from './actlang'
 import { useApi } from '../hooks/useApi'
 import type { CatalogAsset, Contact, EligiblePeer } from '../api/types'
+import { scoreText } from '../api/types'
 
 export type ActKind = 'buy' | 'sell'
 
@@ -141,7 +142,7 @@ export default function ActionBar({
               v: p.display_name,
               n: (act.peer === p.display_name ? '✓ ' : '') + av(p.display_name) + p.display_name,
               d: `${contacts.some(c => c.name === p.display_name) ? 'In your contacts · ' : ''}`
-                + `score ${p.trust_score} · ${p.deals} trades`
+                + `${scoreText(p.trust_score)} · ${p.deals} trades`
                 + ` · ${symOf(act.fiat)}${p.best_price} per ${act.coin}`,
             })),
           ], v => set({ peer: v }, 'peer'))}>

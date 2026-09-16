@@ -41,10 +41,19 @@ function firstFlaggedStep(
 }
 
 export default function MakerFlow({
-  phase, identity, initial, issues, onPending, onSubmitted, onBackOut,
+  phase, identity, initial, issues, resubmit, onPending, onSubmitted, onBackOut,
 }: {
   phase: 'kyc' | 'listing'
   identity: string
+  /**
+   * These terms have already been approved once and are being changed.
+   *
+   * Submitting is not a free edit: it drops the approval until the review
+   * clears again (PRD §卖方支线 改配置重审), and no listing can be posted in
+   * between. Opening this form costs nothing, so the warning belongs here on
+   * the last step rather than on the button that opens it.
+   */
+  resubmit?: boolean
   /** 上一次预审指出来的问题。标在出问题的那几项上，不是丢一段摘要让人自己找。 */
   issues?: ReviewIssue[]
   /** 上次交上来的那份。被打回时表要带着原内容重开——让人对着评语改，
@@ -239,7 +248,8 @@ export default function MakerFlow({
           <p className="sellm-lead">{cur?.lead}</p>
 
           {phase === 'listing' ? (
-            <ListingStep d={lst} step={step} bad={bad} kindLine={kindLine} onChange={setLst} />
+            <ListingStep d={lst} step={step} bad={bad} kindLine={kindLine}
+              identity={identity} onChange={setLst} />
           ) : (
             <>
               {/* 第一步选主体类型：之后两条路的字段完全不同 */}
@@ -281,6 +291,12 @@ export default function MakerFlow({
             </>
           )}
 
+          {last && resubmit && !err ? (
+            <p className="dnote" style={{ color: 'var(--warn)' }}>
+              Submitting sends these terms back for review. Your current terms stay
+              approved until then, but you cannot post new listings while it runs.
+            </p>
+          ) : null}
           {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
 
           <div className="dfoot">
@@ -299,7 +315,7 @@ export default function MakerFlow({
             <button className="btn btn-primary" disabled={busy} onClick={() => void next()}>
               {/* Say what it is doing. A button that only greys out looks
                   broken when the wait runs into seconds. */}
-              {busy ? 'Checking…' : last ? 'Submit' : 'Next'}
+              {busy ? 'Checking…' : !last ? 'Next' : resubmit ? 'Resubmit for review' : 'Submit'}
             </button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
+import { LIVE_CHANGED } from '../api/events'
 import { useApi } from '../hooks/useApi'
 import Avatar from './Avatar'
 import { IPanel } from './icons'
@@ -70,7 +71,16 @@ function OrderStatus({
 }: { identity: string; onOpen: (o: Order) => void }) {
   const [filt, setFilt] = useState<Filt>('all')
   // 工单状态由后端调度器推进，不轮询就看不到变化。
-  const { data } = useApi(() => ep.orders(identity), [identity], 2000)
+  /* 15s as a backstop; the live stream is what normally refreshes this. Every
+     order transition in the product publishes one, including the ones the
+     scheduler makes while nobody is clicking anything — which is what this was
+     polling for. */
+  const { data, reload } = useApi(() => ep.orders(identity), [identity], 15000)
+
+  useEffect(() => {
+    addEventListener(LIVE_CHANGED, reload)
+    return () => removeEventListener(LIVE_CHANGED, reload)
+  }, [reload])
   const live = (data ?? []).filter(o => !o.terminal || o.terminal === 'disputed')
 
   /* 筛选只有两类值得分：球在我手里、球在别处。
@@ -245,7 +255,13 @@ function Assessment({ onFold }: { onFold: () => void }) {
           <span className="agth">Agent profile</span>
         </div>
         <div className="assplit">
-          <div id="arring"><Ring score={run?.score ?? 0} runId={run?.id} /></div>
+          <div id="arring">
+            {/* passed / threshold feed the line under the number, so it says
+                how many actually agreed instead of a hardcoded N of N. */}
+            <Ring score={run?.score ?? 0} runId={run?.id}
+              passed={run?.votes.filter(v => v.v === 'pass').length}
+              total={run?.threshold} />
+          </div>
           {/* .rstats 在 lay-b 下是 display:none，星盘才是这一格的内容 */}
           <div className="rsplit">
             <div className="rtable" id="rs-table"><Constellation live={!!run} done={!!run?.done} /></div>

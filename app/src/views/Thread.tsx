@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
+import { LIVE_CHANGED } from '../api/events'
 import ActionBar, { type Act, type ActKind } from '../components/ActionBar'
 import { useAssessment } from '../hooks/useAssessment'
 import AssessCard from '../components/AssessCard'
@@ -18,7 +19,20 @@ import type { Message, Order } from '../api/types'
  * 「这单还等着凭证」就永远对不上号。
  */
 export default function Thread({ identity, peer }: { identity: string; peer: string }) {
-  const { data, reload } = useApi(() => ep.thread(peer, identity), [peer, identity], 3000)
+  /* 15s, not 3s: the live stream is what makes a new message appear now, and
+     this is the net under it. If the stream is up the timer almost never fires
+     first; if it is down — a proxy that strips streaming, an old backend — the
+     conversation still updates, just at the old speed. Removing it outright
+     would make one broken connection look like a broken product. */
+  const { data, reload } = useApi(() => ep.thread(peer, identity), [peer, identity], 15000)
+
+  /* Refetch the moment the server says this account has something new. The
+     stream deliberately carries no message body, so there is nothing to merge:
+     the same endpoint that filled this view fills it again. */
+  useEffect(() => {
+    addEventListener(LIVE_CHANGED, reload)
+    return () => removeEventListener(LIVE_CHANGED, reload)
+  }, [reload])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   /* 在这个人的会话里直接下单。参照的 composer 和会话本来就是同一个视图，
@@ -107,7 +121,11 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
             : (
               <Fragment key={x.order.id}>
                 {x.order.assessment && <AssessCard a={x.order.assessment} peer={name} />}
-                <OrderDetail id={x.order.id} bare identity={identity} onBack={() => {}} />
+                {/* Hand the card the order this stream already fetched. Left to
+                    itself it polls once a second for a row that arrives here
+                    anyway, three seconds at a time, from the same endpoint. */}
+                <OrderDetail id={x.order.id} bare identity={identity} onBack={() => {}}
+                  order={x.order} onChanged={reload} />
               </Fragment>
             )))}
           {!stream.length && (

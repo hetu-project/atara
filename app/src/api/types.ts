@@ -58,10 +58,48 @@ export interface Wallet {
   spending_contract: string
 }
 
+/**
+ * How a score reads when there may not be one.
+ *
+ * null is "no settlement record", not a low score, so it must not print as
+ * "score null" or quietly become 0. Every surface that shows the number goes
+ * through here so the wording stays the same on all of them.
+ */
+export const scoreText = (s: number | null | undefined) =>
+  s == null ? 'not rated yet' : `score ${s}`
+
+/**
+ * Which band a merchant score falls in: '' neutral, 'lo' concerning,
+ * 'hi' priced as low risk, 'none' never scored.
+ *
+ * The lower line sits at 65, not at 70 where console.html had it. That
+ * threshold was set against the prototype's hand-written 66–97 spread; a score
+ * computed from the settlement record runs about 59–89, and its bottom stretch
+ * is where thin-but-clean records live. At 70 a maker with four clean trades
+ * and a maker with ten defaults in twenty trades were painted the same amber —
+ * "shallow record" and "bad record" reading alike, which is the mistake the
+ * unrated state was introduced to stop.
+ *
+ * 85 is not ours to move: PRD §9.1 6c prices at or above it as low risk.
+ */
+export const scoreBand = (s: number | null | undefined): '' | 'lo' | 'hi' | 'none' => {
+  if (s == null) return 'none'
+  if (s >= 85) return 'hi'
+  if (s < 65) return 'lo'
+  return ''
+}
+
 export interface Maker {
   name: string
   peer_code: string
-  trust_score: number
+  /**
+   * null when there is no settlement record yet.
+   *
+   * "Never scored" and "scored zero" are different facts: an unknown
+   * counterparty is bounded by limits and escrow, a badly-rated one is
+   * refused. They used to share the value 0, which left the UI guessing.
+   */
+  trust_score: number | null
   deals: number
   disputes: number
   fill_rate: string
@@ -123,14 +161,19 @@ export interface Escrow {
 
 export interface OtcLeg {
   offer_id: string
-  /** taker 视角：buy 表示 taker 买币、出法币。 */
+  /** taker 视角：buy 表示 taker 买币、出法币。两方看到的是同一个值。 */
   side: 'buy' | 'sell'
+  /** 看这一单的人自己的方向。做市方与 side 相反——界面上所有
+      「你付 / 你收」的文案都要跟这个走，不要跟 side。 */
+  your_side?: 'buy' | 'sell'
   funding_via?: string
   unit_price: string
   fiat_code: string
   fiat_amount: string
   network: string
   receipt_ref?: string
+  /** 打开那份回执的链接：后端签过、有时效。ref 只是文件名，单独拿着打不开。 */
+  receipt_url?: string
 }
 
 export interface OrderEvent {
@@ -167,6 +210,9 @@ export interface Order {
    * 下单那一刻算出来的风控评分（60–99），存在工单上，之后不重算。
    * 不重算是有意的：评分是对下单当时的判断，跟着后来的事变就不是判断了。
    */
+  /** 这一单是不是我发起的（OTC 里就是「我是吃单方」）。撮合那一站还没有
+      phase 和 actor，这是唯一能区分两方的字段——确认只属于其中一方。 */
+  yours?: boolean
   trust_score: number
   /** 对手方的成绩单与资质件。跟工单一起发，两个数才来自同一时刻。 */
   peer_profile?: PeerProfile
@@ -184,7 +230,14 @@ export interface PeerProfile {
   peer_code?: string
   deals: number
   disputes: number
-  trust_score: number
+  /**
+   * null when there is no settlement record yet.
+   *
+   * "Never scored" and "scored zero" are different facts: an unknown
+   * counterparty is bounded by limits and escrow, a badly-rated one is
+   * refused. They used to share the value 0, which left the UI guessing.
+   */
+  trust_score: number | null
   docs?: Record<string, boolean>
 }
 
@@ -205,6 +258,8 @@ export interface OrderAssessment {
 export interface Evidence {
   outcome: 'completed' | 'cancelled' | 'expired' | 'disputed'
   receipt_ref?: string
+  /** 同 OTC.receipt_url。 */
+  receipt_url?: string
   settled_at?: string
   chain?: {
     kind: string; amount?: string; tx_hash?: string
@@ -238,7 +293,14 @@ export interface EligiblePeer {
   peer_code: string
   hue: number
   avatar_url: string
-  trust_score: number
+  /**
+   * null when there is no settlement record yet.
+   *
+   * "Never scored" and "scored zero" are different facts: an unknown
+   * counterparty is bounded by limits and escrow, a badly-rated one is
+   * refused. They used to share the value 0, which left the UI guessing.
+   */
+  trust_score: number | null
   deals: number
   best_price: string
   available_qty: string
@@ -248,7 +310,14 @@ export interface MatchCandidate {
   offer_id: string
   name: string
   peer_id: string
-  trust_score: number
+  /**
+   * null when there is no settlement record yet.
+   *
+   * "Never scored" and "scored zero" are different facts: an unknown
+   * counterparty is bounded by limits and escrow, a badly-rated one is
+   * refused. They used to share the value 0, which left the UI guessing.
+   */
+  trust_score: number | null
   deals: number
   unit_price: string
   fiat: string
@@ -496,7 +565,14 @@ export interface Account {
   name: string
   kind: string
   deals: number
-  trust_score: number
+  /**
+   * null when there is no settlement record yet.
+   *
+   * "Never scored" and "scored zero" are different facts: an unknown
+   * counterparty is bounded by limits and escrow, a badly-rated one is
+   * refused. They used to share the value 0, which left the UI guessing.
+   */
+  trust_score: number | null
   /** 我跟这个人现在的关系。空=还没有，pending=等他点头，accepted=已经是联系人。 */
   relation?: '' | 'pending' | 'accepted'
 }
@@ -528,6 +604,8 @@ export interface Message {
   kind: 'chat' | 'system' | 'order' | 'assessment'
   body: string
   order_id?: string
+  /** AI 回答之前想了多久（毫秒）。只有它自己的回答上有。 */
+  thought_ms?: number
   payload?: Record<string, string>
   created_at: string
 }

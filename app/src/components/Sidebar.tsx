@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { PROFILE_CHANGED } from '../api/client'
+import { LIVE_CHANGED } from '../api/events'
 import { useApi } from '../hooks/useApi'
 import Avatar from './Avatar'
 import { IApi, IChart, IContacts, IDiscover, IGear, IGo, ILock, INewOrder, IPanel, IPayments } from './icons'
@@ -71,7 +72,19 @@ export default function Sidebar({
   /* 轮询：会话列表要跟着两件事变——我刚下的单会新开一条会话，对方发来的
      消息会顶起一条旧会话。不轮询的话，下完单落到聊天里，左栏却没有这一行，
      得刷新整页才出现；对方说了话也一样，安安静静地什么都不发生。 */
-  const { data: threads } = useApi(() => ep.threads(identity), [identity], 3000)
+  /* 15s as a backstop; LIVE_CHANGED below is what normally refreshes this. */
+  const { data: feed, reload: reloadFeed } = useApi(() => ep.threads(identity), [identity], 15000)
+
+  useEffect(() => {
+    addEventListener(LIVE_CHANGED, reloadFeed)
+    return () => removeEventListener(LIVE_CHANGED, reloadFeed)
+  }, [reloadFeed])
+  const threads = feed?.list
+  /* People waiting for me to accept them. Rendered on the Contacts row so the
+     request is visible from anywhere — until now it was only discoverable by
+     opening the Contacts page, which is the one place you go when you already
+     know there is something there. */
+  const pending = feed?.pending ?? 0
 
   /* 改完名要立刻变。这份 /me 是左栏自己的，账户页那边 reload 的是它那一份——
      不听这个广播的话，左下角会一直停在改名前：新账户那就是一串地址，
@@ -87,6 +100,10 @@ export default function Sidebar({
   /* 新建的钱包没有名字，后端就拿短地址当展示名——那时再拼一次地址
      会写成「Tc72vq…tnhc · Tc72vq…tnhc」。名字就是地址时不重复。 */
   const named = !!me?.display_name && me.display_name !== short
+  /* The initial for the avatar. Falls back to the address, never to a letter
+     that stands for a name nobody has — a profile that failed to load should
+     look unloaded, not like somebody else's account. */
+  const initial = (me?.display_name || addr || '·').charAt(0).toUpperCase()
   /* 把 Atara AI 那条线程从列表里剔掉：它下面已经有一行常驻的入口了。
      desk 现在是库里一个真实的 agent 账号（messages.peer_id 要外键），
      所以一旦跟它说过话，会话列表里就会自动多出同名的一行——同一条对话
@@ -139,6 +156,15 @@ export default function Sidebar({
                   go({ view: n.view } as Route)
                 }}>
                 <span className="ni"><Icon /></span>{n.label}
+                {/* Empty string when there is nothing waiting: `.c.dot:empty`
+                    hides it, so no conditional is needed and the markup stays
+                    the same shape in both states. */}
+                {n.view === 'contacts' && (
+                  <span className="c dot num"
+                    aria-label={pending ? `${pending} waiting to connect` : undefined}>
+                    {pending ? (pending > 99 ? '99+' : pending) : ''}
+                  </span>
+                )}
               </button>
             )
           })}
@@ -218,7 +244,7 @@ export default function Sidebar({
         onPointerEnter={hoverIn} onPointerLeave={hoverOut}>
         <button className="luser" aria-haspopup="menu" aria-expanded={menu}
           onClick={() => (signed ? setMenu(m => !m) : onSignIn())}>
-          <span className="lav">{signed ? (me?.display_name || 'D').charAt(0).toUpperCase() : '+'}</span>
+          <span className="lav">{signed ? initial : '+'}</span>
           <span className="lutxt">
             {signed ? (
               <>
@@ -235,8 +261,13 @@ export default function Sidebar({
           <div className="ddmenu umenu" role="menu"
             style={{ left: folded ? 10 : 8, bottom: 'calc(100% - 6px)' }}>
             <div className="umhead">
-              <span className="umav">{(me?.display_name || 'D').charAt(0).toUpperCase()}</span>
-              <span><b>{me?.display_name ?? 'Demo'}</b><em className="num">{short}</em></span>
+              <span className="umav">{initial}</span>
+              {/* No invented name here either: without a profile this shows the
+                  address, which is at least true. Printing "Demo" turned a
+                  failed request into a claim about who you are — and it looked
+                  convincing enough that it read as the seeded demo account. */}
+              <span><b>{me?.display_name || short || 'Signed in'}</b>
+                <em className="num">{short}</em></span>
             </div>
             <button className="umitem" role="menuitem"
               onClick={() => { setMenu(false); go({ view: 'account' }) }}>

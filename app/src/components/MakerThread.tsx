@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
+import { useApi } from '../hooks/useApi'
 import Fold from './Fold'
 import MakerFlow from './MakerFlow'
 import MakerOffer, { OfferPosted } from './MakerOffer'
 import { FIELD_LABELS, KYC_CORP, KYC_IND } from './kycforms'
 import { listingRows, type Listing } from './MakerListing'
-import { useRailFiat } from '../hooks/useRails'
 import { go } from '../hooks/useRoute'
 import type { MakerApp, Offer } from '../api/types'
 
@@ -272,7 +272,7 @@ export default function MakerThread({
   const revise = reviseAt(app)
   /* The receipt prints the limits with their currency, and which currency
      that is depends on the rails they picked. */
-  const railFiat = useRailFiat()
+  const { data: accts } = useApi(() => ep.bankAccounts(identity), [identity])
 
   /* 新消息进来就滚到底——不滚的话通过那条消息连同它的按钮都在屏幕外面。 */
   useEffect(() => {
@@ -281,6 +281,14 @@ export default function MakerThread({
 
   const submitted = (phase: 'kyc' | 'listing') => {
     setPending(cur => (cur === phase ? null : cur))
+    /* Close the form once it has been handed in.
+
+       toListing is what "they asked to edit the terms" means, and nothing
+       cleared it on the way out — so after a successful resubmission the
+       thread showed the receipt and the approval above a form still sitting
+       on its confirm step, asking to be submitted again. Whether the review
+       passes or bounces is the thread's answer to give, not the form's. */
+    if (phase === 'listing') setToListing(false)
     onDone()
   }
 
@@ -291,8 +299,14 @@ export default function MakerThread({
      让他对着评语改，中间再插一次点击只是多一道手续。 */
   const card: 'kyc' | 'listing' | 'offer' | null =
     revise ? revise
-      : !kycDone ? 'kyc'
-        : kycOk && !listDone && toListing ? 'listing'
+      /* Terms stay editable after approval. The gate used to be
+         `!listDone`, which meant that once they were in, they were fixed:
+         a maker who picked the wrong network or typed the wrong limit had
+         nowhere to go, and neither did one whose business simply changed.
+         Reopening sends the terms back for review — see
+         SubmitMakerApplication. */
+      : kycOk && toListing ? 'listing'
+        : !kycDone ? 'kyc'
           : approved && toOffer ? 'offer'
             : null
 
@@ -352,7 +366,7 @@ export default function MakerThread({
                 business day{' '}
                 <em style={{ fontStyle: 'normal', color: 'var(--faint)' }}>(demo: seconds)</em>.
                 {f.listing
-                  ? <Receipt groups={[['Trading terms', listingRows(f.listing, railFiat)]]} />
+                  ? <Receipt groups={[['Trading terms', listingRows(f.listing, accts ?? [])]]} />
                   : null}
               </Them>
             )}
@@ -383,6 +397,7 @@ export default function MakerThread({
 
       {card === 'offer' ? (
         <MakerOffer terms={f.listing} identity={identity}
+          onEditTerms={() => { setToOffer(false); setToListing(true) }}
           /* 挂完重取一次申请：挂单会动到账户状态（币锁进合约），
              这条对话里别处显示的还是挂之前那一份。 */
           onPosted={(o, sym) => {
@@ -392,6 +407,7 @@ export default function MakerThread({
         <MakerFlow phase={card} identity={identity}
           initial={card === 'kyc' ? f.kyc : (f.listing as unknown as Record<string, unknown>)}
           issues={app?.review_issues}
+          resubmit={card === 'listing' && listDone}
           onPending={setPending}
           onSubmitted={submitted}
           onBackOut={() => setToListing(false)} />

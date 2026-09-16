@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
 import { FX_IDX } from './kycforms'
-import { useRailFiat, useRails } from '../hooks/useRails'
+import { useTradableFiats } from '../hooks/useRails'
+import type { BankAccount } from '../api/types'
+import { BankAccountsModal } from './WalletModals'
 
 /**
  * 挂单配置的表单，逐处对着参照的 paintMaker() 里 phase==='listing' 那一支写。
@@ -68,13 +70,25 @@ const Chips = ({
 )
 
 /**
- * 渠道菜单。勾选不关面板——多选就该是这个手感；点外面才收起。
+ * Which of my own fiat accounts receive the money.
+ *
+ * This used to be a global bank directory: picking "ICBC" declared that I
+ * accept ICBC transfers, and that was the end of it. The account it implied
+ * lived in a different drawer — or nowhere — so no counterparty could ever be
+ * told where to send the money, and nothing checked that the two agreed.
+ *
+ * A rail is the account. There is no separate claim left to contradict.
+ *
+ * Ticking does not close the panel — that is what multi-select should feel
+ * like; clicking outside closes it.
  */
-function RailMenu({
-  sel, onToggle,
-}: { sel: string[]; onToggle: (v: string) => void }) {
-  const groups = useRails()
+function AccountMenu({
+  identity, sel, onToggle,
+}: { identity: string; sel: string[]; onToggle: (v: string) => void }) {
+  const { data: list, reload } = useApi(() => ep.bankAccounts(identity), [identity])
+  const tradable = useTradableFiats()
   const [open, setOpen] = useState(false)
+  const [adding, setAdding] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
@@ -85,42 +99,97 @@ function RailMenu({
     return () => removeEventListener('mousedown', away)
   }, [open])
 
-  const label = sel.length
-    ? `${sel.length} selected — ${sel.slice(0, 3).join(' · ')}${sel.length > 3 ? ` + ${sel.length - 3} more` : ''}`
-    : 'Choose banks and rails…'
+  const rows = list ?? []
+  const byID = new Map(rows.map(a => [a.id, a]))
+  const picked = sel.map(id => byID.get(id)).filter(Boolean) as BankAccount[]
+  /* Terms saved before rails were accounts hold bank names, and an account can
+     be deleted after the terms referenced it. Both read the same way here —
+     this row no longer points anywhere — so say how many rather than which. */
+  const gone = sel.filter(id => !byID.has(id))
 
   return (
-    <div ref={box} style={{ position: 'relative' }}>
-      <button type="button" className="sfdd" aria-expanded={open}
-        onClick={() => setOpen(o => !o)}><span>{label}</span><i>⌄</i></button>
-      {open && (
-        <div className="ddmenu railmenu">
-          {/* 菜单内容来自后端目录：后端结算不了的法币,这里根本不出现。
-              选不到,就构造不出「配置审过了却永远撮合不到」那种单。 */}
-          {groups.map(gr => (
-            <div key={gr.group}>
-              <div className="rmg">{gr.group}</div>
-              {gr.rails.map(x => (
-                <button type="button" key={x.name}
-                  className={'asopt rmi' + (sel.includes(x.name) ? ' on' : '')}
-                  onClick={() => onToggle(x.name)}>
-                  <b>{x.name}</b><span className="rmk">✓</span>
-                </button>
-              ))}
-            </div>
+    <>
+      <div ref={box} style={{ position: 'relative' }}>
+        {/* The chosen accounts sit in the trigger as chips, each with its own
+            remove control. Unpicking one used to mean opening the panel and
+            hunting for the row — and changing which account gets paid is the
+            main reason anyone comes back to these terms at all.
+
+            A div, not a button: the chips are buttons, and a button inside a
+            button is neither valid nor clickable. The opener below is a real
+            button that fills the rest of the row, so the blank area still
+            opens the panel and the keyboard still reaches everything. */}
+        <div className={'sfdd sfdd-tok' + (open ? ' on' : '')}>
+          {picked.map(a => (
+            <span className="tok" key={a.id}>
+              {a.bank}
+              <button type="button" className="tokx" aria-label={`Remove ${a.bank}`}
+                onClick={() => onToggle(a.id)}>×</button>
+            </span>
           ))}
-          {!groups.length && <div className="rmg">Loading…</div>}
+          {gone.length > 0 && (
+            <span className="tok tokgone">
+              {gone.length} no longer on file
+              <button type="button" className="tokx" aria-label="Remove accounts no longer on file"
+                onClick={() => gone.forEach(onToggle)}>×</button>
+            </span>
+          )}
+          <button type="button" className="tokopen" aria-expanded={open}
+            onClick={() => setOpen(o => !o)}>
+            <span>{sel.length ? '' : 'Choose which of your accounts receive the money…'}</span>
+            <i>⌄</i>
+          </button>
         </div>
+        {open && (
+          <div className="ddmenu railmenu">
+            {rows.map(a => {
+              /* An account in a currency we cannot settle is selectable
+                 nowhere — it is the applicant's real account, so it is listed,
+                 but saying why it cannot be used beats leaving them to wonder
+                 where their bank went. */
+              const off = tradable.length > 0 && !tradable.includes(a.currency)
+              return (
+                <button type="button" key={a.id} disabled={off}
+                  className={'asopt rmi' + (sel.includes(a.id) ? ' on' : '')}
+                  onClick={() => onToggle(a.id)}>
+                  <span className="rmtxt">
+                    <b>{a.bank} · <span className="mono">{a.account_no}</span></b>
+                    <span className="rmline">{a.holder} · {a.currency}
+                      {off ? ' — not settled here yet' : ''}</span>
+                  </span>
+                  <span className="rmk">✓</span>
+                </button>
+              )
+            })}
+            {!rows.length && (
+              <div className="rmg">No fiat accounts yet — add the one you want to be paid into.</div>
+            )}
+            <button type="button" className="asopt rmi rmadd"
+              onClick={() => { setAdding(true); setOpen(false) }}>
+              <b>+ Add an account</b>
+            </button>
+          </div>
+        )}
+      </div>
+      {/* Adding has to work from here. These terms come straight after
+          identity, so the account list is empty for everyone reaching this
+          step for the first time — sending them to the Account page to come
+          back would drop them out of the application halfway through. */}
+      {adding && (
+        <BankAccountsModal identity={identity}
+          onClose={() => { setAdding(false); reload() }} />
       )}
-    </div>
+    </>
   )
 }
 
 export function ListingStep({
-  d, step, bad, kindLine, onChange,
+  d, step, bad, kindLine, identity, onChange,
 }: {
   d: Listing
   step: number
+  /** Whose accounts the rails picker lists. */
+  identity: string
   /** 出错那一行的 id。参照靠给 .sf 加 .bad 让预置的 .err 显出来。 */
   bad: string
   /** 复核页第一行的「主体」，来自身份那一段填的东西。 */
@@ -149,8 +218,17 @@ export function ListingStep({
      shown a CNY limit box and a CNY index, and nothing on the page admitted
      it was the wrong currency. Two rails from different corridors is a real
      combination, so say so rather than silently picking one. */
-  const railFiat = useRailFiat()
-  const fiats = [...new Set(d.rails.map(railFiat).filter(Boolean) as string[])]
+  const { data: accts } = useApi(() => ep.bankAccounts(identity), [identity])
+  const pickedAccts = (accts ?? []).filter(a => d.rails.includes(a.id))
+  const fiats = [...new Set(pickedAccts.map(a => a.currency))]
+  /* Ids that resolve to nothing are counted, not printed: the reader cannot
+     act on a raw id, and dropping them silently would make the summary
+     disagree with what is about to be submitted. */
+  const railGone = d.rails.length - pickedAccts.length
+  const railNames = [
+    ...pickedAccts.map(a => `${a.bank} · ${a.account_no}`),
+    ...(railGone ? [`${railGone} no longer on file`] : []),
+  ]
   const fiat = fiats.length === 1 ? fiats[0] : ''
   const idxFiat = fiat || 'CNY'
 
@@ -178,7 +256,10 @@ export function ListingStep({
             {num(d.lo).toLocaleString()} – {num(d.hi).toLocaleString()}{fiat ? ` ${fiat}` : ''}</dd></div>
           <div><dt>Networks</dt><dd>{d.nets.join(' · ')}</dd></div>
           <div><dt>Pricing</dt><dd>{px}</dd></div>
-          <div><dt>Rails</dt><dd>{d.rails.join(' · ')}</dd></div>
+          {/* Named, never printed raw. These are account ids now, and a UUID on
+              a confirmation page tells the reader nothing about what they are
+              about to agree to. */}
+          <div><dt>Rails</dt><dd>{railNames.length ? railNames.join(' · ') : '—'}</dd></div>
         </dl>
         <div className={cls('sf-agree')} style={{ marginTop: 14 }}>
           <label className="sfagree">
@@ -255,9 +336,10 @@ export function ListingStep({
           ? 'Enter a spread between −5 and 5' : 'Enter your rate — a positive number'}</span></div>
 
       <div className={cls('sf-rails') + ' sfrel'}>
-        <span className="sfl">Payment rails — where counterparties send fiat</span>
-        <RailMenu sel={d.rails} onToggle={v => set({ rails: flip(d.rails, v) })} />
-        <span className="err">Select at least one payment rail</span></div>
+        <span className="sfl">Payment rails — which of your accounts counterparties pay</span>
+        <AccountMenu identity={identity} sel={d.rails}
+          onToggle={v => set({ rails: flip(d.rails, v) })} />
+        <span className="err">Select at least one account to be paid into</span></div>
     </>
   )
 }
@@ -265,21 +347,31 @@ export function ListingStep({
 /** 回执里那张「交易条款」表，六行，取自参照的 receiptCard。 */
 export function listingRows(
   d: Listing,
-  /* Rail → fiat. Optional because the receipt can be rendered before the
-     catalogue has loaded; without it the limits print without a currency,
-     which is honest. Naming a currency we have not established would not be. */
-  railFiat?: (rail: string) => string | undefined,
+  /* The reader's own fiat accounts, so the rail ids in `d` can be named.
+     Optional because the receipt can be rendered before they have loaded;
+     without them the limits print without a currency and the rails print as
+     a count, which is honest. Naming an account we have not resolved, or a
+     currency we have not established, would not be. */
+  accounts?: BankAccount[],
 ): [string, string][] {
   /* 每一项都要兜底。这份 d 是后端 form_json 原样发回来的，而后端不校验它的
      形状——用旧版表单交过、或者直接走 API 提交的账号，这里少哪个字段都可能。
      少一个 `?? []` 的后果不是缺一行，是 undefined.join 把整个准入对话炸成白屏，
      而那条对话恰恰是他查「我的申请审到哪了」的唯一入口。 */
   const list = (v: string[] | undefined) => (v?.length ? v.join(' · ') : '—')
+  const picked = (accounts ?? []).filter(a => (d.rails ?? []).includes(a.id))
   const ccy = (() => {
-    if (!railFiat) return ''
-    const f = [...new Set((d.rails ?? []).map(railFiat).filter(Boolean) as string[])]
+    const f = [...new Set(picked.map(a => a.currency))]
     return f.length === 1 ? ` ${f[0]}` : ''
   })()
+  /* Rails print as the accounts they are. An id that resolves to nothing is
+     counted, not printed: a raw id tells the reader nothing, and dropping it
+     silently would make the receipt disagree with what was submitted. */
+  const gone = (d.rails ?? []).length - picked.length
+  const rails = [
+    ...picked.map(a => `${a.bank} · ${a.account_no}`),
+    ...(gone ? [`${gone} no longer on file`] : []),
+  ]
   return [
     ['Side', list(d.dir)],
     ['Assets', list(d.coins)],
@@ -287,6 +379,6 @@ export function listingRows(
     ['Networks', list(d.nets)],
     ['Pricing', d.pricing === 'Float'
       ? `Index ${num(d.spread) >= 0 ? '+' : ''}${d.spread}%` : `Fixed · ${d.fixed || '—'}`],
-    ['Payment rails', list(d.rails)],
+    ['Payment rails', list(rails)],
   ]
 }

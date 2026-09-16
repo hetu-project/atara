@@ -1,5 +1,6 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import * as ep from '../api/endpoints'
+import { LIVE_CHANGED } from '../api/events'
 import Avatar from '../components/Avatar'
 import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
@@ -34,7 +35,13 @@ export default function Payments({ identity }: { identity: string }) {
   const [tab, setTab] = useState<'live' | 'fin'>('live')
   const [lf, setLf] = useState<Live>('all')
   const [df, setDf] = useState<Done>('all')
-  const { data } = useApi(() => ep.orders(identity), [identity], 3000)
+  /* 15s as a backstop; the live stream is what normally refreshes this. */
+  const { data, reload } = useApi(() => ep.orders(identity), [identity], 15000)
+
+  useEffect(() => {
+    addEventListener(LIVE_CHANGED, reload)
+    return () => removeEventListener(LIVE_CHANGED, reload)
+  }, [reload])
 
   const all = data ?? []
   const live = all.filter(o => !o.terminal || o.terminal === 'disputed')

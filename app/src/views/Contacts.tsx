@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import * as ep from '../api/endpoints'
+import { LIVE_CHANGED } from '../api/events'
 import Avatar from '../components/Avatar'
 import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
+import { useToast } from '../components/Toast'
 import type { Account } from '../api/types'
+import { scoreText } from '../api/types'
 
 /**
  * 联系人 = 可以付款的人。
@@ -19,9 +22,22 @@ import type { Account } from '../api/types'
  */
 export default function Contacts({ identity }: { identity: string }) {
   const { data, reload } = useApi(() => ep.contacts(identity), [identity])
-  /* 请求这一栏轮询：对方是在另一个浏览器里点的确认，不轮询就得手动刷新。 */
+  /* 15s as a backstop; the live stream below is what normally refreshes these. */
   const { data: reqs, reload: reloadReqs } =
-    useApi(() => ep.contactRequests(identity), [identity], 5000)
+    useApi(() => ep.contactRequests(identity), [identity], 15000)
+
+  /* Both lists, not just the inbox.
+   *
+   * The reasoning that put a timer on the inbox — the other side clicks in
+   * another browser, so nothing here knows unless it asks — applies just as much
+   * to the other direction, and that half had no timer at all: an invite you
+   * sent stayed under "waiting for them to accept" until you reopened the page,
+   * however long ago they said yes. */
+  useEffect(() => {
+    const again = () => { reload(); reloadReqs() }
+    addEventListener(LIVE_CHANGED, again)
+    return () => removeEventListener(LIVE_CHANGED, again)
+  }, [reload, reloadReqs])
   const [adding, setAdding] = useState(false)
   const [busy, setBusy] = useState('')
   const list = data?.contacts ?? []
@@ -134,6 +150,7 @@ function AddContact({
   onClose: () => void
   onDone: () => void
 }) {
+  const { toast } = useToast()
   const [tab, setTab] = useState<'find' | 'past'>('find')
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<Account[] | null>(null)
@@ -170,9 +187,25 @@ function AddContact({
   const send = async (query: string) => {
     setBusy(true); setErr('')
     try {
-      await ep.addContact({ query, label: 'Client' }, identity)
+      const c = await ep.addContact({ query, label: 'Client' }, identity)
+      /* The sheet closes on success, so without this the click has no visible
+         outcome at all — the dialog just disappears.
+
+         Two outcomes, two sentences: adding someone is a request, unless they
+         had already added us, in which case the backend accepts both sides at
+         once and it is a contact right away. One generic message would be
+         wrong half the time, and the wrong half is the one that says "waiting"
+         about a relationship that is already live. */
+      toast(
+        c.status === 'accepted'
+          ? `${c.name} is now a contact`
+          : `Request sent to ${c.name} — they accept before you can pay them`,
+        { kind: 'ok' },
+      )
       onDone()
     } catch (e) {
+      /* Errors stay inline: the sheet stays open on failure, so the message
+         belongs next to the field that caused it, not in a corner of the page. */
       setErr(e instanceof Error ? e.message : 'Could not add')
     } finally { setBusy(false) }
   }
@@ -223,7 +256,9 @@ function AddContact({
                         onClick={() => { if (!rel) void send(a.address || a.name) }}>
                         <Avatar name={a.name} cls="cpav" />
                         <span className="n"><em>{a.name}</em>
-                          <i>{a.deals ? `${a.deals} trades · score ${a.trust_score}` : shortAddr(a.address)}</i>
+                          <i>{a.deals
+                            ? `${a.deals} trades · ${scoreText(a.trust_score)}`
+                            : shortAddr(a.address)}</i>
                         </span>
                         <span className="acgo">{
                           rel === 'accepted' ? 'Already a contact'

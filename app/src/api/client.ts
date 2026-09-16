@@ -81,6 +81,25 @@ export const IDENTITY_GONE = 'atara:identity-gone'
  */
 export const PROFILE_CHANGED = 'atara:profile-changed'
 
+/**
+ * Sign-in finished, or sign-out did.
+ *
+ * Requests that leave while authentication is still settling get a 401, and
+ * useApi never retries a fetch that has no poll interval — so a page that
+ * mounted a moment too early stays blank for the rest of the session. That is
+ * how the sidebar ended up showing an invented name, and how six offer cards
+ * ended up with no wallet after a fresh login.
+ *
+ * Rather than each of those thirty-odd call sites learning to retry, this fires
+ * once when the answer to "who is calling" has changed, and useApi refetches.
+ */
+export const AUTH_CHANGED = 'atara:auth-changed'
+
+/** Announce that sign-in or sign-out completed. */
+export function authChanged(): void {
+  dispatchEvent(new CustomEvent(AUTH_CHANGED))
+}
+
 export function clearIdentity(): void {
   identity = 'demo'
   try {
@@ -101,9 +120,38 @@ interface RequestOptions {
   signal?: AbortSignal
 }
 
+/* How to get the current Privy access token.
+ *
+ * A module-level hook rather than a React one, because this file is plain
+ * functions called from everywhere — hooks only work inside components, and
+ * threading a token through every call site would mean touching every endpoint.
+ * PrivyRoot installs the getter once on mount; until it does, requests go out
+ * unauthenticated and the backend decides what that is worth. */
+let readToken: (() => Promise<string | null>) | null = null
+
+export function setTokenSource(fn: (() => Promise<string | null>) | null): void {
+  readToken = fn
+}
+
+/** The current token, for callers that build their own request (the event
+    stream does, because it needs a long-lived response rather than JSON). */
+export async function readAuthToken(): Promise<string | null> {
+  if (!readToken) return null
+  try { return await readToken() } catch { return null }
+}
+
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {
+    /* Still sent: it is what the dev-auth path reads, and it is also how the
+       demo watches a trade from both seats. The backend ignores it whenever a
+       bearer token is present, so it cannot override a real identity. */
     'X-Atara-User': opts.as ?? identity,
+  }
+  if (readToken) {
+    try {
+      const t = await readToken()
+      if (t) headers.Authorization = 'Bearer ' + t
+    } catch { /* No token is a valid state — signed out, or Privy still waking up. */ }
   }
   if (opts.body !== undefined) headers['Content-Type'] = 'application/json'
   if (opts.confirmation) headers['X-Atara-Confirmation'] = opts.confirmation

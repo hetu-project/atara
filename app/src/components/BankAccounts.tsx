@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
+import { useTradableFiats } from '../hooks/useRails'
 import { BANKS, CTRY, CTRY_CCY } from './banks'
 import type { BankAccount } from '../api/types'
 
@@ -15,7 +16,12 @@ import type { BankAccount } from '../api/types'
  * 改和删都不该在列表上一键完成。
  */
 
-const CCY = ['CNY', 'HKD', 'USD', 'SGD', 'JPY']
+/* Which currencies an account may be in comes from the server, because the
+   server is what clears them. This list was written into the page as
+   CNY/HKD/USD/SGD/JPY while the backend settled only the first three: SGD and
+   JPY were pickable and would never match anything, with nothing said. That
+   is the same drift the rail catalogue was moved server-side to stop. */
+const FALLBACK_CCY = ['CNY', 'HKD', 'USD']
 
 interface Form {
   id: string
@@ -155,6 +161,11 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
   /* 用户自己点过币种没有。点过就不再替他改——选一家香港的银行把币种翻成
      HKD 是帮忙，但如果他刚刚亲手选了 USD，再翻回去就是跟他较劲。 */
   const [ccyTouched, setCcyTouched] = useState(false)
+  /* Before the catalogue arrives, offer the currencies this version has always
+     settled rather than an empty row — an empty row reads as "none", and the
+     form would have no currency to save. */
+  const fromServer = useTradableFiats()
+  const CCY = fromServer.length ? fromServer : FALLBACK_CCY
 
   const rows = list ?? []
   const acct = rows.find(a => a.id === cur)

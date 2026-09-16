@@ -3,8 +3,13 @@
    所以原样搬过来，只在外面包一层 React。 */
 /* eslint-disable */
 // @ts-nocheck
-function consensusRing(canvas, agents, startDelay, stepMs, score, center){
-  score=score||90;
+function consensusRing(canvas, agents, startDelay, stepMs, score, center, passed, threshold){
+  /* `score||90` used to sit here as a default. It also swallowed a real 0:
+     the ring is built once when a run starts, and at that instant the score is
+     still 0 — so every assessment drew 90 no matter what came back, and a
+     counterparty with a low score was shown the safest number on screen.
+     `??` defaults only when nothing was passed at all. */
+  score = score ?? 0;
   const DPR=Math.min(2,window.devicePixelRatio||1), CSS=220;
   canvas.width=CSS*DPR; canvas.height=CSS*DPR;
   const g=canvas.getContext('2d'); g.scale(DPR,DPR);
@@ -91,7 +96,13 @@ function consensusRing(canvas, agents, startDelay, stepMs, score, center){
     g.font='500 9.5px Inter,system-ui,sans-serif'; g.fillStyle=C.mute;
     g.fillText('Trust Gate · higher is safer', cx, cy+15);
     g.font='500 10px Inter,system-ui,sans-serif'; g.fillStyle=done?C.mute:C.faint;
-    g.fillText(done?`✓ ${N}/${N} agree`:`${n}/${N} agents voted`, cx, cy+30);
+    /* How many actually agreed, not N of N.
+       This read `${N}/${N}` regardless, so a run that passed 5 of 7 and was
+       held for review still printed "✓ 7/7 agree" — directly contradicting the
+       verdict spelled out two lines below it. */
+    const ok = passed == null ? N : passed;
+    const mark = threshold != null && ok >= threshold ? '✓ ' : '';
+    g.fillText(done?`${mark}${ok}/${N} agree`:`${n}/${N} agents voted`, cx, cy+30);
   }
   function needle(a){
     /* 扫描头自己也要发光，否则彗尾最亮的地方反而是尾巴 */

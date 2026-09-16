@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { openEventStream } from './api/events'
 import RightPanel from './components/RightPanel'
 import Sidebar from './components/Sidebar'
 import Home from './views/Home'
@@ -44,6 +45,19 @@ export default function App() {
   const lk = useSessionLock(signed, hasPasskey)
   const [folded, setFolded] = useState(
     () => { try { return localStorage.getItem('atara-left') === '1' } catch { return false } })
+
+  /* One live stream for the whole app, opened once signed in.
+   *
+   * Here rather than in the components that care, because it is one connection
+   * per browser, not per view: HTTP/1.1 allows six to an origin and a stream
+   * holds one for as long as it is open. Views listen for LIVE_CHANGED instead.
+   *
+   * Reopened on sign-in and closed on sign-out — the stream is per account, and
+   * leaving the previous one running would feed the next person's screen. */
+  useEffect(() => {
+    if (!signed) return
+    return openEventStream()
+  }, [signed])
 
   /* 后端换过库、或账户被删之后，本机存的身份就指向一个不存在的人。
      那时所有请求都是 401——退回未登录并弹门，而不是让界面一直重试。 */

@@ -4,14 +4,31 @@ import { getIdentity, setIdentity } from '../api/client'
 const SIGNED = 'atara-signed'
 
 /**
- * 当前身份与登录态。后端鉴权是 mock，X-Atara-User 头直接注入身份。
+ * Who the interface thinks you are, and whether to open the personal area.
  *
- * 「已登录」在这里就是「选定了一个身份」——后端没有会话，
- * 所以这个标记只决定界面开不开个人区，不是安全边界。真正的凭证在链上：
- * 动钱要 Passkey 签名，那一步后端会验。
+ * This flag is not a security boundary and never was. The credential is the
+ * Privy access token that api/client.ts attaches to every request; the backend
+ * verifies its signature and resolves it to an account. What is stored here only
+ * decides what gets rendered.
  *
- * 演示一笔交易必须能切到对手方视角——同一张工单，两方看到的 phase 是互补的，
- * 不能切身份就看不到这件事。种子里可用的 handle 见 SEED_HANDLES。
+ * The X-Atara-User header below is the demo path. The backend ignores it
+ * whenever a token is present, and refuses it outright unless ATARA_DEV_AUTH is
+ * set — so it cannot override a real identity, and a deployment that never
+ * thinks about that setting gets the safe behaviour.
+ *
+ * **What is still missing.** This comment used to claim "moving money needs a
+ * Passkey signature and the backend verifies it". It does not: /passkey/assert
+ * issues a confirmation token without checking any WebAuthn assertion, so the
+ * signature and commit tiers are a convention the frontend follows rather than
+ * something the backend enforces. A valid session is currently enough for every
+ * action in the product. The gap is narrower than it was — minting one of those
+ * tokens now requires a verified session — but an attacker holding a live token,
+ * or anyone at an unlocked screen, is not stopped by the tier they are in.
+ * Do not build on the assumption that they are.
+ *
+ * Switching identity has to stay possible for demos: one order shows
+ * complementary phases to its two sides, and two windows with ?as= is how that
+ * gets shown. Seeded handles are in SEED_HANDLES.
  */
 export function useIdentity() {
   // ?as=<handle> 覆盖当前身份并写进 localStorage，同时视为已登录。

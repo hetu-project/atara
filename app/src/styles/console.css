@@ -577,9 +577,26 @@ main.lout .navsep{margin:6px 8px}
 .nav:hover .navgo{color:var(--mute)}
 a.nav{text-decoration:none}
 main.lout .navtag,main.lout .navgo{display:none}
+/* Collapsed rail: the row is centred and `font-size:0` erases the label, so the
+   pill has no place to sit and the number could not be read anyway. Shrink it
+   to a dot on the icon's corner — the chat rows already do this, and doing it
+   differently here would read as two different kinds of signal.
+   The ring is the rail's own background, so the dot stays legible when it
+   overlaps the glyph. */
+main.lout .nav{position:relative}
+main.lout .nav .c.dot{position:absolute;top:7px;right:13px;
+  min-width:0;width:8px;height:8px;padding:0;border:2px solid var(--paper)}
 .nav{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;text-align:left;padding:8px 10px;border-radius:var(--r-control);font-size:14px;color:var(--mute);font-weight:500}
 .nav .ni{display:flex;align-items:center;justify-content:center;color:var(--faint);width:20px;flex:none}
 .nav .c{margin-left:auto;font-size:11px;color:var(--faint);font-weight:600}
+/* Pending contact requests. Same blue pill as the chat unread badge — one
+   meaning, one colour, so a count in the left rail always reads as "someone is
+   waiting on you". `:empty` hides it at zero, which is why the markup renders
+   an empty span instead of nothing: no conditional, no layout shift. */
+.nav .c.dot{min-width:16px;height:16px;border-radius:999px;background:var(--blue);
+  color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;
+  letter-spacing:0}
+.nav .c.dot:empty{display:none}
 .nav:hover{background:var(--canvas);color:var(--ink)}
 .nav.on{background:var(--card);color:var(--ink);font-weight:500}
 .nav.on .ni{color:var(--accent)}
@@ -705,8 +722,17 @@ main.lout .navtag,main.lout .navgo{display:none}
   text-transform:uppercase;color:var(--faint);white-space:nowrap}
 .od-ai.hi .val{stroke:var(--blue)}
 .od-ai.hi b{color:var(--blue)}
-.od-ai.lo .val{stroke:var(--warn)}
-.od-ai.lo b{color:var(--warn)}
+/* `lo` now means a record with defaults in it, not merely a thin one —
+   the band moved from <70 to <65 when the score started being computed from
+   the settlement record. See scoreBand in api/types.ts. */
+.od-ai.lo .val{stroke:var(--neg)}
+.od-ai.lo b{color:var(--neg)}
+/* Unrated: the ring is there, but empty.
+   Not a low score — a merchant with no settled trades has nothing to
+   summarise. Painting the arc at 0 would land them in the warning band and
+   keep a new maker from ever getting a first trade. The track stays so the
+   corner still reads as the same part of the card. */
+.od-ai.none .val{stroke:none}
 
 .od-net{display:inline-block;margin-right:5px;padding:2px 8px;border-radius:var(--r-chip);
   font-size:11px;font-weight:500;background:var(--card);color:var(--mute)}
@@ -2987,6 +3013,10 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
 .btn-secondary{background:var(--paper);color:var(--ink);box-shadow:var(--sh-btn)}
 .btn-secondary:hover{background:var(--canvas)}
 .btn-ghost{background:transparent;color:var(--mute);padding:0 8px}
+/* An action with a cost: outlined in the negative colour rather than filled.
+   Filled red would read as "delete" and outshout the primary button beside
+   it, which is still the thing most people came to press. Outlined says
+   "this one bites" without taking over the row. */
 .btn-ghost:hover{background:var(--canvas);color:var(--ink)}
 .btn-danger{background:transparent;color:var(--mute);padding:0 8px}
 .btn-danger:hover{background:var(--canvas);color:var(--neg)}
@@ -3162,6 +3192,18 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
    而方阵在气泡里是居中的，再按底对齐就会整体比头像高出半个身位。 */
 .mrow:has(.bubwait){align-items:center}
 
+/* 「想了多久」。
+   两个状态两个位置，但同一套字号和颜色——它们说的是同一件事的两个时刻：
+   等的时候是「已经等了 5 秒」，答完之后是「刚才想了 5 秒」。
+
+   35px 的左缩进和 .msg.them .mt 一样：对方那一侧的气泡让开了头像（24px）
+   加间距（8px），这一行要和气泡左边缘对齐，不是和头像对齐。 */
+.thought,.waited{font-size:var(--rt-title);color:var(--faint-2);padding-left:35px;
+  white-space:nowrap}
+/* 等待中的秒数不要 nowrap 之外的任何动效：方阵已经在动了，再加一处闪动
+   就是两个东西在抢同一件事的说明权。 */
+.waited{font-variant-numeric:tabular-nums}
+
 /* 回答正在生成时跟在文字末尾的光标。
    它不是装饰：模型想第一句话要一两秒，那段时间气泡是空的——没有东西在动的话，
    「在想」和「卡住了」在屏幕上长得一模一样。 */
@@ -3243,13 +3285,53 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
 .sfdd i{color:var(--faint);font-style:normal}
 /* 就地展开而不是浮层：表单卡的 .open 带 overflow:hidden，absolute 面板会被裁——
    占文档流把卡片撑开，面板自己内滚 */
-.railmenu{position:static;margin-top:6px;max-height:260px;min-width:0;max-width:none;
-  border:1px solid var(--line-strong);box-shadow:none}
+/* Open: the trigger and the panel under it are one control, so they meet.
+
+   They used to be two separate slabs six pixels apart, and the panel was
+   var(--paper) — the same colour as the form card behind it, with the shadow
+   switched off because it sits in the flow. On a dark ground that left a
+   hairline at 14% white as the only thing saying a panel had opened at all.
+   Sharing an edge and the trigger's own fill says it without needing contrast
+   the theme does not have to give. */
+.sfdd.on{border-color:var(--accent);border-bottom-color:transparent;
+  border-bottom-left-radius:0;border-bottom-right-radius:0}
+.railmenu{position:static;margin-top:0;max-height:260px;min-width:0;max-width:none;
+  background:var(--canvas);border:1px solid var(--accent);box-shadow:none;
+  border-top-left-radius:0;border-top-right-radius:0}
+
+/* Trigger carrying chips: it has to grow with them and wrap, so the fixed
+   single-line height and centred text of a plain .sfdd do not apply. */
+.sfdd-tok{flex-wrap:wrap;align-items:center;gap:6px;padding:6px 8px 6px 10px}
+.sfdd-tok .tokopen{flex:1;min-width:90px;display:flex;align-items:center;
+  justify-content:space-between;gap:10px;align-self:stretch;min-height:26px;
+  padding:0;border:0;background:none;color:var(--faint);font:inherit;
+  text-align:left;cursor:pointer}
+.sfdd-tok .tokopen i{font-style:normal}
+.tok{display:inline-flex;align-items:center;gap:5px;padding:3px 4px 3px 9px;
+  border-radius:999px;font-size:12px;line-height:1.5;color:var(--ink);
+  background:var(--surface);box-shadow:inset 0 0 0 1px var(--line-strong)}
+.tokgone{color:var(--warn)}
+.tokx{display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;padding:0;border:0;border-radius:999px;
+  background:none;color:var(--faint);font-size:14px;line-height:1;cursor:pointer;
+  transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.tokx:hover{background:color-mix(in srgb,var(--neg) 18%,transparent);color:var(--neg)}
 .rmg{padding:8px 10px 3px;font-size:11px;font-weight:600;color:var(--faint)}
 .rmi{flex-direction:row;align-items:center;justify-content:space-between}
 .rmi .rmk{visibility:hidden;color:var(--accent);font-weight:700}
 .rmi.on .rmk{visibility:visible}
 .rmi.on b{color:var(--accent)}
+/* An account row carries two lines — bank and masked number on top, holder
+   and currency under it — so the tick has to sit beside the pair, not beside
+   the first line. */
+.rmi{gap:10px}
+.rmi>.rmtxt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;
+  overflow:hidden}
+.rmi>.rmtxt>b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rmi .rmline{font-size:11.5px;font-weight:400;color:var(--faint)}
+.rmi[disabled]{opacity:.5;pointer-events:none}
+.rmadd{margin-top:4px;border-top:1px solid var(--hairline)}
+.rmadd>b{color:var(--accent)}
 
 
 .sellm-lead{font-size:12px;color:var(--faint);line-height:1.6;margin-bottom:14px}
@@ -3403,11 +3485,34 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
 .info-pop.show{opacity:1}
 
 /* ══ 通用模态 ══ */
+/* The scrim has to do more than tint. .mcard is var(--paper), and so is every
+   card it opens over, so at 45% and no blur the dialog read as part of the
+   page it was covering. Blurring what is behind separates the layers by
+   focus, which survives any theme; --surface is the one token that is a step
+   above paper in the dark theme, and it is what elevation is for. */
 #modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
-  padding:24px;background:oklch(20% .01 265 / .45)}
+  padding:24px;background:oklch(18% .01 265 / .56);
+  -webkit-backdrop-filter:blur(8px) saturate(.85);backdrop-filter:blur(8px) saturate(.85)}
+/* The dialog arrives from the right and settles in the middle.
+
+   Where it ends up is not up for negotiation — a dialog belongs in the centre
+   of the screen — but sliding in says "a new layer just arrived over this
+   page" in a way that appearing fully-formed in place cannot. The overshoot
+   in --ease does the landing.
+
+   Entry only: an exit would have to outlive the unmount, and every caller
+   here drops the node the moment it closes. A half-built exit that sometimes
+   plays is worse than none. */
+@keyframes mscrim{from{opacity:0}}
+@keyframes mslide{from{opacity:0;transform:translateX(38px) scale(.97)}}
+#modal{animation:mscrim var(--dur-normal) var(--ease)}
+#modal>.mcard{animation:mslide 320ms var(--ease)}
+@media (prefers-reduced-motion:reduce){
+  #modal,#modal>.mcard{animation:none}
+}
 #modal[hidden]{display:none}
 .mcard{width:100%;max-width:520px;max-height:calc(100vh - 48px);display:flex;flex-direction:column;
-  background:var(--paper);border-radius:var(--r-panel);box-shadow:var(--sh-overlay)}
+  background:var(--surface);border-radius:var(--r-panel);box-shadow:var(--sh-overlay)}
 .mhead{display:flex;align-items:center;gap:8px;padding:18px 16px 10px 24px;flex:none}
 .mhead h3{font-size:16px;font-weight:600;color:var(--ink)}
 /* 同时认 .mx。规则原样抄自参照，但那边靠的是 id——一页只有一个弹窗节点，

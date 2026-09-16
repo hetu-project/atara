@@ -1,4 +1,4 @@
-import { BASE, ApiError, getIdentity } from './client'
+import { BASE, ApiError, getIdentity, readAuthToken } from './client'
 import type { ApiErrorBody } from './types'
 
 /**
@@ -24,8 +24,9 @@ export interface DeskInfo {
 export interface DeskHandlers {
   /** 回答的下一段。 */
   onDelta: (text: string) => void
-  /** 整段存完了。 */
-  onDone?: (m: { id: string; body: string; created_at: string }) => void
+  /** 整段存完了。thought_ms 是后端量的「第一个字之前等了多久」，
+      和落库的是同一个数——所以刷新前后显示一致。 */
+  onDone?: (m: { id: string; body: string; created_at: string; thought_ms?: number }) => void
 }
 
 /**
@@ -43,9 +44,22 @@ export class DeskError extends Error {
   }
 }
 
-export const deskInfo = (as?: string): Promise<DeskInfo> =>
-  fetch(BASE + '/desk', { headers: { 'X-Atara-User': as ?? getIdentity() } })
-    .then(r => r.json() as Promise<DeskInfo>)
+/* Both calls here build their own request, so they also have to attach the
+   bearer token themselves — request() in client.ts is what normally does it, and
+   these two do not go through it. Without the token the server sees an
+   unauthenticated caller and answers "sign in first", which the desk then shows
+   as its reply. */
+export const deskInfo = async (as?: string): Promise<DeskInfo> => {
+  const res = await fetch(BASE + '/desk', { headers: await deskHeaders(as) })
+  return res.json() as Promise<DeskInfo>
+}
+
+async function deskHeaders(as?: string): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { 'X-Atara-User': as ?? getIdentity() }
+  const token = await readAuthToken()
+  if (token) headers.Authorization = 'Bearer ' + token
+  return headers
+}
 
 /**
  * 发一句话，边收边回调。
@@ -61,7 +75,7 @@ export async function deskSend(
 ): Promise<void> {
   const res = await fetch(BASE + '/desk/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Atara-User': as ?? getIdentity() },
+    headers: { 'Content-Type': 'application/json', ...(await deskHeaders(as)) },
     body: JSON.stringify({ body }),
     signal,
   })
@@ -123,7 +137,7 @@ function dispatch(raw: string, h: DeskHandlers): void {
       h.onDelta((parsed as { text: string }).text)
       break
     case 'done':
-      h.onDone?.(parsed as { id: string; body: string; created_at: string })
+      h.onDone?.(parsed as { id: string; body: string; created_at: string; thought_ms?: number })
       break
     case 'error': {
       const e = parsed as { code: string; message: string }

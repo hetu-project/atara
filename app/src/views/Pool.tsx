@@ -2,6 +2,7 @@ import { useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useAssessment } from '../hooks/useAssessment'
 import { ApiError } from '../api/client'
+import { scoreBand } from '../api/types'
 import { useApi } from '../hooks/useApi'
 import { useToast } from '../components/Toast'
 import { go } from '../hooks/useRoute'
@@ -57,9 +58,13 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
   const list = all
     .filter(o => coin === 'All' || o.asset === coin)
     .filter(o => !fiat || o.fiat === fiat)
-    /* 自己的单置顶——挂完得马上看见；其余按 AI 分从高到低 */
+    /* Your own listing first — you need to see it the moment you post it.
+       The rest by score, with unrated makers last: that is an ordering
+       preference, not a verdict. Ranking them as if they scored zero would
+       bury a new maker under everyone who has ever traded, and a maker who
+       never gets a first trade never gets a record either. */
     .sort((a, b) => (mineIds.has(b.id) ? 1 : 0) - (mineIds.has(a.id) ? 1 : 0)
-      || b.maker.trust_score - a.maker.trust_score)
+      || (b.maker.trust_score ?? -1) - (a.maker.trust_score ?? -1))
 
   return (
     <div className="view on" id="v-market">
@@ -149,12 +154,28 @@ function OfferCard({
   const qty = Number(o.remaining_qty)
   const ceiling = Math.round(Number(o.fiat_ceiling))
   const docsOn = Object.values(m.docs ?? {}).filter(Boolean).length
-  /* 有成交才有分。deals 是 0 的时候那个分数没有来源。 */
+  /* Whether there is settlement history to show on the trust line.
+     Not a gate on the score ring any more — that one always draws, see below.
+     With no trades there is nothing to put in "N trades · X% completion", so
+     the line says so instead of printing zeroes. */
   const scored = m.deals > 0
+  /* null means no settlement record at all — a different state from a low
+     score, and rendered as one. */
+  const rated = m.trust_score
 
-  /* 下架要在挂单所在的那条链上发交易——不是后端连的那条。 */
-  const { data: chains } = useApi(() => ep.chainInfo(), [])
-  const { data: myWallet } = useApi(() => ep.wallet(identity), [identity])
+  /* Unlisting sends a transaction on the chain the listing lives on — not the
+     one the backend happens to be connected to — so it needs the chain's
+     deployment and this account's address.
+
+     Only on your own cards. These used to be fetched by every card on the page:
+     a screen of six listings opened with six identical /catalog/chain and six
+     identical /wallet, and five of each pair were for the unlist button that
+     card will never show. Deciding here rather than lifting the fetch to the
+     page keeps the data next to the one branch that reads it. */
+  const { data: chains } = useApi(
+    () => (mine ? ep.chainInfo() : Promise.resolve(null)), [mine])
+  const { data: myWallet } = useApi(
+    () => (mine ? ep.wallet(identity) : Promise.resolve(null)), [mine, identity])
   const { toast } = useToast()
   const tx = useWalletTx(
     (chains?.chains ?? []).find(c => c.code === o.network) ?? null, myWallet?.address)
@@ -228,29 +249,34 @@ function OfferCard({
           <i className="od-id num">{m.peer_code}</i>
           {mine ? <i className="od-known">Your listing · {o.side === 'sell' ? 'selling' : 'buying'}</i> : null}
         </span>
-        {/* 信任分是选谁交易的第一判断依据。
-            没成交过就没有分——不是 0 分。摆一个 0 出来，读的人看到的是
-            「这家评分很低」，而实际是「还没有可评的东西」，那是两回事，
-            而且前者会让新做市方永远接不到第一单。
+        {/*
+          Every card carries the ring, the way console.html renders it — the
+          score is the first thing anyone judges a counterparty by, and a card
+          missing that corner reads as a different kind of card rather than as
+          "no score yet".
 
-            没有分的时候这个角落就空着，不摆占位符：下面那行
-            「New merchant — history builds as trades settle」已经把这件事
-            说清楚了，再摆一个空心环等于同一张卡上讲两遍，而且占的是右上角
-            最重的位置。有环 / 没环本身就是「有没有成交历史」最直接的信号。 */}
-        {scored && (
-          <span className={'od-ai ' + (m.trust_score >= 85 ? 'hi' : m.trust_score < 70 ? 'lo' : '')}
-            style={{ ['--p' as string]: m.trust_score }}
-            title="AI risk score — priced from settlement history, fund provenance and dispute record">
-            <span className="od-ring">
-              <svg viewBox="0 0 44 44" aria-hidden>
-                <circle className="trk" cx="22" cy="22" r="18" />
-                <circle className="val" cx="22" cy="22" r="18" />
-              </svg>
-              <b className="num">{m.trust_score}</b>
-            </span>
-            <em>AI score</em>
+          Unrated is its own state, not a low one. A merchant with no settled
+          trades has nothing to summarise: the ring draws empty, with no number
+          inside. A dash in that hole reads as a missing widget; an empty ring
+          still occupies the same corner as a scored card. Painting a 0 there
+          would put someone we know nothing about in the warning band, which
+          keeps a new maker from ever getting a first trade — and without a
+          first trade there is never a record. See docs/信任分.md §4.
+        */}
+        <span className={('od-ai ' + scoreBand(rated)).trimEnd()}
+          style={{ ['--p' as string]: rated ?? 0 }}
+          title={rated === null
+            ? 'Not rated yet — no settled trades to score'
+            : 'AI risk score — priced from settlement history, fund provenance and dispute record'}>
+          <span className="od-ring">
+            <svg viewBox="0 0 44 44" aria-hidden>
+              <circle className="trk" cx="22" cy="22" r="18" />
+              <circle className="val" cx="22" cy="22" r="18" />
+            </svg>
+            {rated !== null ? <b className="num">{rated}</b> : null}
           </span>
-        )}
+          <em>{rated === null ? 'Not rated' : 'AI score'}</em>
+        </span>
       </div>
 
       {/* 分数的来源，不能只给分不给依据 */}

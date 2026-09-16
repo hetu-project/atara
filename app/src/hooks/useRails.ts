@@ -21,16 +21,20 @@ export function useRails(): RailGroup[] {
 }
 
 /**
- * 渠道 → 币种。
+ * Which fiat currencies can actually be settled.
  *
- * 返回一个查询函数而不是一张 Map：调用方要的就是「这条渠道收什么币」，
- * 而目录还没取回来时它该诚实地答「不知道」，不是答一个空字符串。
+ * Same reason the rail catalogue lives on the server: a currency list written
+ * into the page drifts from what the backend can clear, and nothing says so.
+ * The fiat accounts form offered SGD and JPY for exactly that reason — both
+ * selectable, neither settleable.
+ *
+ * Empty while the catalogue is loading, and callers must read that as "not
+ * known yet" rather than "nothing is settleable".
  */
-export function useRailFiat(): (rail: string) => string | undefined {
-  const groups = useRails()
-  return useMemo(() => {
-    const m = new Map<string, string>()
-    for (const g of groups) for (const r of g.rails) m.set(r.name, r.fiat)
-    return (rail: string) => m.get(rail)
-  }, [groups])
+export function useTradableFiats(): string[] {
+  const { data } = useApi(() => ep.fiats(), [])
+  return useMemo(
+    () => (data ?? []).flatMap(g => g.assets.map(a => a.code)),
+    [data],
+  )
 }

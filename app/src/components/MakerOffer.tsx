@@ -4,7 +4,6 @@ import { useApi } from '../hooks/useApi'
 import ConfirmSheet from './ConfirmSheet'
 import { isWalletTxError, useWalletTx } from '../hooks/useWalletTx'
 import { FX_IDX } from './kycforms'
-import { useRailFiat } from '../hooks/useRails'
 import type { Listing } from './MakerListing'
 import type { Offer } from '../api/types'
 import type { TxStep } from '../hooks/useWalletTx'
@@ -34,14 +33,16 @@ type OfferBody = {
 }
 
 export default function MakerOffer({
-  terms, identity, onPosted,
+  terms, identity, onPosted, onEditTerms,
 }: {
   terms: Listing | undefined
   identity: string
   onPosted: (o: Offer, sym: string) => void
+  /** Reopen the trading terms. Every choice on this form is bounded by them. */
+  onEditTerms?: () => void
 }) {
-  /* 渠道收什么币,问后端那份目录——前端不再留副本。 */
-  const railCcy = useRailFiat()
+  /* Which fiat the terms settle in comes from the accounts they picked. */
+  const { data: accts } = useApi(() => ep.bankAccounts(identity), [identity])
   const { data: cat } = useApi(() => ep.assets(), [])
   const { data: fiatCorridors } = useApi(() => ep.fiats(), [])
   const { data: w } = useApi(() => ep.wallet(identity), [identity])
@@ -90,11 +91,36 @@ export default function MakerOffer({
      passkey。用户可以在确认框里改——有人两边都有，挂单时想用哪边是他的事。 */
   const { data: me } = useApi(() => ep.me(identity), [identity])
   const [via, setVia] = useState<'atara' | 'ext' | null>(null)
+
+  /*
+    How the coins get into escrow. Two routes, as in console.html
+    (bindFundVia): the Atara wallet signs with a passkey, or the maker sends
+    the coins themselves and we watch the contract for the deposit.
+
+    ⚠️ Only the first route is wired. `send()` below ignores this and always
+    goes through the connected wallet, so choosing "External wallet" today
+    changes the wording and nothing else — the button offers to open a wallet
+    and then asks for a passkey.
+
+    The missing half is not a stray option to delete. A desk logs in by email
+    for convenience while its inventory sits in cold storage or a multisig;
+    requiring the login wallet to hold the coins would mean moving the whole
+    treasury into a hot wallet. What is missing is the reference's second
+    route: show the contract address and amount, let them send from anywhere,
+    verify the lock on chain (CreateOffer already accepts a lock made
+    elsewhere via offer_id).
+
+    Doing it properly needs one question answered first: the contract returns
+    an unlisted lock to whoever made it, so when the locking address is not
+    the account address, who may unlist?
+  */
   const walletKind = via ?? (me?.wallet_kind === 'ext' ? 'ext' : 'atara')
-  /* 能结算哪些法币，由配置里选过的收款渠道决定——你没有那个国家的收款
-     账户，就不该对外说你收那种钱。 */
+  /* 能结算哪些法币，由配置里选过的收款账户决定——你没有那个国家的收款
+     账户，就不该对外说你收那种钱。这句话以前只是个愿望：渠道是从银行目录
+     里挑的名字，跟账户簿毫无关系。现在渠道就是账户，它才真的成立。 */
   const tradableFiat = (fiatCorridors ?? []).flatMap(c => c.assets.map(a => a.code))
-  const fromRails = [...new Set((terms?.rails ?? []).map(railCcy).filter(Boolean) as string[])]
+  const fromRails = [...new Set((accts ?? [])
+    .filter(a => (terms?.rails ?? []).includes(a.id)).map(a => a.currency))]
   const fiats = (fromRails.length ? fromRails : tradableFiat).filter(f => tradableFiat.includes(f))
   const curFiat = fiats.includes(fiat) ? fiat : (fiats[0] ?? '')
 
@@ -291,6 +317,20 @@ export default function MakerOffer({
         )}
 
         <div className="dfoot" style={{ marginTop: 14 }}>
+          {/*
+            The way back to the terms sits here, next to the action it blocks.
+
+            Every field above is bounded by the trading terms — which assets,
+            which networks, which rails. So the moment a maker discovers the
+            terms are wrong is while standing on this form, reading a note
+            saying the network they picked has no escrow contract. Putting the
+            fix in a chat message further up means finding it by scrolling back
+            through the conversation that led here.
+          */}
+          {onEditTerms && (
+            <button className="btn btn-secondary btn-sm" type="button" disabled={busy}
+              onClick={onEditTerms}>Change trading terms</button>
+          )}
           <button className="btn btn-primary" disabled={busy}
             onClick={() => post()}>Review &amp; post</button>
         </div>

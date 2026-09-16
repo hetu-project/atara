@@ -13,6 +13,7 @@ import { useAssessment } from '../hooks/useAssessment'
 import { useKycGate } from '../hooks/useKycGate'
 import { NEW_ORDER, OPEN_DESK, go, isDeskOpen, setDeskOpen } from '../hooks/useRoute'
 import type { MatchCandidate } from '../api/types'
+import { scoreText } from '../api/types'
 
 /**
  * 首页 = 一张空台面加一句问话。
@@ -27,6 +28,11 @@ const a0 = (a: { coin: string } | null) => a?.coin ?? 'USDT'
 const clock = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 
+/* 毫秒进来，屏幕上那个整数出去。
+   不满一秒返回 0，调用方据此整行不印——「Thought for 0 seconds」是句废话，
+   而且半秒回来的时候根本没人觉得等过。 */
+const secsOf = (ms?: number) => (ms && ms >= 1000 ? Math.round(ms / 1000) : 0)
+
 export default function Home({ identity }: { identity: string; onNeedSignIn?: () => void }) {
   const [text, setText] = useState('')
   const [act, setAct] = useState<Act | null>(null)
@@ -39,8 +45,18 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
      分开存是因为后者每收到几个字就要重画一次，混进 chat 会让整段列表跟着重渲染。
      null 表示此刻没有人在说话。 */
   const [chat, setChat] = useState<
-    { id: string; author: 'me' | 'them'; body: string; at: string }[]>([])
+    { id: string; author: 'me' | 'them'; body: string; at: string; thought?: number }[]>([])
   const [streaming, setStreaming] = useState<string | null>(null)
+
+  /* 等待期间的走秒。只是进度，不是结论。
+   *
+   * 写在回答上的那个数字由后端给（Message.thought_ms），因为它要落库，而落库
+   * 的数只能有一个来源。两边各量一份的话，刚才看到的和刷新之后看到的会差一
+   * 秒——同一件事说出两个数，比少说一个更糟。
+   *
+   * 这里这个只回答「已经等了几秒」，等的过程中后端还没法告诉我们答案。 */
+  const askedAt = useRef(0)
+  const [waited, setWaited] = useState(0)
   const deskAbort = useRef<AbortController | null>(null)
   /* 上一次失败的那句，连同原因。挂在消息流末尾，带一颗重试。 */
   const [failed, setFailed] = useState<{ q: string; why: string } | null>(null)
@@ -93,6 +109,17 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
      所以不能用 smooth——那会让滚动永远追不上正在生成的文字。 */
   useEffect(() => { if (stick.current) toBottom(false) }, [chat.length, streaming])
 
+  /* 等待期间走秒。只在一个字都还没来的时候走（streaming === ''）——字一开始
+     来就不是「在想」了，再让秒数往上跳是在说一件已经不成立的事。
+     250ms 一跳而不是 1000ms：整秒走的话，第一次跳变在 0 到 1 秒之间随机，
+     看起来像卡了一下。 */
+  useEffect(() => {
+    if (streaming !== '') return
+    const t = setInterval(
+      () => setWaited(Math.floor((Date.now() - askedAt.current) / 1000)), 250)
+    return () => clearInterval(t)
+  }, [streaming])
+
   /* 历史。以前这条对话只活在这一次会话里：刷新、切个视图再回来，屏幕上
      就空了——而消息其实好好地存在库里。 */
   const { data: hist } = useApi(() => ep.thread(ep.DESK_ID, identity), [identity])
@@ -114,7 +141,7 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     const past = hist.messages
       .filter(m => m.kind === 'chat')
       .map(m => ({ id: m.id, author: m.author === 'me' ? 'me' as const : 'them' as const,
-                   body: m.body, at: m.created_at }))
+                   body: m.body, at: m.created_at, thought: secsOf(m.thought_ms) }))
     /* 已经开始说话了就不接管。历史是在挂载时拉的，要是这期间用户已经发出
        一句，拿历史整个覆盖会把那句吞掉（服务端那份还没回来）。 */
     setChat(c => (c.length ? c : past))
@@ -166,6 +193,24 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     }
   }, [fresh, openDesk])
   const kyc = useKycGate()
+
+  /* 准入那块在对话里的位置：它一出现，就落在当时对话的末尾，然后不再动。
+     记的是当时的条数，不是时刻——时刻要拿服务器给的 created_at 去比，
+     两边的钟差一秒就会把一条新回复排到它上面。
+
+     为什么不继续钉在最底下：钉住的话它看着不动，实际上每来一条新消息，
+     它和上下文的相对位置就变一次——正在填的表单周围的内容在漂。落定之后
+     代价换成了「表单会被顶上去、要往回滚一点」，那是滚动，不是重排。
+
+     卡片收掉时一起清空：下次再打开它是一件新的待办，该重新落在那时的末尾。 */
+  const [anchor, setAnchor] = useState<number | null>(null)
+  useEffect(() => {
+    setAnchor(a => (kyc.maker ? a ?? chat.length : null))
+  }, [kyc.maker, chat.length])
+  /* 落点要换算到 shown 上：收起历史之后 chat 的下标和 shown 的对不上。
+     夹在两端之间——历史被收掉的那部分可能已经把落点甩到了前面。 */
+  const cut = anchor == null ? shown.length
+    : Math.max(0, Math.min(shown.length, anchor - folded))
   const { data: cdata } = useApi(() => ep.contacts(identity), [identity])
   const contacts = cdata?.contacts ?? []
   const peers = useMemo(() => contacts.map(c => ({ name: c.name })), [contacts])
@@ -223,6 +268,8 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     /* 自己那句先画出来。等后端确认再画的话，网络慢的时候输入框已经清空、
        屏幕上却什么都没有，像是把话吞了。 */
     setChat(c => [...c, { id: 'local-' + Date.now(), author: 'me', body: q, at: new Date().toISOString() }])
+    askedAt.current = Date.now()
+    setWaited(0)
     setStreaming('')
     /* 自己发的这一下无条件滚到底，不看 stick——他刚刚往上翻着读旧消息，
        然后打了一句发出去，那当然是想看这句和它的回答。 */
@@ -234,7 +281,11 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
       await ep.deskSend(q, {
         onDelta: t => setStreaming(s => s + t),
         onDone: m => {
-          setChat(c => [...c, { id: m.id, author: 'them', body: m.body, at: m.created_at }])
+          /* 秒数用后端给的，不用这边计时器读到的那个。两处各量一份的话，
+             刚才看到的和刷新之后看到的会差一秒——而它们本该是同一件事。
+             这边那个计时器只负责等待期间的进度。 */
+          setChat(c => [...c, { id: m.id, author: 'them', body: m.body,
+            at: m.created_at, thought: secsOf(m.thought_ms) }])
           setStreaming(null)
         },
       }, identity, ctl.signal)
@@ -302,37 +353,75 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     } finally { setBusy(false) }
   }
 
+  /* 一条消息长什么样。提出来是因为它现在要渲染两遍——准入那块上面一段、
+     下面一段——而两段必须长得一模一样。 */
+  const bubble = (m: { id: string; author: 'me' | 'them'; body: string; at: string; thought?: number }) => (
+    <div key={m.id} className={'msg ' + m.author}>
+      {/* 想了多久，留在回答上面。
+          只在满一秒时印：半秒回来的时候印「0s」是噪音，而且那种时候根本
+          没人觉得等过。
+          这一条**活在这次会话里**——刷新之后消息从库里读回来，没有这个数，
+          那一行就不再出现。落库要给 messages 加一列，为一行灰字不值当；
+          它交代的是「刚才那一下为什么慢」，而那件事刷新之后已经不重要了。 */}
+      {m.author === 'them' && (m.thought ?? 0) >= 1 && (
+        <span className="thought">✦ Thought for {m.thought} seconds</span>
+      )}
+      {m.author === 'me' ? (
+        <>
+          <span className="bub">{m.body}</span>
+          <span className="mt">{clock(m.at)}</span>
+        </>
+      ) : (
+        <>
+          <span className="mrow">
+            <span className="thav deskav mav" aria-hidden><i /></span>
+            <span className="bub">{m.body}</span>
+          </span>
+          {/* 时间和动作在同一行：两者都是「关于这条消息」的元信息，
+              各占一行会让消息之间的间距忽大忽小。 */}
+          <span className="mact">
+            <span className="mt">{clock(m.at)}</span>
+            {/* 只给它那一侧复制：自己刚打的那句没人会去复制，
+                两边都放只会让每一条消息下面都挂一排按钮。 */}
+            <CopyButton text={m.body} label="Copy reply" done="Reply copied"
+              className="mactb" />
+          </span>
+        </>
+      )}
+    </div>
+  )
+
   return (
     <div className="view on" id="v-chat">
       <div id="log" ref={log}>
         {/* 和 Atara AI 的对话。和准入那块同一条流——它们本来就是同一个台面上
-            的两种消息：那边是流程播报，这边是你问它答。 */}
-        {shown.map(m => (
-          <div key={m.id} className={'msg ' + m.author}>
-            {m.author === 'me' ? (
-              <>
-                <span className="bub">{m.body}</span>
-                <span className="mt">{clock(m.at)}</span>
-              </>
-            ) : (
-              <>
-                <span className="mrow">
-                  <span className="thav deskav mav" aria-hidden><i /></span>
-                  <span className="bub">{m.body}</span>
-                </span>
-                {/* 时间和动作在同一行：两者都是「关于这条消息」的元信息，
-                    各占一行会让消息之间的间距忽大忽小。 */}
-                <span className="mact">
-                  <span className="mt">{clock(m.at)}</span>
-                  {/* 只给它那一侧复制：自己刚打的那句没人会去复制，
-                      两边都放只会让每一条消息下面都挂一排按钮。 */}
-                  <CopyButton text={m.body} label="Copy reply" done="Reply copied"
-                    className="mactb" />
-                </span>
-              </>
-            )}
-          </div>
-        ))}
+            的两种消息：那边是流程播报，这边是你问它答。
+
+            分成两段渲染，中间夹着准入那块：见 cut。 */}
+        {shown.slice(0, cut).map(bubble)}
+        {/* 准入那块落在它出现时的位置，不再钉在对话最后。
+
+            钉在最后是为了让「要按的按钮、要填的表单」永远在眼皮底下，代价写
+            在当时的注释里：后来的聊天记录排在它上面。真正的毛病是那个代价没有
+            尽头——通过之后它早就不是待办了，却还压在每一句新消息下面，于是你
+            刚发的话出现在准入对话的**上方**。
+
+            更要紧的是：钉住的东西看着不动，其实每来一条消息，它和上下文的相对
+            位置就变一次,正在填的表单周围的内容在漂。落定之后这件事没了,换来的
+            代价是表单可能被顶出屏幕——那是滚一下,比重排轻。 */}
+        {kyc.maker ? (
+          <>
+            {/* 样式挂在 #thhead 上，而且要 .show 才 display:flex——
+                写成 class 的话头像会掉到文字上面一行。 */}
+            <div id="thhead" className="show mkhead">
+              <span className="thav deskav" aria-hidden><i /></span>
+              <span className="thwho"><b>Atara AI</b><span>Verification and listing desk</span></span>
+            </div>
+            {kyc.maker}
+          </>
+        ) : null}
+        {/* 落点之后说的话。 */}
+        {shown.slice(cut).map(bubble)}
         {/* 失败的那句挂在它自己后面，不是飘到列表底部——那行字经常在屏幕外，
             而且不说明是哪一句失败的。 */}
         {failed && (
@@ -359,6 +448,11 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
               <span className={'bub' + (streaming ? '' : ' bubwait')}>
                 {streaming ? <>{streaming}<i className="tcur" aria-hidden /></> : <Dither />}
               </span>
+              {/* 等了几秒。方阵在动说明「还活着」，秒数说明「等了多久」——
+                  两件不同的事，慢到十几秒的时候只有后者能让人决定要不要继续等。 */}
+              {!streaming && waited >= 1 && (
+                <span className="waited" aria-live="off">{waited}s</span>
+              )}
             </span>
           </div>
         )}
@@ -376,7 +470,7 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
                 <button type="button" key={c.offer_id} disabled
                   className={'mcand' + (chosen?.offer_id === c.offer_id ? ' on' : '')}>
                   <span className="mcn"><b>{c.name}</b>
-                    <em>score {c.trust_score} · {c.deals} trades · {c.unit_price} {c.fiat}/{a0(act)}</em>
+                    <em>{scoreText(c.trust_score)} · {c.deals} trades · {c.unit_price} {c.fiat}/{a0(act)}</em>
                   </span>
                 </button>
               ))}
@@ -390,27 +484,6 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
         {run ? <Thinking /> : (!cands.length && !kyc.maker && !shown.length && streaming === null &&
           <div id="empty"><h3>What would you like to settle?</h3></div>)}
         {err ? <p className="roempty" style={{ textAlign: 'center' }}>{err}</p> : null}
-        {/* 准入整块排在对话最后，不按时间混进消息流。
-            参照里它是 Atara AI 这个会话里的一张卡片，不是弹窗，所以带上那条
-            线程头；但它不是一条「发生在某个时刻」的消息，而是你手上没做完的
-            那件事——它有表单要填、有按钮要按，位置得由「还没做完」决定，
-            不由「什么时候发生的」决定。
-
-            排在开头试过：跟 AI 聊几句，那颗要按的按钮就滚出了屏幕，而且点了
-            之后表单长在半空中，画面还得往上跳。沉到底之后这两件事一起没了——
-            要按的、要填的，都在你眼皮底下。代价是后来的聊天记录排在它上面，
-            这个代价是对的：聊天是流水，这块是待办。 */}
-        {kyc.maker ? (
-          <>
-            {/* 样式挂在 #thhead 上，而且要 .show 才 display:flex——
-                写成 class 的话头像会掉到文字上面一行。 */}
-            <div id="thhead" className="show mkhead">
-              <span className="thav deskav" aria-hidden><i /></span>
-              <span className="thwho"><b>Atara AI</b><span>Verification and listing desk</span></span>
-            </div>
-            {kyc.maker}
-          </>
-        ) : null}
       </div>
 
       <Composer

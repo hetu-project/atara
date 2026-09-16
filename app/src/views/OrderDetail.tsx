@@ -1,12 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import * as ep from '../api/endpoints'
+import { LIVE_CHANGED } from '../api/events'
 import ConfirmSheet from '../components/ConfirmSheet'
 import DisputeForm from '../components/DisputeForm'
 import FilePick from '../components/FilePick'
 import DocView, { DOC_META } from '../components/DocView'
 import Avatar from '../components/Avatar'
 import { useAction, useApi } from '../hooks/useApi'
+import { useMe } from '../hooks/useMe'
+import CopyButton from '../components/CopyButton'
 import type { Order } from '../api/types'
+import { scoreText } from '../api/types'
 
 const FIAT_SYM: Record<string, string> = {
   CNY: '¥', HKD: 'HK$', SGD: 'S$', JPY: '¥', EUR: '€', USD: '$', AED: 'د.إ', GBP: '£',
@@ -35,16 +39,54 @@ const money = (v: number, c: string) =>
  *   还等着凭证」摆在一起才对得上号。
  */
 export default function OrderDetail({
-  id, onBack, bare, identity,
-}: { id: string; onBack: () => void; bare?: boolean; identity?: string }) {
-  const { data: o, error, reload } = useApi(() => ep.order(id), [id], 1000)
+  id, onBack, bare, identity, order, onChanged,
+}: {
+  id: string
+  onBack: () => void
+  bare?: boolean
+  identity?: string
+  /** The order, when the caller already has it. Given this, the card renders
+      what it was handed and fetches nothing. */
+  order?: Order
+  /** Ask the owner of that data to refresh, after an action changed the order. */
+  onChanged?: () => void
+}) {
+  /* Fetch only when nobody handed us the order.
+   *
+   * Every card used to poll for itself once a second. In a conversation the
+   * cards are one per order, so a thread with seven of them asked the server
+   * seven times a second for rows the thread had already fetched — the same DTO,
+   * from the same poll, three seconds earlier. Seven requests, seven identical
+   * answers, and each one costs two chain round trips on the backend.
+   *
+   * The standalone /order/:id page has no such parent, so it still fetches, and
+   * still polls: the scheduler moves that order along while the page is open. */
+  const own = useApi(
+    () => (order ? Promise.resolve(order) : ep.order(id)),
+    [id, order], order ? undefined : 15000)
+  const o = order ?? own.data
+  const error = order ? null : own.error
+  const reload = onChanged ?? own.reload
+
+  /* Standalone page only: when a parent handed us the order, that parent is the
+     one listening, and refetching here as well would ask twice for one change.
+     15s is the backstop for a stream that dropped without either end noticing. */
+  useEffect(() => {
+    if (order) return
+    addEventListener(LIVE_CHANGED, own.reload)
+    return () => removeEventListener(LIVE_CHANGED, own.reload)
+  }, [order, own.reload])
   const { run, pending, error: actErr } = useAction()
   const [open, setOpen] = useState(true)
   /* 下单前那一道确认。开着的时候装的就是这一单——不另存一份参数，
      人看到的和发出去的必须是同一个东西。 */
   const [ask, setAsk] = useState(false)
   const [disp, setDisp] = useState(false)
-  const { data: me } = useApi(() => ep.me(), [])
+  /* One /me for the whole application, not one per card: the wallet kind is a
+     property of the person, and fourteen cards asked fourteen times for the same
+     answer. The comment here used to claim "one for the whole page" while the
+     call sat inside the card — see useMe for what those queued requests cost. */
+  const me = useMe()
   const walletKind = me?.wallet_kind === 'ext' ? 'ext' : 'atara'
 
   const wrap = (node: React.ReactNode) =>
@@ -53,22 +95,43 @@ export default function OrderDetail({
   if (!o) return wrap(<div className="mkempty">Loading the order…</div>)
 
   const act = async (fn: () => Promise<unknown>) => { await run(fn); reload() }
-  const sell = o.otc?.side === 'sell'
+  /* your_side, not side: `side` is the taker's direction and is the same string
+     for both parties, so the maker used to read the whole card from the taker's
+     seat — "their coins were returned" about his own coins. */
+  const sell = (o.otc?.your_side ?? o.otc?.side) === 'sell'
   const coin = `${Number(o.amount.amount).toLocaleString()} ${o.amount.asset}`
   const ccy = o.otc?.fiat_code ?? 'CNY'
   const fiat = money(Number(o.otc?.fiat_amount ?? 0), ccy)
-  const step = o.terminal && o.terminal !== 'completed' ? 'dead' : o.state
-  /* 终态且非完成：轨道停在原地，没有「当前站」——
-     把第一站标成 now 会读成「刚开始」，而它其实已经结束了。 */
-  const idx = step === 'dead' ? -1
+  /* A finished order is not one outcome but three, and they need different
+     words. Collapsing them into a single "dead" step meant a disputed order was
+     shown as "Payment window missed — their coins were returned and the miss
+     recorded against your score": wrong about what happened, wrong about where
+     the money is (still locked, awaiting a ruling) and wrong about the
+     consequence (no default was recorded). `completed` keeps falling through to
+     the s5 copy, which already reads as a settlement. */
+  const step = o.terminal && o.terminal !== 'completed' ? o.terminal : o.state
+  /* Finished without settling: the rail stops where it is and has no current
+     stop — marking the first one as `now` reads as "just started". */
+  const ended = step === 'expired' || step === 'cancelled' || step === 'disputed'
+  const idx = ended ? -1
     : ({ match: 0, s1: 1, s3: 2, s3v: 3, s4: 3, s5: 4 } as Record<string, number>)[step] ?? 0
-  const mine = o.actor === 'you' || step === 'match'
-  const over = step === 's5' || step === 'dead'
+  /* `yours` is the taker. The match stop used to count as mine for both sides,
+     so the maker got Confirm and Drop too — and both came back 403, because the
+     backend only lets the owner move a match. Nothing was ever at risk; the
+     buttons were just an invitation to an error. The maker committed when his
+     listing locked the coins, so at this stop he has nothing to do but wait. */
+  const yours = o.yours !== false
+  const mine = o.actor === 'you' || (step === 'match' && yours)
+  /* A dispute is not over — the funds are still in the contract and a ruling is
+     pending — but nobody on this screen can move it either, so it renders like
+     a closed order rather than one with actions. */
+  const over = step === 's5' || ended
 
   const badge = ({
     match: 'Pending', s1: sell ? 'Escrowing' : 'Waiting',
     s3: sell ? 'Waiting' : 'Your turn', s3v: 'Verifying', s4: 'Verifying',
-    s5: 'Done', dead: 'Timed out',
+    s5: 'Done',
+    expired: 'Timed out', cancelled: 'Cancelled', disputed: 'In dispute',
   } as Record<string, string>)[step] ?? 'In progress'
 
   /* 状态行那句话按买卖方向分叉——两侧看到的事实本来就不一样 */
@@ -79,7 +142,9 @@ export default function OrderDetail({
     s3v: <>Their receipt is in · <b className="amt">{fiat}</b> reported sent</>,
     s4: <>Verifying their receipt · <b className="amt">{fiat}</b> reported sent</>,
     s5: <><b className="amt">{fiat}</b> received · performance written back to score</>,
-    dead: <>Their payment window missed · your {coin} returned from escrow</>,
+    expired: <>Their payment window missed · your {coin} returned from escrow</>,
+    cancelled: <>Order cancelled · your {coin} returned from escrow</>,
+    disputed: <>In dispute · your {coin} stays locked until this is settled</>,
   } as Record<string, JSX.Element>)[step] : ({
     match: <>Buy {coin} for <b className="amt">{fiat}</b></>,
     s1: <>Buy {coin} for <b className="amt">{fiat}</b> · verifying their escrow</>,
@@ -87,7 +152,9 @@ export default function OrderDetail({
     s3v: <>Verifying receipt · <b className="amt">{fiat}</b> sent</>,
     s4: <>Verifying receipt · <b className="amt">{fiat}</b> sent</>,
     s5: <><b className="amt">{coin}</b> credited · performance written back to score</>,
-    dead: <>Payment window missed · their {coin} was returned</>,
+    expired: <>Payment window missed · their {coin} was returned</>,
+    cancelled: <>Order cancelled · their {coin} was returned</>,
+    disputed: <>In dispute · the {coin} stays locked until this is settled</>,
   } as Record<string, JSX.Element>)[step]
 
   return wrap(
@@ -109,7 +176,7 @@ export default function OrderDetail({
         <div className="open"><div className="openin">
           <Rail at={idx} sell={sell} />
           <div className="pad">
-            {step === 'match' ? (
+            {step === 'match' && yours ? (
               <>
                 <div className="dhead">
                   <b className="damt num">{sell ? 'Sell' : 'Buy'} {coin}</b>
@@ -148,7 +215,13 @@ export default function OrderDetail({
                   </dd></div>
                   <div><dt>Reference</dt><dd>
                     <span className="dmono">{o.ref}</span>
-                    <Copy text={o.ref} />
+                    {/* The reference is the one string that has to arrive intact
+                        at the bank — a silent copy button is worst exactly here,
+                        because a copy that did not happen shows up later as a
+                        payment nobody can match to an order. CopyButton swaps to
+                        a green check and says so out loud. */}
+                    <CopyButton text={o.ref} label="Copy reference"
+                      done="Reference copied" className="cpbtn" />
                     <span className="dreq">required</span>
                   </dd></div>
                 </dl>
@@ -279,7 +352,7 @@ function Peer({ o, ccy }: { o: Order; ccy: string }) {
           金额旁边，不是藏在对方主页里。数据跟工单一起来，两个数同一时刻。 */}
       {p && (
         <div><dt>Track record</dt>
-          <dd>{p.deals} trades · {p.disputes} disputes · score {p.trust_score}</dd></div>
+          <dd>{p.deals} trades · {p.disputes} disputes · {scoreText(p.trust_score)}</dd></div>
       )}
       {p?.docs && (
         <div><dt>Documents</dt>
@@ -303,6 +376,22 @@ function Peer({ o, ccy }: { o: Order; ccy: string }) {
               用在 29.28 上会印成「¥29」——抹掉的正好是这个数的大部分。 */}
           <dd>{FIAT_SYM[o.fee.currency] ?? ''}{o.fee.amount} {o.fee.currency}{' '}
             <span className="dreq">{o.fee.bps / 100}%</span></dd></div>
+      )}
+      {/* The receipt itself, wherever this table appears while the order is
+          still open. The verify step used to ask "check it landed before
+          releasing" and then show everything except the thing being checked —
+          the person holding the money had to decide on a file they could not
+          open. The settled view leaves this out because the evidence pack below
+          already carries it with its verification timestamp. */}
+      {o.otc?.receipt_url && !o.terminal && (
+        <div><dt>Receipt</dt>
+          <dd>
+            <a className="lnk" href={o.otc.receipt_url} target="_blank" rel="noopener"
+              onClick={e => e.stopPropagation()}>Open original ↗</a>
+            <span className="dreq" style={{ marginLeft: 8 }}>
+              uploaded by the paying side
+            </span>
+          </dd></div>
       )}
       {doc && (
         <DocView doc={doc} has={!!p?.docs?.[doc]} peer={name} onClose={() => setDoc('')} />
@@ -335,6 +424,11 @@ function Waiting({
   onCancel: () => void; pending: boolean
 }) {
   const head: Record<string, [string, string]> = sell ? {
+    /* The maker's side of the match stop. Without it this fell through to the
+       "In progress" fallback — a blank wait with no reason given, right after
+       someone took his listing. */
+    match: [`Waiting on ${o.counterparty_name ?? 'them'} to confirm`,
+      `Your ${coin} is already locked in the contract · if they do not confirm, the match lapses`],
     s1: ['Locking your coins', o.escrow?.funding_via === 'external'
       ? 'From your external wallet — detection is automatic'
       : 'Signed from your wallet · confirming on-chain'],
@@ -343,16 +437,26 @@ function Waiting({
     s3v: ['Their receipt is in', 'Check it against your account before releasing'],
     s4: ['Verifying their receipt', 'Amount, reference and sender name are checked against the escrow'],
     s5: [`${fiat} received`, 'Escrow released to them · performance written back to both records'],
-    dead: ['Their payment window missed', `Your ${coin} came back from escrow · their miss recorded`],
+    expired: ['Their payment window missed', `Your ${coin} came back from escrow · their miss recorded`],
+    cancelled: ['Order cancelled', `Your ${coin} came back from escrow · no default recorded`],
+    disputed: ['In dispute — under review',
+      `Your ${coin} stays locked in the contract until this is settled`],
   } : {
+    match: [`Waiting on ${o.counterparty_name ?? 'them'} to confirm`,
+      'Nothing moves until they do · if they do not confirm, the match lapses'],
     s1: ['Verifying their escrow', 'Locked when they listed — binding it to this order'],
     s3: [`Waiting on ${o.counterparty_name ?? 'them'}`, 'They are sending the transfer'],
     s3v: ['Waiting on their check', 'They confirm the money landed, then escrow releases'],
     s4: ['Verifying your receipt', 'Amount, reference and sender name are checked against the escrow'],
     s5: [`${coin} credited`, 'Settled in full · performance written back to their score'],
-    dead: ['Payment window missed', `Their ${coin} was returned and the miss recorded against your score`],
+    expired: ['Payment window missed', `Their ${coin} was returned and the miss recorded against your score`],
+    cancelled: ['Order cancelled', `Their ${coin} was returned · no default recorded`],
+    disputed: ['In dispute — under review',
+      `The ${coin} stays locked in the contract until this is settled`],
   }
   const mech: Record<string, string> = {
+    match: 'The side that took the listing confirms — you committed when the listing '
+      + 'locked your coins. A lapsed match is recorded as unfilled, not as a default.',
     s1: sell
       ? 'Your coins sit in the escrow contract — not with Atara, not with them. They release only when the buyer’s payment clears verification.'
       : 'Locked at listing, bound to your order now. If the binding fails, the trade closes — no exposure to you.',
@@ -360,7 +464,13 @@ function Waiting({
     s3v: 'Release is automatic once the receipt is confirmed. Neither side can hold the funds back.',
     s4: 'Release is automatic once the receipt matches. Neither side can hold the funds back.',
     s5: 'The evidence pack is the settlement record — receipt, escrow release and both signatures.',
-    dead: 'Funds returned automatically — nothing was held. The miss stays on the record.',
+    expired: 'Funds returned automatically — nothing was held. The miss stays on the record.',
+    cancelled: 'Funds returned automatically — nothing was held, and no default was recorded.',
+    /* Say where the money is and who moves next. Without this the screen goes
+       quiet after the most alarming action on it, and the person who just
+       raised the dispute has no way to tell whether anything is happening. */
+    disputed: 'The funds stay in the contract — neither side can move them. '
+      + 'A reviewer decides whether they are released or returned.',
   }
   const h = head[step] ?? ['In progress', '']
 
@@ -444,12 +554,12 @@ function Pack({ ev, coin, fiat, ref_ }: {
         <span>Evidence pack · {ref_}</span>
         <b>{done ? `${coin} → ${fiat}` : ev.outcome}</b>
       </div>
-      {ev.receipt_ref && (
+      {ev.receipt_url && (
         <div className="evrow">
           <i className="ok" />
           <span>Bank receipt</span>
           {/* 打开的是当时交上来的原件，不是一个「已上传」的字样 */}
-          <a href={ep.fileURL(ev.receipt_ref)} target="_blank" rel="noopener"
+          <a href={ev.receipt_url} target="_blank" rel="noopener"
             /* 链接文字不印 file_ref：那是一个 uuid，对人没有任何意义，
                而这一行左边已经说了它是什么。 */
             onClick={e => e.stopPropagation()}>Open original ↗</a>

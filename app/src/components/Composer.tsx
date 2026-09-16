@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import * as ep from '../api/endpoints'
 import { IBuy, IMic, ISell, ISend } from './icons'
 import VoiceBar from './VoiceBar'
@@ -66,6 +66,30 @@ export default function Composer({
   onStop?: () => void
   onVoiceError?: (msg: string) => void
 }) {
+  /* 输入框跟着内容长高。1 行起，到 156px（6 行）转滚动——那个上限在 CSS 里。
+   *
+   * 先归 auto 再读 scrollHeight：不归的话盒子只会变高不会变矮，因为
+   * scrollHeight 永远不小于当前高度，删字之后下面留着一片空白。
+   *
+   * useLayoutEffect 而不是 useEffect：浏览器绘制之前就把高度写好，否则每敲
+   * 一个字都会先画出旧高度再跳一下。
+   *
+   * #say 上那个 smooth 类是配套的：CSS 里给它的是一条 .15s 的平直曲线，而
+   * 默认那条是开合用的弹簧——每敲一个字弹一下，正是参照里特意避开的。 */
+  const box = useRef<HTMLTextAreaElement>(null)
+  const [fast, setFast] = useState(false)
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+    setFast(true)
+  }, [text])
+  /* 面板开合换回弹簧。两种改高度混用同一条曲线是不行的：用弹簧，每敲一个字
+     盒子都要弹一下；用平直曲线，面板开出来就是硬邦邦地推上去。所以按「这次
+     变高是谁引起的」来切。 */
+  useLayoutEffect(() => { setFast(false) }, [actOn])
+
   const [mic, setMic] = useState(false)
   const voice = useRef<IFlytekStreamer | null>(null)
   const before = useRef('')
@@ -112,7 +136,7 @@ export default function Composer({
   const go = () => { if (!busy) onSubmit() }
 
   return (
-    <div id="say" className={actOn ? 'actopen' : ''}>
+    <div id="say" className={(fast ? 'smooth' : '') + (actOn ? ' actopen' : '')}>
       <div id="actions" role="group" aria-label="Actions">
         <button className={'act' + (actOn === 'buy' ? ' on' : '')} type="button"
           onClick={() => onToggle('buy')}>
@@ -125,7 +149,7 @@ export default function Composer({
       </div>
       <div className="sayrow">
         {panel}
-        <textarea id="free" rows={1} aria-label={ariaLabel}
+        <textarea id="free" rows={1} aria-label={ariaLabel} ref={box}
           value={text}
           onChange={e => onChange(e.target.value)}
           onKeyDown={e => {

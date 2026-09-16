@@ -1,13 +1,21 @@
-import { ApiError, BASE, PROFILE_CHANGED, api, getIdentity, withConfirmation } from './client'
+import { ApiError, BASE, PROFILE_CHANGED, api, getIdentity, readAuthToken, withConfirmation } from './client'
 import type {
   Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, EligiblePeer, KycSession, KycStatus, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, RailGroup, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
 } from './types'
 
 // ── 账户 ──
 
-/** 注册与登录是同一个端点：地址已存在就返回那个账户，不建重复户。 */
+/**
+ * Sign-up and sign-in are the same endpoint: the account is looked up by
+ * `privy_id`, so the same person always lands on the same account whether or
+ * not this particular login came with a wallet.
+ */
 export const connect = (body: {
   method: 'passkey' | 'wallet' | 'google' | 'email' | 'twitter'
+  /** The identity. Everything else on this object can change; this cannot. */
+  privy_id?: string
+  /** Where money goes. Absent while Privy is still provisioning the wallet —
+      the account is created either way and refuses payments until it lands. */
   address?: string
   email?: string
   name?: string
@@ -182,10 +190,15 @@ export async function upload(file: File, as?: string): Promise<string> {
   const fd = new FormData()
   fd.append('file', file)
   // 用同一个 BASE：写死 '/api/v1' 会在跨域部署时漏掉这一个端点
+  /* The bearer token has to go on by hand here: request() is what normally
+     attaches it, and this call deliberately does not go through it. */
+  const headers: Record<string, string> = { 'X-Atara-User': as ?? getIdentity() }
+  const token = await readAuthToken()
+  if (token) headers.Authorization = 'Bearer ' + token
   const res = await fetch(BASE + '/uploads', {
     method: 'POST',
     // 不要手写 Content-Type——boundary 由浏览器生成
-    headers: { 'X-Atara-User': as ?? getIdentity() },
+    headers,
     body: fd,
   })
   const body = await res.json().catch(() => null) as
@@ -414,8 +427,17 @@ export const addContact = (
   as?: string,
 ) => api.post<Contact>('/contacts', body, { as })
 
+/**
+ * The sidebar feed: one poll, two things on it.
+ *
+ * `pending_contacts` is how many people are waiting for me to accept them.
+ * It rides along with the thread list rather than getting an endpoint of its
+ * own because the sidebar already polls this one every three seconds, and a
+ * second timer for a single integer is not worth the traffic.
+ */
 export const threads = (as?: string) =>
-  api.get<{ threads: ThreadSummary[] }>('/threads', { as }).then(r => r.threads ?? [])
+  api.get<{ threads: ThreadSummary[]; pending_contacts?: number }>('/threads', { as })
+    .then(r => ({ list: r.threads ?? [], pending: r.pending_contacts ?? 0 }))
 
 export const thread = (peer: string, as?: string) =>
   api.get<Thread>(`/threads/${encodeURIComponent(peer)}`, { as })
@@ -431,11 +453,9 @@ export const conditionCatalog = () => api.get<ConditionCatalog>('/catalog/condit
 export const parseIntent = (text: string, as?: string) =>
   api.post<unknown>('/orders/parse', { text }, { as })
 
-/**
- * 上传件的直链。证据包里那份银行凭证要能点开看原件——
- * 显示一个「已上传」的字样，等于让人相信一份他看不到的东西。
- */
-export const fileURL = (ref: string) => BASE + '/uploads/' + ref.split('/').pop()
+/* 这里原来有一个 fileURL(ref)，前端自己拼 /uploads/<ref>。删掉了：那条路由
+   现在要一枚签过名的链接，而链接只能由后端签——它是在「你是不是这单的当事人」
+   那一步之后发的。所以 ref 只是文件名，能不能打开由 receipt_url 说了算。 */
 
 // ── 语音听写 ──
 
@@ -480,7 +500,10 @@ export function uploadProgress(
   as?: string,
 ): { done: Promise<Uploaded>; abort: () => void } {
   const xhr = new XMLHttpRequest()
+  let abandoned = false
+  let bail: (() => void) | null = null
   const done = new Promise<Uploaded>((resolve, reject) => {
+    bail = () => reject(new ApiError(0, { code: 'UPLOAD_ABORTED', message: 'Upload cancelled' }))
     xhr.upload.onprogress = e => {
       /* lengthComputable 为假时别硬算：那时 e.total 是 0，算出来是 Infinity，
          进度条会直接窜到底再卡住，比没有进度更糟。 */
@@ -509,10 +532,29 @@ export function uploadProgress(
 
   const fd = new FormData()
   fd.append('file', file)
-  xhr.open('POST', BASE + '/uploads')
-  xhr.setRequestHeader('X-Atara-User', as ?? getIdentity())
-  // 不设 Content-Type——boundary 由浏览器生成
-  xhr.send(fd)
 
-  return { done, abort: () => xhr.abort() }
+  /* Reading the token is async, so the request leaves on a later tick while the
+     handle we return exists right now. That gap is real: a user who changes
+     their mind can abort before anything is in flight, and xhr.abort() on a
+     request that was never opened does nothing at all — so abort rejects the
+     promise itself and tells the sender not to bother. */
+  void (async () => {
+    const token = await readAuthToken()
+    if (abandoned) return
+    xhr.open('POST', BASE + '/uploads')
+    xhr.setRequestHeader('X-Atara-User', as ?? getIdentity())
+    if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+    // 不设 Content-Type——boundary 由浏览器生成
+    xhr.send(fd)
+  })()
+
+  return {
+    done,
+    abort: () => {
+      if (abandoned) return
+      abandoned = true
+      xhr.abort() // Fires onabort once sent; a no-op before that, hence bail.
+      bail?.()    // Settling twice is harmless — the first one wins.
+    },
+  }
 }
