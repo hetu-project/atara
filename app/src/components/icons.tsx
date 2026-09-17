@@ -103,6 +103,25 @@ export const ISend = () => (
   </svg>
 )
 
+/** Down-arrow pair of ISend — receive into this wallet. */
+export const IReceive = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+    strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M8 3.5v9M4.5 9 8 12.5 11.5 9" />
+  </svg>
+)
+
+/** Bank building. Fiat accounts are bank-to-bank, not an on-chain address. */
+export const IBank = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+    strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M2.5 6.2 8 3l5.5 3.2" />
+    <path d="M4 6.4v5.4M8 6.4v5.4M12 6.4v5.4" />
+    <path d="M3 11.8h10" />
+    <path d="M2.4 13.2h11.2" />
+  </svg>
+)
+
 /* ── 账户页用的小图标，逐字取自 console.html ── */
 export const CHIP = () => (
   <svg className="cchip" width="21" height="15" viewBox="0 0 22 16" fill="none"

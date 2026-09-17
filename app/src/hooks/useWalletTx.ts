@@ -30,6 +30,9 @@ const ERC20 = [
     outputs: [{ type: 'uint256' }] },
   { name: 'balanceOf', type: 'function', stateMutability: 'view',
     inputs: [{ name: 'owner', type: 'address' }], outputs: [{ type: 'uint256' }] },
+  { name: 'transfer', type: 'function', stateMutability: 'nonpayable',
+    inputs: [{ name: 'to', type: 'address' }, { name: 'amount', type: 'uint256' }],
+    outputs: [{ type: 'bool' }] },
 ] as const
 
 const ESCROW = [
@@ -88,10 +91,16 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
   const { wallets } = useWallets()
   const [step, setStep] = useState<TxStep>({ k: 'idle' })
 
-  /** 拿到能签名的客户端，并确保钱包停在正确的链上。 */
-  const connect = useCallback(async () => {
+  /**
+   * A signing client on the right chain.
+   *
+   * Lock and approve need an escrow contract. A plain transfer only needs
+   * this chain's RPC and token address — missing escrow does not stop
+   * someone sending coins that are already in their wallet.
+   */
+  const connect = useCallback(async (opts?: { needEscrow?: boolean }) => {
     if (!info) throw new Error('Pick a network first')
-    if (!info.deployed) {
+    if (opts?.needEscrow !== false && !info.deployed) {
       throw new Error(`${info.name} has no escrow contract yet — nothing can be locked there`)
     }
     const want = (expected ?? '').toLowerCase()
@@ -264,6 +273,49 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
     }
   }, [connect])
 
+  /**
+   * An ERC-20 transfer from the user's own wallet. Not a custodial
+   * withdrawal — the coins stay on their address; the platform only
+   * records the intent and the hash that follows.
+   */
+  const transferToken = useCallback(async (p: {
+    token: string; to: string; amountWei: string
+  }): Promise<string> => {
+    try {
+      const { account, pub, wallet, chain } = await connect({ needEscrow: false })
+      const amount = BigInt(p.amountWei)
+      const token = p.token as Address
+      const to = p.to as Address
+
+      const bal = await pub.readContract({
+        address: token, abi: ERC20, functionName: 'balanceOf', args: [account],
+      })
+      if (bal < amount) {
+        const dec = await pub.readContract({
+          address: token, abi: ERC20, functionName: 'decimals',
+        }).catch(() => 18)
+        const fmt = (v: bigint) => (Number(v) / 10 ** Number(dec)).toLocaleString()
+        throw new Error(
+          `${short(account)} holds ${fmt(bal)} of ${short(token)} — this needs ${fmt(amount)}`)
+      }
+
+      setStep({ k: 'wallet', msg: 'Sign in your wallet to send' })
+      const h = await wallet.writeContract({
+        address: token, abi: ERC20, functionName: 'transfer',
+        args: [to, amount], chain, account,
+      })
+      setStep({ k: 'mining', msg: 'Sending', hash: h })
+      const rc = await pub.waitForTransactionReceipt({ hash: h })
+      if (rc.status !== 'success') throw new Error('The transfer was rejected on chain')
+      setStep({ k: 'done', hash: h })
+      return h
+    } catch (e) {
+      const msg = readable(e)
+      setStep({ k: 'error', msg })
+      throw new WalletTxError(msg)
+    }
+  }, [connect])
+
   /** 下架：把没被订单绑走的量取回钱包。只有原 maker 能调。 */
   const unlockListing = useCallback(async (p: {
     escrow: string; offerKey: string
@@ -288,7 +340,7 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
   }, [connect])
 
   return {
-    step, setStep, lockListing, unlockListing, approveSpending,
+    step, setStep, lockListing, unlockListing, approveSpending, transferToken,
     ready: wallets.length > 0,
   }
 }

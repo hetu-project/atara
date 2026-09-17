@@ -1,15 +1,15 @@
 import { useState } from 'react'
+import CoinMark, { coinHue } from '../components/CoinMark'
 import CountUp from '../components/CountUp'
 import * as ep from '../api/endpoints'
 import CopyButton from '../components/CopyButton'
-import { CHIP, IArrow, ICheck, IPen } from '../components/icons'
+import { CHIP, IArrow, IBank, ICheck, IPen, IReceive, ISend } from '../components/icons'
 import { useApi } from '../hooks/useApi'
 import { useKycGate } from '../hooks/useKycGate'
 import { AllowanceModal, BankAccountsModal, ReceiveModal, SendModal } from '../components/WalletModals'
 import { go } from '../hooks/useRoute'
 import type { Allowance, WalletAsset } from '../api/types'
 
-const COIN_HUE: Record<string, number> = { USDT: 158, USDC: 220, BTC: 36, ETH: 250 }
 const fmtAmt = (n: number) =>
   n < 1 ? n.toFixed(4).replace(/0+$/, '').replace(/\.$/, '') : n.toLocaleString()
 
@@ -40,7 +40,11 @@ export default function Account({ identity }: { identity: string }) {
   const [pick, setPick] = useState<string>('')
   const [flip, setFlip] = useState(false)
   const { data: me, reload: reloadMe } = useApi(() => ep.me(identity), [identity])
-  const { data: w } = useApi(() => ep.wallet(identity), [identity])
+  /* An incoming chain transfer is not an Atara event: /events stays quiet
+     when someone Sends USDT. This page used to fetch wallet once on enter,
+     so a recipient sitting here never left the old balance. 15s matches the
+     order-page backstop — the figure comes from RPC, not the scheduler. */
+  const { data: w, reload: reloadW } = useApi(() => ep.wallet(identity), [identity], 15000)
   const { data: allow, reload } = useApi(() => ep.allowances(identity), [identity])
   const { data: mine } = useApi(() => ep.myOffers(identity), [identity])
   const { data: orders } = useApi(() => ep.orders(identity), [identity])
@@ -58,6 +62,13 @@ export default function Account({ identity }: { identity: string }) {
   /* 还挂着的单：卖完（filled）和下架（delisted）的不算。它们已经不占着钱、
      也不能被吃，摆在「Your listings」里只会让人以为还在市场上。 */
   const live = (mine ?? []).filter(o => o.status === 'active')
+  /* 钱包这一格还没读到过。
+   *
+   * 不能用 `avail === 0` 判断——真的没有钱和还没读到，在屏幕上必须是两件事。
+   * 先画 $0 再跳到真数，等于先说了一句会让人做决定的假话（而且它长得完全
+   * 像真话，没人会去核对）。只看首屏：15 秒那轮刷新时数字已经在屏幕上了，
+   * 再变回骨架反而像坏了。 */
+  const loadingWallet = w === undefined
   const avail = Number(w?.on_chain_usd ?? 0)
   const esc = Number(w?.in_escrow_usd ?? 0)
   const escN = assets.filter(a => Number(a.in_escrow) > 0).length
@@ -97,7 +108,11 @@ export default function Account({ identity }: { identity: string }) {
                   </span>
                 ) : (
                   <>
-                    <span className="pname">{me?.display_name ?? 'Demo'}</span>
+                    {/* 读不到账户时不要编一个名字出来。这里原来写的是 'Demo'，
+                        于是「/me 挂了」在屏幕上的样子是「你叫 Demo」——一句
+                        看起来很正常的话，没人会去查。侧栏那一处已经因为同一个
+                        原因改过一次了。 */}
+                    <span className="pname">{me?.display_name ?? '—'}</span>
                     <button className="pedit" title="Rename" aria-label="Edit nickname"
                       /* 没起过名字的账户，展示名就是地址的缩写（0xFC3d…4443）。
                          把缩写填进输入框等于让人对着省略号改——所以这时填完整
@@ -142,26 +157,44 @@ export default function Account({ identity }: { identity: string }) {
         <div className="pgrid pg-a">
           <section className="pmod">
             <div className="pmh"><h4>Wallet</h4><span className="ad">Non-custodial</span></div>
-            <div className="atot"><b className="av num">$<CountUp value={avail + esc} /></b></div>
+            <div className="atot"><b className="av num">
+              {loadingWallet ? <i className="sk" style={{ width: '6.5em' }} /> : <>$<CountUp value={avail + esc} /></>}
+            </b></div>
+            {/* 分配条在读到之前留空，不画成 100% 可用——那是在断言一件还不知道的事。 */}
             <div className="aalloc" title="Available vs in escrow">
-              <i className="aa-av" style={{ width: `${(avail / (avail + esc || 1) * 100).toFixed(1)}%` }} />
-              <i className="aa-es" style={{ width: `${(esc / (avail + esc || 1) * 100).toFixed(1)}%` }} />
+              {!loadingWallet && <>
+                <i className="aa-av" style={{ width: `${(avail / (avail + esc || 1) * 100).toFixed(1)}%` }} />
+                <i className="aa-es" style={{ width: `${(esc / (avail + esc || 1) * 100).toFixed(1)}%` }} />
+              </>}
             </div>
             <div className="asplit">
               <div><span className="al">In your wallet</span>
-                <b className="num">$<CountUp value={avail} /></b></div>
+                <b className="num">
+                  {loadingWallet ? <i className="sk" style={{ width: '4em' }} /> : <>$<CountUp value={avail} /></>}
+                </b></div>
               <div><span className="al">In escrow contracts</span>
-                <b className="num">$<CountUp value={esc} /></b>
-                <span className="ad">{escN} trades locked ·{' '}
-                  <a href="#/payments" className="lnk">View ›</a></span></div>
+                <b className="num">
+                  {loadingWallet ? <i className="sk" style={{ width: '4em' }} /> : <>$<CountUp value={esc} /></>}
+                </b>
+                <span className="ad">{loadingWallet ? ' ' : <>{escN} trades locked ·{' '}
+                  <a href="#/payments" className="lnk">View ›</a></>}</span></div>
             </div>
             <div className="aacts">
-              <button className="btn btn-secondary" onClick={() => setSheet('receive')}>Receive</button>
-              <button className="btn btn-secondary" onClick={() => setSheet('send')}>Send</button>
+              <button className="btn btn-secondary aact-in" onClick={() => setSheet('receive')}>
+                <span className="aact-ic"><IReceive /></span>
+                <span className="aact-lb">Receive</span>
+              </button>
+              <button className="btn btn-secondary aact-out" onClick={() => setSheet('send')}>
+                <span className="aact-ic"><ISend /></span>
+                <span className="aact-lb">Send</span>
+              </button>
               {/* 「Fiat accounts」而不是「Addresses」：这一格管的是法币腿的落点，
                   而链上地址在 Send 里当场填、按网络校验，从来不需要先登记。
                   一个含糊的「Addresses」把两件事盖在一起，点进去才知道是哪一件。 */}
-              <button className="btn btn-secondary" onClick={() => setSheet('bank')}>Fiat accounts</button>
+              <button className="btn btn-secondary aact-bank" onClick={() => setSheet('bank')}>
+                <span className="aact-ic"><IBank /></span>
+                <span className="aact-lb">Fiat accounts</span>
+              </button>
             </div>
           </section>
 
@@ -194,7 +227,8 @@ export default function Account({ identity }: { identity: string }) {
           <section className="pmod">
             {tab === 'assets' && (
               <>
-                <div className="pmh"><h4>Assets · {assets.length}</h4>
+                {/* 计数也要等：先写「Assets · 0」再跳到 2，说的是同一句假话。 */}
+                <div className="pmh"><h4>Assets{loadingWallet ? '' : ` · ${assets.length}`}</h4>
                   <button className="h3go" onClick={() => go({ view: 'payments' })}>Statement <IArrow /></button></div>
                 <Assets rows={assets} />
                 <p className="rnote">
@@ -210,9 +244,7 @@ export default function Account({ identity }: { identity: string }) {
                   <div className="alist2">
                     {live.map(o => (
                       <div className="arow3" key={o.id}>
-                        <span className="acoin" style={{ background: `hsl(${COIN_HUE[o.asset] ?? 200} 45% 40%)` }}>
-                          {o.asset.slice(0, 1)}
-                        </span>
+                        <CoinMark asset={o.asset} />
                         <span className="anm"><b>{o.asset}</b><em>{o.side} · {o.status}</em></span>
                         <span className="aright">
                           <b className="num">{Number(o.remaining_qty).toLocaleString()}</b>
@@ -252,7 +284,7 @@ export default function Account({ identity }: { identity: string }) {
         {sheet === 'bank' && <BankAccountsModal identity={identity} onClose={() => setSheet('')} />}
         {sheet === 'send' && (
           <SendModal identity={identity} assets={assets}
-            onClose={() => setSheet('')} onDone={() => {}} />
+            onClose={() => setSheet('')} onDone={() => reloadW()} />
         )}
         {sheet === 'allowance' && (
           <AllowanceModal identity={identity} asset={w?.assets?.[0]?.asset ?? 'USDT'}
@@ -277,11 +309,11 @@ function Assets({ rows }: { rows: WalletAsset[] }) {
       {rows.map(a => {
         const usd = Number(a.usd_value)
         const pct = usd / tot * 100
-        const hue = COIN_HUE[a.asset] ?? 200
+        const hue = coinHue(a.asset)
         const locked = Number(a.in_escrow)
         return (
           <div className="arow3" key={a.asset}>
-            <span className="acoin" style={{ background: `hsl(${hue} 45% 40%)` }}>{a.asset.slice(0, 1)}</span>
+            <CoinMark asset={a.asset} />
             <span className="anm"><b>{a.asset}</b>
               <em>{a.network}{locked ? ` · ${fmtAmt(locked)} locked` : ''}</em></span>
             <span className="aright">

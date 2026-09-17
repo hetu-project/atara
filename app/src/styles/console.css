@@ -828,7 +828,7 @@ main.lout .nav .c.dot{position:absolute;top:7px;right:13px;
   /* 授权卡走同一条两列轴：三列会剩一个孤儿，而且和上下模块的边对不齐 */
   #rulesbody .cards{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 }
-.pmod{display:flex;flex-direction:column;gap:var(--sp-4);min-width:0;
+.pmod{display:flex;flex-direction:column;gap:var(--sp-4);min-width:0;height:100%;
   padding:var(--sp-5);background:var(--paper);border-radius:var(--r-panel);box-shadow:var(--ring)}
 .pmh{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-3)}
 .pmh h4{font-size:12.5px;font-weight:600;letter-spacing:.01em;color:var(--mute)}
@@ -905,7 +905,35 @@ main.lout .nav .c.dot{position:absolute;top:7px;right:13px;
 .asplit{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:var(--sp-4) var(--sp-5);padding-top:var(--sp-4)}
 .asplit b{font-size:17px;font-weight:600;color:var(--ink)}
 .asplit .ad{display:block;font-size:12px;color:var(--faint);margin-top:var(--sp-1);line-height:1.45}
-.aacts{display:flex;gap:var(--sp-2);flex-wrap:wrap}
+.aacts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-2);
+  margin-top:auto;margin-bottom:auto}
+.aacts .btn{width:100%;height:40px;padding:0 8px;font-size:12.5px;overflow:hidden;
+  transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),transform var(--dur-fast) var(--ease)}
+.aacts .btn:active{transform:scale(.97)}
+.aact-ic,.aact-lb{display:flex;align-items:center;
+  transition:transform var(--dur-normal) var(--ease)}
+.aact-ic svg{transition:transform var(--dur-normal) var(--ease);transform-origin:center}
+/* Hover motion after the paper-plane send button — icon moves, label stays
+   readable. Sliding the word 5em off would empty these equal-width slots. */
+.aact-out:hover .aact-ic{animation:aact-fly .6s ease-in-out infinite alternate}
+.aact-out:hover .aact-ic svg{transform:translateX(.35em) rotate(40deg) scale(1.08)}
+.aact-out:hover .aact-lb{transform:translateX(.28em)}
+.aact-in:hover .aact-ic svg{transform:translateY(.28em)}
+.aact-in:hover .aact-lb{transform:translateY(.08em)}
+.aact-bank:hover .aact-ic svg{transform:translateY(-.18em)}
+@keyframes aact-fly{
+  from{transform:translateY(.08em)}
+  to{transform:translateY(-.08em)}
+}
+@media (prefers-reduced-motion:reduce){
+  .aacts .btn:active{transform:none}
+  .aact-ic,.aact-lb,.aact-ic svg{transition:none}
+  .aact-out:hover .aact-ic{animation:none}
+  .aact-out:hover .aact-ic svg,.aact-out:hover .aact-lb,
+  .aact-in:hover .aact-ic svg,.aact-in:hover .aact-lb,
+  .aact-bank:hover .aact-ic svg{transform:none}
+}
 .wadr{display:flex;align-items:baseline;gap:var(--sp-2);margin-top:2px;flex-wrap:wrap}
 .wadr code{font-size:12.5px;color:var(--mute)}
 .wadr .lnk{font-size:12px}
@@ -1394,7 +1422,9 @@ a.dspx{color:#d0574d}
 .arow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:var(--r-control)}
 .arow:hover{background:var(--canvas)}
 .acoin{width:28px;height:28px;flex:none;border-radius:999px;display:flex;align-items:center;justify-content:center;
-  font-size:10px;font-weight:700;color:#fff}
+  font-size:10px;font-weight:700;color:#fff;overflow:hidden}
+.acoin.pic{background:transparent}
+.acoin img{width:100%;height:100%;object-fit:cover;display:block}
 .anm{display:flex;flex-direction:column;gap:1px;min-width:0}
 .anm b{font-size:13px;font-weight:600;color:var(--ink)}
 .anm em{font-style:normal;font-size:11px;color:var(--faint)}
@@ -3186,8 +3216,9 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
 
 /* 等待气泡：里面装的是 Dither 方阵，不是文字。
    inline 元素要按基线排版，行盒比 22px 的方阵高出一截，而那段空白全落在
-   方阵上方——气泡因此比需要的高十来个像素。flex 不走基线，气泡就正好裹住它。 */
-.bub.bubwait{display:flex;line-height:0}
+   方阵上方——气泡因此比需要的高十来个像素。flex 不走基线，气泡就正好裹住它。
+   秒数叠在方阵上面：同一列、居中，不再跟在右侧抢同一条基线。 */
+.bub.bubwait{display:flex;flex-direction:column;align-items:center;gap:6px;line-height:0}
 /* 这一行改成按中线对齐。底对齐是为文字气泡定的（文字本来就贴着底边），
    而方阵在气泡里是居中的，再按底对齐就会整体比头像高出半个身位。 */
 .mrow:has(.bubwait){align-items:center}
@@ -3197,12 +3228,12 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
    等的时候是「已经等了 5 秒」，答完之后是「刚才想了 5 秒」。
 
    35px 的左缩进和 .msg.them .mt 一样：对方那一侧的气泡让开了头像（24px）
-   加间距（8px），这一行要和气泡左边缘对齐，不是和头像对齐。 */
-.thought,.waited{font-size:var(--rt-title);color:var(--faint-2);padding-left:35px;
+   加间距（8px），这一行要和气泡左边缘对齐，不是和头像对齐。
+   等待中的秒数已经进了气泡、叠在方阵顶上，不再用这条缩进。 */
+.thought{font-size:var(--rt-title);color:var(--faint-2);padding-left:35px;
   white-space:nowrap}
-/* 等待中的秒数不要 nowrap 之外的任何动效：方阵已经在动了，再加一处闪动
-   就是两个东西在抢同一件事的说明权。 */
-.waited{font-variant-numeric:tabular-nums}
+.waited{font-size:var(--rt-title);line-height:1;color:var(--faint-2);
+  font-variant-numeric:tabular-nums}
 
 /* 回答正在生成时跟在文字末尾的光标。
    它不是装饰：模型想第一句话要一两秒，那段时间气泡是空的——没有东西在动的话，
@@ -3616,11 +3647,52 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
 
 /* 出金：步骤条与地址选择 */
 .wsteps{display:flex;gap:6px;list-style:none;margin-bottom:14px}
-.wsteps li{flex:1;display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--faint)}
-.wsteps li::before{content:'';height:2px;border-radius:999px;background:var(--hairline)}
+.wsteps li{flex:1;display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--faint);
+  transition:color var(--dur-fast) var(--ease)}
+.wsteps li::before{content:'';height:2px;border-radius:999px;background:var(--hairline);
+  transition:background var(--dur-normal) var(--ease)}
 .wsteps li.on{color:var(--ink);font-weight:500}
 .wsteps li.on::before,.wsteps li.done::before{background:var(--accent)}
 .wsteps li.done{color:var(--mute)}
+
+/* Send's two steps are one send moving forward, not a second modal.
+   After beui Morphing Modal — height follows the content, the pane slides in.
+   The hidden pane is position:absolute on top; without a clip, .mbody
+   scrolls to the taller page, which is the white bar beside a two-row list. */
+.wslide{position:relative;overflow:hidden}
+.wslide-pane{transition:transform var(--dur-normal) var(--ease),
+  opacity var(--dur-normal) var(--ease),
+  visibility 0s linear var(--dur-normal)}
+.wslide-pane:not(.on){position:absolute;left:0;right:0;top:0;
+  opacity:0;pointer-events:none;visibility:hidden}
+.wslide-pane.on{position:relative;transform:none;opacity:1;visibility:visible;
+  transition:transform var(--dur-normal) var(--ease),opacity var(--dur-normal) var(--ease),
+  visibility 0s}
+.wslide[data-step="1"] .wslide-pane[data-i="0"]{transform:translateX(-18px)}
+.wslide[data-step="0"] .wslide-pane[data-i="1"]{transform:translateX(18px)}
+@media (prefers-reduced-motion:reduce){
+  .wslide-pane{transition:none}
+}
+/* 首屏还没拿到数时占位的灰条。
+ *
+ * 为什么不是「先显示 0」：0 是一个看起来完全正常的数字，而「你钱包里没有钱」
+ * 是人会据此行动的一句话。真实的 0 和还没读到，在屏幕上必须长得不一样——
+ * 账户页那句凭空写死的 'Demo' 是同一个毛病，已经删掉了。
+ *
+ * 动画复用 agshimmer：项目里已经有一条闪动，再加一条不同节奏的，同屏两处
+ * 一起动就会互相抢。inline-block + currentColor 让它跟着所在那行的字号走，
+ * 不用为每个位置各调一次宽高。 */
+.sk{display:inline-block;vertical-align:-.12em;height:1em;min-width:2em;
+  border-radius:var(--r-chip);background:linear-gradient(90deg,
+    var(--card) 35%,var(--line-strong) 50%,var(--card) 65%);
+  background-size:200% 100%;animation:agshimmer 1.4s linear infinite}
+/* 一整行的占位（资产行那种），高度由调用方给 */
+.sk-row{display:block;width:100%;height:14px;margin:9px 0;border-radius:var(--r-chip)}
+@media (prefers-reduced-motion:reduce){
+  /* 不闪，但灰条留着——它还要负责说明「这里的数还没到」。 */
+  .sk{animation:none;background:var(--card)}
+}
+
 .wlist{display:flex;flex-direction:column;gap:6px}
 .wrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;
   border-radius:var(--r-control);border:1px solid var(--hairline);background:var(--canvas);
@@ -3793,11 +3865,46 @@ body:has(.rshow:not([hidden])) .tsts{top:54px}
 .wpicked{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 12px;margin-bottom:14px;
   border:1px solid var(--hairline);border-radius:var(--r-control);background:var(--card);cursor:pointer}
 .wpicked:hover{border-color:var(--line-strong)}
-.wachg{margin-left:auto;flex:none;font-size:12px;font-weight:600;color:var(--accent)}
+.sf-amt{display:flex;align-items:center;gap:8px}
+.sf-amt input[type=text]{flex:1;width:auto;min-width:0}
+.sf-max{flex:none;height:36px;padding:0 12px;border:0;border-radius:var(--r-control);cursor:pointer;
+  font-size:12px;font-weight:600;color:var(--accent);background:var(--card);
+  transition:background var(--dur-fast) var(--ease)}
+.sf-max:hover{background:var(--canvas)}
 .wnew{margin:0 0 14px;padding:10px 12px;border-radius:var(--r-control);background:var(--warn-wash);font-size:12.5px;color:var(--mute)}
 .wnew p{margin:0;line-height:1.45}
 .wnew b{color:var(--ink);font-weight:600}
 .wnew.warn p{margin-bottom:10px}
+
+/* Send receipt: amount is the fact, then the same rows a wallet shows.
+   Not a second card inside the dialog — the dialog is the receipt. */
+.mcard.sentcard .mhead{position:relative;justify-content:center;padding:18px 48px 4px}
+.mcard.sentcard .mx{position:absolute;right:12px;top:12px;margin:0}
+.sentok{display:flex;flex-direction:column;align-items:center}
+.sentok-hero{display:flex;flex-direction:column;align-items:center;text-align:center;
+  width:100%;padding:6px 0 20px;border-bottom:1px solid var(--hairline)}
+.sentok-mark{width:44px;height:44px;margin-bottom:12px;border-radius:999px;
+  display:grid;place-items:center;color:var(--green);background:var(--green-wash);
+  animation:sentok-pop var(--dur-normal) var(--ease) both}
+@keyframes sentok-pop{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:none}}
+.sentok-st{margin:0 0 10px;font-size:12px;font-weight:600;color:var(--green)}
+.sentok-amt{display:flex;align-items:center;justify-content:center;gap:10px}
+.sentok-amt .acoin{width:40px;height:40px;font-size:14px}
+.sentok-amt b{font-size:28px;font-weight:600;letter-spacing:-.03em;line-height:1.1;color:var(--ink)}
+.sentok-net{margin:8px 0 0;font-size:12.5px;color:var(--mute)}
+.sentok-kv{display:flex;flex-direction:column;width:fit-content;max-width:100%;margin:4px auto 0}
+.sentok-kv>div{display:flex;align-items:center;gap:12px;min-height:40px;
+  padding:8px 0;border-bottom:1px solid var(--hairline);font-size:13px}
+.sentok-kv>div:last-child{border-bottom:0}
+.sentok-kv dt{flex:none;width:7.2em;text-align:right;color:var(--faint)}
+.sentok-kv dd{display:flex;align-items:center;gap:2px;min-width:0;margin:0;
+  font-weight:500;color:var(--ink)}
+.sentok-kv code{min-width:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12.5px;font-weight:500}
+.sentok-note{margin:14px 0 0;max-width:34ch;text-align:center;font-size:12px;line-height:1.55;color:var(--faint)}
+.sentok-foot{width:100%;margin-top:18px}
+.sentok-foot .btn{flex:1;text-decoration:none}
+@media (prefers-reduced-motion:reduce){.sentok-mark{animation:none}}
 
 /* 设置密码弹窗里那句「为什么现在要设」——比正文重，因为它是这次打断的理由 */
 .pwwhy{color:var(--ink)!important;font-weight:500}

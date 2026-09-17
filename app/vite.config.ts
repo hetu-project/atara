@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 /**
  * 把仓库根的 api.html 一起发出去。
@@ -37,7 +38,16 @@ function apiDoc(): Plugin {
 // dev 时把 /api 代理到本地后端，浏览器视角同源——不依赖后端 CORS，
 // 也不会因为预检失败而卡在「看起来没请求出去」。
 export default defineConfig({
-  plugins: [react(), apiDoc()],
+  /* Privy signing needs Buffer. Vite does not provide Node globals, so
+     the embedded wallet throws "Buffer is not defined". Only the bits we use. */
+  plugins: [
+    nodePolyfills({
+      include: ['buffer'],
+      globals: { Buffer: true, process: true, global: true },
+    }),
+    react(),
+    apiDoc(),
+  ],
   server: {
     port: 5173,
     proxy: {

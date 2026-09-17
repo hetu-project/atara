@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { parseUnits } from 'viem'
 import * as ep from '../api/endpoints'
 import { isWalletTxError, useWalletTx, type TxStep } from '../hooks/useWalletTx'
 import { useApi } from '../hooks/useApi'
+import CoinMark from './CoinMark'
+import CopyButton from './CopyButton'
 import { BankAccountsPanel } from './BankAccounts'
 import Qr from './Qr'
-import { ICopy } from './icons'
+import { ICopy, IGo } from './icons'
 import type { Allowance, Wallet, WalletAsset } from '../api/types'
 
 /**
@@ -15,8 +18,8 @@ import type { Allowance, Wallet, WalletAsset } from '../api/types'
  * 接口后端也早就有了，只是前端没接。
  */
 
-/* 每条链的手续费用什么币付。表里没有的一律说「按该链的原生币」，
-   不编一个具体数字——编出来的数字会被当成报价。 */
+/* Network fee is an estimate in the chain's native coin, not a quote.
+   Keys are chain families — BSC-TESTNET looks up BSC. */
 const FEE: Record<string, string> = {
   ETH: '~0.002 ETH', POLYGON: '~0.01 POL', ARBITRUM: '~0.0001 ETH',
   BASE: '~0.0001 ETH', BSC: '~0.0005 BNB', TRON: '~1 TRX', BTC: '~0.0001 BTC',
@@ -38,17 +41,29 @@ const NET_NAME: Record<string, string> = {
    靠这张表当主力会漏：后端发的是 ETHEREUM，表里写的是 ETH，于是那一格
    直接印出大写的代码；BSC-TESTNET 更是压根没有。 */
 const netName = (n: string) => NET_NAME[n] ?? n
+const family = (code: string) => code.replace(/-TESTNET$/, '')
+const netLabel = (code: string, name?: string) => {
+  if (name) return name
+  const pretty = NET_NAME[family(code)] ?? family(code)
+  return code.endsWith('-TESTNET') ? `${pretty} testnet` : pretty
+}
+const feeLine = (code: string, native?: string) =>
+  FEE[family(code)] ?? (native ? `paid in ${native}` : "paid in the chain's native coin")
+const fmtAmt = (n: string | number) => {
+  const x = Number(n)
+  return Number.isFinite(x) ? x.toLocaleString() : String(n)
+}
 /* 地址格式按链族走，不按币种——同一条链上所有代币共用一个地址。
    按币种算是上一版的 bug：USDT 和 USDC 都在 Polygon 上，却给出两个地址。 */
 const CHAIN_OF = (n: string) => (n === 'TRON' ? 'tron' : n === 'BTC' ? 'btc' : 'evm')
 
 function Sheet({
-  title, onClose, children,
-}: { title: string; onClose: () => void; children: React.ReactNode }) {
+  title, onClose, children, className,
+}: { title: string; onClose: () => void; children: React.ReactNode; className?: string }) {
   return (
     <div id="modal" role="dialog" aria-modal="true"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="mcard">
+      <div className={'mcard' + (className ? ' ' + className : '')}>
         <header className="mhead">
           <h3>{title}</h3>
           <button className="sayic mx" title="Close" aria-label="Close" onClick={onClose}>
@@ -70,6 +85,69 @@ function Chips({
       {opts.map(o => (
         <button key={o} type="button" className={'sfchip' + (o === on ? ' on' : '')}
           onClick={() => onPick(o)}>{o}</button>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * 两步之间的切换。对照 beui 的 Morphing Modal：硬切会让人觉得弹窗换了一张，
+ * 其实只是同一次发送往前走了一步。
+ *
+ * 不用 Framer Motion（对照清单写过：到现在没有一处需要它）。左右位移是 CSS；
+ * 高度要量完才知道，所以量的那一下在这里。
+ */
+function StepSlide({
+  step, children,
+}: { step: 0 | 1; children: [ReactNode, ReactNode] }) {
+  const wrap = useRef<HTMLDivElement>(null)
+  const prev = useRef(step)
+  const fromH = useRef(0)
+
+  useLayoutEffect(() => {
+    const el = wrap.current
+    if (!el) return
+    if (prev.current === step) {
+      fromH.current = el.offsetHeight
+      return
+    }
+    const from = fromH.current
+    const to = el.offsetHeight
+    prev.current = step
+    fromH.current = to
+    if (from === to) return
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    el.style.height = `${from}px`
+    el.style.overflow = 'hidden'
+    const id = requestAnimationFrame(() => {
+      el.style.transition = 'height var(--dur-normal) var(--ease)'
+      el.style.height = `${to}px`
+    })
+    const done = (e: TransitionEvent) => {
+      if (e.target !== el || e.propertyName !== 'height') return
+      el.style.height = ''
+      el.style.overflow = ''
+      el.style.transition = ''
+      el.removeEventListener('transitionend', done)
+    }
+    el.addEventListener('transitionend', done)
+    return () => {
+      cancelAnimationFrame(id)
+      el.removeEventListener('transitionend', done)
+      el.style.height = ''
+      el.style.overflow = ''
+      el.style.transition = ''
+    }
+  }, [step])
+
+  return (
+    <div ref={wrap} className="wslide" data-step={step}>
+      {children.map((pane, i) => (
+        <div key={i} className={'wslide-pane' + (i === step ? ' on' : '')}
+          data-i={i} aria-hidden={i !== step}
+          {...(i !== step ? { inert: true } : {})}>
+          {pane}
+        </div>
       ))}
     </div>
   )
@@ -206,48 +284,101 @@ export function SendModal({
   onClose: () => void
   onDone: () => void
 }) {
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState<0 | 1>(0)
   const [pick, setPick] = useState<WalletAsset | null>(null)
   const [to, setTo] = useState('')
   const [amount, setAmount] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
-  const [sent, setSent] = useState('')
+  const [sent, setSent] = useState<{
+    to: string; hash: string; amount: string; asset: string
+    from: string; network: string; explorer: string
+  } | null>(null)
+
+  const { data: chains } = useApi(() => ep.chainInfo(), [])
+  const { data: myWallet } = useApi(() => ep.wallet(identity), [identity])
 
   /* 余额为 0 的不列：转不出去的东西摆在选择列表里，只会让人点进去才发现。 */
   const sendable = assets.filter(a => Number(a.on_chain) > 0)
   const net = pick?.network ?? ''
-  const fee = FEE[net] ?? "paid in the chain's native coin"
+  const chain = (chains?.chains ?? []).find(c => c.code === net) ?? null
+  const label = netLabel(net, chain?.name)
+  const fee = feeLine(net, chain?.native)
+  const tok = pick ? chain?.tokens?.[pick.asset] : undefined
+  const wtx = useWalletTx(chain, myWallet?.address)
 
   /* 每条链自己的地址格式；表里没有的按 EVM。 */
   const okTo = (v: string) => (ADDR_RE[net] ?? /^0x[0-9a-fA-F]{40}$/).test(v.trim())
+  let amtOk = false
+  if (tok && pick && amount) {
+    try {
+      const wei = parseUnits(amount, tok.decimals)
+      const avail = parseUnits(pick.on_chain, tok.decimals)
+      amtOk = wei > 0n && wei <= avail
+    } catch { /* not a number */ }
+  }
 
   const submit = async () => {
     const v = to.trim()
     if (!okTo(v)) { setErr(`That is not a ${net} address`); return }
-    const n = Number(amount)
-    if (!(n > 0) || n > Number(pick!.on_chain)) {
+    if (ADDR_RE[net]) {
+      setErr(`Sending on ${net} is not wired in this console yet`); return
+    }
+    if (!tok?.address) {
+      setErr(`${chain?.name ?? net} has no ${pick!.asset} contract in this build — nothing can be sent on chain`)
+      return
+    }
+    let wei: bigint
+    let avail: bigint
+    try {
+      wei = parseUnits(amount, tok.decimals)
+      avail = parseUnits(pick!.on_chain, tok.decimals)
+    } catch {
+      setErr('That is not a valid amount'); return
+    }
+    if (wei <= 0n || wei > avail) {
       setErr('Must be above 0 and within what is available'); return
     }
     setBusy(true); setErr('')
     try {
-      await ep.createWithdrawal(
+      /* Record the intent, then let the wallet actually transfer. We used
+         to POST and jump to "Signed / broadcast from your own wallet" —
+         nothing happened on chain. That was a lie. */
+      const wd = await ep.createWithdrawal(
         { to_address: v, to_chain: net, asset: pick!.asset, amount }, identity)
-      setSent(v); onDone()
+      const hash = await wtx.transferToken({
+        token: tok.address, to: v, amountWei: wei.toString(),
+      })
+      try {
+        await ep.broadcastWithdrawal(wd.id, hash, identity)
+      } catch {
+        /* The coins already left the wallet. A failed record is not a failed send. */
+      }
+      setSent({
+        to: v, hash, amount, asset: pick!.asset,
+        from: myWallet?.address ?? '',
+        network: label,
+        explorer: chain?.explorer ?? '',
+      })
+      onDone()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not sign')
+      if (!isWalletTxError(e)) {
+        setErr(e instanceof Error ? e.message : 'Could not send')
+      }
     } finally { setBusy(false) }
   }
 
+  const toRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (step !== 1) return
+    const t = window.setTimeout(() => toRef.current?.focus(), 220)
+    return () => clearTimeout(t)
+  }, [step])
+
   if (sent) {
     return (
-      <Sheet title="Signed" onClose={onClose}>
-        <p className="rnote">
-          {amount} {pick?.asset} → <b className="num">{shortAddr(sent)}</b>.
-          {' '}<b>The transfer is broadcast from your own wallet</b> — the platform never
-          holds your coins, so it only records that you signed this.
-        </p>
-        <div className="dfoot"><button className="btn btn-primary" onClick={onClose}>Close</button></div>
+      <Sheet title="Sent" className="sentcard" onClose={onClose}>
+        <SentReceipt {...sent} onClose={onClose} />
       </Sheet>
     )
   }
@@ -260,16 +391,17 @@ export function SendModal({
         ))}
       </ol>
 
-      {step === 0 ? (
+      <StepSlide step={step}>
         <>
           <div className="walist">
             {sendable.map(a => (
               <button type="button" className="warow" key={a.asset}
                 onClick={() => { setPick(a); setTo(''); setAmount(''); setErr(''); setStep(1) }}>
+                <CoinMark asset={a.asset} />
                 <span className="anm"><b>{a.asset}</b>
-                  <em>{a.network}
-                    {Number(a.in_escrow) > 0 ? ` · ${a.in_escrow} locked` : ''}</em></span>
-                <span className="waval"><b className="num">{a.on_chain}</b><em>available</em></span>
+                  <em>{netLabel(a.network, chains?.chains.find(c => c.code === a.network)?.name)}
+                    {Number(a.in_escrow) > 0 ? ` · ${fmtAmt(a.in_escrow)} locked` : ''}</em></span>
+                <span className="waval"><b className="num">{fmtAmt(a.on_chain)}</b><em>available</em></span>
                 <span className="wago" aria-hidden>›</span>
               </button>
             ))}
@@ -279,17 +411,18 @@ export function SendModal({
           )}
           {!sendable.length && <div className="fempty">Nothing available to send.</div>}
         </>
-      ) : (
         <>
-          <button type="button" className="wpicked" onClick={() => { setStep(0); setErr('') }}>
-            <span className="anm"><b>{pick!.asset}</b>
-              <em>{net} · {pick!.on_chain} available</em></span>
+          <button type="button" className="wpicked" onClick={() => { setStep(0); setErr(''); wtx.setStep({ k: 'idle' }) }}>
+            <CoinMark asset={pick?.asset ?? ''} />
+            <span className="anm"><b>{pick?.asset}</b>
+              <em>{label} · {fmtAmt(pick?.on_chain ?? '')} available</em></span>
             <span className="wachg">Change</span>
           </button>
 
           <div className="sf"><span className="sfl">To</span>
-            <input type="text" className="mono" autoFocus value={to} spellCheck={false}
-              autoComplete="off" placeholder={`Paste a ${net} address`}
+            <input ref={toRef} type="text" className="mono" value={to} spellCheck={false}
+              autoComplete="off"
+              placeholder={CHAIN_OF(net) === 'evm' ? 'Paste a 0x address' : `Paste a ${label} address`}
               onChange={e => { setTo(e.target.value); setErr('') }} />
           </div>
 
@@ -302,28 +435,116 @@ export function SendModal({
             </div>
           )}
 
-          <div className="sf"><span className="sfl">Amount ({pick!.asset})</span>
-            <input type="text" value={amount} inputMode="decimal"
-              placeholder={`Available ${pick!.on_chain}`}
-              onChange={e => { setAmount(e.target.value); setErr('') }} />
+          <div className="sf"><span className="sfl">Amount ({pick?.asset})</span>
+            <div className="sf-amt">
+              <input type="text" value={amount} inputMode="decimal"
+                placeholder={`Available ${fmtAmt(pick?.on_chain ?? '')}`}
+                onChange={e => { setAmount(e.target.value); setErr('') }} />
+              <button type="button" className="sf-max" disabled={!pick}
+                onClick={() => { setAmount(pick?.on_chain ?? ''); setErr('') }}>Max</button>
+            </div>
           </div>
 
-          <dl className="sfsum">
-            <div><dt>Network</dt><dd>{net}</dd></div>
+          <dl className="sfsum sfsum-rows">
+            <div><dt>Network</dt><dd>{label}</dd></div>
             <div><dt>Network fee</dt><dd className="num">{fee}</dd></div>
           </dl>
 
           {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
+          <TxLine step={wtx.step} explorer={chain?.explorer ?? ''} />
 
           <div className="dfoot">
-            <button className="btn backbtn" onClick={() => { setStep(0); setErr('') }}>Back</button>
-            <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
-              {busy ? 'Signing…' : 'Review'}
+            <button className="btn backbtn" disabled={busy} onClick={() => { setStep(0); setErr(''); wtx.setStep({ k: 'idle' }) }}>Back</button>
+            <button className="btn btn-primary" disabled={busy || !okTo(to) || !amtOk}
+              onClick={() => void submit()}>
+              {busy ? 'Sending…' : 'Send in wallet'}
             </button>
           </div>
         </>
-      )}
+      </StepSlide>
     </Sheet>
+  )
+}
+
+/**
+ * Receipt after a confirmed send. The old view was one grey sentence and a
+ * Close button — a transfer that already left the wallet deserves the same
+ * facts a wallet shows: amount, both addresses, hash, explorer.
+ */
+function SentReceipt({
+  amount, asset, from, to, hash, network, explorer, onClose,
+}: {
+  amount: string
+  asset: string
+  from: string
+  to: string
+  hash: string
+  network: string
+  explorer: string
+  onClose: () => void
+}) {
+  const href = explorer && hash ? `${explorer}/tx/${hash}` : ''
+  return (
+    <div className="sentok" aria-live="polite">
+      <div className="sentok-hero">
+        <span className="sentok-mark" aria-hidden>
+          <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 8.5 6.2 11.7 13 4.9" />
+          </svg>
+        </span>
+        <p className="sentok-st">Confirmed on chain</p>
+        <div className="sentok-amt">
+          <CoinMark asset={asset} />
+          <b className="num">{fmtAmt(amount)} {asset}</b>
+        </div>
+        <p className="sentok-net">{network}</p>
+      </div>
+
+      <dl className="sentok-kv">
+        {from ? (
+          <div>
+            <dt>From</dt>
+            <dd>
+              <code className="num">{shortAddr(from)}</code>
+              <CopyButton text={from} label="Copy sending address" done="Address copied"
+                className="btn btn-ghost btn-sm btn-icon" />
+            </dd>
+          </div>
+        ) : null}
+        <div>
+          <dt>To</dt>
+          <dd>
+            <code className="num">{shortAddr(to)}</code>
+            <CopyButton text={to} label="Copy recipient" done="Address copied"
+              className="btn btn-ghost btn-sm btn-icon" />
+          </dd>
+        </div>
+        {hash ? (
+          <div>
+            <dt>Transaction</dt>
+            <dd>
+              <code className="num">{shortAddr(hash)}</code>
+              <CopyButton text={hash} label="Copy transaction hash" done="Hash copied"
+                className="btn btn-ghost btn-sm btn-icon" />
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+
+      <p className="sentok-note">
+        The coins left your wallet — the platform never held them.
+      </p>
+
+      <div className="dfoot sentok-foot">
+        {href ? (
+          <a className="btn btn-secondary" href={href} target="_blank" rel="noopener">
+            View transaction <IGo />
+          </a>
+        ) : null}
+        <button className="btn btn-primary" onClick={onClose}>Done</button>
+      </div>
+    </div>
   )
 }
 

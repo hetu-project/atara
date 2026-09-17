@@ -446,13 +446,19 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
             <span className="mrow">
               <span className="thav deskav mav" aria-hidden><i /></span>
               <span className={'bub' + (streaming ? '' : ' bubwait')}>
-                {streaming ? <>{streaming}<i className="tcur" aria-hidden /></> : <Dither />}
+                {streaming ? (
+                  <>{streaming}<i className="tcur" aria-hidden /></>
+                ) : (
+                  <>
+                    {/* Seconds sit on top of the grid. Beside it they read as a
+                        caption for the row; above it they caption the wait. */}
+                    {waited >= 1 && (
+                      <span className="waited" aria-live="off">{waited}s</span>
+                    )}
+                    <Dither />
+                  </>
+                )}
               </span>
-              {/* 等了几秒。方阵在动说明「还活着」，秒数说明「等了多久」——
-                  两件不同的事，慢到十几秒的时候只有后者能让人决定要不要继续等。 */}
-              {!streaming && waited >= 1 && (
-                <span className="waited" aria-live="off">{waited}s</span>
-              )}
             </span>
           </div>
         )}
