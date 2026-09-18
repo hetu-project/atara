@@ -3,6 +3,7 @@ import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
 import { useTradableFiats } from '../hooks/useRails'
 import { BANKS, CTRY, CTRY_CCY } from './banks'
+import { checkAcct, countryOfCurrency } from './acctfmt'
 import { useToast } from './Toast'
 import type { BankAccount } from '../api/types'
 
@@ -31,31 +32,10 @@ interface Form {
   no: string
   ccy: string
   region: string
+  /** ISO alpha-2 of the bank picked from the catalogue; empty when typed freely. */
+  country: string
 }
-const blank = (): Form => ({ id: '', holder: '', bank: '', no: '', ccy: 'CNY', region: '' })
-
-/** 本地即时校验，只为给出提示。落库前后端会再校一次——那一次才算数。 */
-function checkAcct(raw: string): { s: 'empty' | 'ok' | 'bad'; msg?: string } {
-  const v = raw.replace(/[\s-]/g, '').toUpperCase()
-  if (!v) return { s: 'empty' }
-  if (/^[A-Z]{2}\d{2}/.test(v)) {
-    if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(v)) {
-      return { s: 'bad', msg: 'An IBAN is 15–34 characters — check for a missing block' }
-    }
-    const r = (v.slice(4) + v.slice(0, 4)).replace(/[A-Z]/g, c => String(c.charCodeAt(0) - 55))
-    let m = 0
-    for (const d of r) m = (m * 10 + Number(d)) % 97
-    return m === 1
-      ? { s: 'ok', msg: `IBAN checksum valid · ${CTRY[v.slice(0, 2)] ?? v.slice(0, 2)}` }
-      : { s: 'bad', msg: 'IBAN checksum does not match — one character is wrong' }
-  }
-  if (/[^0-9]/.test(v)) {
-    return { s: 'bad', msg: 'Digits only, or a full IBAN starting with a country code' }
-  }
-  if (v.length < 8) return { s: 'bad', msg: 'Too short — bank accounts are at least 8 digits' }
-  if (v.length > 19) return { s: 'bad', msg: 'Too long — at most 19 digits' }
-  return { s: 'ok' }
-}
+const blank = (): Form => ({ id: '', holder: '', bank: '', no: '', ccy: 'CNY', region: '', country: '' })
 
 // ── 银行组合框 ──────────────────────────────────────────────────────
 
@@ -171,22 +151,33 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
 
   const rows = list ?? []
   const acct = rows.find(a => a.id === cur)
-  const chk = checkAcct(f.no)
+  /* Live check, for the hint only; the server runs the same rules before
+     saving and that run is the one that counts (see acctfmt.ts). The country
+     comes from the bank picked, else from the currency — a freely typed
+     "ICBC" with CNY is still a mainland account. */
+  const country = f.country || countryOfCurrency(f.ccy)
+  const chk = checkAcct(f.no, country, f.bank)
+  /* Whether the number field has been left once. Errors wait for that: every
+     account number is "too short" while it is still being typed. Warnings and
+     read-outs show at once — they are about what is there, not what is missing. */
+  const [noLeft, setNoLeft] = useState(false)
 
   const save = async () => {
     // 校验顺序跟栏位顺序一致：先指出最上面那一个，人从上往下改就行。
     if (!f.holder.trim()) { setBad('holder'); return }
     if (!f.bank.trim()) { setBad('bank'); return }
     // 编辑时账号留空 = 不改；新增必须填。走 checkAcct，跟边填边提示同一套规则。
-    if (!f.id && chk.s !== 'ok') { setBad('no'); return }
-    if (f.id && f.no.trim() && chk.s !== 'ok') { setBad('no'); return }
+    // Only 'bad' blocks: a warning is a hint about something unusual, and the
+    // person typing knows their own account better than the table does.
+    if (!f.id && (chk.s === 'empty' || chk.s === 'bad')) { setBad('no'); return }
+    if (f.id && f.no.trim() && chk.s === 'bad') { setBad('no'); return }
     if (!f.region.trim()) { setBad('region'); return }
     setBad('')
     setBusy(true); setErr('')
     try {
       const a = await ep.saveBankAccount({
         holder: f.holder.trim(), bank: f.bank.trim(), account_no: f.no,
-        currency: f.ccy, region: f.region.trim(),
+        currency: f.ccy, region: f.region.trim(), country,
       }, f.id || undefined, identity)
       reload(); setCur(a.id); setView('detail')
     } catch (e) {
@@ -218,7 +209,7 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
               字母。地区只在空着时填：人已经写了「Shenzhen, CN」就别改成「China」。 */}
           <BankBox value={f.bank} ccy={f.ccy}
             onPick={(v, hit) => {
-              const next = { ...f, bank: v }
+              const next = { ...f, bank: v, country: hit?.c ?? '' }
               if (hit) {
                 if (!next.region.trim()) next.region = CTRY[hit.c] ?? hit.c
                 const c = CTRY_CCY[hit.c]
@@ -232,11 +223,16 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
           <span className="sfl">Account number</span>
           <input type="text" className="mono" value={f.no} autoComplete="off" spellCheck={false}
             placeholder={f.id ? 'Retype it to change it' : 'Account number, or a full IBAN'}
-            onChange={e => { setF({ ...f, no: e.target.value }); setErr(''); setBad('') }} />
+            onBlur={() => setNoLeft(true)}
+            onChange={e => {
+              setF({ ...f, no: e.target.value }); setErr(''); setBad('')
+              if (!e.target.value.trim()) setNoLeft(false)
+            }} />
           <span className="err">{chk.msg ?? 'At least eight digits'}</span>
-          {chk.msg && bad !== 'no' ? (
-            <span className={chk.s === 'bad' ? 'err' : 'cbhint'}
-              style={chk.s === 'bad' ? { display: 'block', color: 'var(--warn)' } : undefined}>
+          {/* Live hint in three tones. The .err line above takes over when a
+              save flags this field, so the hint steps aside then. */}
+          {chk.msg && bad !== 'no' && (chk.s !== 'bad' || noLeft) ? (
+            <span className={'cbhint ' + (chk.s === 'bad' ? 'no' : chk.s === 'warn' ? 'warn' : 'ok')}>
               {chk.msg}
             </span>
           ) : null}
@@ -288,7 +284,7 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
           <button className="btn btn-danger backbtn" onClick={() => setDel(true)}>Remove</button>
           <button className="btn btn-primary" onClick={() => {
             setF({ id: acct.id, holder: acct.holder, bank: acct.bank, no: '',
-              ccy: acct.currency, region: acct.region })
+              ccy: acct.currency, region: acct.region, country: '' })
             // 编辑已有账户：币种是他当初定的，不该被选银行这个动作翻掉。
             setBad(''); setCcyTouched(true); setView('form')
           }}>Edit</button>

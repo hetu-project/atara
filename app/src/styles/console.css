@@ -4086,6 +4086,7 @@ body:has(.rshow:not([hidden])) .tsts{top:54px}
 .cbfree .cbn{color:var(--accent)}
 .cbhint{display:block;margin-top:5px;font-size:11px;color:var(--faint)}
 .cbhint.ok{color:var(--green)}
+.cbhint.warn{color:var(--warn)}
 .cbhint.no{color:var(--neg)}
 .sf.bad .cbhint{display:none}
 .prowgo{width:100%;text-align:left;cursor:pointer;background:var(--paper)}

@@ -587,6 +587,9 @@ export interface KycStatus {
   reference?: string
   identity?: KycIdentity
   warnings?: KycWarning[]
+  /** 我们自己的批注，跟 warnings 分开——那些是核验服务的原话。
+      目前只有一种：这张证件已经在别的账号名下，所以结论被降到了 review。 */
+  note?: string
   kyc_ok: boolean
   concluded_at?: string
   /** 这台机器配没配 ID Analyzer。没配时要照实说，不能摆一颗按不动的按钮。 */

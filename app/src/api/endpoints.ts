@@ -264,7 +264,11 @@ export const bankAccounts = (as?: string) =>
 
 /** 提交的是**全量**账号：后端校完就掩码落库，全量不进数据库。 */
 export const saveBankAccount = (
-  body: { holder: string; bank: string; account_no: string; currency: string; region: string },
+  body: {
+    holder: string; bank: string; account_no: string; currency: string; region: string
+    /** ISO alpha-2 of where the bank is; picks the account-number format rules. */
+    country?: string
+  },
   id?: string, as?: string,
 ) => api.post<BankAccount>(id ? `/bank-accounts/${id}` : '/bank-accounts', body, { as })
 

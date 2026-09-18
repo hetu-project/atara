@@ -120,11 +120,17 @@ export default function IdCheck({
     )
   }
 
+  /* 后端那句话优先于我们这句通用的。
+
+     通用那句说的是「有一项检查没过」，而降到复核最常见的原因恰恰是**每项都
+     过了**——这张证件已经在另一个账号名下。照着通用那句读，人会去重拍证件，
+     而重拍多少次都没用。有理由就说理由。 */
   if (st === 'review') {
     return (
       <div className="idck">
         <Banner tone="warn" title="Sent for manual review"
-          note="Your documents were read, but at least one check needs a person to look at it. You will be able to trade once it clears." />
+          note={status?.note ||
+            'Your documents were read, but at least one check needs a person to look at it. You will be able to trade once it clears.'} />
         <Warnings status={status} />
       </div>
     )
