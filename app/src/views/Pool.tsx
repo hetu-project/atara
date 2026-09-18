@@ -9,6 +9,7 @@ import { go } from '../hooks/useRoute'
 import { useKycGate } from '../hooks/useKycGate'
 import { useWalletTx } from '../hooks/useWalletTx'
 import type { Offer } from '../api/types'
+import { Failed, Pending } from '../components/Loading'
 
 const FIAT_SYM: Record<string, string> = {
   CNY: '¥', HKD: 'HK$', SGD: 'S$', JPY: '¥', EUR: '€', USD: '$', AED: 'د.إ', GBP: '£',
@@ -45,7 +46,7 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
      而且中途根本不知道后面还有什么。 */
   const [picking, setPicking] = useState(false)
 
-  const { data, loading } = useApi(() => ep.offers(side), [side])
+  const { data, error, reload } = useApi(() => ep.offers(side), [side])
   const { data: assets } = useApi(() => ep.assets(), [])
   const { data: fiatGroups } = useApi(() => ep.fiats(), [])
   const { data: mine } = useApi(() => ep.myOffers(identity), [identity])
@@ -108,9 +109,11 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
         <div id="pool">
           {list.map(o => <OfferCard key={o.id} o={o} side={side} mine={mineIds.has(o.id)}
             identity={identity} onNeedSignIn={onNeedSignIn} />)}
-          {!list.length && (
-            <div className="mkempty">{loading ? 'Loading offers…' : 'No offers match'}</div>
-          )}
+          {!list.length && (data === null
+            ? <div className="mkempty">
+                {error ? <Failed error={error} onRetry={reload} /> : <Pending rows={3} />}
+              </div>
+            : <div className="mkempty">No offers match</div>)}
         </div>
       </div>
     </div>
@@ -239,7 +242,12 @@ function OfferCard({
          不 await：逐票落下来是给人看的过程，进会话不该等它。 */
       void start(o.id, m.name, ord.id)
       go({ view: 'thread', peer: ord.counterparty_id ?? '' })
-    } catch { /* 错误由会话里的工单卡或下一次拉取暴露 */ }
+    } catch (e) {
+      /* Stay on the card. The thread does not exist yet, so there is nowhere
+         else for the error to appear — swallowing it made a failed click
+         look like a dead button. */
+      toast(msgOf(e, 'Could not open that order'), { kind: 'err' })
+    }
   }
 
   return (

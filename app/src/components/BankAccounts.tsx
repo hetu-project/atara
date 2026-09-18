@@ -3,6 +3,7 @@ import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
 import { useTradableFiats } from '../hooks/useRails'
 import { BANKS, CTRY, CTRY_CCY } from './banks'
+import { useToast } from './Toast'
 import type { BankAccount } from '../api/types'
 
 /**
@@ -166,6 +167,7 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
      form would have no currency to save. */
   const fromServer = useTradableFiats()
   const CCY = fromServer.length ? fromServer : FALLBACK_CCY
+  const { toast } = useToast()
 
   const rows = list ?? []
   const acct = rows.find(a => a.id === cur)
@@ -297,8 +299,13 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
             ok="Remove"
             onClose={() => setDel(false)}
             onOk={async () => {
-              await ep.deleteBankAccount(acct.id, identity)
-              setDel(false); setCur(''); setView('list'); reload()
+              try {
+                await ep.deleteBankAccount(acct.id, identity)
+                toast(`Removed ${acct.bank} · ${acct.account_no}`)
+                setDel(false); setCur(''); setView('list'); reload()
+              } catch (e) {
+                toast(e instanceof Error ? e.message : 'Could not remove that account', { kind: 'err' })
+              }
             }} />
         )}
       </>

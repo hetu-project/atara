@@ -1,3 +1,4 @@
+import { Failed, Pending } from './Loading'
 import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { LIVE_CHANGED } from '../api/events'
@@ -75,7 +76,7 @@ function OrderStatus({
      order transition in the product publishes one, including the ones the
      scheduler makes while nobody is clicking anything — which is what this was
      polling for. */
-  const { data, reload } = useApi(() => ep.orders(identity), [identity], 15000)
+  const { data, error, reload } = useApi(() => ep.orders(identity), [identity], 15000)
 
   useEffect(() => {
     addEventListener(LIVE_CHANGED, reload)
@@ -137,7 +138,9 @@ function OrderStatus({
               </span>
             </button>
           )
-        }) : (
+        }) : data === null ? (
+          error ? <Failed error={error} onRetry={reload} compact /> : <Pending rows={2} />
+        ) : (
           <div className="roempty">
             Nothing in flight. Payments you start show up here with what they are waiting on.
           </div>

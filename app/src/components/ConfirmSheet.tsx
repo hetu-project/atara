@@ -21,7 +21,8 @@ import { IPasskey, IWallet } from './icons'
 export interface ConfirmRow { k: string; v: React.ReactNode }
 
 export default function ConfirmSheet({
-  title, amount, unit, lead, rows, extra, note, walletKind, plain, busy, onConfirm, onClose,
+  title, amount, unit, lead, rows, extra, note, walletKind, plain, busy, blocked, quiet,
+  onConfirm, onClose,
 }: {
   title: string
   /** 大数。挂单是币量，吃单是要付的法币。 */
@@ -43,6 +44,13 @@ export default function ConfirmSheet({
    */
   plain?: string
   busy?: boolean
+  /** 这条路还走不通。按钮置灰，而不是让它点下去走到别的地方。 */
+  blocked?: boolean
+  /**
+   * The button no longer commits to anything — it just dismisses. Secondary
+   * styling, so it does not read as one more "yes" after the money has moved.
+   */
+  quiet?: boolean
   onConfirm: () => void
   onClose: () => void
 }) {
@@ -90,7 +98,8 @@ export default function ConfirmSheet({
             <span className="psfund">{note.how}</span>
           </div>
         )}
-        <button className="btn btn-primary psok" disabled={busy} onClick={onConfirm}>
+        <button className={'btn psok ' + (quiet ? 'btn-secondary quiet' : 'btn-primary')}
+          disabled={busy || blocked} onClick={onConfirm}>
           {icon} {busy ? 'Working…' : label}
         </button>
       </div>

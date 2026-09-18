@@ -16,6 +16,7 @@ import { LockScreen, PwSetup, useSessionLock } from './components/SessionLock'
 import { AssessmentProvider } from './hooks/useAssessment'
 import { KycProvider } from './hooks/useKycGate'
 import { ToastProvider } from './components/Toast'
+import LiveToasts from './components/LiveToasts'
 import Tooltip from './components/Tooltip'
 import { useIdentity } from './hooks/useIdentity'
 import { usePrivy } from '@privy-io/react-auth'
@@ -89,6 +90,7 @@ export default function App() {
     /* Toast 放在最外层：任何一层里的任何动作都可能需要报一句，
        包在里面的话，外层出的事就没地方说。 */
     <ToastProvider>
+    <LiveToasts />
     <AssessmentProvider>
     <KycProvider identity={handle}>
     {/* 右栏属于「有对话的那两个视图」：新建一单，以及某个人的会话。

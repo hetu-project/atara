@@ -7,7 +7,8 @@ import CoinMark from './CoinMark'
 import CopyButton from './CopyButton'
 import { BankAccountsPanel } from './BankAccounts'
 import Qr from './Qr'
-import { ICopy, IGo } from './icons'
+import { IGo } from './icons'
+import { useToast } from './Toast'
 import type { Allowance, Wallet, WalletAsset } from '../api/types'
 
 /**
@@ -215,9 +216,7 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
           <span className="sfl">Your wallet address</span>
           <div className="depline">
             <code>{addr}</code>
-            <button className="btn btn-secondary btn-sm btn-icon" title="Copy address"
-              aria-label="Copy wallet address"
-              onClick={() => navigator.clipboard?.writeText(addr)}><ICopy /></button>
+            <CopyButton text={addr} label="Copy wallet address" done="Wallet address copied" />
           </div>
           {/* 同一条链族共用一个地址。不说这句，用户会以为换个网络就要换地址，
               于是每换一次都重新复制一遍。 */}
@@ -598,6 +597,7 @@ export function AllowanceModal({
      校验其实跑了、也拦下了，但没人知道该改哪个框。 */
   const [bad, setBad] = useState<{ id: string; msg: string } | null>(null)
   const [busy, setBusy] = useState(false)
+  const { toast } = useToast()
 
   const coins = (cat ?? []).map(a => a.code)
   const rows = chains?.chains ?? []
@@ -644,6 +644,8 @@ export function AllowanceModal({
            而不是把一个界面上问不到的选择留成空值。 */
         recipients: 'Any',
       }, edit?.id, identity)
+      const name = f.spender.trim()
+      toast(edit ? `Allowance updated — ${name}` : `Allowance issued to ${name}`)
       onDone()
     } catch (e) {
       // 钱包那一侧的错已经在交易进度那里显示过了，别再重复一遍

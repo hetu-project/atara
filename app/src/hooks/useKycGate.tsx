@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import * as ep from '../api/endpoints'
 import MakerThread from '../components/MakerThread'
 import type { MakerApp } from '../api/types'
+import { LIVE_EVENT, type LivePayload } from '../api/events'
 import { useApi } from './useApi'
 import { go } from './useRoute'
 
@@ -42,7 +43,23 @@ export const useKycGate = () => useContext(KycCtx)
  * 能不能下单，以及做市准入走到了哪一步。
  */
 export function KycProvider({ identity, children }: { identity: string; children: React.ReactNode }) {
-  const { data: app, reload } = useApi(() => ep.makerApp(identity), [identity])
+  /* 有东西在等审核时才轮询。
+
+     放行是 10 秒后由定时器做的（生产环境是人），而那一下没有任何东西把
+     结果推到这个页面上——事件流断了、或者根本没连上,人就永远停在
+     「已收到,审核中」那句话上,而库里早就写着通过了。
+
+     下面那个 LIVE_EVENT 是正路,这一条是它断掉时的兜底。注释原来就写着
+     「上面那个轮询是兜底」,但上面从来没有轮询——这次把它补上。
+
+     没东西在等的时候不轮询:绝大多数时间这个页面上没有任何在审的东西,
+     每四秒问一次「有变化吗」是在问一个答案永远不变的问题。 */
+  const [waiting, setWaiting] = useState(false)
+  const { data: app, reload } = useApi(
+    () => ep.makerApp(identity), [identity], waiting ? 4000 : undefined)
+  useEffect(() => {
+    setWaiting(!!app && ((app.kyc_done && !app.kyc_ok) || (app.listing_done && !app.approved)))
+  }, [app])
   const [open, setOpen] = useState(false)
   const [why, setWhy] = useState<'trade' | 'maker'>('trade')
   /* 「为什么要验」那一句已经说过了。原来是把 why 改成 maker 来收起它——
@@ -66,6 +83,17 @@ export function KycProvider({ identity, children }: { identity: string; children
     }, 1500)
     return () => clearInterval(t)
   }, [pending, reload])
+
+  /* A review landing on the server is an event, not something this page
+     discovers by asking. The poll above is a backstop for a dropped stream. */
+  useEffect(() => {
+    const on = (e: Event) => {
+      const ev = (e as CustomEvent<LivePayload>).detail
+      if (ev?.kind === 'maker') reload()
+    }
+    addEventListener(LIVE_EVENT, on)
+    return () => removeEventListener(LIVE_EVENT, on)
+  }, [reload])
 
   const require = useCallback(() => {
     if (app?.kyc_ok) return false

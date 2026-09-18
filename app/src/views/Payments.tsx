@@ -5,6 +5,7 @@ import Avatar from '../components/Avatar'
 import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
 import type { Order } from '../api/types'
+import { Failed, Pending } from '../components/Loading'
 
 type Live = 'all' | 'you' | 'wait' | 'disp'
 type Done = 'all' | 'Released' | 'Refunded'
@@ -36,7 +37,7 @@ export default function Payments({ identity }: { identity: string }) {
   const [lf, setLf] = useState<Live>('all')
   const [df, setDf] = useState<Done>('all')
   /* 15s as a backstop; the live stream is what normally refreshes this. */
-  const { data, reload } = useApi(() => ep.orders(identity), [identity], 15000)
+  const { data, error, reload } = useApi(() => ep.orders(identity), [identity], 15000)
 
   useEffect(() => {
     addEventListener(LIVE_CHANGED, reload)
@@ -76,11 +77,11 @@ export default function Payments({ identity }: { identity: string }) {
         <div className="atabs" role="tablist">
           <button className={'atab' + (tab === 'live' ? ' on' : '')} role="tab"
             aria-selected={tab === 'live'} onClick={() => setTab('live')}>
-            In progress · <b className="num">{live.length}</b>
+            In progress{data !== null && <> · <b className="num">{live.length}</b></>}
           </button>
           <button className={'atab' + (tab === 'fin' ? ' on' : '')} role="tab"
             aria-selected={tab === 'fin'} onClick={() => setTab('fin')}>
-            Closed · <b className="num">{done.length}</b>
+            Closed{data !== null && <> · <b className="num">{done.length}</b></>}
           </button>
         </div>
 
@@ -92,12 +93,14 @@ export default function Payments({ identity }: { identity: string }) {
                   .map(([k, lb]) => (
                     <button key={k} className={'hfil' + (lOn === k ? ' on' : '')}
                       disabled={!lsets[k].length} onClick={() => setLf(k)}>
-                      {lb}<b className="num">{lsets[k].length}</b>
+                      {lb}{data !== null && <b className="num">{lsets[k].length}</b>}
                     </button>
                   ))}
               </div>
             </div>
-            {lsets[lOn].length ? (
+            {data === null ? (
+              error ? <Failed error={error} onRetry={reload} /> : <Pending rows={3} card />
+            ) : lsets[lOn].length ? (
               <div className="pgrid2">{lsets[lOn].map(o => <LiveCard key={o.id} o={o} />)}</div>
             ) : (
               <div className="pfempty">
@@ -114,14 +117,16 @@ export default function Payments({ identity }: { identity: string }) {
                 {(['all', 'Released', 'Refunded'] as Done[]).map(k => (
                   <button key={k} className={'hfil' + (dOn === k ? ' on' : '')}
                     disabled={k !== 'all' && !dcounts[k]} onClick={() => setDf(k)}>
-                    {k === 'all' ? 'All' : k}<b className="num">{dcounts[k]}</b>
+                    {k === 'all' ? 'All' : k}{data !== null && <b className="num">{dcounts[k]}</b>}
                   </button>
                 ))}
               </div>
               <button className="btn btn-ghost btn-sm">Export</button>
             </div>
             {/* 结束的单子是台账：一张表，一笔一行，每列各司其职 */}
-            {dlist.length ? (
+            {data === null ? (
+              error ? <Failed error={error} onRetry={reload} /> : <Pending rows={4} card />
+            ) : dlist.length ? (
               <div className="led">
                 <div className="ledr ledh">
                   <span>Date</span><span>Counterparty</span><span>Order</span>

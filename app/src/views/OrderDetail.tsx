@@ -9,8 +9,9 @@ import Avatar from '../components/Avatar'
 import { useAction, useApi } from '../hooks/useApi'
 import { useMe } from '../hooks/useMe'
 import CopyButton from '../components/CopyButton'
+import { Row } from '../components/prim'
 import type { Order } from '../api/types'
-import { scoreText } from '../api/types'
+import { scoreBand, scoreText } from '../api/types'
 
 const FIAT_SYM: Record<string, string> = {
   CNY: '¥', HKD: 'HK$', SGD: 'S$', JPY: '¥', EUR: '€', USD: '$', AED: 'د.إ', GBP: '£',
@@ -76,12 +77,34 @@ export default function OrderDetail({
     addEventListener(LIVE_CHANGED, own.reload)
     return () => removeEventListener(LIVE_CHANGED, own.reload)
   }, [order, own.reload])
+  /* The countdown runs off the deadline, on a local clock.
+
+     `seconds_left` is computed on the server when the row is built, so a card
+     rendering it directly only moves when the order is refetched — every 15s
+     on the standalone page, and only on a change event inside a thread. The
+     number sat still for ten seconds and then jumped, which reads as a frozen
+     page rather than a running window.
+
+     `state_deadline` is an instant, so it can be counted down from here once a
+     second without asking anyone. It falls back to the server's number while
+     the deadline is absent — old rows have no deadline stored. */
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+
   const { run, pending, error: actErr } = useAction()
   const [open, setOpen] = useState(true)
   /* 下单前那一道确认。开着的时候装的就是这一单——不另存一份参数，
      人看到的和发出去的必须是同一个东西。 */
   const [ask, setAsk] = useState(false)
   const [disp, setDisp] = useState(false)
+  /* The pages uploaded and not yet submitted. Two separate steps on purpose —
+     see the footer — and a list rather than one file because a transfer is
+     frequently more than one image: the payment screen, the bank's
+     confirmation, a statement line when neither shows the reference. */
+  const [pages, setPages] = useState<{ ref: string; name: string; url?: string }[]>([])
   /* One /me for the whole application, not one per card: the wallet kind is a
      property of the person, and fourteen cards asked fourteen times for the same
      answer. The comment here used to claim "one for the whole page" while the
@@ -93,6 +116,12 @@ export default function OrderDetail({
     bare ? <>{node}</> : <Shell onBack={onBack}>{node}</Shell>
   if (error) return wrap(<div className="mkempty">{error.message}</div>)
   if (!o) return wrap(<div className="mkempty">Loading the order…</div>)
+
+  /* Prefer the deadline over the server's count — see the ticker above. Both
+     floor at zero so an expired window reads as gone, not as a negative. */
+  const left = o.state_deadline
+    ? Math.max(0, Math.round((new Date(o.state_deadline).getTime() - now) / 1000))
+    : Math.max(0, o.seconds_left)
 
   const act = async (fn: () => Promise<unknown>) => { await run(fn); reload() }
   /* your_side, not side: `side` is the taker's direction and is the same string
@@ -165,9 +194,10 @@ export default function OrderDetail({
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(v => !v) } }}>
           <span className="st">{badge}</span>
           <span className="dsum">{line}</span>
-          {o.seconds_left > 0 && (
-            <span className="cd num">
-              ⏱ {Math.floor(o.seconds_left / 60)}:{String(o.seconds_left % 60).padStart(2, '0')}
+          {left > 0 && (
+            <span className={'cd num' + (left <= 120 ? ' tight' : '')}
+              title="Miss this window and the coins return — recorded as a default">
+              {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
             </span>
           )}
           <span className="dchev" aria-hidden>⌃</span>
@@ -197,47 +227,109 @@ export default function OrderDetail({
               </>
             ) : step === 's3' && o.phase === 'pay' ? (
               <>
-                {/* 卡号与附言是要抄进银行 App 的，给复制按钮而不是让人手抄 */}
                 <div className="dhead">
                   <b className="damt num">Transfer {fiat}</b>
                   <span className="dsub">to the account below, then upload the receipt</span>
                 </div>
+
+                {/* 跟这张卡别的阶段同一种排版:标签在左、值在右、发丝线分行。
+
+                    这里一度改成「标签大写压在值上面」那一套,于是同一张卡走到
+                    下一步就换了一种语言,而它明明还是那张卡。要抄进银行 App 的
+                    两样各带一颗复制键,那是这一步的重点——重点不必靠另起一套
+                    排版来强调。 */}
                 <dl className="dpay">
+                  {o.payout ? (
+                    <>
+                      <div><dt>Pay to</dt><dd>
+                        <b>{o.payout.holder}</b>
+                        <span className="dmono">{o.payout.bank}</span>
+                      </dd></div>
+                      <div><dt>Account</dt><dd>
+                        <span className="dmono">{o.payout.account_no}</span>
+                        {/* 号码是手抄进银行 App 的,给复制键而不是让人对着念。 */}
+                        <CopyButton text={o.payout.account_no} label="Copy account number"
+                          done="Account number copied" className="cpbtn" />
+                        <span className="dreq">{o.payout.region}</span>
+                      </dd></div>
+                    </>
+                  ) : (
+                    /* 说清楚缺的是哪一半。「问对方要」是唯一剩下的动作,而它
+                       只在人知道这里没有东西在加载时才说得通。 */
+                    <div><dt>Pay to</dt><dd>
+                      <span style={{ color: 'var(--warn)' }}>
+                        No account on file — ask them for their bank details before
+                        sending anything.
+                      </span>
+                    </dd></div>
+                  )}
                   <div><dt>Escrow</dt><dd>
                     <span className="esok">✓ {coin} locked</span>
-                    {/* 确认数只在真有一笔入金时才有意义。买方向是绑定对方挂单
-                        时就锁好的仓，没有转账可数——显示 0/6 会让人以为卡住了。 */}
                     <span className="dmono">
-                      {o.escrow?.tx_hash ? `tx ${o.escrow.tx_hash.slice(0, 6)}…${o.escrow.tx_hash.slice(-4)}` : 'bound to this order'}
+                      {o.escrow?.tx_hash
+                        ? `tx ${o.escrow.tx_hash.slice(0, 6)}…${o.escrow.tx_hash.slice(-4)}`
+                        : 'bound to this order'}
                       {o.escrow?.funding_via && o.escrow.required
                         ? ` · ${o.escrow.confirmations}/${o.escrow.required} confirmations` : ''}
                     </span>
                   </dd></div>
                   <div><dt>Reference</dt><dd>
+                    {/* 附言是唯一必须原样到达银行的字符串——一次没复制成功,
+                        事后就是一笔没人能对上号的汇款。 */}
                     <span className="dmono">{o.ref}</span>
-                    {/* The reference is the one string that has to arrive intact
-                        at the bank — a silent copy button is worst exactly here,
-                        because a copy that did not happen shows up later as a
-                        payment nobody can match to an order. CopyButton swaps to
-                        a green check and says so out loud. */}
                     <CopyButton text={o.ref} label="Copy reference"
                       done="Reference copied" className="cpbtn" />
                     <span className="dreq">required</span>
                   </dd></div>
                 </dl>
-                <p className="dmech">Miss the window and it returns to them, recorded as a default.</p>
+
+                <p className="dmech">
+                  Miss the window and it returns to them, recorded as a default.
+                </p>
+
+                {pages.length > 0 && (
+                  <div className="rclist">
+                    {pages.map((f, i) => (
+                      <Row key={f.ref} lead={i + 1} title={f.name}
+                        trail={
+                          <>
+                            {/* 打开看一眼是唯一能确认传对了的办法——文件名
+                                证明不了什么,手机相册里每张照片名字都一样。 */}
+                            {f.url && (
+                              <a className="lnk" href={f.url} target="_blank" rel="noopener">View</a>
+                            )}
+                            <button type="button" className="rcx"
+                              aria-label={`Remove ${f.name}`}
+                              onClick={() => setPages(p => p.filter(x => x.ref !== f.ref))}>×</button>
+                          </>
+                        } />
+                    ))}
+                    <span className="rchint">
+                      {pages.length} {pages.length === 1 ? 'file' : 'files'} · not sent yet
+                    </span>
+                  </div>
+                )}
+
                 <div className="dfoot">
                   <a href="#" className="lnk ecancel" style={{ marginRight: 'auto' }}
                     onClick={e => { e.preventDefault(); void act(() => ep.cancel(o.id)) }}>Cancel order</a>
-                  {/* 付款这一步是最容易出事的一步——钱已经出去了，对方却说没收到。
-                      出口得在这儿，而不是等人去找客服。 */}
+                  {/* 付款这一步最容易出事——钱已经出去了,对方却说没收到。
+                      出口得在这儿,而不是等人去找客服。 */}
                   <a href="#" className="lnk dspx"
                     onClick={e => { e.preventDefault(); setDisp(true) }}>Report a problem</a>
-                  {/* 选完就传，传完直接提交回执。中间那几秒进度画在按钮上——
-                      原来这一步从点击到成功界面完全不动，而回执经常是几 MB 的
-                      手机照片。 */}
-                  <FilePick variant="button" label="Upload receipt" disabled={pending}
-                    identity={identity} onDone={ref => void act(() => ep.receipt(o.id, ref))} />
+                  <FilePick variant="button" label={pages.length ? 'Add another' : 'Upload receipt'}
+                    identity={identity}
+                    disabled={pending || pages.length >= MAX_PAGES}
+                    className={pages.length ? 'btn-secondary' : ''}
+                    onDone={(ref, meta) => setPages(p =>
+                      p.some(x => x.ref === ref) ? p : [...p, { ref, ...meta }])} />
+                  {pages.length > 0 && (
+                    <button className="btn btn-primary" disabled={pending}
+                      onClick={() => void act(async () => {
+                        await ep.receipt(o.id, pages.map(f => f.ref))
+                        setPages([])
+                      })}>Submit {pages.length > 1 ? `${pages.length} files` : 'receipt'}</button>
+                  )}
                 </div>
               </>
             ) : step === 's3v' && o.phase === 'verify' ? (
@@ -316,13 +408,15 @@ export default function OrderDetail({
   )
 }
 
-/** 轨道。站名按买卖方向分叉：买方的 s1 是验证锁仓，卖方的 s1 是自己的币上链。 */
+/** Rail. Stop names fork by side: the buyer verifies a lock, the seller funds it. */
 function Rail({ at, sell }: { at: number; sell: boolean }) {
+  /* The live clock lives in the header. Putting a window on this stop as well
+     made the same card say "8 min" and "7:33" at once. */
   const stops: [string, string][] = sell
-    ? [['Matched', ''], ['Escrow funded', '~2 min'], ['Their transfer', '4 h window'], ['Verify & release', '~2 min']]
-    : [['Matched', ''], ['Escrow verified', 'seconds'], ['Your transfer', '4 h window'], ['Verify & release', '~2 min']]
+    ? [['Matched', ''], ['Escrow funded', '~2 min'], ['Their transfer', ''], ['Verify & release', '~2 min']]
+    : [['Matched', ''], ['Escrow verified', 'seconds'], ['Your transfer', ''], ['Verify & release', '~2 min']]
   return (
-    <div className="erail" style={{ padding: '0 20px 14px' }}>
+    <div className="erail">
       {stops.map(([n, eta], k) => (
         <span key={n} className={'es ' + (k < at ? 'done' : k === at ? 'now' : '')}>
           <i />{n}{k === at && eta ? ` · ${eta}` : ''}
@@ -331,6 +425,12 @@ function Rail({ at, sell }: { at: number; sell: boolean }) {
     </div>
   )
 }
+
+/* Mirrors maxReceiptPages on the server. Not a storage limit — it is the point
+   past which nobody reads them, and a verifier facing thirty images stops
+   checking and starts guessing. Enforced there too; this only keeps the button
+   from offering something that would be refused. */
+const MAX_PAGES = 8
 
 /** 资质件六项。缺件也照实显示——让对方自己给缺口定价，不替他隐藏。 */
 const DOCS: [string, string][] = [
@@ -396,19 +496,30 @@ function Peer({ o, ccy }: { o: Order; ccy: string }) {
       {doc && (
         <DocView doc={doc} has={!!p?.docs?.[doc]} peer={name} onClose={() => setDoc('')} />
       )}
-      {/* 这一单自己的分，下单那一刻定的。摆在对手方旁边是因为它评的就是
-          这笔单跟这个对手方——不是这个人此刻的总体信誉。 */}
-      {o.trust_score > 0 && (
-        <div><dt>Risk score</dt>
-          <dd>
-            <b className={'num ' + (o.trust_score >= 85 ? 'ok' : o.trust_score < 70 ? 'warn' : '')}>
-              {o.trust_score}
-            </b>
-            <span className="dreq" style={{ marginLeft: 8 }}>
-              scored when the order was placed
+      {/* 对手方的分,下单那一刻定的快照。
+
+          跟 Discover 上那个环是**同一个数**——它们本来是两个各算各的函数,
+          于是同一张卡上并排着 74 和 56,谁也解释不了对方。现在同源。
+
+          存快照而不是现算:重算的话,历史单的分会跟着这个商户后来的成交和
+          纠纷变,而这个数说的是「下单那一刻我们怎么看他」。 */}
+      {/* 文案跟 Discover 上那个环逐字一致:同一个数,两处叫法不同的话,
+          人会以为是两个东西——而它们本来就是被当成两个东西的。 */}
+      <div><dt>{o.trust_score === null ? 'Not rated' : 'AI score'}</dt>
+        <dd>
+          {o.trust_score === null ? (
+            <span className="dreq" style={{ marginLeft: 0 }}>
+              No settled trades yet when this order was placed
             </span>
-          </dd></div>
-      )}
+          ) : (
+            <>
+              <b className={'num ' + scoreBand(o.trust_score)}>{o.trust_score}</b>
+              <span className="dreq" style={{ marginLeft: 8 }}>
+                scored when the order was placed
+              </span>
+            </>
+          )}
+        </dd></div>
     </dl>
   )
 }

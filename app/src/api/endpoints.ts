@@ -1,6 +1,6 @@
 import { ApiError, BASE, PROFILE_CHANGED, api, getIdentity, readAuthToken, withConfirmation } from './client'
 import type {
-  Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, EligiblePeer, KycSession, KycStatus, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, RailGroup, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
+  Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, DepositStatus, EligiblePeer, KybResult, KycSession, KycStatus, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, RailGroup, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
 } from './types'
 
 // ── 账户 ──
@@ -151,8 +151,10 @@ export const fund = (o: Order, via: 'wallet' | 'external', as?: string) =>
     token => api.post<Order>(`/orders/${o.id}/fund`, { via }, { confirmation: token, as }), as)
 
 /** 提交法币回执 → s3v。不动链上钱，不需要令牌。 */
-export const receipt = (orderId: string, fileRef: string, as?: string) =>
-  api.post<Order>(`/orders/${orderId}/receipt`, { file_ref: fileRef }, { as })
+/* 一次交齐。一笔转账常常不止一张——付款页、银行回单、附言看不清时还要
+   一条流水。分多次提交的话订单会被推进去好几次,而它只该推进一次。 */
+export const receipt = (orderId: string, fileRefs: string[], as?: string) =>
+  api.post<Order>(`/orders/${orderId}/receipt`, { file_refs: fileRefs }, { as })
 
 /**
  * 核验对方回执 → s4，或 ok=false 转 disputed。
@@ -320,6 +322,19 @@ export const markets = () =>
 export const appealMakerApp = (note: string, as?: string) =>
   api.post<MakerApp>('/maker/application/appeal', { note }, { as })
 
+
+/* 半路自动保存。跟提交是两件事:这个只写草稿列,不碰已提交的那份,
+   也不触发任何审核。没配 ATARA_PII_KEY 时后端会回 DRAFT_UNAVAILABLE——
+   半填的身份材料不明文落库。 */
+/* 核一份企业注册文件。单独一个端点:它按次计费(10 credits)、要等七八秒,
+   而提交是个瞬时动作。搭在一起的话,点「下一步」会莫名其妙卡住,而且改一个
+   无关字段重新提交就又扣一次。 */
+export const verifyBusiness = (fileRef: string, as?: string) =>
+  api.post<KybResult>('/maker/kyb', { file_ref: fileRef }, { as })
+
+export const saveMakerDraft = (
+  body: { phase: 'kyc' | 'listing'; step: number; form: Record<string, unknown> }, as?: string,
+) => api.post<{ status: string }>('/maker/draft', body, { as })
 export const makerApp = (as?: string) => api.get<MakerApp>('/maker/application', { as })
 
 // ── 身份核验（ID Analyzer / DocuPass）──
@@ -373,6 +388,10 @@ export const createOffer = (req: {
     token => api.post<Offer>('/offers', req, { confirmation: token, as }), as)
 
 /** 挂卖单第一步：要号，并拿到锁币要用的参数。 */
+/** 一笔外部入金到账了没有。只有这笔入金的主人查得到。 */
+export const depositStatus = (offerID: string, as?: string) =>
+  api.get<DepositStatus>(`/offers/${offerID}/deposit`, { as })
+
 export const prepareOffer = (req: {
   side: 'buy' | 'sell'; asset: string; fiat: string; qty: string
   unit_price: string; min_lot: string; network: string

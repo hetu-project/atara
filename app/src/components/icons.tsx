@@ -145,6 +145,10 @@ export const ICheck = () => (
     strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <path d="M3 8.5 6.2 11.7 13 4.9" /></svg>
 )
+/** Circled "i" for a neutral notice. Not in console.html; drawn on the same 16-grid. */
+export const IInfo = () => (
+  <svg {...S(14)}><circle cx="8" cy="8" r="6" /><path d="M8 5.2v.01M8 7.4v3.4" /></svg>
+)
 export const IArrow = () => (
   <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor"
     strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

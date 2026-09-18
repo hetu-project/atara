@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
+import { useToast } from './Toast'
 import ConfirmSheet from './ConfirmSheet'
+import CopyButton from './CopyButton'
+import Qr from './Qr'
+import { IInfo } from './icons'
 import { isWalletTxError, useWalletTx } from '../hooks/useWalletTx'
 import { FX_IDX } from './kycforms'
 import type { Listing } from './MakerListing'
-import type { Offer } from '../api/types'
+import type { DepositStatus, Offer, PreparedOffer } from '../api/types'
 import type { TxStep } from '../hooks/useWalletTx'
 
 /**
@@ -30,6 +34,80 @@ type OfferBody = {
   side: 'sell' | 'buy'; asset: string; fiat: string
   unit_price: string; qty: string; min_lot: string
   network: string; networks: string[]
+}
+
+/* Expiry as "when · how long is left".
+
+   Both: the absolute time is what a withdrawal queue is checked against, the
+   relative one is the answer wanted at a glance. Relative alone goes stale while
+   the card sits open; absolute alone makes the reader do the subtraction.
+
+   The day is part of "when". A bare "17:10" shown at 19:00 reads as today and
+   is wrong by a day, so anything not today gets "Tomorrow" or a date. Minutes
+   drop once an hour or more is left; the listing is not that precise, and
+   "22h 9m" is two numbers where one does the job. */
+function expiresText(unix?: number): string {
+  if (!unix) return '—'
+  const at = new Date(unix * 1000)
+  const left = unix * 1000 - Date.now()
+  if (left <= 0) return 'expired'
+  const now = new Date()
+  const next = new Date(now); next.setDate(now.getDate() + 1)
+  const day = at.toDateString() === now.toDateString() ? ''
+    : at.toDateString() === next.toDateString() ? 'Tomorrow '
+    : at.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' '
+  const clock = at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const h = Math.floor(left / 3_600_000)
+  /* Floor, not round: rounding turns 59m 40s into "60m". */
+  const m = Math.floor((left % 3_600_000) / 60_000)
+  return `${day}${clock} · ${h > 0 ? `${h}h` : `${m}m`} left`
+}
+
+/** 0x34Bd…E1D7 — enough to recognise an account, not enough to mistype it. */
+const shortAddr = (a?: string) => (a ?? '').replace(/^(.{6}).+(.{4})$/, '$1…$2')
+
+/* When the contract was last read. A clock next to "Check now" answers "is the
+   poll still running" more honestly than a pulsing dot: the dot animates whether
+   or not anything is happening. */
+function checkedText(at: number): string {
+  if (!at) return ''
+  return `Checked ${new Date(at).toLocaleTimeString([], {
+    hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+}
+
+/* 点完「我转好了」之后那一句，连同它的语气。
+
+   语气按**含义**定，不是一律标红。「还没到」绝大多数时候只是钱还没转出去、或者
+   交易还没落块——把它涂红，人会以为操作失败了，而什么都没失败。真正该跳出来的
+   是「收到了但不够」：那一条要他再动一次手，不说清楚他会一直等一件不会发生的事。
+
+   说的是链上此刻的事实，不是一句好听的话。少转的原因通常很具体（填了挂单量、
+   忘了手续费、交易所扣了提币费），把差额说出来，他立刻知道该补多少。 */
+type Wait = { tone: 'idle' | 'warn' | 'ok'; text: string }
+
+function waitLine(d: DepositStatus | null): Wait {
+  if (!d) return { tone: 'idle', text: 'Checking the contract…' }
+  if (d.status === 'swept') {
+    /* 分开说。币进托管是链上那一步，挂单上架是它之后的一步，而后者失败过——
+       凭前者宣布后者，人会去 Listings 里找一笔并不存在的挂单，然后以为是
+       界面坏了。这时候真正出事的是后端，而这句话把它盖住了。 */
+    return d.listed
+      ? { tone: 'ok', text: 'The coins are in escrow and your listing is up.' }
+      : { tone: 'warn', text: 'The coins are in escrow. Posting the listing is taking '
+          + 'longer than usual — nothing is lost, the coins are locked under this listing.' }
+  }
+  if (d.status === 'expired') {
+    return { tone: 'warn', text: 'The price expired before the coins arrived. '
+      + 'Anything sent there is still yours to take back.' }
+  }
+  const got = Number(d.received)
+  const need = Number(d.need)
+  if (!got) return { tone: 'idle', text: 'Nothing has arrived yet. Watching the contract.' }
+  if (got < need) {
+    return { tone: 'warn',
+      text: `Received ${d.received} of ${d.need} — send the rest and it will go up by itself.` }
+  }
+  return { tone: 'ok', text: 'The transfer landed. Posting the listing…' }
 }
 
 export default function MakerOffer({
@@ -89,32 +167,141 @@ export default function MakerOffer({
   const onChain = chains?.impl === 'evm'
   /* 钱包类型决定确认那一下签在哪儿：外部钱包弹它自己的窗口，Atara 钱包走
      passkey。用户可以在确认框里改——有人两边都有，挂单时想用哪边是他的事。 */
+  const { toast } = useToast()
   const { data: me } = useApi(() => ep.me(identity), [identity])
   const [via, setVia] = useState<'atara' | 'ext' | null>(null)
 
   /*
-    How the coins get into escrow. Two routes, as in console.html
-    (bindFundVia): the Atara wallet signs with a passkey, or the maker sends
-    the coins themselves and we watch the contract for the deposit.
+    How the coins get into escrow. Two routes, as in console.html (bindFundVia).
 
-    ⚠️ Only the first route is wired. `send()` below ignores this and always
-    goes through the connected wallet, so choosing "External wallet" today
-    changes the wording and nothing else — the button offers to open a wallet
-    and then asks for a passkey.
+    The Atara wallet signs `lockListing` itself, so the coins leave a wallet this
+    browser can reach. The external route asks for nothing: we show an address,
+    the maker sends from wherever the coins actually are — an exchange, a cold
+    wallet, a multisig — and the backend watches the chain for the arrival.
 
-    The missing half is not a stray option to delete. A desk logs in by email
-    for convenience while its inventory sits in cold storage or a multisig;
-    requiring the login wallet to hold the coins would mean moving the whole
-    treasury into a hot wallet. What is missing is the reference's second
-    route: show the contract address and amount, let them send from anywhere,
-    verify the lock on chain (CreateOffer already accepts a lock made
-    elsewhere via offer_id).
-
-    Doing it properly needs one question answered first: the contract returns
-    an unlisted lock to whoever made it, so when the locking address is not
-    the account address, who may unlist?
+    That second route exists because the first one cannot serve a desk whose
+    inventory is not in a hot wallet. Requiring a signature would mean moving the
+    treasury to sign for one listing.
   */
+  /* 外部入金的地址和该转的数，来自 /offers/prepare。
+     只取一次：每调一次就发一个新挂单号、落一行新的待入金，来回切换那两个
+     chip 会留下一串没人会用的记录。 */
+  const [dep, setDep] = useState<PreparedOffer | null>(null)
+  const [depErr, setDepErr] = useState('')
+  const [sent, setSent] = useState(false)
+  /* 点完「我转好了」之后的真实进度。
+
+     没有它，那颗按钮就是句空话：点不点、转没转，屏幕上看到的都一样。而这一步
+     的不确定性恰恰最高——金额填错、链选错、交易所扣了提币费，都会让钱到不了或
+     者不够，而人会一直等一件永远不会发生的事。 */
+  const [got, setGot] = useState<DepositStatus | null>(null)
+  /* Sheet dismissed while a deposit is still on its way.
+
+     Closing used to wipe `dep` and `sent` together with the sheet. The coins were
+     already sent, the backend was still watching the address, but nothing on
+     screen could show that any more: the poll below stopped with the sheet, so
+     the "listed" toast never fired either. Now closing only hides the sheet;
+     the deposit state stays, the poll keeps running, and a strip on the form
+     leads back here. */
+  const [hidden, setHidden] = useState(false)
+  const sell = curSide === 'Sell crypto'
+  const pending = sent && !!dep
+  /* 放在取地址那段之前：下面那个 effect 读它，而 effect 必须排在组件里所有
+     提前返回的上面（见那里的注释）。 */
   const walletKind = via ?? (me?.wallet_kind === 'ext' ? 'ext' : 'atara')
+  /* The external-deposit route: a sell listing funded from a wallet we never
+     touch. Most of the sheet below branches on it. */
+  const ext = sell && walletKind === 'ext'
+
+  /* 这一段必须待在组件里所有提前返回的**上面**。
+
+     下面有一处「条款和本版支持的币对不上就整块返回 Nothing listable」——
+     它一生效，后面的 hook 就不会被调用，而 React 只要发现这一次比上一次少跑了
+     hook 就会当场抛 "Rendered fewer hooks than expected"，整个控制台起不来。
+     这个错误是 eslint-plugin-react-hooks 抓出来的，肉眼和正则都没找到。 */
+  /* 要一个入金地址。
+
+     这一步就把挂单号发出去了，并且在后端落一行「等这笔钱」——所以只做一次。
+     反复切换那两个 chip 会留下一串永远等不到钱的记录，而每一行都会被 watcher
+     每隔几秒读一次链。 */
+  /* 面板一露出来就去取，而不是等谁点那个 chip。
+
+     外部钱包登录的账户 walletKind 默认就是 'ext'（见上面那行 via ?? …），
+     所以弹窗一开面板就在那儿了，而点击从来没发生过——它会永远停在
+     「Getting an address…」，要切到 Atara 再切回来才动。绑在「可见」上，
+     两条进入路径就都覆盖了。 */
+  useEffect(() => {
+    if (confirm && sell && walletKind === 'ext') void askAddress()
+    // askAddress 自己有幂等判断，不进依赖，否则每次渲染都会重新跑一遍
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirm, sell, walletKind])
+
+  /* Poll only once the person has said the coins are sent.
+
+     Nobody on chain notifies us, so we have to ask; each ask is one RPC, and most
+     of the time there is no deposit in flight at all. Every 3 seconds follows the
+     pace of blocks landing, not the pace of a UI trying to look responsive.
+
+     The poll does not stop when the sheet is hidden: the deposit is still on its
+     way, and this loop is the only thing that turns its arrival into a receipt. */
+  const [checking, setChecking] = useState(false)
+  const [checkedAt, setCheckedAt] = useState(0)
+  /* 手动再查一次。轮询那条路自己会跑，这颗按钮是给「它还在动吗」这个疑问的——
+     等待的时候，一个按得动的按钮比一个转圈的图标让人踏实。 */
+  const recheck = async () => {
+    if (!dep?.offer_id || checking) return
+    setChecking(true)
+    try {
+      setGot(await ep.depositStatus(dep.offer_id, identity))
+      setCheckedAt(Date.now())
+    } catch { /* 读不到就保持上一次的样子 */ } finally { setChecking(false) }
+  }
+
+  useEffect(() => {
+    if (!sent || !dep?.offer_id) return
+    let alive = true
+    const look = async () => {
+      try {
+        const d = await ep.depositStatus(dep.offer_id, identity)
+        if (!alive) return
+        setGot(d)
+        setCheckedAt(Date.now())
+        if (!d.listed) return
+        /* 挂单出来了，就走和签名那条路一模一样的收尾：一句 toast，然后把
+           卡片换成回执。
+
+           挂单成了就是成了，不该因为币是转进来的就长得不一样。原来是在卡片
+           里把中间那行灰字换成一句「你的挂单上去了」——而大标题还是「33 USDT」、
+           底下还在喊「POSTING LOCKS FUNDS INTO ESCROW」，整张卡片看起来仍然停在
+           「你即将要做」。没人会把那一行认成成功。 */
+        alive = false
+        const o = await ep.offer(dep.offer_id)
+        toast(`Listed · ${Number(o.qty).toLocaleString()} ${o.asset} locked in escrow`,
+          { kind: 'ok' })
+        resetSheet()
+        onPosted(o, sym)
+      } catch { /* 读不到就保持上一次的样子，别把已经显示的进度抹掉 */ }
+    }
+    void look()
+    const t = setInterval(() => void look(), 3000)
+    return () => { alive = false; clearInterval(t) }
+  }, [sent, dep?.offer_id, identity])
+
+  const askAddress = async () => {
+    if (dep || !confirm) return
+    setDepErr('')
+    try {
+      const p = await ep.prepareOffer(confirm, identity)
+      if (!p.deposit_addr) {
+        setDepErr('This server has no deposit address configured yet.')
+        return
+      }
+      setDep(p)
+    } catch (e) {
+      setDepErr(e instanceof Error ? e.message : 'Could not get a deposit address')
+    }
+  }
+
   /* 能结算哪些法币，由配置里选过的收款账户决定——你没有那个国家的收款
      账户，就不该对外说你收那种钱。这句话以前只是个愿望：渠道是从银行目录
      里挑的名字，跟账户簿毫无关系。现在渠道就是账户，它才真的成立。 */
@@ -124,7 +311,6 @@ export default function MakerOffer({
   const fiats = (fromRails.length ? fromRails : tradableFiat).filter(f => tradableFiat.includes(f))
   const curFiat = fiats.includes(fiat) ? fiat : (fiats[0] ?? '')
 
-  const sell = curSide === 'Sell crypto'
   const sym = FIAT_SYM[curFiat] ?? ''
   const avail = num(w?.assets.find(a => a.asset === curCoin)?.on_chain ?? '0')
 
@@ -187,6 +373,11 @@ export default function MakerOffer({
       return
     }
     setBad({ id: '' })
+    /* A deposit is already in flight: bring that sheet back instead of opening a
+       new one. A new body would reuse the old address (askAddress is idempotent
+       on `dep`), so the amount on screen and the amount the watcher expects
+       could disagree. One pending deposit at a time. */
+    if (pending) { setHidden(false); return }
     /* 校验过了先停一下让人看清楚：这一下之后币就进合约了，不可撤销。
        参照在这里也插了一道（requireVerify），而且卖单和买单的措辞不同——
        卖单锁的是钱，买单只是一句承诺。 */
@@ -195,6 +386,31 @@ export default function MakerOffer({
       unit_price: String(p), qty: String(q), min_lot: String(m),
       network: curNet, networks: [curNet],
     })
+  }
+
+  /* Full reset: the sheet is over, whatever it was showing.
+
+     Drop this address. The next sheet is another listing (amount or price may
+     have changed) and the address is derived from those fields — keeping the
+     old one would send coins somewhere that no longer matches. */
+  const resetSheet = () => {
+    setConfirm(null)
+    setHidden(false)
+    setDep(null)
+    setSent(false)
+    setGot(null)
+    setDepErr('')
+  }
+
+  /* What ✕, the backdrop and the Close button do.
+
+     While a deposit is in flight, closing only hides the sheet — the coins are
+     out there and the watcher is still counting them. The one exception is an
+     expired price: nothing more will happen to that deposit from here, so
+     closing it really is the end. */
+  const closeSheet = () => {
+    if (pending && got?.status !== 'expired') { setHidden(true); return }
+    resetSheet()
   }
 
   const send = async (body: OfferBody) => {
@@ -217,6 +433,18 @@ export default function MakerOffer({
       const o = await ep.createOffer({ ...body, ...extra }, identity)
       tx.setStep({ k: 'idle' })
       setConfirm(null)
+      /* Say it landed, and say whether coins actually moved.
+
+         Posting a sell listing ends with a wallet signature and then the card
+         simply swaps to a receipt — the one thing the person was waiting to
+         hear, that the lock went through on chain, was never said out loud.
+         Off-chain postings get their own wording rather than a claim about
+         escrow that did not happen. */
+      toast(
+        extra.lock_tx
+          ? `Listed · ${Number(body.qty).toLocaleString()} ${body.asset} locked in escrow`
+          : `Listed · ${Number(body.qty).toLocaleString()} ${body.asset}`,
+        { kind: 'ok' })
       onPosted(o, sym)
     } catch (e) {
       // 钱包那一侧的错已经在交易进度那里显示过了，别再重复一遍。
@@ -303,10 +531,34 @@ export default function MakerOffer({
         {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
         <TxNote step={tx.step} explorer={chain?.explorer ?? ''} />
 
+        {/* The way back to a deposit whose sheet was dismissed. Same .fstat block
+            as inside the sheet, same live line: the thing being waited for has
+            not changed, only where it is shown. */}
+        {pending && hidden && dep && (() => {
+          const w = waitLine(got)
+          return (
+            <div className={'fstat ' + w.tone}>
+              <i />
+              <span>
+                <b className="num">{dep.deposit_total} {curCoin}</b> on its way to escrow · {w.text}
+                {checkedAt > 0 && <em className="fchk">{checkedText(checkedAt)}</em>}
+              </span>
+              <button type="button" className="btn btn-ghost btn-sm"
+                onClick={() => setHidden(false)}>Show</button>
+            </div>
+          )
+        })()}
+
+        {/* Say what posting does on the route that is selected. The two-transaction
+            line is true of the Atara wallet only; next to a pending external
+            deposit it contradicted the strip right above it. */}
         {onChain && sell && chain?.deployed && (
           <p className="rnote">
-            Posting sends two transactions from your own wallet on {chain.name}:
-            one to approve the escrow contract, one to lock the coins into it.
+            {walletKind === 'ext'
+              ? <>Posting shows an escrow address on {chain.name}. Send from any
+                  wallet; the coins lock the moment they arrive.</>
+              : <>Posting sends two transactions from your own wallet on {chain.name}:
+                  one to approve the escrow contract, one to lock the coins into it.</>}
           </p>
         )}
         {onChain && sell && chain && !chain.deployed && (
@@ -331,18 +583,29 @@ export default function MakerOffer({
             <button className="btn btn-secondary btn-sm" type="button" disabled={busy}
               onClick={onEditTerms}>Change trading terms</button>
           )}
+          {/* While a deposit is in flight this button reopens that sheet (see
+              post()), so it must not promise a new listing. */}
           <button className="btn btn-primary" disabled={busy}
-            onClick={() => post()}>Review &amp; post</button>
+            onClick={() => post()}>{pending ? 'Back to deposit' : <>Review &amp; post</>}</button>
         </div>
       </div></div></div>
 
-      {confirm && (
+      {confirm && !hidden && (
         <ConfirmSheet
           title="Confirm listing"
-          amount={num(qty).toLocaleString()} unit={curCoin}
+          /* On the external route the headline is the number to send, fee
+             included — that is what gets typed into a withdrawal form. The
+             listing size moves down into the sentence. Showing the listing size
+             big and the send amount small had people copying the wrong one. */
+          amount={ext && dep ? String(dep.deposit_total) : num(qty).toLocaleString()} unit={curCoin}
           walletKind={walletKind}
           busy={busy}
-          lead={<>
+          lead={ext ? <>
+            Lists <b className="num">{num(qty).toLocaleString()} {curCoin}</b> at{' '}
+            <b className="num">{sym}{num(px).toLocaleString()}</b>, min lot{' '}
+            <b className="num">{sym}{num(min).toLocaleString()}</b>.
+            {dep ? <> Includes the <b className="num">{dep.deposit_fee} {curCoin}</b> fee.</> : null}
+          </> : <>
             List <b className="num">{num(qty).toLocaleString()} {curCoin}</b>{' '}
             {sell ? 'for sale' : 'wanted'} at{' '}
             <b className="num">{sym}{num(px).toLocaleString()}</b> · min lot{' '}
@@ -351,26 +614,162 @@ export default function MakerOffer({
           </>}
           extra={sell ? (
             <>
+              {/* The route locks once they say the coins are sent — not before.
+
+                  Switching to the Atara wallet after that would hide the address
+                  block, turn the button back into "Confirm with passkey", and one
+                  more click would sign a second listing while the external deposit
+                  is still being watched. Same terms, two listings.
+
+                  Locking earlier (on the address itself) was tried and felt broken:
+                  the address is fetched the moment the panel shows, so someone who
+                  only opened External wallet to look could never switch back, with
+                  nothing on screen saying why. Before "I've sent it" nothing has
+                  moved, so switching is free; the fetched address is kept, and
+                  coming back shows the same one instead of minting another. */}
               <div className="fvia">
                 <button type="button" className={'sfchip' + (walletKind !== 'ext' ? ' on' : '')}
+                  disabled={sent} title={sent ? 'Locked while the deposit is being watched' : undefined}
                   onClick={() => setVia('atara')}>Atara wallet</button>
                 <button type="button" className={'sfchip' + (walletKind === 'ext' ? ' on' : '')}
+                  disabled={sent} title={sent ? 'Locked while the deposit is being watched' : undefined}
                   onClick={() => setVia('ext')}>External wallet</button>
               </div>
+              {/* One line under the chips: what this route is, or, once sent,
+                  why the chips stopped working. A greyed control with no
+                  explanation reads as a bug. */}
               <div className="fviabody">
-                {walletKind === 'ext'
-                  ? 'Your wallet signs the lock — the coins go straight into the escrow contract.'
-                  : 'Signed from your Atara wallet — straight into the escrow contract, not to Atara.'}
+                {walletKind !== 'ext'
+                  ? 'Signed from your Atara wallet — straight into the escrow contract, not to Atara.'
+                  : sent
+                    ? 'Route locked while this deposit is being watched.'
+                    : depErr || (!dep
+                      ? 'Getting an address…'
+                      : 'Send from any wallet. We watch the contract and post the listing when the coins land.')}
               </div>
+
+              {/* The external deposit, laid out like an exchange deposit page:
+                  QR first and centred (scanning is the first action), the address
+                  in a field with its own Copy, parameters as label-over-value cells,
+                  then one neutral notice carrying the wrong-chain warning.
+
+                  The block stays after "I've sent it". Collapsing it to a status
+                  line looked broken, and that is exactly when people re-check the
+                  address and the amount. Only the notice gives way to progress. */}
+              {walletKind === 'ext' && dep && (
+                <div className="fdep">
+                  {/* The code encodes exactly the string in the field below (see Qr). */}
+                  <div className="fqrc"><Qr text={dep.deposit_addr ?? ''} size={136} /></div>
+
+                  <div className="ffield">
+                    <span className="flab">Deposit address</span>
+                    <div className="faddrf">
+                      <span className="fadr">{dep.deposit_addr}</span>
+                      {chain?.explorer && (
+                        <a className="esxp" href={`${chain.explorer}/address/${dep.deposit_addr}`}
+                          target="_blank" rel="noopener" title="View on explorer">↗</a>
+                      )}
+                      <CopyButton text={dep.deposit_addr ?? ''} label="Copy address"
+                        done="Address copied" />
+                    </div>
+                  </div>
+
+                  {/* The fee is added before the transfer so the listing locks the
+                      round number they configured; deducting on arrival would turn
+                      a 2,000 listing into 1,999.5. "included" says the headline
+                      already has it.
+
+                      Refunds: we never know who paid. An external deposit often
+                      comes from an exchange's pooled address shared by thousands of
+                      customers, and refunding there drops the coins into a hole.
+
+                      Expiry: what expires is this configuration, not the address.
+                      A price set at ¥7 is not the listing they would post tomorrow;
+                      the address stays valid and whatever lands there stays theirs. */}
+                  <div className="fdgrid">
+                    <div className="fcell"><span>Network</span><b>{chain?.name ?? curNet}</b></div>
+                    <div className="fcell"><span>Fee</span>
+                      <b className="num">{dep.deposit_fee} {curCoin} · included</b></div>
+                    <div className="fcell"><span>Refunds to your account</span>
+                      <b className="num">{shortAddr(me?.address)}</b></div>
+                    <div className="fcell"><span>Price holds until</span>
+                      <b className="num">{expiresText(dep.deposit_expiry)}</b></div>
+                  </div>
+
+                  {sent ? (() => {
+                    const w = waitLine(got)
+                    return (
+                      /* The only thing changing on the card. The clock under the
+                         text answers "is the poll still running". */
+                      <div className={'fstat ' + w.tone}>
+                        <i />
+                        <span>{w.text}
+                          {checkedAt > 0 && <em className="fchk">{checkedText(checkedAt)}</em>}
+                        </span>
+                        <button type="button" className="btn btn-ghost btn-sm"
+                          onClick={() => void recheck()}>
+                          {checking ? 'Checking…' : 'Check now'}
+                        </button>
+                      </div>
+                    )
+                  })() : (
+                    /* Read before sending. The wrong-chain line is the sentence
+                       every exchange puts here; the other two must be known before
+                       the transfer, not after. */
+                    <div className="fnotice">
+                      <IInfo />
+                      <span>
+                        Send only <b>{curCoin}</b> on <b>{chain?.name ?? curNet}</b> to this
+                        address. Refunds go to your account, never back to the sender.
+                        After the price expires, coins sent here are still yours to take back.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           ) : null}
-          note={sell
+          /* 转完之后不再警告。那一句是对「你即将锁一笔钱」发的，而钱已经出去了——
+             对一个做完的决定继续发警告，只会让人以为还有什么没完成。这时候
+             屏幕上唯一要说的就是进度那一行。 */
+          /* The external deposit carries its own notice above, and after the
+             coins are sent a warning about "posting" would describe a decision
+             already made. Every other route keeps the shared ⚠ line. */
+          note={ext
+            ? undefined
+            : sell
             ? { why: 'Posting locks funds into escrow',
                 how: 'They stay there until someone fills the listing, or you unlist.' }
             : { why: 'Posting a public listing',
                 how: 'Nothing is locked — a buy listing is a commitment to pay, not an escrow.' }}
-          onConfirm={() => void send(confirm)}
-          onClose={() => setConfirm(null)} />
+          /* 外部入金那一档不走 send()。
+
+             send() 会去签一笔 lockListing——而这一档的全部意义就是不需要签名。
+             这里点下去只是「我转好了」：钱到没到由 watcher 说了算，他点不点
+             其实都一样，所以这一下不发任何请求，只把卡片切到等待态。
+
+             挂单是钱到之后由后端建的，不是这里建的。 */
+          onConfirm={() => {
+            if (sell && walletKind === 'ext') {
+              /* 转完之后唯一还剩的动作就是走开。挂单会自己上架，人留在这儿
+                 也看不到更多东西——所以按钮变成关闭，而不是一颗按不动的灰键。 */
+              if (sent) { closeSheet(); return }
+              setSent(true)
+              return
+            }
+            void send(confirm)
+          }}
+          /* 这一档任何时候都不能落回默认文案。默认是「Sign in your wallet」——
+             而这条路的全部意义就是不需要签名，在它上面说这句话，等于告诉人
+             他刚才做的事不算数。 */
+          plain={sell && walletKind === 'ext'
+            ? (sent ? 'Close' : "I've sent it")
+            : undefined}
+          /* Once the coins are sent there is nothing left to confirm. A primary
+             blue Close reads as one more commitment; secondary says "you may go". */
+          quiet={sent && sell && walletKind === 'ext'}
+          blocked={sell && walletKind === 'ext' && !dep}
+          onClose={closeSheet} />
       )}
     </div>
   )

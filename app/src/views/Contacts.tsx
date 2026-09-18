@@ -7,6 +7,7 @@ import { go } from '../hooks/useRoute'
 import { useToast } from '../components/Toast'
 import type { Account } from '../api/types'
 import { scoreText } from '../api/types'
+import { Failed, Pending } from '../components/Loading'
 
 /**
  * 联系人 = 可以付款的人。
@@ -21,7 +22,7 @@ import { scoreText } from '../api/types'
  * 「加了就能付」，而对方从头到尾没说过一句话。
  */
 export default function Contacts({ identity }: { identity: string }) {
-  const { data, reload } = useApi(() => ep.contacts(identity), [identity])
+  const { data, error, reload } = useApi(() => ep.contacts(identity), [identity])
   /* 15s as a backstop; the live stream below is what normally refreshes these. */
   const { data: reqs, reload: reloadReqs } =
     useApi(() => ep.contactRequests(identity), [identity], 15000)
@@ -112,6 +113,10 @@ export default function Contacts({ identity }: { identity: string }) {
               </div>
             ))}
           </div>
+        ) : data === null ? (
+          /* Not loaded is not "none": the empty state hands out an action
+             (add someone) that is wrong while the list is still on its way. */
+          error ? <Failed error={error} onRetry={reload} /> : <Pending rows={3} card />
         ) : !inbox.length && !pend.length ? (
           <div className="mkempty">No contacts yet — add someone to pay them.</div>
         ) : null}

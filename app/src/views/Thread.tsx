@@ -6,10 +6,12 @@ import { useAssessment } from '../hooks/useAssessment'
 import AssessCard from '../components/AssessCard'
 import Avatar from '../components/Avatar'
 import Composer from '../components/Composer'
+import { useToast } from '../components/Toast'
 import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
 import OrderDetail from './OrderDetail'
 import type { Message, Order } from '../api/types'
+import { Failed, Pending } from '../components/Loading'
 
 /**
  * 一个对手方一条线程。
@@ -24,7 +26,7 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
      first; if it is down — a proxy that strips streaming, an old backend — the
      conversation still updates, just at the old speed. Removing it outright
      would make one broken connection look like a broken product. */
-  const { data, reload } = useApi(() => ep.thread(peer, identity), [peer, identity], 15000)
+  const { data, error, reload } = useApi(() => ep.thread(peer, identity), [peer, identity], 15000)
 
   /* Refetch the moment the server says this account has something new. The
      stream deliberately carries no message body, so there is nothing to merge:
@@ -39,7 +41,15 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
      所以这一排在对话里一直都在；我们拆成了两个视图，拆的时候把它落下了。
      而「正在跟这个人说话」恰恰是最该能直接下单的地方。 */
   const [act, setAct] = useState<Act | null>(null)
-  const [err, setErr] = useState('')
+  /* Order failures go to the corner toast, not a grey line above the composer.
+
+     That line sat between the last bubble and the input, centred like a system
+     notice, so "only 308 CNY is available on this listing" read as something
+     the counterparty's side had said — and it stayed there until the next
+     keystroke. The toast is where every other action in the console reports
+     its outcome; this one was the odd one out. */
+  const { toast } = useToast()
+  const fail = (msg: string) => toast(msg, { kind: 'err' })
   const { start } = useAssessment()
   const { data: cdata } = useApi(() => ep.contacts(identity), [identity])
 
@@ -68,15 +78,15 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
   /* 对手方是写死的——你就在跟他说话。Home 那边要先撮合出一个人来，
      这里不用，也不该让人再选一次。 */
   const order = async (a: Act) => {
-    setBusy(true); setErr('')
+    setBusy(true)
     try {
       const m = await ep.match({
         intent: a.k, amount: String(a.amt), amount_kind: 'coin',
         asset: a.coin, fiat: a.fiat, counterparty_id: peer,
       })
-      if (m.violation) { setErr(m.violation.message); return }
+      if (m.violation) { fail(m.violation.message); return }
       const pick = m.candidates?.[0]
-      if (!pick) { setErr(`${name} has nothing live on that side right now`); return }
+      if (!pick) { fail(`${name} has nothing live on that side right now`); return }
       const ord = await ep.take(pick.offer_id, {
         amount: pick.coin_amount, amount_kind: 'coin', network: '',
       })
@@ -84,7 +94,7 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
       void start(pick.offer_id, pick.name, ord.id)
       setAct(null); reload()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not open that order')
+      fail(e instanceof Error ? e.message : 'Could not open that order')
     } finally { setBusy(false) }
   }
 
@@ -128,20 +138,24 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
                   order={x.order} onChanged={reload} />
               </Fragment>
             )))}
-          {!stream.length && (
-            <div className="msg sys"><span className="bub">
-              Nothing here yet. Orders and messages with {name} land in this stream.
-            </span></div>
-          )}
+          {/* Three different silences: still loading, failed, genuinely empty.
+              Drawn as one they all read "nothing here", and the first two are
+              not that. */}
+          {!stream.length && (data === null
+            ? (error ? <Failed error={error} onRetry={reload} /> : <Pending rows={3} />)
+            : (
+              <div className="msg sys"><span className="bub">
+                Nothing here yet. Orders and messages with {name} land in this stream.
+              </span></div>
+            ))}
           <div ref={end} />
         </div>
       </div>
 
-      {err ? <p className="roempty" style={{ textAlign: 'center' }}>{err}</p> : null}
       <Composer
         identity={identity}
         text={text}
-        onChange={q => { setText(q); setErr('') }}
+        onChange={setText}
         ariaLabel={`Message ${name}`}
         placeholder={act
           ? `Press Enter to place this order with ${name}`
@@ -156,7 +170,7 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
         onSubmit={() => { if (act) void order(act); else void send() }}
         sendTitle={act ? 'Place this order (Enter)' : 'Send (Enter)'}
         sendLabel={act ? 'Place this order' : 'Send'}
-        onVoiceError={setErr}
+        onVoiceError={fail}
       />
     </div>
   )

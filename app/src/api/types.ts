@@ -42,7 +42,10 @@ export interface WalletAsset {
   network: string
   on_chain: string
   in_escrow: string
+  /** Empty for the gas coin — no quote, and it is kept out of the totals. */
   usd_value: string
+  /** The chain's own coin. Pays gas; cannot be listed or sent as a token. */
+  native?: boolean
 }
 
 export interface Wallet {
@@ -174,6 +177,17 @@ export interface OtcLeg {
   receipt_ref?: string
   /** 打开那份回执的链接：后端签过、有时效。ref 只是文件名，单独拿着打不开。 */
   receipt_url?: string
+  /** 这笔付款的每一页,按提交顺序。上面那两个字段只指最后一张,留着是给
+      只显示一张的旧界面用的——要核验付款的那一方必须看到全部。 */
+  receipts?: ReceiptPage[]
+}
+
+/** 一笔付款凭证里的一页。 */
+export interface ReceiptPage {
+  ref: string
+  url?: string
+  /** 核过没有。分两轮交上来的一组不会整体看着像没人看过。 */
+  verified: boolean
 }
 
 export interface OrderEvent {
@@ -202,6 +216,10 @@ export interface Order {
   card_id?: string
   state_deadline?: string
   seconds_left: number
+  /* 该往哪儿转钱。只有欠这笔款的那一方、且只在还没转的时候，后端才发这一段；
+     其余任何人拿到的都是 undefined。没有它就是「拿不到收款信息」——
+     可能是对方没登记账户，也可能是这台后端没配加密密钥。 */
+  payout?: Payout
   escrow?: Escrow
   rail: RailStop[]
   otc?: OtcLeg
@@ -213,7 +231,9 @@ export interface Order {
   /** 这一单是不是我发起的（OTC 里就是「我是吃单方」）。撮合那一站还没有
       phase 和 actor，这是唯一能区分两方的字段——确认只属于其中一方。 */
   yours?: boolean
-  trust_score: number
+  /** 下单那一刻对手方的信任分快照。跟 Discover 上那个环是同一个来源,
+      同一个商户在两处看到的必然是同一个数。null = 那时还没有记录。 */
+  trust_score: number | null
   /** 对手方的成绩单与资质件。跟工单一起发，两个数才来自同一时刻。 */
   peer_profile?: PeerProfile
   /** 这一单的手续费，下单那一刻定死的。 */
@@ -373,6 +393,30 @@ export interface PreparedOffer {
   amount_wei: string
   chain_id: number
   network: string
+
+  /* 外部入金那一档。空表示这台服务器没开这个功能（没配工厂）。
+     deposit_total 才是**要让人转的数**——它等于挂单量加手续费，比 amount_wei
+     大一点。拿 amount_wei 去显示的话，人转的会比该转的少，扫不动。 */
+  deposit_addr?: string
+  deposit_total?: string
+  deposit_fee?: string
+  /** Unix 秒。过了这个点这份配置不再自动上架，钱只能取回。 */
+  deposit_expiry?: number
+}
+
+/** 一笔外部入金此刻怎么样了。见后端 app.DepositStatus。 */
+export interface DepositStatus {
+  status: 'waiting' | 'swept' | 'expired'
+  address: string
+  /** 挂单量。要转的是它加手续费，不是它本身。 */
+  need: string
+  /** 此刻链上真有的。收到一部分时它介于 0 和 need 之间。 */
+  received: string
+  sweep_tx?: string
+  /** 挂单是不是真的上架了。和「已扫进托管」是两件事——扫币在链上，建挂单在
+      它之后，后者失败过。 */
+  listed: boolean
+  expires_at: number
 }
 
 export interface CatalogAsset {
@@ -412,6 +456,20 @@ export interface Allowance {
 }
 
 // ── 收款方与提现 ──
+
+/**
+ * 一笔单的收款信息,发给该付款的那一方。
+ *
+ * 跟 BankAccount 不是一个东西:那个是「我自己的账户簿」,号码永远是掩码;
+ * 这个是「你要把钱打到这里」,号码是完整的——掩码转不了账。
+ */
+export interface Payout {
+  holder: string
+  bank: string
+  account_no: string
+  currency: string
+  region: string
+}
 
 /** 法币收款账户。account_no 恒为掩码——全量号码从不落库。 */
 export interface BankAccount {
@@ -491,6 +549,34 @@ export interface KycWarning {
   decision?: string
 }
 
+/** 从注册文件上读出来的公司信息。跟 KycIdentity 对称。 */
+export interface KybBusiness {
+  legal_name?: string
+  reg_number?: string
+  entity_type?: string
+  /** YYYY-MM-DD */
+  incorporated?: string
+  /** Incorporated / Dissolved … */
+  status?: string
+  /** ISO2 */
+  country?: string
+  address?: string
+  city?: string
+  postcode?: string
+  doc_type?: string
+  official?: boolean
+  directors?: string[]
+}
+
+/** 一次企业核验的结论。 */
+export interface KybResult {
+  status: 'accept' | 'review' | 'reject'
+  business: KybBusiness
+  warnings?: { code: string; description: string; severity: string; decision: string }[]
+  /** 这次没有核验任何东西（读的是本地 fixture）。界面必须说出来。 */
+  simulated: boolean
+}
+
 /** 一条法币收款渠道。由后端目录发,不在前端写死——见 useRails 的说明。 */
 export interface Rail { name: string; fiat: string }
 export interface RailGroup { group: string; fiat: string; rails: Rail[] }
@@ -537,6 +623,14 @@ export interface MakerApp {
   listing_done: boolean
   approved: boolean
   form: string
+  /** 半路存下的那份,还没提交。表单重开时恢复它,提交后后端会清掉。 */
+  draft?: Record<string, unknown>
+  /** 最近一次企业核验的结论。企业那条路第 3 步拿它预填并锁住。 */
+  kyb?: KybResult
+  /** 这份草稿属于哪一段。两段表单字段完全不同,恢复错了比不恢复更糟。 */
+  draft_phase?: 'kyc' | 'listing'
+  /** 上次填到第几步。丢掉它的话,内容记住了却还要从头点八页。 */
+  draft_step?: number
   reject_reason?: string
   /**
    * 最近一次预审逐项的问题。每条都指到表单字段的 key——界面据此把话

@@ -331,13 +331,24 @@ export default function MakerThread({
         </>
       )}
 
-      {revise === 'kyc'
+      {/* 重审期间收掉上一次的结论。
+
+          它说的是「你交的上一版有这两处要改」。人已经改完又交了一次,正等着
+          听结果,这时把旧评语摆在那儿只会让他以为改了没用——而那两条确实
+          可能已经不成立了。等新结论回来再显示,显示的就一定是当下的判断。 */}
+      {revise === 'kyc' && pending !== 'kyc'
         ? <Revise reason={app?.reject_reason ?? ''} app={app} identity={identity} onDone={onDone} />
         : null}
 
-      {kycOk && (
+      {kycOk && (from === 'trade' || kycDone) && (
         /* 通过那两条话逐字取自参照：为下单来验的只说「可以交易了」，
-           直接来入驻的才带出下一段。 */
+           直接来入驻的才带出下一段。
+
+           入驻那条还要 kycDone：证件核验通过只说明这个人是真人，不说明
+           九步材料交上来了——国籍、税务居民地、资金来源那些 DocuPass 从
+           没问过。只读 kycOk 的话，做完活体就被告知「身份已通过，下一步
+           配置交易条款」，整段自述被跳过。为下单来验的人不看这一段，
+           所以 from==='trade' 照旧。 */
         <Them>
           {from === 'trade'
             ? '✓ Identity verified — you can trade now.'
@@ -373,7 +384,7 @@ export default function MakerThread({
         </>
       )}
 
-      {revise === 'listing'
+      {revise === 'listing' && pending !== 'listing'
         ? <Revise reason={app?.reject_reason ?? ''} app={app} identity={identity} onDone={onDone} />
         : null}
 
@@ -403,10 +414,25 @@ export default function MakerThread({
           onPosted={(o, sym) => {
             setToOffer(false); setPosted(ps => [...ps, { o, sym }]); onDone()
           }} />
+      ) : card && !app ? (
+        /* 申请还没拉回来,先什么都不铺。
+
+           门控是从 app 的几个布尔推出来的,而 app 为 null 时它们全是 false
+           ——于是「还没交身份材料」这个判断在数据缺席的情况下永远成立,
+           表单会以默认状态先铺一遍:个人、第 1 步、空表。等数据到了,
+           useState 的初始化函数早就跑完了,草稿和已选的主体再也塞不回去。
+
+           后端对没有申请的人也回一个对象,所以 null 只可能是「还没加载完」。 */
+        <div className="mkempty">Loading your application…</div>
       ) : card ? (
         <MakerFlow phase={card} identity={identity}
           initial={card === 'kyc' ? f.kyc : (f.listing as unknown as Record<string, unknown>)}
           issues={app?.review_issues}
+          /* 只有同一段的草稿才恢复。两段表单字段完全不同,把身份那段的
+             内容塞进交易条款表单,比不恢复糟得多。 */
+          draft={app?.draft_phase === card ? app.draft : undefined}
+          draftStep={app?.draft_phase === card ? app.draft_step : 0}
+          kyb={app?.kyb}
           resubmit={card === 'listing' && listDone}
           onPending={setPending}
           onSubmitted={submitted}

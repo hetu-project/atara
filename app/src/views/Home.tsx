@@ -37,7 +37,6 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   const [text, setText] = useState('')
   const [act, setAct] = useState<Act | null>(null)
   const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')
   const [cands, setCands] = useState<MatchCandidate[]>([])
   const [chosen, setChosen] = useState<MatchCandidate | null>(null)
 
@@ -153,6 +152,10 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   }, [hist, identity])
 
   const { toast } = useToast()
+  /* Order and voice failures report in the corner toast, same as on the
+     thread view. The centred grey line they used to occupy read like a
+     system notice in the stream rather than a reply to what was just done. */
+  const fail = (msg: string) => toast(msg, { kind: 'err' })
   const { run, start, reset } = useAssessment()
 
   /**
@@ -169,7 +172,6 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     reset()
     setCands([])
     setChosen(null)
-    setErr('')
     /* 只收屏幕，不碰 isDeskOpen：那个标志归侧栏所有（它在 Home 挂载之前就
        表过态了）。这里跟着改的话，从 Chats 点进来的那一下会被 mount 时的
        这次调用抹掉——刚说要看对话，转头又被收起来。 */
@@ -221,7 +223,6 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
 
   /** 点胶囊入口：手动开的面板一律实心，打字不去抢。 */
   const toggle = (k: ActKind) => {
-    setErr('')
     setAct(a => (a && a.k === k && !a.auto ? null : { ...blank(k), auto: false }))
   }
 
@@ -229,7 +230,6 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
       语音转写也走这里：说出来的和打出来的同一条路，下面那排胶囊才会跟着长。 */
   const onType = (q: string) => {
     setText(q)
-    setErr('')
     if (act && !act.auto) return               // 用户手动开的面板，打字不去抢
     if (!q.trim()) { setAct(a => (a?.auto ? null : a)); return }
     const r = liveParse(q, peers) as null | {
@@ -262,7 +262,6 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
    * 装的是「正在长出来的那一段」，收完由 onDone 归位到消息列表里。
    */
   const ask = async (q: string) => {
-    setErr('')
     setFailed(null)
     setText('')
     /* 自己那句先画出来。等后端确认再画的话，网络慢的时候输入框已经清空、
@@ -326,7 +325,7 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     /* 身份门在最前面：撮合、评估都跑完了才说「你还没验身份」，
        那十几秒就白等了。 */
     if (kyc.require()) return
-    setBusy(true); setErr('')
+    setBusy(true)
     try {
       /* 先撮合后评估：对手方还没出现就跑评估，评的是谁？
          后端扫全池、按成绩排序，顺带把装不下这笔量的挡掉。 */
@@ -334,12 +333,12 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
         intent: a.k, amount: String(a.amt), amount_kind: 'coin',
         asset: a.coin, fiat: a.fiat,
       })
-      if (m.violation) { setErr(m.violation.message); return }
-      if (!m.candidates?.length) { setErr('No live offers on that side right now'); return }
+      if (m.violation) { fail(m.violation.message); return }
+      if (!m.candidates?.length) { fail('No live offers on that side right now'); return }
       /* 指名了就用指名的，没指名交给撮合的头名——成绩最好的排在前面，
          所以排序本身就是默认选择。 */
       const pick = (a.peer && m.candidates.find(c => c.name === a.peer)) || m.candidates[0]
-      if (!pick) { setErr('No live offers on that side right now'); return }
+      if (!pick) { fail('No live offers on that side right now'); return }
       setCands(m.candidates)
       setChosen(pick)
       // 评估当着面跑完，再开工单——不评就下单，那张卡就成了既成事实
@@ -349,7 +348,7 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
       })
       go({ view: 'order', id: ord.id })
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Request failed')
+      fail(e instanceof Error ? e.message : 'Request failed')
     } finally { setBusy(false) }
   }
 
@@ -489,7 +488,6 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
             东西了，它还在问你要不要开始。 */}
         {run ? <Thinking /> : (!cands.length && !kyc.maker && !shown.length && streaming === null &&
           <div id="empty"><h3>What would you like to settle?</h3></div>)}
-        {err ? <p className="roempty" style={{ textAlign: 'center' }}>{err}</p> : null}
       </div>
 
       <Composer
@@ -512,7 +510,7 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
         sendLabel="Compose"
         streaming={streaming !== null}
         onStop={stopAsk}
-        onVoiceError={setErr}
+        onVoiceError={fail}
       />
     </div>
   )

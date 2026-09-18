@@ -1,14 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import CoinMark, { coinHue } from '../components/CoinMark'
 import CountUp from '../components/CountUp'
 import * as ep from '../api/endpoints'
+import { LIVE_CHANGED } from '../api/events'
 import CopyButton from '../components/CopyButton'
 import { CHIP, IArrow, IBank, ICheck, IPen, IReceive, ISend } from '../components/icons'
 import { useApi } from '../hooks/useApi'
 import { useKycGate } from '../hooks/useKycGate'
+import { useToast } from '../components/Toast'
 import { AllowanceModal, BankAccountsModal, ReceiveModal, SendModal } from '../components/WalletModals'
 import { go } from '../hooks/useRoute'
 import type { Allowance, WalletAsset } from '../api/types'
+import { Failed, Pending } from '../components/Loading'
 
 const fmtAmt = (n: number) =>
   n < 1 ? n.toFixed(4).replace(/0+$/, '').replace(/\.$/, '') : n.toLocaleString()
@@ -44,21 +47,41 @@ export default function Account({ identity }: { identity: string }) {
      when someone Sends USDT. This page used to fetch wallet once on enter,
      so a recipient sitting here never left the old balance. 15s matches the
      order-page backstop — the figure comes from RPC, not the scheduler. */
-  const { data: w, reload: reloadW } = useApi(() => ep.wallet(identity), [identity], 15000)
-  const { data: allow, reload } = useApi(() => ep.allowances(identity), [identity])
-  const { data: mine } = useApi(() => ep.myOffers(identity), [identity])
-  const { data: orders } = useApi(() => ep.orders(identity), [identity])
+  const { data: w, error: wErr, reload: reloadW } =
+    useApi(() => ep.wallet(identity), [identity], 15000)
+  const { data: allow, error: allowErr, reload } = useApi(() => ep.allowances(identity), [identity])
+  /* 挂单列表要听实时流：外部入金那一档是**后端在人离开之后**才把挂单建起来的
+     （钱到了才建），浏览器这边没有任何理由知道它发生了。 */
+  const { data: mine, error: mineErr, reload: reloadOffers } =
+    useApi(() => ep.myOffers(identity), [identity])
+  useEffect(() => {
+    addEventListener(LIVE_CHANGED, reloadOffers)
+    return () => removeEventListener(LIVE_CHANGED, reloadOffers)
+  }, [reloadOffers])
+  const { data: orders, error: ordersErr, reload: reloadOrders } =
+    useApi(() => ep.orders(identity), [identity])
+  const { toast } = useToast()
 
   const saveName = async () => {
     const v = draft.trim()
     setRenaming(false)
     if (!v || v === initial) return
-    try { await ep.rename(v, identity); reloadMe() } catch { /* 后端会说原因，这里不吞成静默失败 */ }
+    try {
+      await ep.rename(v, identity)
+      reloadMe()
+    } catch (e) {
+      /* The field already closed. An inline error has nowhere to sit. */
+      toast(e instanceof Error ? e.message : 'Could not update the name', { kind: 'err' })
+    }
   }
 
   const cards = allow ?? []
   const card = cards.find(c => c.id === pick) ?? cards[0]
   const assets = w?.assets ?? []
+  /* The gas coin sits in the list but is not a token: it cannot be listed,
+     sent through the token path, or granted as an allowance. Pickers and
+     defaults take this subset. */
+  const tradable = assets.filter(a => !a.native)
   /* 还挂着的单：卖完（filled）和下架（delisted）的不算。它们已经不占着钱、
      也不能被吃，摆在「Your listings」里只会让人以为还在市场上。 */
   const live = (mine ?? []).filter(o => o.status === 'active')
@@ -68,7 +91,7 @@ export default function Account({ identity }: { identity: string }) {
    * 先画 $0 再跳到真数，等于先说了一句会让人做决定的假话（而且它长得完全
    * 像真话，没人会去核对）。只看首屏：15 秒那轮刷新时数字已经在屏幕上了，
    * 再变回骨架反而像坏了。 */
-  const loadingWallet = w === undefined
+  const loadingWallet = w === null
   const avail = Number(w?.on_chain_usd ?? 0)
   const esc = Number(w?.in_escrow_usd ?? 0)
   const escN = assets.filter(a => Number(a.in_escrow) > 0).length
@@ -157,6 +180,9 @@ export default function Account({ identity }: { identity: string }) {
         <div className="pgrid pg-a">
           <section className="pmod">
             <div className="pmh"><h4>Wallet</h4><span className="ad">Non-custodial</span></div>
+            {/* The bars below stay grey on failure rather than turning into
+                $0; this line says why they are grey. */}
+            {loadingWallet && wErr && <Failed error={wErr} onRetry={reloadW} compact />}
             <div className="atot"><b className="av num">
               {loadingWallet ? <i className="sk" style={{ width: '6.5em' }} /> : <>$<CountUp value={avail + esc} /></>}
             </b></div>
@@ -208,9 +234,11 @@ export default function Account({ identity }: { identity: string }) {
             </div>
             {card ? (
               <Card c={card} all={cards} flip={flip} onFlip={() => setFlip(f => !f)}
-                onPick={setPick} asset={w?.assets?.[0]?.asset ?? 'USDT'}
+                onPick={setPick} asset={tradable[0]?.asset ?? 'USDT'}
                 /* 撤销在编辑弹窗里，不在卡片下面——见 Card 里的注释。 */
                 onEdit={() => { setEditing(true); setSheet('allowance') }} />
+            ) : allow === null ? (
+              allowErr ? <Failed error={allowErr} onRetry={reload} compact /> : <Pending rows={2} />
             ) : <p className="rnote">No allowances yet.</p>}
           </section>
         </div>
@@ -230,7 +258,7 @@ export default function Account({ identity }: { identity: string }) {
                 {/* 计数也要等：先写「Assets · 0」再跳到 2，说的是同一句假话。 */}
                 <div className="pmh"><h4>Assets{loadingWallet ? '' : ` · ${assets.length}`}</h4>
                   <button className="h3go" onClick={() => go({ view: 'payments' })}>Statement <IArrow /></button></div>
-                <Assets rows={assets} />
+                {loadingWallet ? <Pending rows={2} /> : <Assets rows={assets} />}
                 <p className="rnote">
                   Digital assets only — <b>fiat never enters the account</b>.
                   <i className="info" tabIndex={0} data-tip="The fiat leg of an OTC trade settles bank-to-bank between the two parties. We verify the receipt but never hold the funds.">i</i>
@@ -253,6 +281,8 @@ export default function Account({ identity }: { identity: string }) {
                       </div>
                     ))}
                   </div>
+                ) : mine === null ? (
+                  mineErr ? <Failed error={mineErr} onRetry={reloadOffers} compact /> : <Pending rows={2} />
                 ) : (
                   <ListingsEmpty everListed={!!mine?.length} />
                 )}
@@ -274,7 +304,11 @@ export default function Account({ identity }: { identity: string }) {
                       </span>
                     </button>
                   ))}
-                  {!closed.length && <p className="rnote">Nothing settled yet.</p>}
+                  {!closed.length && (orders === null
+                    ? (ordersErr
+                      ? <Failed error={ordersErr} onRetry={reloadOrders} compact />
+                      : <Pending rows={3} />)
+                    : <p className="rnote">Nothing settled yet.</p>)}
                 </div>
               </>
             )}
@@ -283,16 +317,27 @@ export default function Account({ identity }: { identity: string }) {
         {sheet === 'receive' && <ReceiveModal w={w ?? null} onClose={() => setSheet('')} />}
         {sheet === 'bank' && <BankAccountsModal identity={identity} onClose={() => setSheet('')} />}
         {sheet === 'send' && (
-          <SendModal identity={identity} assets={assets}
+          <SendModal identity={identity} assets={tradable}
             onClose={() => setSheet('')} onDone={() => reloadW()} />
         )}
         {sheet === 'allowance' && (
-          <AllowanceModal identity={identity} asset={w?.assets?.[0]?.asset ?? 'USDT'}
+          <AllowanceModal identity={identity} asset={tradable[0]?.asset ?? 'USDT'}
             walletKind={me?.wallet_kind ?? 'ext'}
             edit={editing ? card : undefined}
             onRevoke={card ? async () => {
-              await ep.revokeAllowance(card.id, identity)
-              reload(); setSheet(''); setEditing(false)
+              const name = card.spender
+              const live = card.status === 'live'
+              try {
+                await ep.revokeAllowance(card.id, identity)
+                toast(
+                  name === 'Me'
+                    ? (live ? 'Spending disabled' : 'Spending re-enabled')
+                    : (live ? `Revoked — ${name}` : `Re-issued — ${name}`),
+                )
+                reload(); setSheet(''); setEditing(false)
+              } catch (e) {
+                toast(e instanceof Error ? e.message : 'Could not change that allowance', { kind: 'err' })
+              }
             } : undefined}
             onClose={() => { setSheet(''); setEditing(false) }}
             onDone={() => { reload(); setSheet(''); setEditing(false) }} />
@@ -311,6 +356,26 @@ function Assets({ rows }: { rows: WalletAsset[] }) {
         const pct = usd / tot * 100
         const hue = coinHue(a.asset)
         const locked = Number(a.in_escrow)
+        const bal = Number(a.on_chain)
+        /* The gas coin. No USD (no quote), no share bar (not part of the
+           total). The amount takes the big slot, and an empty balance is
+           said out loud: every listing and transfer from this wallet fails at
+           signing without it, and nothing else on the page would say why. */
+        if (a.native) {
+          return (
+            <div className="arow3" key={a.asset}>
+              <CoinMark asset={a.asset} />
+              <span className="anm"><b>{a.asset}</b>
+                <em>{a.network} · pays gas</em></span>
+              <span className="aright">
+                <b className="num">{fmtAmt(bal)} {a.asset}</b>
+                <em className="num" style={bal > 0 ? undefined : { color: 'var(--warn)' }}>
+                  {bal > 0 ? 'Not tradable' : 'No gas — listing and sending need it'}
+                </em>
+              </span>
+            </div>
+          )
+        }
         return (
           <div className="arow3" key={a.asset}>
             <CoinMark asset={a.asset} />

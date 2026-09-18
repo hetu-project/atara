@@ -9,14 +9,23 @@ import { BASE, getIdentity, readAuthToken } from './client'
  * between. The cost is that reconnection is ours to write, which is the loop
  * below; desk.ts reads a stream the same way.
  *
- * The stream carries no data of consequence: an event says "something changed",
- * and the hooks refetch through the normal endpoints. So a missed event costs a
- * round trip rather than a wrong screen, and the `sync` the server sends on
- * every connect closes whatever gap a dropped connection opened.
+ * An event still means "refetch": the hooks reload through the normal
+ * endpoints. A few fields ride along (order id, ref, new state) so a toast
+ * can name what moved when the person is looking at something else.
  */
 
 /** Fired when the stream says something changed, and on every (re)connect. */
 export const LIVE_CHANGED = 'atara:live-changed'
+/** Fired with the parsed payload, except on the reconnect `sync`. */
+export const LIVE_EVENT = 'atara:live-event'
+
+export interface LivePayload {
+  kind: string
+  peer?: string
+  order_id?: string
+  ref?: string
+  state?: string
+}
 
 const FIRST_RETRY = 1000
 const MAX_RETRY = 30_000
@@ -35,7 +44,12 @@ export function openEventStream(): () => void {
   let timer: number | undefined
   let fails = 0
 
-  const announce = () => dispatchEvent(new CustomEvent(LIVE_CHANGED))
+  const announce = (payload?: LivePayload) => {
+    dispatchEvent(new CustomEvent(LIVE_CHANGED))
+    if (payload?.kind && payload.kind !== 'sync') {
+      dispatchEvent(new CustomEvent<LivePayload>(LIVE_EVENT, { detail: payload }))
+    }
+  }
 
   const run = async () => {
     if (stopped) return
@@ -66,9 +80,10 @@ export function openEventStream(): () => void {
         const frames = buf.split('\n\n')
         buf = frames.pop() ?? ''
         for (const f of frames) {
-          // Comment lines (": ping") are the heartbeat and carry nothing.
-          if (!f.startsWith('event:')) continue
-          announce()
+          const p = parseFrame(f)
+          /* Comment frames (": ping") keep the socket alive and carry nothing. */
+          if (!p) continue
+          announce(p)
         }
       }
     } catch {
@@ -89,4 +104,25 @@ export function openEventStream(): () => void {
     if (timer) clearTimeout(timer)
     ctrl?.abort()
   }
+}
+
+function parseFrame(raw: string): LivePayload | undefined {
+  let event = ''
+  let data = ''
+  for (const line of raw.split('\n')) {
+    if (line.startsWith(':')) continue
+    if (line.startsWith('event:')) event = line.slice(6).trim()
+    else if (line.startsWith('data:')) data += line.slice(5).trim()
+  }
+  if (!event) return
+  let extra: LivePayload = { kind: event }
+  if (data) {
+    /* 展开在前、kind 在后：SSE 的 `event:` 那一行才是「这是什么事件」的
+       权威，data 里带的是 peer / order_id 这些附加信息。反过来写的话，
+       data 里若出现一个 kind 就会把 event 行盖掉——而那一行是我们自己
+       发的，data 是从 JSON 解出来的。 */
+    try { extra = { ...(JSON.parse(data) as Partial<LivePayload>), kind: event } }
+    catch { /* a malformed frame still means "something changed" */ }
+  }
+  return extra
 }

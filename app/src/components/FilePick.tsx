@@ -36,7 +36,7 @@ export default function FilePick({
   disabled = false,
 }: {
   /** 上传成功后拿到的 file_ref。 */
-  onDone: (ref: string) => void
+  onDone: (ref: string, meta: { name: string; url?: string }) => void
   /** 已经传过的那一份（回填用）。给了就直接显示成已附。 */
   value?: string
   label?: string
@@ -80,7 +80,10 @@ export default function FilePick({
     j.done.then(u => {
       job.current = null
       setSt({ s: 'ok', name: f.name, ref: u.file_ref, url: u.url })
-      onDone(u.file_ref)
+      /* Hand back what it is, not just the reference. A caller that has to
+         show the person what they picked — before doing something with it
+         that cannot be taken back — has no way to name the file otherwise. */
+      onDone(u.file_ref, { name: f.name, url: u.url })
     }).catch((e: unknown) => {
       job.current = null
       const msg = e instanceof Error ? e.message : 'Upload failed'
@@ -109,8 +112,11 @@ export default function FilePick({
     return (
       <>
         {input}
+        {/* className overrides the default emphasis. When this button is the
+            one action on the card it is primary; when it sits beside a submit
+            it must not compete with it. */}
         <button type="button" disabled={disabled && !up}
-          className={'btn btn-primary fpbtn1' + (up ? ' uping' : '')}
+          className={'btn ' + (className || 'btn-primary') + ' fpbtn1' + (up ? ' uping' : '')}
           style={up ? ({ ['--pct' as string]: st.pct + '%' } as React.CSSProperties) : undefined}
           onClick={() => { if (up) { job.current?.abort(); return } pick.current?.click() }}>
           {up ? `${st.pct}% · Cancel` : label}
