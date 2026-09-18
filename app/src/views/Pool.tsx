@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import * as ep from '../api/endpoints'
+import { LIVE_CHANGED } from '../api/events'
 import { useAssessment } from '../hooks/useAssessment'
 import { ApiError } from '../api/client'
 import { scoreBand } from '../api/types'
@@ -46,7 +47,18 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
      而且中途根本不知道后面还有什么。 */
   const [picking, setPicking] = useState(false)
 
-  const { data, error, reload } = useApi(() => ep.offers(side), [side])
+  /* 15s, like every other list that changes on its own. This one was the
+     exception: whoever opened Discover saw the pool as it stood at that moment,
+     and kept seeing it — listings posted since never appeared, listings taken
+     since stayed clickable until the backend refused the order. The live
+     stream cannot cover it: the offer event goes only to the listing's owner.
+     It still helps for that owner, whose external-deposit listing goes up
+     minutes after they closed the sheet. */
+  const { data, error, reload } = useApi(() => ep.offers(side), [side], 15000)
+  useEffect(() => {
+    addEventListener(LIVE_CHANGED, reload)
+    return () => removeEventListener(LIVE_CHANGED, reload)
+  }, [reload])
   const { data: assets } = useApi(() => ep.assets(), [])
   const { data: fiatGroups } = useApi(() => ep.fiats(), [])
   const { data: mine } = useApi(() => ep.myOffers(identity), [identity])

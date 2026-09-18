@@ -107,9 +107,23 @@ export function useApi<T>(
 
     const delay = error ? backoff(fails.current) : pollMs
     if (!delay) return
+    /* No poll while the tab is in the background. Nobody is looking, and a
+       page left open on Discover would otherwise ask every 15 seconds for as
+       long as the laptop stays awake. Retries after an error still run: they
+       are about getting the page back to a working state, not about freshness.
+       The visibility effect below asks once the moment the tab comes back, so
+       the reader sees the current list, not one that is up to a poll old. */
+    if (!error && document.hidden) return
     const t = setTimeout(() => setTick(n => n + 1), delay)
     return () => clearTimeout(t)
   }, [settled, pollMs, error])
+
+  useEffect(() => {
+    if (!pollMs) return
+    const back = () => { if (document.visibilityState === 'visible') setTick(n => n + 1) }
+    document.addEventListener('visibilitychange', back)
+    return () => document.removeEventListener('visibilitychange', back)
+  }, [pollMs])
 
   /* Refetch when sign-in or sign-out completes.
    *
