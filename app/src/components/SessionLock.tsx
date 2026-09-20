@@ -131,6 +131,9 @@ export function LockScreen({
   const [err, setErr] = useState('')
   const [shake, setShake] = useState(0)
   const [busy, setBusy] = useState(false)
+  /* 先给哪一种。passkey 更好用，但它可能在这个域名上根本不存在——
+     见下面 byPasskey 的注释——所以这是个可以退的选择，不是定局。 */
+  const [byPw, setByPw] = useState(!hasPasskey)
   const ini = (name.trim()[0] || 'D').toUpperCase()
   const span = LOCK_IDLE >= 60000
     ? `${Math.round(LOCK_IDLE / 60000)} minutes`
@@ -142,8 +145,21 @@ export function LockScreen({
       await assertPasskey()
       onUnlock()
     } catch (e) {
-      // 用户取消、或者这台设备上没有这把钥匙——都照实说，别只是没反应
-      setErr(e instanceof Error ? e.message : 'Could not verify your passkey')
+      /* 失败就退回密码，别把人关在门外。
+
+         hasPasskey 读的是 Privy 账户上登记的那一把，而 WebAuthn 的钥匙是
+         **绑在域名上**的。同一个账户换一个部署地址——本地、IP、vercel.app、
+         自己的域名——账户上还写着「有 passkey」，浏览器这边却一把都找不到。
+         那时屏幕上只剩一颗按不动的按钮和「签出」，而人什么都没做错。 */
+      const why = e instanceof Error ? e.message : 'Could not verify your passkey'
+      /* 浏览器**故意**不区分「用户取消」和「这里没有这把钥匙」——区分了就等于
+         告诉一个页面某个账户有没有注册过。所以两种可能都要说，并且给出那条
+         一定管用的退路。没有这一句的话，屏幕上只有一条含糊的报错和一颗
+         按不动的按钮。 */
+      setErr(pw ? why
+        : why + ' — it may have been cancelled, or set up at a different address '
+          + 'and so is not available here. Signing out and back in will let you in.')
+      if (pw) setByPw(true)
     } finally { setBusy(false) }
   }
 
@@ -160,24 +176,15 @@ export function LockScreen({
     <div id="lock" className="show" role="dialog" aria-modal="true" aria-label="Session locked">
       <div className="lksheet">
         <span className="lkav">{ini}</span>
-        {/* 有 passkey 时标题是「已锁定」而不是「输入你的密码」——
-            这屏上根本没有密码框，标题却在叫人输密码，那是自相矛盾。 */}
-        <h3>{hasPasskey ? 'Session locked' : 'Enter your password'}</h3>
+        {/* 标题跟着屏上真正摆着的东西走：没有密码框就别叫人输密码。 */}
+        <h3>{byPw ? 'Enter your password' : 'Session locked'}</h3>
         <p>
           For your security, this session locks after {span} of inactivity.
-          {hasPasskey
-            ? ' Unlock with your passkey to continue.'
-            : ' Enter your password to continue.'}
+          {byPw
+            ? ' Enter your password to continue.'
+            : ' Unlock with your passkey to continue.'}
         </p>
-        {hasPasskey ? (
-          <>
-            <div className="pwerr">{err}</div>
-            <button className="btn btn-primary lkok" disabled={busy}
-              onClick={() => void byPasskey()}>
-              {busy ? 'Waiting for your passkey…' : 'Unlock with passkey'}
-            </button>
-          </>
-        ) : (
+        {byPw ? (
           <>
             <input type="password" className={'pwin' + (shake ? ' shake' : '')} key={shake}
               autoFocus autoComplete="off" aria-label="Password" value={v}
@@ -185,6 +192,27 @@ export function LockScreen({
               onKeyDown={e => { if (e.key === 'Enter') submit() }} />
             <div className="pwerr">{err}</div>
             <button className="btn btn-primary lkok" onClick={submit}>Unlock</button>
+            {/* 有 passkey 的话留一条回去的路：刚才那次失败可能只是点错了取消 */}
+            {hasPasskey && (
+              <button className="lkalt" onClick={() => { setErr(''); setByPw(false) }}>
+                Use your passkey instead
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="pwerr">{err}</div>
+            <button className="btn btn-primary lkok" disabled={busy}
+              onClick={() => void byPasskey()}>
+              {busy ? 'Waiting for your passkey…' : 'Unlock with passkey'}
+            </button>
+            {/* 这一把可能是在另一个域名上注册的，在这里找不到。没设过密码
+                就没有这条路——那时只剩签出，所以上面那句错误必须说清楚。 */}
+            {pw && (
+              <button className="lkalt" onClick={() => { setErr(''); setByPw(true) }}>
+                Use your password instead
+              </button>
+            )}
           </>
         )}
         {/* 共用屏幕的场景下，回到座位的可能不是同一个人 */}
