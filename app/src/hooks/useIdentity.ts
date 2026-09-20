@@ -33,8 +33,11 @@ const SIGNED = 'atara-signed'
 export function useIdentity() {
   // ?as=<handle> 覆盖当前身份并写进 localStorage，同时视为已登录。
   // 演示台的必需品：开两个窗口各带一个 as，就能同时盯住交易的两侧。
+  // 只在 dev 构建生效：生产里后端不认这个头，让它「看起来登录了」只会
+  // 得到一屏 401。
+  const asParam = () => (import.meta.env.DEV ? new URLSearchParams(location.search).get('as') : null)
   const [handle, setHandle] = useState(() => {
-    const as = new URLSearchParams(location.search).get('as')
+    const as = asParam()
     if (as) {
       setIdentity(as)
       try { sessionStorage.setItem(SIGNED, '1') } catch { /* 隐身窗口 */ }
@@ -43,7 +46,7 @@ export function useIdentity() {
     return getIdentity()
   })
   const [signed, setSigned] = useState(() => {
-    if (new URLSearchParams(location.search).get('as')) return true
+    if (asParam()) return true
     try { return sessionStorage.getItem(SIGNED) === '1' } catch { return false }
   })
 

@@ -1,4 +1,4 @@
-import { BASE, ApiError, getIdentity, readAuthToken } from './client'
+import { BASE, ApiError, devHeaders, readAuthToken } from './client'
 import type { ApiErrorBody } from './types'
 
 /**
@@ -55,7 +55,7 @@ export const deskInfo = async (as?: string): Promise<DeskInfo> => {
 }
 
 async function deskHeaders(as?: string): Promise<Record<string, string>> {
-  const headers: Record<string, string> = { 'X-Atara-User': as ?? getIdentity() }
+  const headers: Record<string, string> = devHeaders(as)
   const token = await readAuthToken()
   if (token) headers.Authorization = 'Bearer ' + token
   return headers

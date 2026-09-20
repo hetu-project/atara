@@ -28,6 +28,29 @@ const money = (v: number, c: string) =>
   `${FIAT_SYM[c] ?? ''}${Math.round(v).toLocaleString()} ${c}`
 
 /**
+ * 剩余时间。单位要一直看得出来。
+ *
+ * 原来只有 `mm:ss` 一种写法，于是四小时的付款窗口渲染成 `240:00`，然后
+ * 239:59、239:58 一路往下——没有任何地方写着那是分钟。看的人只能猜，而这个
+ * 数正是「错过会记进成绩单」的那个数，猜错的代价不是看错一眼。
+ *
+ * 分三档，每一档都带着单位：
+ *   ≥ 1 天   `14d 2h`   —— 凭证档的异议窗口、兜底转人工
+ *   ≥ 1 小时 `3h 58m`   —— 法币腿、核验窗口。到这个尺度上秒是噪音
+ *   其余     `9:58`     —— 秒开始有意义了，用大家都认得的钟面写法
+ *
+ * 不做成「4 小时 / 4h」这种整数近似：窗口快走完时，`0h` 和 `12m` 是两件
+ * 完全不同的事。
+ */
+const leftText = (s: number) => {
+  if (s >= 86400) return `${Math.floor(s / 86400)}d ${Math.floor((s % 86400) / 3600)}h`
+  if (s >= 3600) {
+    return `${Math.floor(s / 3600)}h ${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}m`
+  }
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+/**
  * 一张工单的全过程，与 console.html 的 .deal 卡同构：
  * 状态行（可折叠）→ 轨道 → 主数字 → KV 组 → 说明句 → 动作行。
  *
@@ -197,7 +220,7 @@ export default function OrderDetail({
           {left > 0 && (
             <span className={'cd num' + (left <= 120 ? ' tight' : '')}
               title="Miss this window and the coins return — recorded as a default">
-              {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
+              {leftText(left)}
             </span>
           )}
           <span className="dchev" aria-hidden>⌃</span>

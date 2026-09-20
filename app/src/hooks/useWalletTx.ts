@@ -5,6 +5,8 @@ import {
   type Address, type Hex,
 } from 'viem'
 import type { ChainRow } from '../api/types'
+import { WalletTxError, readable } from '../api/walletError'
+export { WalletTxError, isWalletTxError } from '../api/walletError'
 
 /**
  * 用用户自己的钱包发交易。
@@ -54,30 +56,6 @@ export type TxStep =
   | { k: 'mining'; msg: string; hash: string }
   | { k: 'done'; hash: string }
   | { k: 'error'; msg: string }
-
-/**
- * 钱包那一侧出的错。
- *
- * 打上标记，好让调用方知道「这条已经在交易进度那里显示过了」——不然
- * 同一句话会被外层的错误提示再显示一遍，看着像出了两次错。
- */
-export class WalletTxError extends Error {
-  readonly walletTx = true
-}
-export const isWalletTxError = (e: unknown): e is WalletTxError =>
-  e instanceof Error && (e as WalletTxError).walletTx === true
-
-/** 钱包报错常常是一大段 JSON-RPC 原文。取第一句给人看，别把整段糊上去。 */
-function readable(e: unknown): string {
-  const raw = e instanceof Error ? e.message : String(e)
-  if (/User rejected|denied transaction|User denied/i.test(raw)) {
-    return 'You cancelled that transaction in your wallet'
-  }
-  if (/insufficient funds/i.test(raw)) {
-    return 'Not enough native coin in this wallet to pay gas'
-  }
-  return raw.split('\n')[0]!.slice(0, 200)
-}
 
 /**
  * @param info 这笔交易要发在哪条链上。挂单选了哪个网络就传哪条——

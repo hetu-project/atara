@@ -163,7 +163,12 @@ export const receipt = (orderId: string, fileRefs: string[], as?: string) =>
  * 自己核自己等于退回成「等对方点确认」，那正是协议要取代的东西。
  */
 export const verifyReceipt = (orderId: string, ok: boolean, reason = '', as?: string) =>
-  api.post<Order>(`/orders/${orderId}/verify-receipt`, { ok, reason }, { as })
+  ok
+    /* Clearing releases escrow, so it is signature grade — the same passkey
+       step as funding. Rejecting only freezes money and needs nothing extra. */
+    ? withConfirmation('verify', [orderId], 'signature',
+        tok => api.post<Order>(`/orders/${orderId}/verify-receipt`, { ok, reason }, { as, confirmation: tok }), as)
+    : api.post<Order>(`/orders/${orderId}/verify-receipt`, { ok, reason }, { as })
 
 /**
  * 开一张争议案卷。

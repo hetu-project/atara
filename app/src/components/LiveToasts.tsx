@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { LIVE_EVENT, type LivePayload } from '../api/events'
+import { NOTICE_EVENT, type Notice } from '../api/client'
 import { go, useRoute, type Route } from '../hooks/useRoute'
 import { useToast } from './Toast'
 
@@ -30,8 +31,15 @@ export default function LiveToasts() {
           : undefined,
       })
     }
+    /* Plain notices from the API layer (a declined signature, for one): no
+       route check, no View button — they are about what the person just did. */
+    const onNotice = (e: Event) => {
+      const n = (e as CustomEvent<Notice>).detail
+      if (n?.text) toast(n.text, { kind: n.kind })
+    }
     addEventListener(LIVE_EVENT, on)
-    return () => removeEventListener(LIVE_EVENT, on)
+    addEventListener(NOTICE_EVENT, onNotice)
+    return () => { removeEventListener(LIVE_EVENT, on); removeEventListener(NOTICE_EVENT, onNotice) }
   }, [toast])
 
   return null

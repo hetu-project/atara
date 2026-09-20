@@ -10,6 +10,7 @@ import { useToast } from '../components/Toast'
 import { useApi } from '../hooks/useApi'
 import { go } from '../hooks/useRoute'
 import OrderDetail from './OrderDetail'
+import { scoreText } from '../api/types'
 import type { Message, Order } from '../api/types'
 import { Failed, Pending } from '../components/Loading'
 
@@ -115,7 +116,7 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
           {/* 参照这一行是对手方的成绩单：多少笔、多少分。「N orders together」
               说的是我跟他做过几单，那是另一个数，而且它已经在下面的流里了。 */}
           <span>
-            {m ? `${m.deals} trades · score ${m.trust_score}` : 'No trades yet'}
+            {m ? `${m.deals} trades · ${scoreText(m.trust_score)}` : 'No trades yet'}
           </span>
         </span>
       </div>
