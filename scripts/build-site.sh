@@ -36,23 +36,30 @@ cp -r assets "$out"/
 # The console. Its base is /app/ (see app/vite.config.ts), so the build output
 # lands under app/ directly.
 #
-# Report the toolchain first. This lockfile passes validation on npm 11 and
-# fails on npm 10 — and the one npm 10 writes itself fails too, which is a
-# known weakness in how it resolves transitive dependencies. Which npm the
-# build machine runs is therefore the one fact that matters here, and it should
-# not have to be guessed at.
-echo "node $(node -v) · npm $(npm -v)"
-
-# Prefer npm ci: it installs strictly from package-lock.json, exactly what was
-# verified locally. npm install quietly moves minor versions, which is how
-# "works here, breaks there" starts.
+# Install with a pinned npm, not whatever the machine ships.
 #
-# But a failing ci must not keep the whole site from shipping. Fall back to
-# install, and say so out loud — a silent downgrade becomes an unexplainable
-# version difference weeks later.
-(cd app && { npm ci || {
+# npm 11.6 and npm 11.17 each reject the lockfile the other writes: one wants
+# @solana/kit@5.5.1 materialised, the other wants the @solana/* 2.3.0 tree, and
+# neither accepts the other's answer. They disagree about the same dependency
+# graph, so "which npm" is not a detail here — it decides whether `npm ci` can
+# run at all. A lockfile is only reproducible against the tool that wrote it.
+#
+# Regenerate the lockfile with this same pinned version whenever dependencies
+# change: (cd app && npx -y npm@$NPM_PIN install)
+NPM_PIN=11.17.0
+echo "node $(node -v) · npm $(npm -v) · pinned npm $NPM_PIN"
+
+# npm ci installs strictly from package-lock.json — exactly what was verified.
+# npm install quietly moves minor versions, which is how "works here, breaks
+# there" starts.
+#
+# A failing ci still must not keep the whole site from shipping, so fall back —
+# but say so out loud. A silent downgrade becomes an unexplainable version
+# difference weeks later. Note the fallback also rewrites the lockfile, so a
+# build that prints this line has changed a tracked file.
+(cd app && { npx -y npm@$NPM_PIN ci || {
   echo "!!! npm ci failed, falling back to npm install — this build may not match the lockfile"
-  npm install --no-audit --no-fund
+  npx -y npm@$NPM_PIN install --no-audit --no-fund
 }; } && npm run build)
 cp -r app/dist "$out/app"
 
