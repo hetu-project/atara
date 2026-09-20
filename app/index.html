@@ -8,6 +8,30 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
 <script>
+  /* Send anyone without an invite pass back to the landing page.
+
+     The gate lives on the landing page, and until now it only guarded the
+     click path: typing /app straight into the address bar walked past it.
+     This closes that, and it has to run here — the pass is in localStorage,
+     which no edge middleware can read.
+
+     Before the module script on purpose: someone who gets bounced should not
+     first download three megabytes of console.
+
+     The key is shared with the gate in the repo-root index.html. One name in
+     two files is a coupling; it is written down in both.
+
+     Not security. The digest the gate checks against ships in the landing
+     page's own source, and anyone can set this key by hand — see the note
+     above the gate. This keeps /app off the path of someone who was never let
+     in, nothing more. Skipped on localhost so `npm run dev` does not require
+     walking through the landing page first. */
+  try {
+    var host = location.hostname
+    var local = host === 'localhost' || host === '127.0.0.1' || host === '[::1]'
+    if (!local && localStorage.getItem('atara-gate') !== '1') location.replace('/')
+  } catch (e) { /* storage blocked — let them through rather than trap them */ }
+
   /* 内联在 head 里：晚一步就会先闪一眼浅色再切深色。与旧 console.html 同一手法。 */
   try {
     var t = localStorage.getItem('atara-theme')
