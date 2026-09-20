@@ -1,37 +1,59 @@
 #!/usr/bin/env bash
 #
-# 把落地页和控制台拼成一个站点，交给 Vercel 发布。
+# Assemble the landing page and the console into one site for Vercel.
 #
-#   /            index.html    落地页
-#   /api.html    api.html      开发者文档
-#   /app         app/dist      控制台（React）
+#   /            index.html    landing page
+#   /api.html    api.html      developer reference
+#   /app         app/dist      console (React)
 #
-# 为什么要有这一步：根目录原来的 vercel.json 是 outputDirectory: "."——
-# 把整个仓库目录原样发出去。只有几个 html 的时候那够用，但 app/ 合进来之后，
-# app/src/ 和 docs/ 里的内部材料会一起挂上公网，而 Vercel 不读 .gitignore。
+# Why this exists: the root vercel.json used to be outputDirectory: "." — it
+# published the whole repository directory as-is. That was fine while the repo
+# held a few html files, but with app/ merged in it would put app/src/ and the
+# internal notes under docs/ on the public internet, and Vercel does not read
+# .gitignore.
 #
-# 显式拼一个输出目录，比维护一张「不要发什么」的清单可靠：以后新增的东西
-# 默认不发布，而不是默认发布。忘记加白名单只会少发一个文件，忘记加黑名单
-# 是把不该公开的东西公开。
+# Naming what to publish beats maintaining a list of what to hide: anything
+# added later is unpublished by default. Forgetting to add something to an
+# allowlist costs one missing file; forgetting to add it to a denylist puts
+# something public that was never meant to be.
 set -euo pipefail
 
 out=.vercel-out
 rm -rf "$out" && mkdir -p "$out"
 
-# 落地页与开发者文档。两份都是自包含的单文件 HTML，不需要构建。
+# The landing page and the developer reference. Both are self-contained single
+# html files, so there is nothing to build.
 cp index.html api.html "$out"/
 cp -r assets "$out"/
 
-# console.html 不发。它是 app/ 的前身，落地页和 API 文档上的入口都已经切到
-# /app，所以它再没有入口——但它看起来还能用，而它不会跟着产品变。一个拿着
-# 旧链接进来的人会以为那就是产品，然后在一张死界面上点半天。404 更诚实。
-# 文件留在仓库里：app/src/styles/console.css 的来源就是它。
+# console.html is not published. It is the ancestor of app/, and every entry
+# point on the landing page and the API reference now goes to /app — so nothing
+# links to it any more. But it still looks usable while no longer following the
+# product, and someone arriving on an old link would take it for the real thing
+# and click around a dead screen. A 404 is more honest. The file stays in the
+# repository: app/src/styles/console.css came from it.
 
-# 控制台。base 是 /app/（见 app/vite.config.ts），产物直接落在 app/ 下。
+# The console. Its base is /app/ (see app/vite.config.ts), so the build output
+# lands under app/ directly.
 #
-# npm ci 而不是 npm install：严格按 package-lock.json 装，和本地验证过的一致。
-# install 会悄悄升次版本，于是出现「我这儿好的、线上坏的」。
-(cd app && npm ci && npm run build)
+# Report the toolchain first. This lockfile passes validation on npm 11 and
+# fails on npm 10 — and the one npm 10 writes itself fails too, which is a
+# known weakness in how it resolves transitive dependencies. Which npm the
+# build machine runs is therefore the one fact that matters here, and it should
+# not have to be guessed at.
+echo "node $(node -v) · npm $(npm -v)"
+
+# Prefer npm ci: it installs strictly from package-lock.json, exactly what was
+# verified locally. npm install quietly moves minor versions, which is how
+# "works here, breaks there" starts.
+#
+# But a failing ci must not keep the whole site from shipping. Fall back to
+# install, and say so out loud — a silent downgrade becomes an unexplainable
+# version difference weeks later.
+(cd app && { npm ci || {
+  echo "!!! npm ci failed, falling back to npm install — this build may not match the lockfile"
+  npm install --no-audit --no-fund
+}; } && npm run build)
 cp -r app/dist "$out/app"
 
 echo "site assembled in $out:"
