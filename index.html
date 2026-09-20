@@ -2265,18 +2265,25 @@
 })();
   /* ── Invite gate ─────────────────────────────────────────────
      Start opens it here rather than sending anyone to a second page to be
-     turned away. The pass is kept in sessionStorage under the key the
-     console's own head script reads, so clearing it there is one gate,
-     not two, and a visitor is never asked twice.
+     turned away. The pass is kept in localStorage, so it survives closing the
+     browser: asking again every morning buys nothing when the code is checked
+     against a digest shipped in this very page, and it is the kind of friction
+     people route around by leaving a tab open forever.
+
+     The cost is that a shared machine stays unlocked for whoever sits down
+     next. That is the right trade here only because this gate was never an
+     access control — see below.
 
      What this is worth, stated plainly: the page ships whatever it
      compares against, so the digest below raises reading the source to
      running a dictionary and nothing more. It keeps the console out of
      search results and off the path of someone clicking Start. Real
      access control belongs at the edge. */
+  /* Shared with the head script in app/index.html, which bounces anyone
+     without this key back here. One name in two files — say so in both. */
   const GATE_KEY='atara-gate';
   const GATE_SHA='71298716e654dd5291d9d8a322c9195e551a68b5bd214c5716d9a66cfef3439e';
-  const passed=()=>{try{return sessionStorage.getItem(GATE_KEY)==='1'}catch(e){return false}};
+  const passed=()=>{try{return localStorage.getItem(GATE_KEY)==='1'}catch(e){return false}};
   /* the page's script tag sits mid-document; the gate's markup is at the end
      of the body, so at parse time it does not exist yet. Wait for the DOM. */
   function bootGate(){
@@ -2341,7 +2348,7 @@
         note.textContent='That code is not valid.'; key.select();
         return;
       }
-      try{sessionStorage.setItem(GATE_KEY,'1')}catch(e){}
+      try{localStorage.setItem(GATE_KEY,'1')}catch(e){}
       gate.classList.remove('is-bad'); gate.classList.add('is-ok');
       note.textContent='Opening the console…';
       setTimeout(()=>{location.href='/app'},420);
