@@ -779,7 +779,7 @@
       <a class="brand" href="#top" aria-label="Atara home"><span class="brand-mark" aria-hidden="true"><i></i></span><span class="wordmark">Atara</span></a>
       <div class="nav-right">
         <a class="nav-link" href="api.html">API</a>
-        <a class="nav-start" href="console.html">Console <span aria-hidden="true">&rarr;</span></a>
+        <a class="nav-start" href="/app">Console <span aria-hidden="true">&rarr;</span></a>
       </div>
     </nav>
 
@@ -787,7 +787,7 @@
       <div class="hero-copy">
         <h1 id="hero-title"><span class="line"><span>The agentic payment model for conditional settlement.</span></span><span class="line"><span>Computable risk, minimal cost.</span></span></h1>
         <p class="hero-lede">Atara is a conditional payment protocol. It computes the risk on every payment and takes a fraction up front instead of the whole sum.</p>
-        <div class="hero-actions"><a class="btn btn-primary" href="console.html">Start</a><a class="btn btn-secondary" href="#contact">Talk to us</a></div>
+        <div class="hero-actions"><a class="btn btn-primary" href="/app">Start</a><a class="btn btn-secondary" href="#contact">Talk to us</a></div>
       </div>
 
       <figure class="ticket" id="pricingInstrument" aria-label="Illustrative: one order compared across five dimensions. With Atara, the model computes the collateral, the risk of default and the fee for this counterparty; the payment condition is written into the protocol. Without it: full collateral, no risk priced, a higher flat fee, and a condition left to judgement.">
@@ -1452,7 +1452,7 @@
     <h2 class="reveal">Send us a trade.</h2>
     <div class="cta-foot reveal">
       <p>A size, a side, and a counterparty you do not trust yet.</p>
-      <a class="btn btn-primary" href="console.html">Start</a>
+      <a class="btn btn-primary" href="/app">Start</a>
     </div>
   </div>
 </section>
@@ -2307,7 +2307,7 @@
       opener&&opener.focus(); opener=null;
     }
 
-    document.querySelectorAll('a[href="console.html"]').forEach(a=>{
+    document.querySelectorAll('a[href="/app"]').forEach(a=>{
       a.addEventListener('click',ev=>{
         if(passed())return;               /* already in this visit — let it through */
         ev.preventDefault(); open(a);
@@ -2344,7 +2344,7 @@
       try{sessionStorage.setItem(GATE_KEY,'1')}catch(e){}
       gate.classList.remove('is-bad'); gate.classList.add('is-ok');
       note.textContent='Opening the console…';
-      setTimeout(()=>{location.href='console.html'},420);
+      setTimeout(()=>{location.href='/app'},420);
     });
   }
   if(document.readyState==='loading')
