@@ -113,3 +113,13 @@ docs-internal/
 # 后端在这个目录下写用户上传的回执与 KYC 件。这个仓库是公开的，
 # 本地跑过后端就会在这里留下真实上传物——绝不能进版本控制。
 var/
+
+docs/loading.md
+docs/beui-组件对照.md
+docs/MAKER-REVIEW-AI.md
+docs/信任分.md
+docs/共识系统.md
+docs/身份系统审查.md
+# 站点构建产物（scripts/build-site.sh 拼出来的，每次重建）
+.vercel-out/
+.vercel/
