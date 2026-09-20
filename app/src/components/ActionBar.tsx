@@ -28,9 +28,6 @@ const flag = (c: string) => {
   const cc = c === 'EUR' ? 'EU' : c.slice(0, 2)
   return String.fromCodePoint(...[...cc].map(ch => 0x1f1e6 + ch.charCodeAt(0) - 65))
 }
-const av = (n: string) =>
-  `<span class="apav" style="background:hsl(${avHue(n)} 42% 34%);color:#fff">${avInit(n)}</span>`
-
 /**
  * 动作行：把一句话变成可点的参数。
  *
@@ -140,7 +137,8 @@ export default function ActionBar({
               d: 'Quick trade — Atara matches the best counterparty for this amount' },
             ...fits.map(p => ({
               v: p.display_name,
-              n: (act.peer === p.display_name ? '✓ ' : '') + av(p.display_name) + p.display_name,
+              n: (act.peer === p.display_name ? '✓ ' : '') + p.display_name,
+              av: p.display_name,
               d: `${contacts.some(c => c.name === p.display_name) ? 'In your contacts · ' : ''}`
                 + `${scoreText(p.trust_score)} · ${p.deals} trades`
                 + ` · ${symOf(act.fiat)}${p.best_price} per ${act.coin}`,

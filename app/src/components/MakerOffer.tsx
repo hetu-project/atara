@@ -11,6 +11,7 @@ import { assertPasskey } from './SessionLock'
 import { isWalletTxError, useWalletTx } from '../hooks/useWalletTx'
 import { FX_IDX } from './kycforms'
 import type { Listing } from './MakerListing'
+import { ApiError } from '../api/client'
 import type { DepositStatus, Offer, PreparedOffer } from '../api/types'
 import type { TxStep } from '../hooks/useWalletTx'
 
@@ -448,6 +449,14 @@ export default function MakerOffer({
           await assertPasskey()
         }
       }
+      /* The passkey step comes first. It is the person's authorisation of
+         this listing, and the coins move on chain in the very next step —
+         asking for it afterwards (which createOffer used to do on its own)
+         meant approving and locking first, then being asked "do you agree?",
+         and a "no" left the coins locked with nothing to show for it. */
+      let confirmation: string | undefined
+      if (sell) confirmation = await ep.confirmOffer(body.asset, body.qty, identity)
+
       if (onChain && sell && chain?.deployed) {
         const prep = await ep.prepareOffer(body, identity)
         const hash = await tx.lockListing({
@@ -456,7 +465,19 @@ export default function MakerOffer({
         })
         extra = { offer_id: prep.offer_id, lock_tx: hash }
       }
-      const o = await ep.createOffer({ ...body, ...extra }, identity)
+      let o: Offer
+      try {
+        o = await ep.createOffer({ ...body, ...extra }, identity, confirmation)
+      } catch (e) {
+        /* The token lives 120 s and the wallet may have taken longer than that
+           over approve + lock. The coins are locked under extra.offer_id by
+           now, so do not start over: sign once more and post the same listing.
+           Any other failure is a real one and propagates. */
+        const stale = e instanceof ApiError && /^(CONFIRMATION_|SIGNATURE_REQUIRED$)/.test(e.code)
+        if (!stale || !sell) throw e
+        const again = await ep.confirmOffer(body.asset, body.qty, identity)
+        o = await ep.createOffer({ ...body, ...extra }, identity, again)
+      }
       tx.setStep({ k: 'idle' })
       setConfirm(null)
       /* Say it landed, and say whether coins actually moved.

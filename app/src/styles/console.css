@@ -849,16 +849,12 @@ main.lout .nav .c.dot{position:absolute;top:7px;right:13px;
    注意 .pav 已被收款人面板占用，这里用 .pfav（同名类会被后声明的那条盖掉） ── */
 .pid{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;
   padding-bottom:var(--sp-5);border-bottom:1px solid var(--hairline)}
-.pfav{position:relative;width:56px;height:56px;flex:none;border-radius:999px;border:0;cursor:pointer;
+/* 头像目前只是首字母徽章，没有上传功能，所以不能长得像按钮：
+   没有 pointer、没有悬停变暗。等上传做出来再把这几条加回去。 */
+.pfav{position:relative;width:56px;height:56px;flex:none;border-radius:999px;border:0;
   display:flex;align-items:center;justify-content:center;overflow:hidden;
   font-size:20px;font-weight:600;color:var(--on-inverse);background:hsl(var(--pc,221) 55% 48%);
   background-size:cover;background-position:center}
-.pfav::after{content:'';position:absolute;inset:0;background:#000;opacity:0;
-  transition:opacity var(--dur-fast) var(--ease)}
-.pfav:hover::after{opacity:.28}
-.pfav .pcam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  opacity:0;z-index:1;transition:opacity var(--dur-fast) var(--ease)}
-.pfav:hover .pcam{opacity:1}
 .pidmain{min-width:0;flex:1}
 .pnrow{display:flex;align-items:center;gap:var(--sp-2)}
 .pname{font-family:var(--serif);font-size:24px;font-weight:500;letter-spacing:-.01em;color:var(--ink);line-height:1.15}

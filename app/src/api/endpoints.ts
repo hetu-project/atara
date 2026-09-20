@@ -1,4 +1,4 @@
-import { ApiError, BASE, PROFILE_CHANGED, api, getIdentity, readAuthToken, withConfirmation } from './client'
+import { ApiError, BASE, PROFILE_CHANGED, api, assert, getIdentity, readAuthToken, withConfirmation } from './client'
 import type {
   Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, DepositStatus, EligiblePeer, KybResult, KycSession, KycStatus, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, RailGroup, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
 } from './types'
@@ -391,10 +391,20 @@ export const createOffer = (req: {
   min_lot: string
   network: string
   networks?: string[]
-}, as?: string) =>
-  withConfirmation('offer', [req.asset, req.qty],
-    req.side === 'sell' ? 'signature' : 'commit',
-    token => api.post<Offer>('/offers', req, { confirmation: token, as }), as)
+}, as?: string, confirmation?: string) =>
+  /* A caller that already holds a token passes it in. The sell flow does:
+     it has to sign *before* the wallet locks coins on chain, so by the time
+     it gets here the confirmation is minutes old and must not be re-issued. */
+  confirmation
+    ? api.post<Offer>('/offers', req, { confirmation, as })
+    : withConfirmation('offer', [req.asset, req.qty],
+        req.side === 'sell' ? 'signature' : 'commit',
+        token => api.post<Offer>('/offers', req, { confirmation: token, as }), as)
+
+/** The confirmation a sell listing needs, obtainable ahead of the lock. Same
+    scope and parts as createOffer, or the backend will not accept it. */
+export const confirmOffer = (asset: string, qty: string, as?: string) =>
+  assert('offer', [asset, qty], 'signature', as)
 
 /** 挂卖单第一步：要号，并拿到锁币要用的参数。 */
 /** 一笔外部入金到账了没有。只有这笔入金的主人查得到。 */

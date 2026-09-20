@@ -106,7 +106,11 @@ export default function Account({ identity }: { identity: string }) {
         {/* 身份：地址就是账户，邮箱只是通知渠道 */}
         <div className="rsec">
           <div className="pid">
-            <button className="pfav" title="Change avatar" aria-label="Change avatar">{ini}</button>
+            {/* A badge, not a button. It used to be a <button title="Change
+                avatar"> with no handler: pointer cursor, a hover shade, a
+                promise, and nothing behind it — there is no avatar upload on
+                either side yet. When that ships, this is where the control goes. */}
+            <span className="pfav" aria-hidden>{ini}</span>
             <div className="pidmain">
               <div className="pnrow">
                 {/* 铅笔原来没有 onClick，点了完全没反应。改名走 POST /me，

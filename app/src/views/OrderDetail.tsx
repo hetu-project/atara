@@ -122,6 +122,9 @@ export default function OrderDetail({
   /* 下单前那一道确认。开着的时候装的就是这一单——不另存一份参数，
      人看到的和发出去的必须是同一个东西。 */
   const [ask, setAsk] = useState(false)
+  /* Drop / cancel / reject close money-adjacent state. One more click,
+     because a missed tap on a text link used to unwind escrow. */
+  const [quit, setQuit] = useState<null | 'drop' | 'cancel' | 'reject'>(null)
   const [disp, setDisp] = useState(false)
   /* The pages uploaded and not yet submitted. Two separate steps on purpose —
      see the footer — and a list rather than one file because a transfer is
@@ -241,7 +244,7 @@ export default function OrderDetail({
                 </p>
                 <div className="dfoot">
                   <a href="#" className="dcancel lnk"
-                    onClick={e => { e.preventDefault(); void act(() => ep.cancel(o.id)) }}>Drop</a>
+                    onClick={e => { e.preventDefault(); setQuit('drop') }}>Drop</a>
                   {/* 确认之前再停一下：这一下之后付款窗口就开始走，错过会
                       记进你的成绩单。参照在这里也插了一道。 */}
                   <button className="btn btn-primary" disabled={pending}
@@ -335,7 +338,7 @@ export default function OrderDetail({
 
                 <div className="dfoot">
                   <a href="#" className="lnk ecancel" style={{ marginRight: 'auto' }}
-                    onClick={e => { e.preventDefault(); void act(() => ep.cancel(o.id)) }}>Cancel order</a>
+                    onClick={e => { e.preventDefault(); setQuit('cancel') }}>Cancel order</a>
                   {/* 付款这一步最容易出事——钱已经出去了,对方却说没收到。
                       出口得在这儿,而不是等人去找客服。 */}
                   <a href="#" className="lnk dspx"
@@ -369,7 +372,7 @@ export default function OrderDetail({
                 </p>
                 <div className="dfoot">
                   <a href="#" className="lnk dspx" style={{ marginRight: 'auto' }}
-                    onClick={e => { e.preventDefault(); void act(() => ep.verifyReceipt(o.id, false, 'Receipt does not match')) }}>
+                    onClick={e => { e.preventDefault(); setQuit('reject') }}>
                     It does not match
                   </a>
                   <button className="btn btn-primary" disabled={pending}
@@ -378,7 +381,7 @@ export default function OrderDetail({
               </>
             ) : (
               <Waiting o={o} sell={sell} step={step} coin={coin} fiat={fiat} ccy={ccy}
-                onCancel={() => void act(() => ep.cancel(o.id))} pending={pending} />
+                canCancel={yours} onCancel={() => setQuit('cancel')} pending={pending} />
             )}
           </div>
         </div></div>
@@ -393,6 +396,37 @@ export default function OrderDetail({
           identity={identity ?? ''}
           onClose={() => setDisp(false)}
           onDone={() => { setDisp(false); reload() }} />
+      )}
+
+      {quit && (
+        <ConfirmSheet
+          title={quit === 'drop' ? 'Drop this match' : quit === 'reject' ? 'Reject this receipt' : 'Cancel this order'}
+          walletKind={walletKind}
+          plain={quit === 'drop' ? 'Drop match' : quit === 'reject' ? 'It does not match' : 'Cancel order'}
+          busy={pending}
+          lead={quit === 'drop'
+            ? <>This match will close. Their listing stays up.</>
+            : quit === 'reject'
+              ? <>The receipt does not match this order. Escrow stays locked until a reviewer decides.</>
+              : <>Close this order. The coins return from escrow.</>}
+          note={quit === 'drop'
+            ? { why: 'Nothing has moved yet.', how: 'No coins leave escrow, and no default is recorded.' }
+            : quit === 'reject'
+              ? { why: 'This opens a dispute.', how: 'Use this when the amount, reference, or sender does not match.' }
+              : { why: step === 's3'
+                  ? 'If you already sent the bank transfer, cancelling will not get that money back.'
+                  : 'This closes the trade before escrow is fully in place.',
+                  how: 'The coins return from escrow. No default is recorded.' }}
+          onConfirm={() => {
+            const kind = quit
+            void (async () => {
+              const ok = kind === 'reject'
+                ? await run(() => ep.verifyReceipt(o.id, false, 'Receipt does not match'))
+                : await run(() => ep.cancel(o.id))
+              if (ok) { setQuit(null); reload() }
+            })()
+          }}
+          onClose={() => setQuit(null)} />
       )}
 
       {ask && (
@@ -552,10 +586,12 @@ function Peer({ o, ccy }: { o: Order; ccy: string }) {
  * 所以照样把资料摆出来，只是没有动作按钮。
  */
 function Waiting({
-  o, sell, step, coin, fiat, ccy, onCancel, pending,
+  o, sell, step, coin, fiat, ccy, canCancel, onCancel, pending,
 }: {
   o: Order; sell: boolean; step: string; coin: string; fiat: string; ccy: string
-  onCancel: () => void; pending: boolean
+  canCancel?: boolean
+  onCancel: () => void
+  pending: boolean
 }) {
   const head: Record<string, [string, string]> = sell ? {
     /* The maker's side of the match stop. Without it this fell through to the
@@ -644,7 +680,9 @@ function Waiting({
       )}
       {o.evidence && <Pack ev={o.evidence} coin={coin} fiat={fiat} ref_={o.ref} />}
       <p className="dmech">{mech[step] ?? ''}</p>
-      {step === 's1' && (
+      {/* S1 cancel is the taker's. The listing maker used to get the same
+          link and a 403 — this order belongs to another account. */}
+      {step === 's1' && canCancel && (
         <div className="dfoot">
           <a href="#" className="lnk ecancel" onClick={e => { e.preventDefault(); if (!pending) onCancel() }}>
             Cancel order
