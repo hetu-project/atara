@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import * as ep from '../api/endpoints'
+import Dither from './Dither'
 import Qr from './Qr'
 import type { KycSession, KycStatus } from '../api/types'
 
@@ -48,6 +50,12 @@ export default function IdCheck({
   /* 这次会话。开着弹窗时才有值——关掉不作废它，人可能是切去手机上扫码走完的，
      那条会话还在跑。 */
   const [sess, setSess] = useState<KycSession | null>(null)
+  /* Whether the window for that session is showing. Closing the window used to
+     drop the session with it, so a slip of the hand left "Start over" as the
+     only way back — a new upstream session for a check that was half done. Now
+     closing hides the window and the session stays; the person can reopen it,
+     and Start over is what it says. */
+  const [open, setOpen] = useState(false)
   /* 有一次没走完的核验在挂着才轮询。
      还没开过（state 'none'）就不问：那时每隔几秒问一次后端毫无意义，
      而后端每次问都会去上游拉一遍——那是按次计费的。
@@ -76,7 +84,7 @@ export default function IdCheck({
   useEffect(() => {
     if (!status) return
     if (status.state === 'pending') setWatching(true)
-    else if (status.state !== 'none') { stop(); setWatching(false); setSess(null) }
+    else if (status.state !== 'none') { stop(); setWatching(false); setSess(null); setOpen(false) }
   }, [status, stop])
 
   const start = async () => {
@@ -84,6 +92,7 @@ export default function IdCheck({
     try {
       const s = await ep.startKyc(identity)
       setSess(s)
+      setOpen(true)
       setWatching(true)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'could not start verification')
@@ -114,6 +123,7 @@ export default function IdCheck({
           note="The checks below did not clear. You can try again with a different document." />
         <Warnings status={status} />
         <button className="btn btn-secondary" disabled={busy} onClick={() => void start()}>
+          {busy && <Dither size={12} speed={1} label="Opening" />}
           {busy ? 'Opening…' : 'Try again'}
         </button>
       </div>
@@ -152,15 +162,36 @@ export default function IdCheck({
       )}
       {/* 走完之后这里不说「已通过」——那句话得后端说。
           模拟模式没有「等结果」这回事：后端当场就落了结论。 */}
-      {watching && !sim && <p className="sfnote">Waiting for the result…</p>}
-      <button className="btn btn-primary" disabled={busy} onClick={() => void start()}>
-        {busy ? 'Opening…'
-          : sim ? 'Skip verification'
-            : st === 'pending' ? 'Start over' : 'Verify my identity'}
-      </button>
+      {/* Polling for a verdict that may take a minute. The loader says the
+          wait is alive; the sentence says what it is waiting for. */}
+      {watching && !sim && (
+        <p className="sfnote kwait">
+          <Dither size={14} speed={1.1} label="Waiting for the result" />
+          Waiting for the result…
+        </p>
+      )}
+      {sess?.url && !open && st === 'pending' ? (
+        /* The window was closed on a session that is still open. Reopening is
+           the usual want; starting over is the deliberate one, so it is the
+           quiet button. */
+        <div className="idacts">
+          <button className="btn btn-primary" onClick={() => setOpen(true)}>Reopen the window</button>
+          <button className="btn btn-ghost" disabled={busy} onClick={() => void start()}>
+            {busy && <Dither size={12} speed={1} label="Opening" />}
+            {busy ? 'Opening…' : 'Start over'}
+          </button>
+        </div>
+      ) : (
+        <button className="btn btn-primary" disabled={busy} onClick={() => void start()}>
+          {busy && <Dither size={12} speed={1} label="Opening" />}
+          {busy ? 'Opening…'
+            : sim ? 'Skip verification'
+              : st === 'pending' ? 'Start over' : 'Verify my identity'}
+        </button>
+      )}
       {err ? <p className="sfnote bad">{err}</p> : null}
       {/* 模拟会话没有 URL，弹出来是一张空白页。 */}
-      {sess?.url && <DocuPassSheet sess={sess} onClose={() => setSess(null)} />}
+      {sess?.url && open && <DocuPassSheet sess={sess} onClose={() => setOpen(false)} />}
     </div>
   )
 }
@@ -172,8 +203,18 @@ export default function IdCheck({
  * 就扫下面那个码用手机走。二维码是建会话时 ID Analyzer 一起给的，
  * 不是我们另画的——它指向同一条会话，手机上走完这边一样会亮。
  */
+/* Mounted on <body>, not where it is rendered from.
+
+   It is rendered from inside the verification card, and that card is a CSS
+   container (`container-type` on .deal.kyc .openin, for the rail that folds
+   away when the card is narrow). A container applies layout containment, and
+   layout containment makes the element the containing block for fixed-position
+   descendants — so a fixed overlay inside it is no longer fixed to the viewport,
+   it is pinned inside the card and clipped by its overflow. A portal takes the
+   overlay out of that subtree; the modal was never conceptually part of the
+   card anyway. */
 function DocuPassSheet({ sess, onClose }: { sess: KycSession; onClose: () => void }) {
-  return (
+  return createPortal(
     <div id="modal" role="dialog" aria-modal="true"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="mcard dpcard">
@@ -207,7 +248,8 @@ function DocuPassSheet({ sess, onClose }: { sess: KycSession; onClose: () => voi
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
 import { COUNTRIES } from './countries'
+import Dither from './Dither'
 import FilePick from './FilePick'
 import IdCheck from './IdCheck'
 import {
-  KYC_CORP, KYC_IND, LISTING_STEPS, VERIFIED_BIZ, VERIFIED_FIELDS, type Field, type Step,
+  IDENTITY_FIELDS, KYC_CORP, KYC_IND, LISTING_STEPS, VERIFIED_BIZ, VERIFIED_FIELDS,
+  type Field, type Step,
 } from './kycforms'
 import { ListingStep, badListingField, blankListing, type Listing } from './MakerListing'
 import type { KybResult, ReviewIssue } from '../api/types'
@@ -100,8 +102,8 @@ export default function MakerFlow({
     Open on the step that has the first problem, not on step one.
 
     The summary sits at the top of the thread and the per-field note sits
-    inside the step it belongs to; with nine steps between them, someone who
-    was sent back to fix two fields can see neither. Moving the summary below
+    inside the step it belongs to; with a dozen corporate steps between them,
+    someone who was sent back to fix two fields can see neither. Moving the summary below
     the form would not help — the distance is the problem, not the side.
 
     Nothing flagged (a first submission) starts at the beginning as before.
@@ -212,10 +214,14 @@ export default function MakerFlow({
        证件类型比这张表列的多得多——读出来一个不在列表里的值硬塞进去，
        结果是一行选不中的值，或者被悄悄改成「Other」。 */
     const opts = new Map<string, string[] | undefined>()
-    for (const st of (kind === 'Corporate' ? KYC_CORP : KYC_IND) as Step[]) {
-      for (const f of st.fields ?? []) {
-        if (f.type === 'pick' || f.type === 'multi') opts.set(f.k, f.opts)
-      }
+    const fields = [
+      ...((kind === 'Corporate' ? KYC_CORP : KYC_IND) as Step[]).flatMap(st => st.fields ?? []),
+      /* The individual path has no step for the identity fields any more;
+         their option lists still decide what the document may write in. */
+      ...IDENTITY_FIELDS,
+    ]
+    for (const f of fields) {
+      if (f.type === 'pick' || f.type === 'multi') opts.set(f.k, f.opts)
     }
     const out: Record<string, string> = {}
     const take = (map: Record<string, string>, src: Record<string, unknown> | undefined) => {
@@ -263,8 +269,13 @@ export default function MakerFlow({
 
      不放在 FilePick 的 onDone 里:那一层只知道「文件传好了」,而这件事要看
      它是不是注册文件、以及这一份有没有核过。`sentDoc` 记住核过的那一份,
-     换一份才重核——10 credits 一次,重复核同一份是白烧。 */
-  const sentDoc = useRef('')
+     换一份才重核——10 credits 一次,重复核同一份是白烧。
+
+     初值取自后端已有的结论,而不是空串。ref 只活在这一次挂载里:刷新一下
+     它就忘了核过什么,而草稿里的 bizdoc 还在,于是又发一次请求。实测这样
+     烧掉过 30 credits。服务端现在也会挡(按 user_id + file_ref 复用结论),
+     但那一趟往返本来就不必发——它知道的东西这里也知道得到。 */
+  const sentDoc = useRef(initialKyb?.file_ref ?? '')
   useEffect(() => {
     if (kind !== 'Corporate') return
     const ref = typeof form.bizdoc === 'string' ? form.bizdoc : ''
@@ -330,7 +341,7 @@ export default function MakerFlow({
     const b = phase === 'kyc' ? badKyc() : badListingField(lst, step)
     if (b) { setBad(b); return }
     setBad(''); setErr('')
-    if (!last) { setStep(s => s + 1); return }
+    if (!last) { go(step + 1); return }
     setBusy(true)
     try {
       const payload = phase === 'kyc'
@@ -362,47 +373,123 @@ export default function MakerFlow({
     ? ' · ' + String(form.surname) + String(form.firstname ?? '')
     : form.company ? ' · ' + String(form.company) : '')
 
-  /* 结构逐处对齐参照的 paintMaker()：一张 deal 卡，不是弹窗。
-     步骤指示是一条分段进度条（.dsteps），不是把九个步骤名铺成一片文字——
-     后者在窄栏里会换行成三四行，把表单本身挤到屏幕外面去。 */
+  /* Per-step state for both renderings of the progress: the rail and the
+     narrow bar draw the same list, so it is computed once.
+
+     Every step that can be reached is a button. The review points at step 4
+     and step 9 while the person stands on step 12; walking Back and Next
+     through the whole form is a dozen clicks, each one re-running that step's
+     validation. Backwards only, never forward past a step not yet filled —
+     the checks run step by step, and skipping one is skipping its check.
+     Flagged steps are the exception: they were submitted, and going straight
+     to them is the point. */
+  const rail = steps.map((s2, i) => {
+    const needs = (s2.fields ?? []).some(f => flagged.has(f.k))
+    return {
+      t: s2.t, i, needs,
+      can: i <= step || needs,
+      cls: [i < step ? 'on' : i === step ? 'now' : '', needs ? 'todo' : ''].filter(Boolean).join(' '),
+    }
+  })
+  /* A step change is drawn as: this step leaves (fast), the next one arrives
+     (slower), moving in the direction of travel. Leaving needs the old content
+     to stay on screen for its 110ms, so the state change is held back that long;
+     validation has already run by the time go() is called, so nothing the person
+     did is delayed — only what they see. Reduced motion: change at once. */
+  const [dir, setDir] = useState<1 | -1>(1)
+  const [leaving, setLeaving] = useState(false)
+  const goTimer = useRef<number | null>(null)
+  useEffect(() => () => { if (goTimer.current) clearTimeout(goTimer.current) }, [])
+  const go = (i: number) => {
+    if (i === step) return
+    setDir(i > step ? 1 : -1)
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { setStep(i); return }
+    if (goTimer.current) clearTimeout(goTimer.current)
+    setLeaving(true)
+    goTimer.current = window.setTimeout(() => {
+      goTimer.current = null
+      setLeaving(false)
+      setStep(i)
+    }, 110)
+  }
+  const jump = (i: number) => { setBad(''); setErr(''); go(i) }
+  const flaggedSteps = rail.filter(r => r.needs && r.i !== step).map(r => r.i + 1)
+  const nextStep = steps[step + 1]
+
+  /* One deal card in the thread, not a modal, as in the reference's paintMaker().
+
+     Two columns: every step named down the left, the current step on the
+     right. The old segmented bar hid the step names behind hover, so nobody
+     knew what was still to come until they got there — the point in a long
+     form where people give up (corporate onboarding is twelve steps). The
+     rail lays the whole route out, and a step the review bounced says so in
+     words, where the bar could only turn a two-pixel segment amber.
+
+     The rail costs width. Below 640px of card (the chat column with the
+     assessment panel dragged wide, or a phone) it folds away and a bar at
+     the top of the body takes over — thicker than the old one, with a line
+     under it carrying what the rail would have said. One React tree, one
+     container query; see .krail / .kbar. */
   return (
-    <div className="deal mine xopen">
-      <div className="row1">
-        <span className="st">{tag}</span>
-        <span>{step + 1} / {steps.length} · {cur?.t}</span>
-      </div>
+    <div className="deal mine xopen kyc">
       <div className="open"><div className="openin">
-        {/* 每一段都能点。
-
-            审核指着第 4 步和第 9 步各一处,而人正站在第 12 步——一路 Back
-            回去改、再一路 Next 走回来,是十几次点击,中间每一步都要重新
-            过一遍校验。那条进度条本来就画着「哪几步要改」,让它能点是
-            把已经显示出来的信息变得可用。
-
-            只能往回跳,不能往前跳过没填的:前面的校验是逐步做的,
-            跳过去等于绕开它,而绕开的后果要到提交那一刻才知道。
-            有问题的那几步例外——它们是交过的,可以直接去。 */}
-        <div className="dsteps"
-          aria-label={`Step ${step + 1} of ${steps.length}: ${cur?.t ?? ''}`}>
-          {steps.map((s2, i) => {
-            const needs = (s2.fields ?? []).some(f => flagged.has(f.k))
-            const can = i <= step || needs
-            const cls = [i < step ? 'on' : i === step ? 'now' : '', needs ? 'todo' : '']
-              .filter(Boolean).join(' ')
-            return (
-              <button key={s2.t} type="button" className={'dstep ' + cls}
-                disabled={!can || busy}
-                aria-current={i === step ? 'step' : undefined}
-                title={`${i + 1}. ${s2.t}${needs ? ' — needs a change' : ''}`}
-                onClick={() => { setBad(''); setErr(''); setStep(i) }}>
-                <i />
-                <span className="dsteplbl">{i + 1}. {s2.t}</span>
-              </button>
-            )
-          })}
-        </div>
-        <div className="pad">
-          <p className="sellm-lead">{cur?.lead}</p>
+        {/* The whole card morphs when the route changes — Individual has two
+            steps, Corporate twelve, and the rail below goes from one to the
+            other in a single render. Without this the card doubles in height
+            in one frame and the thread under it jumps. StepStage inside does
+            the same for the content on a step change; the two never fire on
+            the same render. */}
+        <HeightMorph dep={kind + phase} className="kwrap">
+          {phase === 'kyc' && (
+            /* Keyed on kind so the list remounts when the route changes and
+               every item plays its entrance, staggered by --i: the route reads
+               as unrolling rather than being swapped. Items that leave are not
+               animated out — ten fading at once would drag — the height morph
+               above carries that side. */
+            <nav className="krail" aria-label="Steps" key={kind}>
+              {rail.map(r => (
+                <button key={r.t} type="button" className={'kst ' + r.cls}
+                  style={{ '--i': Math.min(r.i, 10) } as React.CSSProperties}
+                  disabled={!r.can || busy}
+                  aria-current={r.i === step ? 'step' : undefined}
+                  onClick={() => jump(r.i)}>
+                  <span className="kdot" aria-hidden>
+                    {r.needs ? '!' : r.i < step ? (
+                      <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 8.5 6.2 11.7 13 4.9" /></svg>
+                    ) : r.i + 1}
+                  </span>
+                  <span className="kt">{r.t}{r.needs && <em>Needs a change</em>}</span>
+                </button>
+              ))}
+            </nav>
+          )}
+          <div className="kbody">
+            <div className="keye">
+              <span>{tag}</span><i aria-hidden>·</i>
+              <span>Step {step + 1} of {steps.length}</span>
+            </div>
+            <h3 className="kh">{cur?.t}</h3>
+            {/* The narrow-width bar. Same states as the rail; what the rail said
+                in words goes on one line under it. */}
+            <div className="kbar" aria-label={`Step ${step + 1} of ${steps.length}`}>
+              <div>
+                {rail.map(r => (
+                  <button key={r.t} type="button" className={r.cls} disabled={!r.can || busy}
+                    title={`${r.i + 1}. ${r.t}`} aria-label={`${r.i + 1}. ${r.t}`}
+                    onClick={() => jump(r.i)}><i /></button>
+                ))}
+              </div>
+              <p>
+                {nextStep ? <>Next: <b>{nextStep.t}</b></> : <>Last step</>}
+                {flaggedSteps.length > 0 && (
+                  <> · Step {flaggedSteps.join(', ')} need{flaggedSteps.length === 1 ? 's' : ''} a change</>
+                )}
+              </p>
+            </div>
+            <StepStage step={step} dir={dir} leaving={leaving}>
+            <p className="sellm-lead">{cur?.lead}</p>
 
           {phase === 'listing' ? (
             <ListingStep d={lst} step={step} bad={bad} kindLine={kindLine}
@@ -458,30 +545,153 @@ export default function MakerFlow({
             </p>
           ) : null}
           {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
+            </StepStage>
 
-          <div className="dfoot">
-            {(step > 0 || (phase === 'listing' && onBackOut)) && (
-              <button className="btn btn-icon backbtn" title="Back" aria-label="Back"
+            {/* Back on the left, forward on the right, on a rule of their own at
+                the bottom of the column. Back is always drawn so the two never
+                swap places between steps; on the first step it is simply off. */}
+            <div className="kfoot">
+              <button type="button" className="btn btn-ghost"
+                disabled={busy || !(step > 0 || (phase === 'listing' && onBackOut))}
                 onClick={() => {
                   setBad(''); setErr('')
-                  if (step > 0) setStep(s2 => s2 - 1)
+                  if (step > 0) go(step - 1)
                   else onBackOut?.()
                 }}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
-                  strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M10 3.5 5.5 8l4.5 4.5" /></svg>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                  strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M10 3 5 8l5 5" /></svg>
+                Back
               </button>
-            )}
-            <button className="btn btn-primary" disabled={busy} onClick={() => void next()}>
-              {/* Say what it is doing. A button that only greys out looks
-                  broken when the wait runs into seconds. */}
-              {busy ? 'Checking…' : !last ? 'Next' : resubmit ? 'Resubmit for review' : 'Submit'}
-            </button>
+              <button className="btn btn-primary" disabled={busy} onClick={() => void next()}>
+                {/* Say what it is doing. A button that only greys out looks
+                    broken when the wait runs into seconds. */}
+                {busy && <Dither size={12} speed={1} label="Checking" />}
+                {busy ? 'Checking…' : !last ? 'Next' : resubmit ? 'Resubmit for review' : 'Submit'}
+                {!busy && !last && (
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                    strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="m6 3 5 5-5 5" /></svg>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
+        </HeightMorph>
       </div></div>
     </div>
   )
+}
+
+/**
+ * A box that transitions its height whenever `dep` changes, by measuring
+ * itself before and after. The same measure-and-tween StepStage uses for the
+ * step content, without the content animation: here the children are the
+ * card's two columns and only the outline should move. Reduced motion: the
+ * height simply changes.
+ */
+function HeightMorph({
+  dep, className, children,
+}: { dep: string; className?: string; children: React.ReactNode }) {
+  const wrap = useHeightMorph(dep)
+  return <div ref={wrap} className={className}>{children}</div>
+}
+
+/**
+ * The area of the card that changes between steps, and how it changes.
+ *
+ * Two motions at once. The content: the old step fades, lifts 5px and blurs
+ * on its way out (`.kstage.out`, 110ms); the new one fades in from 8px below,
+ * blurred, and settles (`.kin`, 220ms). Going back reverses the direction —
+ * `--kdir` flips the signs. The blur is what makes it read as one thing
+ * changing rather than two things swapping: without it there is a frame where
+ * both are legible at once. Same recipe as beUI's tab panels; nothing new.
+ *
+ * The height: the stage measures itself before and after the content changes
+ * and transitions between the two, the way StepSlide does in WalletModals. Without
+ * this the chat stream below the card jumps every time a step has a different
+ * number of fields — and every step does.
+ *
+ * `key={step}` remounts the inner wrapper so the enter animation plays once
+ * per step. Keyframes, not a transition, because it runs from a fresh mount and
+ * is never interrupted mid-way: the exit is finished before it starts.
+ */
+function StepStage({
+  step, dir, leaving, children,
+}: { step: number; dir: 1 | -1; leaving: boolean; children: React.ReactNode }) {
+  const wrap = useHeightMorph(step)
+  return (
+    <div ref={wrap} className={'kstage' + (leaving ? ' out' : '')}
+      style={{ '--kdir': dir } as React.CSSProperties}>
+      <div key={step} className="kin">{children}</div>
+    </div>
+  )
+}
+
+/**
+ * Transition an element's height whenever `dep` changes: measure before,
+ * measure after, tween between. Used by StepStage (per step) and HeightMorph
+ * (per route).
+ *
+ * Two effects, on purpose. The first has no deps and only takes a reading each
+ * render, so the "before" height is always the latest. The second runs only
+ * when `dep` changes and owns the tween. They used to be one depless effect,
+ * and that was the bug: the tween sets the old height, then waits a frame to
+ * set the new one — and any re-render in between (switching account type
+ * triggers one straight away, from the verified-fields write-back) ran the
+ * cleanup, cancelled that frame, and left the box pinned at the old height
+ * with nothing left to unpin it. The card stayed Corporate-tall after
+ * switching back to Individual.
+ *
+ * The cleanup now also clears the inline styles itself, and a timer clears
+ * them if transitionend never arrives (it can be skipped when the transition
+ * is interrupted). Reduced motion: the height just changes.
+ */
+function useHeightMorph(dep: unknown) {
+  const ref = useRef<HTMLDivElement>(null)
+  const fromH = useRef(0)
+  const prev = useRef(dep)
+
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (el && prev.current === dep) fromH.current = el.offsetHeight
+  })
+
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || prev.current === dep) return
+    prev.current = dep
+    const from = fromH.current
+    /* Read the natural height with nothing pinned: a previous tween that was
+       cut short may have left its inline height on the element. */
+    el.style.height = ''
+    el.style.overflow = ''
+    el.style.transition = ''
+    const to = el.offsetHeight
+    fromH.current = to
+    if (!from || from === to || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const clear = () => {
+      el.style.height = ''
+      el.style.overflow = ''
+      el.style.transition = ''
+      el.removeEventListener('transitionend', done)
+      clearTimeout(guard)
+    }
+    const done = (e: TransitionEvent) => {
+      if (e.target === el && e.propertyName === 'height') clear()
+    }
+    el.style.height = `${from}px`
+    el.style.overflow = 'hidden'
+    const id = requestAnimationFrame(() => {
+      el.style.transition = 'height var(--dur-normal) var(--ease)'
+      el.style.height = `${to}px`
+    })
+    el.addEventListener('transitionend', done)
+    const guard = window.setTimeout(clear, 600)
+    return () => { cancelAnimationFrame(id); clear() }
+  }, [dep])
+
+  return ref
 }
 
 /* 错误话跟着控件类型走。不小写化：会把 ID / TIN 这类缩写弄坏。逐字取自参照。 */
@@ -507,7 +717,15 @@ const errFor = (f: Field) =>
  */
 function KybNote({ r, busy }: { r?: KybResult; busy: boolean }) {
   if (busy) {
-    return <span className="kbn busy">Reading your document — this takes a few seconds…</span>
+    /* The house loader (Dither) beside the sentence. A line of grey text on
+       its own does not move, and a wait of several seconds with nothing
+       moving reads as a hang. */
+    return (
+      <span className="kbn busy">
+        <Dither size={16} speed={1.1} label="Reading your document" />
+        Reading your document — this takes a few seconds…
+      </span>
+    )
   }
   if (!r) return null
   const b = r.business

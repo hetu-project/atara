@@ -78,9 +78,10 @@ export default function Account({ identity }: { identity: string }) {
   const cards = allow ?? []
   const card = cards.find(c => c.id === pick) ?? cards[0]
   const assets = w?.assets ?? []
-  /* The gas coin sits in the list but is not a token: it cannot be listed,
-     sent through the token path, or granted as an allowance. Pickers and
-     defaults take this subset. */
+  /* The gas coin sits in the list but is not a token: it cannot be listed or
+     granted as an allowance, so pickers and defaults take this subset. Send
+     is the exception — it is real money in the wallet and has its own
+     value-transfer path, so Send gets the full list. */
   const tradable = assets.filter(a => !a.native)
   /* 还挂着的单：卖完（filled）和下架（delisted）的不算。它们已经不占着钱、
      也不能被吃，摆在「Your listings」里只会让人以为还在市场上。 */
@@ -317,7 +318,7 @@ export default function Account({ identity }: { identity: string }) {
         {sheet === 'receive' && <ReceiveModal w={w ?? null} onClose={() => setSheet('')} />}
         {sheet === 'bank' && <BankAccountsModal identity={identity} onClose={() => setSheet('')} />}
         {sheet === 'send' && (
-          <SendModal identity={identity} assets={tradable}
+          <SendModal identity={identity} assets={assets}
             onClose={() => setSheet('')} onDone={() => reloadW()} />
         )}
         {sheet === 'allowance' && (

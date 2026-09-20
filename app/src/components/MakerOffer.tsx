@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { usePrivy } from '@privy-io/react-auth'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
 import { useToast } from './Toast'
@@ -6,6 +7,7 @@ import ConfirmSheet from './ConfirmSheet'
 import CopyButton from './CopyButton'
 import Qr from './Qr'
 import { IInfo } from './icons'
+import { assertPasskey } from './SessionLock'
 import { isWalletTxError, useWalletTx } from '../hooks/useWalletTx'
 import { FX_IDX } from './kycforms'
 import type { Listing } from './MakerListing'
@@ -83,7 +85,9 @@ function checkedText(at: number): string {
 
    说的是链上此刻的事实，不是一句好听的话。少转的原因通常很具体（填了挂单量、
    忘了手续费、交易所扣了提币费），把差额说出来，他立刻知道该补多少。 */
-type Wait = { tone: 'idle' | 'warn' | 'ok'; text: string }
+/* alert: nothing has arrived and the person has to act — the one state in
+   this list where waiting is not the right move, so it is the one in red. */
+type Wait = { tone: 'idle' | 'alert' | 'warn' | 'ok'; text: string }
 
 function waitLine(d: DepositStatus | null): Wait {
   if (!d) return { tone: 'idle', text: 'Checking the contract…' }
@@ -102,7 +106,7 @@ function waitLine(d: DepositStatus | null): Wait {
   }
   const got = Number(d.received)
   const need = Number(d.need)
-  if (!got) return { tone: 'idle', text: 'Nothing has arrived yet. Watching the contract.' }
+  if (!got) return { tone: 'alert', text: 'Nothing has arrived yet. Watching the contract.' }
   if (got < need) {
     return { tone: 'warn',
       text: `Received ${d.received} of ${d.need} — send the rest and it will go up by itself.` }
@@ -170,6 +174,11 @@ export default function MakerOffer({
   const { toast } = useToast()
   const { data: me } = useApi(() => ep.me(identity), [identity])
   const [via, setVia] = useState<'atara' | 'ext' | null>(null)
+  /* Whether this account has a passkey to assert. Read here rather than asked
+     of the sheet: the sheet only labels the button, the approval happens in
+     send(). */
+  const { user: privyUser } = usePrivy()
+  const hasPasskey = (privyUser?.linkedAccounts ?? []).some(a => a.type === 'passkey')
 
   /*
     How the coins get into escrow. Two routes, as in console.html (bindFundVia).
@@ -422,6 +431,23 @@ export default function MakerOffer({
            ③ 拿着号来建挂单，后端去链上核对锁了什么
          买单不锁币（法币腿走银行），一步就够。 */
       let extra: { offer_id?: string; lock_tx?: string } = {}
+      /* A buy listing locks nothing, so there is no transaction — but posting
+         it is a public commitment to pay, and it is approved the way every
+         other commitment here is: an external wallet signs a message that
+         states the listing, the Atara wallet asserts its passkey. Neither is
+         checked server-side (see the note in useIdentity); it is the same tier
+         as the confirmation token createOffer already carries, made visible.
+         An Atara wallet with no passkey yet has nothing to assert and goes
+         straight through. */
+      if (!sell) {
+        if (walletKind === 'ext') {
+          await tx.signMessage(
+            `Atara listing — buy ${body.qty} ${body.asset} at ${sym}${body.unit_price} per ${body.asset}, ` +
+            `min lot ${sym}${body.min_lot}, settled in ${body.fiat}, on ${body.network}.`)
+        } else if (hasPasskey) {
+          await assertPasskey()
+        }
+      }
       if (onChain && sell && chain?.deployed) {
         const prep = await ep.prepareOffer(body, identity)
         const hash = await tx.lockListing({
@@ -597,7 +623,13 @@ export default function MakerOffer({
              included — that is what gets typed into a withdrawal form. The
              listing size moves down into the sentence. Showing the listing size
              big and the send amount small had people copying the wrong one. */
-          amount={ext && dep ? String(dep.deposit_total) : num(qty).toLocaleString()} unit={curCoin}
+          /* A buy listing is money going out, so the headline is the fiat it
+             commits — quantity × rate — and the coins go into the sentence.
+             The sell headline stays in coins: that is what gets locked. */
+          amount={ext && dep ? String(dep.deposit_total)
+            : sell ? num(qty).toLocaleString()
+            : `${sym}${(num(qty) * num(px)).toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+          unit={sell ? curCoin : curFiat}
           walletKind={walletKind}
           busy={busy}
           lead={ext ? <>
@@ -605,12 +637,16 @@ export default function MakerOffer({
             <b className="num">{sym}{num(px).toLocaleString()}</b>, min lot{' '}
             <b className="num">{sym}{num(min).toLocaleString()}</b>.
             {dep ? <> Includes the <b className="num">{dep.deposit_fee} {curCoin}</b> fee.</> : null}
-          </> : <>
-            List <b className="num">{num(qty).toLocaleString()} {curCoin}</b>{' '}
-            {sell ? 'for sale' : 'wanted'} at{' '}
+          </> : sell ? <>
+            List <b className="num">{num(qty).toLocaleString()} {curCoin}</b> for sale at{' '}
             <b className="num">{sym}{num(px).toLocaleString()}</b> · min lot{' '}
-            <b className="num">{sym}{num(min).toLocaleString()}</b>
-            {sell ? '. Funds stay locked until filled or unlisted.' : '.'}
+            <b className="num">{sym}{num(min).toLocaleString()}</b>.
+            Funds stay locked until filled or unlisted.
+          </> : <>
+            Buy <b className="num">{num(qty).toLocaleString()} {curCoin}</b> at{' '}
+            <b className="num">{sym}{num(px).toLocaleString()}</b> per {curCoin}, paying up to{' '}
+            <b className="num">{sym}{(num(qty) * num(px)).toLocaleString(undefined, { maximumFractionDigits: 2 })}</b>
+            {' '}· min lot <b className="num">{sym}{num(min).toLocaleString()}</b>.
           </>}
           extra={sell ? (
             <>
@@ -768,6 +804,8 @@ export default function MakerOffer({
           /* Once the coins are sent there is nothing left to confirm. A primary
              blue Close reads as one more commitment; secondary says "you may go". */
           quiet={sent && sell && walletKind === 'ext'}
+          /* On the listing sheet the passkey button reads "Approve". */
+          okLabel="Approve"
           blocked={sell && walletKind === 'ext' && !dep}
           onClose={closeSheet} />
       )}

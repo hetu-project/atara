@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
+import Dither from './Dither'
 import Fold from './Fold'
 import MakerFlow from './MakerFlow'
 import MakerOffer, { OfferPosted } from './MakerOffer'
-import { FIELD_LABELS, KYC_CORP, KYC_IND } from './kycforms'
+import { FIELD_LABELS, IDENTITY_FIELDS, KYC_CORP, KYC_IND } from './kycforms'
 import { listingRows, type Listing } from './MakerListing'
 import { go } from '../hooks/useRoute'
 import type { MakerApp, Offer } from '../api/types'
@@ -73,12 +74,50 @@ const show = (v: unknown) => {
  * 不滤掉的话回执上会多出一行「Identity verification —」，看着像有一项没填。
  */
 function kycGroups(form: Record<string, unknown>): Group[] {
-  const steps = form.kind === 'Corporate' ? KYC_CORP : KYC_IND
-  return steps
+  const corp = form.kind === 'Corporate'
+  const steps = corp ? KYC_CORP : KYC_IND
+  const groups = steps
     .map(st => [st.t, (st.fields ?? [])
       .filter(f => f.type !== 'idcheck')
       .map(f => [f.l, show(form[f.k])] as [string, string])] as Group)
     .filter(([, rows]) => rows.length)
+  /* Individuals type nothing after the identity check, so the receipt would be
+     one line ("Account type"). What the document said is the submission; it
+     goes on the receipt under its own heading, only the fields that came back. */
+  if (!corp) {
+    const rows = IDENTITY_FIELDS
+      .filter(f => form[f.k] !== undefined && form[f.k] !== '')
+      .map(f => [f.l, show(form[f.k])] as [string, string])
+    if (rows.length) groups.push(['From your document', rows])
+  }
+  return groups
+}
+
+/* The living part of a "Received" receipt.
+
+   Between "submitted" and "approved" the thread used to go still: nothing on
+   screen moved until the verdict bubble appeared, and with the demo timing
+   note gone there is no hint that anything is happening. This line says the
+   system is working without promising when it will finish — a pulsing dot
+   and the time of the last poll, not a spinner or a countdown. In production
+   this stage can sit for hours under human review; a dot and a clock are still
+   true after hours, a progress bar is not. Reuses .fstat from the deposit
+   watcher so the two "waiting on something" surfaces read the same. */
+function ReviewLine({ state, checkedAt }: {
+  state: 'review' | 'ok' | 'back'; checkedAt: number
+}) {
+  const text = state === 'ok' ? 'Approved' : state === 'back' ? 'Sent back — see below' : 'Under review'
+  const when = checkedAt > 0
+    ? new Date(checkedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : ''
+  return (
+    <span className={'fstat rline ' + state} role="status">
+      <i />
+      <span><b>{text}</b>
+        {when && <em className="fchk">{state === 'ok' ? 'Cleared ' : 'Checked '}{when}</em>}
+      </span>
+    </span>
+  )
 }
 
 function Receipt({ groups }: { groups: Group[] }) {
@@ -265,6 +304,13 @@ export default function MakerThread({
   const bottom = useRef<HTMLDivElement>(null)
 
   const f = forms(app?.form)
+  /* When the application was last read from the server. The gate polls every
+     1.5 s while a review is open and reloads on the live event, and each
+     reload hands down a fresh object — so this ticks exactly when the poll
+     does, and stops when it stops. That is the point: the clock answers "is
+     it still checking", and a clock that kept ticking on its own would not. */
+  const [checkedAt, setCheckedAt] = useState(0)
+  useEffect(() => { if (app) setCheckedAt(Date.now()) }, [app])
   const kycDone = !!app?.kyc_done
   const kycOk = !!app?.kyc_ok
   const listDone = !!app?.listing_done
@@ -323,9 +369,10 @@ export default function MakerThread({
             : (
               <Them>
                 Received — your identity application is under review. Usually cleared within
-                one business day{' '}
-                <em style={{ fontStyle: 'normal', color: 'var(--faint)' }}>(demo: seconds)</em>.
+                one business day.
                 {f.kyc ? <Receipt groups={kycGroups(f.kyc)} /> : null}
+                <ReviewLine state={kycOk ? 'ok' : revise === 'kyc' ? 'back' : 'review'}
+                  checkedAt={checkedAt} />
               </Them>
             )}
         </>
@@ -374,11 +421,12 @@ export default function MakerThread({
             : (
               <Them>
                 Received — your trading terms are under review. Usually cleared within one
-                business day{' '}
-                <em style={{ fontStyle: 'normal', color: 'var(--faint)' }}>(demo: seconds)</em>.
+                business day.
                 {f.listing
                   ? <Receipt groups={[['Trading terms', listingRows(f.listing, accts ?? [])]]} />
                   : null}
+                <ReviewLine state={approved ? 'ok' : revise === 'listing' ? 'back' : 'review'}
+                  checkedAt={checkedAt} />
               </Them>
             )}
         </>
@@ -423,7 +471,10 @@ export default function MakerThread({
            useState 的初始化函数早就跑完了,草稿和已选的主体再也塞不回去。
 
            后端对没有申请的人也回一个对象,所以 null 只可能是「还没加载完」。 */
-        <div className="mkempty">Loading your application…</div>
+        <div className="mkempty kload">
+          <Dither size={20} speed={1.1} label="Loading your application" />
+          Loading your application…
+        </div>
       ) : card ? (
         <MakerFlow phase={card} identity={identity}
           initial={card === 'kyc' ? f.kyc : (f.listing as unknown as Record<string, unknown>)}

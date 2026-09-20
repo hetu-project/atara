@@ -20,38 +20,47 @@ const HUE: Record<string, number> = {
 /* Icons in public/coins. Most are the CC0 set from spothq/cryptocurrency-icons
    at 128px; TON, ARB and OP come from the Trust Wallet assets repo because the
    CC0 set has no entry for them. Testnet coins reuse the mainnet logo: tBNB is
-   BNB with no value, and a different mark would suggest a different asset. */
+   BNB with no value, and a different mark would suggest a different asset.
+
+   Paths are relative and get BASE_URL prepended below. They used to start with
+   a slash, which is right only when the console sits at the domain root — it
+   now sits under /app, and a leading slash would send every icon to
+   /coins/*.png, one level above where the build puts them. Vite rewrites
+   imports for the base path but not strings, so this one has to say it. */
 const FILE: Record<string, string> = {
-  USDT: '/coins/usdt.png',
-  USDC: '/coins/usdc.png',
-  DAI: '/coins/dai.png',
-  BTC: '/coins/btc.png',
-  ETH: '/coins/eth.png',
-  BNB: '/coins/bnb.png',
-  tBNB: '/coins/bnb.png',
-  TRX: '/coins/trx.png',
-  SOL: '/coins/sol.png',
-  XRP: '/coins/xrp.png',
-  DOGE: '/coins/doge.png',
-  ADA: '/coins/ada.png',
-  AVAX: '/coins/avax.png',
-  MATIC: '/coins/matic.png',
-  POL: '/coins/matic.png',
-  DOT: '/coins/dot.png',
-  LTC: '/coins/ltc.png',
-  LINK: '/coins/link.png',
-  TON: '/coins/ton.png',
-  ATOM: '/coins/atom.png',
-  XLM: '/coins/xlm.png',
-  UNI: '/coins/uni.png',
-  ARB: '/coins/arb.png',
-  OP: '/coins/op.png',
+  USDT: 'coins/usdt.png',
+  USDC: 'coins/usdc.png',
+  DAI: 'coins/dai.png',
+  BTC: 'coins/btc.png',
+  ETH: 'coins/eth.png',
+  BNB: 'coins/bnb.png',
+  tBNB: 'coins/bnb.png',
+  TRX: 'coins/trx.png',
+  SOL: 'coins/sol.png',
+  XRP: 'coins/xrp.png',
+  DOGE: 'coins/doge.png',
+  ADA: 'coins/ada.png',
+  AVAX: 'coins/avax.png',
+  MATIC: 'coins/matic.png',
+  POL: 'coins/matic.png',
+  DOT: 'coins/dot.png',
+  LTC: 'coins/ltc.png',
+  LINK: 'coins/link.png',
+  TON: 'coins/ton.png',
+  ATOM: 'coins/atom.png',
+  XLM: 'coins/xlm.png',
+  UNI: 'coins/uni.png',
+  ARB: 'coins/arb.png',
+  OP: 'coins/op.png',
 }
 
 export const coinHue = (asset: string) => HUE[asset] ?? 200
 
 export default function CoinMark({ asset, className }: { asset: string; className?: string }) {
-  const src = FILE[asset]
+  const file = FILE[asset]
+  // BASE_URL is '/app/' in this deployment and '/' if the console ever moves
+  // back to a domain root — either way it already ends in a slash.
+  const src = file ? import.meta.env.BASE_URL + file : undefined
   const [dead, setDead] = useState(false)
   const cls = 'acoin' + (className ? ' ' + className : '') + (src && !dead ? ' pic' : '')
   if (!src || dead) {

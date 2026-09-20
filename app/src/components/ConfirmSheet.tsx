@@ -21,7 +21,7 @@ import { IPasskey, IWallet } from './icons'
 export interface ConfirmRow { k: string; v: React.ReactNode }
 
 export default function ConfirmSheet({
-  title, amount, unit, lead, rows, extra, note, walletKind, plain, busy, blocked, quiet,
+  title, amount, unit, lead, rows, extra, note, walletKind, plain, busy, blocked, quiet, okLabel,
   onConfirm, onClose,
 }: {
   title: string
@@ -51,6 +51,13 @@ export default function ConfirmSheet({
    * styling, so it does not read as one more "yes" after the money has moved.
    */
   quiet?: boolean
+  /**
+   * One word for the signing button, whichever wallet is behind it. The icon
+   * still says how — wallet or passkey — and what is required does not change
+   * with the wording. Default wording is per variant ("Sign in your wallet",
+   * "Confirm with passkey", "Add a passkey to approve").
+   */
+  okLabel?: string
   onConfirm: () => void
   onClose: () => void
 }) {
@@ -61,10 +68,10 @@ export default function ConfirmSheet({
   const [icon, label] = plain
     ? [null, plain]
     : ext
-    ? [<IWallet key="w" />, 'Sign in your wallet']
+    ? [<IWallet key="w" />, okLabel ?? 'Sign in your wallet']
     : hasPk
-      ? [<IPasskey key="p" />, 'Confirm with passkey']
-      : [<IPasskey key="p" />, 'Add a passkey to approve']
+      ? [<IPasskey key="p" />, okLabel ?? 'Confirm with passkey']
+      : [<IPasskey key="p" />, okLabel ?? 'Add a passkey to approve']
 
   return (
     <div id="confirm" className="show" role="dialog" aria-modal="true" aria-label={title}

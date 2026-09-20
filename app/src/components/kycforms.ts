@@ -11,37 +11,37 @@
 const F=(k,l,type,extra)=>Object.assign({k,l,type:type||'text'},extra||{});
 
 
+/* Individual onboarding is two steps: which kind of account, then the identity
+   check. That is a product decision (Sept 2026): the seven self-reported steps
+   that used to follow — profile, contact, tax residency, employment, source of
+   wealth, declarations, signature — are gone for individuals. Nothing is typed
+   after the check; what the account knows about the person is what the
+   document said. The corporate path below is unchanged.
+
+   The backend's required-field list for individuals (makerreview/rules.go,
+   needIndividual) is empty to match; identity is proven by the verification
+   row the server holds, which it already insists on at submit. */
 const KYC_IND=[
  {t:'Account type', lead:'Individuals and companies follow different paths.', fields:[]},
  /* 核验放在最前：证件上那些字段（姓名、生日、证件号、有效期）应当是**读出来的**，
-    不是手打的。先验再填，下一步就只剩证件上没有的东西要问。
-    原来这一步叫「ID check」摆在第九步，是三个上传框——那不是核验，那是收图。 */
+    不是手打的。原来这一步叫「ID check」摆在第九步，是三个上传框——那不是核验，那是收图。 */
  {t:'Identity verification', lead:'A live check against your government ID.',
   fields:[F('idcheck','Identity verification','idcheck')]},
- {t:'Basic profile', lead:'Read from your document — check it and fill in the rest.', /* 本步全部字段 [抄] */
-  fields:[F('nationality','Nationality','pick',{opts:['China','Hong Kong','Singapore','United States','Other']}),
-          F('gender','Gender','pick',{opts:['Male','Female'],opt:true}),
-          F('surname','Last name'), F('firstname','First name'),
-          F('idtype','ID type','pick',{opts:['ID card','Passport','HK/Macau permit']}),
-          F('idno','ID number'),
-          F('idissue','Issue date','date',{opt:true}), F('iddue','Expiry date','date',{opt:true}),
-          F('birthday','Date of birth','date',{opt:true})]},
- {t:'Contact', lead:'Used for verification notices.', /* 步骤名 [抄]，字段 [补] */
-  fields:[F('phone','Phone','text',{opt:true}), F('email','Email','text',{opt:true}), F('addr','Address','text',{opt:true})]},
- {t:'Tax information', lead:'Required under CRS and FATCA.', /* 步骤名 [抄]，字段 [补] */
-  fields:[F('taxcountry','Tax residency','pick',{opts:['China','Hong Kong','Singapore','Other']}),
-          F('tin','TIN','text',{opt:true})]},
- {t:'Employment', lead:'Supports your source of wealth.', /* 步骤名 [抄]，字段 [补] */
-  fields:[F('empstatus','Status','pick',{opts:['Employed','Self-employed','Business owner','Retired','Student','Unemployed'],opt:true}),
-          F('industry','Industry','text',{opt:true}), F('employer','Employer','text',{opt:true})]},
- {t:'Source of wealth', lead:'How your wealth was accumulated overall.', /* 步骤名 [抄]，字段 [补] */
-  fields:[F('sow','Sources','multi',{opts:['Salary','Business income','Investments','Inheritance','Digital assets','Other']}),
-          F('income','Annual income','pick',{opts:['Under 500k','500k–2M','2M–10M','Over 10M']})]},
- {t:'Declarations', lead:'Politically exposed persons require enhanced due diligence.', /* 步骤名 [抄]，字段 [补] */
-  fields:[F('pep','Politically exposed person','pick',{opts:['No','Yes','Close associate']}),
-          F('ustax','US tax resident','pick',{opts:['No','Yes'],opt:true})]},
- {t:'Signature', lead:'Signing confirms the declarations above.', /* 步骤名 [抄]，字段 [补] */
-  fields:[F('sign','Signature','sign')]},
+];
+
+/* What the identity check reads off the document. Not a step — nobody types
+   these — but they still need definitions: the check writes them into the
+   form (VERIFIED_FIELDS), the submission carries them, and the receipt labels
+   them. Option lists stay so a value the document gives in another spelling
+   is dropped rather than saved as an unknown choice. */
+export const IDENTITY_FIELDS: Field[] = [
+  F('nationality','Nationality','pick',{opts:['China','Hong Kong','Singapore','United States','Other']}),
+  F('gender','Gender','pick',{opts:['Male','Female'],opt:true}),
+  F('surname','Last name'), F('firstname','First name'),
+  F('idtype','ID type','pick',{opts:['ID card','Passport','HK/Macau permit']}),
+  F('idno','ID number'),
+  F('idissue','Issue date','date',{opt:true}), F('iddue','Expiry date','date',{opt:true}),
+  F('birthday','Date of birth','date',{opt:true}),
 ];
 
 const KYC_CORP=[
@@ -170,9 +170,11 @@ export interface Step { t: string; lead: string; fields: Field[] }
  * verdict look like a stack trace.
  */
 export const FIELD_LABELS: Record<string, string> = Object.fromEntries(
-  [...KYC_IND, ...KYC_CORP, ...LISTING_STEPS]
-    .flatMap((st: any) => (st.fields ?? []) as { k: string; l: string }[])
-    .map(f => [f.k, f.l]),
+  [
+    ...[...KYC_IND, ...KYC_CORP, ...LISTING_STEPS]
+      .flatMap((st: any) => (st.fields ?? []) as { k: string; l: string }[]),
+    ...IDENTITY_FIELDS,
+  ].map(f => [f.k, f.l]),
 )
 
 export { KYC_IND, KYC_CORP, LISTING_STEPS }

@@ -188,15 +188,9 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
   if (view === 'form') {
     return (
       <>
-        <button type="button" className="wpicked" onClick={() => setView(f.id ? 'detail' : 'list')}>
-          <span className="pav">{f.id ? (f.bank.slice(0, 2) || '··') : '+'}</span>
-          <span className="anm"><b>{f.id ? 'Edit account' : 'New account'}</b>
-            <em>{f.id
-              ? 'Changes apply the next time you hand out the number'
-              : 'A counterparty will pay this account directly'}</em></span>
-          <span className="wachg">Cancel</span>
-        </button>
-
+        {/* No header row above the fields. The sheet title already says where
+            we are, and the Cancel button at the bottom is the way back, so the
+            row was a second title with a second Cancel. */}
         <div className={'sf' + (bad === 'holder' ? ' bad' : '')}>
           <span className="sfl">Account holder</span>
           <input type="text" value={f.holder} placeholder="Name on the account"

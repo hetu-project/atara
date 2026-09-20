@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useWallets } from '@privy-io/react-auth'
 import {
-  createPublicClient, createWalletClient, custom, defineChain, http,
+  createPublicClient, createWalletClient, custom, defineChain, formatEther, http,
   type Address, type Hex,
 } from 'viem'
 import type { ChainRow } from '../api/types'
@@ -316,6 +316,46 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
     }
   }, [connect])
 
+  /**
+   * Send the chain's own coin (BNB, tBNB, ETH). A plain value transfer, not a
+   * contract call — the gas coin has no token address.
+   *
+   * The balance check includes the fee: with a token the fee comes out of a
+   * different balance, but here the coin being sent is also the coin paying
+   * for the send, so "you have 0.05, sending 0.05" fails for a reason the
+   * wallet reports badly. Say it before asking for a signature.
+   */
+  const transferNative = useCallback(async (p: {
+    to: string; amountWei: string
+  }): Promise<string> => {
+    try {
+      const { account, pub, wallet, chain } = await connect({ needEscrow: false })
+      const amount = BigInt(p.amountWei)
+      const to = p.to as Address
+
+      const gas = 21000n
+      const gasPrice = await pub.getGasPrice()
+      const bal = await pub.getBalance({ address: account })
+      if (bal < amount + gas * gasPrice) {
+        throw new Error(
+          `${short(account)} holds ${formatEther(bal)} — sending ${formatEther(amount)} plus ` +
+          `about ${formatEther(gas * gasPrice)} in fees does not fit. Use Max to leave room for the fee.`)
+      }
+
+      setStep({ k: 'wallet', msg: 'Sign in your wallet to send' })
+      const h = await wallet.sendTransaction({ to, value: amount, gas, chain, account })
+      setStep({ k: 'mining', msg: 'Sending', hash: h })
+      const rc = await pub.waitForTransactionReceipt({ hash: h })
+      if (rc.status !== 'success') throw new Error('The transfer was rejected on chain')
+      setStep({ k: 'done', hash: h })
+      return h
+    } catch (e) {
+      const msg = readable(e)
+      setStep({ k: 'error', msg })
+      throw new WalletTxError(msg)
+    }
+  }, [connect])
+
   /** 下架：把没被订单绑走的量取回钱包。只有原 maker 能调。 */
   const unlockListing = useCallback(async (p: {
     escrow: string; offerKey: string
@@ -339,8 +379,28 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
     }
   }, [connect])
 
+  /* Sign a plain message — no transaction, no gas. What a buy listing asks
+     for: it locks nothing on chain, so there is nothing to send, but posting
+     it is still a commitment and the wallet is where commitments are signed.
+     The text is what the person is agreeing to, in words their wallet shows
+     them before they sign. */
+  const signMessage = useCallback(async (message: string): Promise<string> => {
+    try {
+      const { account, wallet } = await connect({ needEscrow: false })
+      setStep({ k: 'wallet', msg: 'Sign the listing in your wallet' })
+      const sig = await wallet.signMessage({ account, message })
+      setStep({ k: 'idle' })
+      return sig
+    } catch (e) {
+      const msg = readable(e)
+      setStep({ k: 'error', msg })
+      throw new WalletTxError(msg)
+    }
+  }, [connect])
+
   return {
-    step, setStep, lockListing, unlockListing, approveSpending, transferToken,
+    step, setStep, lockListing, unlockListing, approveSpending, transferToken, transferNative,
+    signMessage,
     ready: wallets.length > 0,
   }
 }

@@ -571,6 +571,8 @@ export interface KybBusiness {
 /** 一次企业核验的结论。 */
 export interface KybResult {
   status: 'accept' | 'review' | 'reject'
+  /** 这个结论对应的那份文件。手上这份跟它一样，就不用再问一次。 */
+  file_ref?: string
   business: KybBusiness
   warnings?: { code: string; description: string; severity: string; decision: string }[]
   /** 这次没有核验任何东西（读的是本地 fixture）。界面必须说出来。 */

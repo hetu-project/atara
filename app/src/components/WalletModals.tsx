@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { parseUnits } from 'viem'
 import * as ep from '../api/endpoints'
 import { isWalletTxError, useWalletTx, type TxStep } from '../hooks/useWalletTx'
@@ -48,6 +49,12 @@ const netLabel = (code: string, name?: string) => {
   const pretty = NET_NAME[family(code)] ?? family(code)
   return code.endsWith('-TESTNET') ? `${pretty} testnet` : pretty
 }
+/* What Max leaves behind when sending the gas coin. The fee for a plain
+   transfer on these chains is a few ten-thousandths; this covers it with room
+   to spare without visibly eating into what the person wanted to send. The
+   hook re-checks against the live gas price before asking for a signature. */
+const NATIVE_RESERVE = 0.001
+
 const feeLine = (code: string, native?: string) =>
   FEE[family(code)] ?? (native ? `paid in ${native}` : "paid in the chain's native coin")
 const fmtAmt = (n: string | number) => {
@@ -61,7 +68,12 @@ const CHAIN_OF = (n: string) => (n === 'TRON' ? 'tron' : n === 'BTC' ? 'btc' : '
 function Sheet({
   title, onClose, children, className,
 }: { title: string; onClose: () => void; children: React.ReactNode; className?: string }) {
-  return (
+  /* On <body> via a portal. The fiat-accounts sheet opens from inside the
+     trading-terms card, which is a CSS container; a fixed overlay rendered
+     inside a container is pinned to it, not to the viewport (see DocuPassSheet
+     in IdCheck for the full reason). Every sheet goes through here, so every
+     sheet is safe from that wherever it is opened from. */
+  return createPortal(
     <div id="modal" role="dialog" aria-modal="true"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className={'mcard' + (className ? ' ' + className : '')}>
@@ -74,7 +86,8 @@ function Sheet({
         </header>
         <div className="mbody">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -304,15 +317,28 @@ export function SendModal({
   const label = netLabel(net, chain?.name)
   const fee = feeLine(net, chain?.native)
   const tok = pick ? chain?.tokens?.[pick.asset] : undefined
+  /* The gas coin has no token entry: it is the chain itself, 18 decimals on
+     every EVM chain we run. Everything below that needs decimals reads this. */
+  const isNative = !!pick?.native
+  const decimals = isNative ? 18 : tok?.decimals
   const wtx = useWalletTx(chain, myWallet?.address)
+
+  /* Max for the gas coin keeps a little back for the fee. Sending the whole
+     balance of the coin that pays for the send can never go through. */
+  const maxAmount = () => {
+    if (!pick) return ''
+    if (!isNative) return pick.on_chain
+    const left = Number(pick.on_chain) - NATIVE_RESERVE
+    return left > 0 ? left.toFixed(6).replace(/\.?0+$/, '') : '0'
+  }
 
   /* 每条链自己的地址格式；表里没有的按 EVM。 */
   const okTo = (v: string) => (ADDR_RE[net] ?? /^0x[0-9a-fA-F]{40}$/).test(v.trim())
   let amtOk = false
-  if (tok && pick && amount) {
+  if (decimals !== undefined && pick && amount) {
     try {
-      const wei = parseUnits(amount, tok.decimals)
-      const avail = parseUnits(pick.on_chain, tok.decimals)
+      const wei = parseUnits(amount, decimals)
+      const avail = parseUnits(pick.on_chain, decimals)
       amtOk = wei > 0n && wei <= avail
     } catch { /* not a number */ }
   }
@@ -323,15 +349,15 @@ export function SendModal({
     if (ADDR_RE[net]) {
       setErr(`Sending on ${net} is not wired in this console yet`); return
     }
-    if (!tok?.address) {
+    if (!isNative && !tok?.address) {
       setErr(`${chain?.name ?? net} has no ${pick!.asset} contract in this build — nothing can be sent on chain`)
       return
     }
     let wei: bigint
     let avail: bigint
     try {
-      wei = parseUnits(amount, tok.decimals)
-      avail = parseUnits(pick!.on_chain, tok.decimals)
+      wei = parseUnits(amount, decimals!)
+      avail = parseUnits(pick!.on_chain, decimals!)
     } catch {
       setErr('That is not a valid amount'); return
     }
@@ -345,9 +371,11 @@ export function SendModal({
          nothing happened on chain. That was a lie. */
       const wd = await ep.createWithdrawal(
         { to_address: v, to_chain: net, asset: pick!.asset, amount }, identity)
-      const hash = await wtx.transferToken({
-        token: tok.address, to: v, amountWei: wei.toString(),
-      })
+      /* Two ways to move money on an EVM chain: a token is a contract call,
+         the gas coin is a plain value transfer. Same receipt either way. */
+      const hash = isNative
+        ? await wtx.transferNative({ to: v, amountWei: wei.toString() })
+        : await wtx.transferToken({ token: tok!.address, to: v, amountWei: wei.toString() })
       try {
         await ep.broadcastWithdrawal(wd.id, hash, identity)
       } catch {
@@ -399,6 +427,7 @@ export function SendModal({
                 <CoinMark asset={a.asset} />
                 <span className="anm"><b>{a.asset}</b>
                   <em>{netLabel(a.network, chains?.chains.find(c => c.code === a.network)?.name)}
+                    {a.native ? ' · pays gas — keep some' : ''}
                     {Number(a.in_escrow) > 0 ? ` · ${fmtAmt(a.in_escrow)} locked` : ''}</em></span>
                 <span className="waval"><b className="num">{fmtAmt(a.on_chain)}</b><em>available</em></span>
                 <span className="wago" aria-hidden>›</span>
@@ -440,7 +469,7 @@ export function SendModal({
                 placeholder={`Available ${fmtAmt(pick?.on_chain ?? '')}`}
                 onChange={e => { setAmount(e.target.value); setErr('') }} />
               <button type="button" className="sf-max" disabled={!pick}
-                onClick={() => { setAmount(pick?.on_chain ?? ''); setErr('') }}>Max</button>
+                onClick={() => { setAmount(maxAmount()); setErr('') }}>Max</button>
             </div>
           </div>
 

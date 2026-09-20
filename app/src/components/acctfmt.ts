@@ -278,6 +278,12 @@ function checkCN(bank: string, v: string): AcctCheck {
   if (card) {
     return { s: 'warn', msg: 'Does not read as a card number — fine if this is a corporate account' }
   }
+  /* Inside the envelope — passbook and some corporate accounts are this short —
+     but a personal account at a major bank never is, and "123456789" is what a
+     test entry looks like. Said, not enforced. */
+  if (n < 16) {
+    return { s: 'warn', msg: `${n} digits is short for a mainland account — personal cards are 16–19; check it unless this is a passbook or corporate account` }
+  }
   return { s: 'ok' }
 }
 

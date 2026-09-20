@@ -119,7 +119,10 @@ export default function Sidebar({
           <span className="lmark" aria-hidden><i /></span>
           <span className="lfi"><IPanel /></span>
         </button>
-        <a className="lbrand" href="../index.html" aria-label="Back to site">
+        {/* 站点根，不是 '../index.html'。相对路径要求控制台正好深一层——它现在
+            确实在 /app 下，但那是部署布局，不是这个组件知道的事；换一层目录
+            这里就会悄悄指到别处去。'/' 永远是落地页。 */}
+        <a className="lbrand" href="/" aria-label="Back to site">
           <span className="lmark" aria-hidden><i /></span><b>Atara</b>
         </a>
         <button className="sayic lfoldx" title="Collapse sidebar" aria-label="Collapse sidebar"

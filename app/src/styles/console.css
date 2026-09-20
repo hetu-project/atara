@@ -2052,33 +2052,92 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .deal.xopen .open{grid-template-rows:1fr}
 .deal .openin{overflow:hidden;min-height:0}
 .deal .pad{padding:0 20px 18px}
-.dsteps{display:flex;gap:4px;margin:0 20px 15px}
-/* 每一段是一颗按钮。点击区比那条 2px 的线高得多——一条两像素的线是点不中的,
-   而这些段本来就并排挤着,点偏一格就去了别的步骤。 */
-.dstep{flex:1;min-width:0;padding:8px 0;border:0;background:none;cursor:pointer;
-  display:block;position:relative}
-.dstep:disabled{cursor:default}
-.dsteps i{display:block;height:2px;width:100%;background:var(--hairline);border-radius:2px;
-  transition:background var(--dur-fast) var(--ease)}
-.dstep:not(:disabled):hover i{background:var(--line-strong)}
-.dsteps .on i{background:var(--blue)}
-.dsteps .now i{background:var(--blue);box-shadow:0 0 0 2px var(--blue-wash)}
-.dstep:not(:disabled):hover .on i,.dsteps .on:hover i{background:var(--blue-deep)}
-/* 步骤名只在悬停时冒出来。十二个名字并排铺开会换行成三四行,把表单挤下去;
-   而人需要它的时候只有一个——「我要跳的那一段是哪个」。 */
-.dsteplbl{position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%);
-  white-space:nowrap;font-size:11px;padding:4px 8px;border-radius:var(--r-chip);
-  background:var(--card);color:var(--ink);box-shadow:var(--sh-raised);
-  opacity:0;pointer-events:none;transition:opacity var(--dur-fast) var(--ease);z-index:5}
-.dstep:not(:disabled):hover .dsteplbl,.dstep:focus-visible .dsteplbl{opacity:1}
-/* A step that still holds something the review asked to change.
-   Amber beats the blue "done/current" state: those say where you are,
-   this says where you still have to go back to. */
-.dsteps .todo i{background:var(--warn)}
-.dsteps .todo.now i{background:var(--warn);
-  box-shadow:0 0 0 2px color-mix(in srgb,var(--warn) 22%,transparent)}
-/* 要改的那几段即使还没走到也能点——它们是交过的,人正是要回去改它们。 */
-.dsteps .todo{cursor:pointer}
+/* ── The verification / terms card: every step down the left, one step on
+   the right. States are the same four everywhere — done (outlined, check),
+   current (filled blue), still to do (grey ring), bounced by the review
+   (amber, "!"): those say where you are, amber says where you still have to
+   go back to. The card is a container so the fold-away below 640px follows
+   the column it sits in, not the window. */
+.deal.kyc .openin{container-type:inline-size}
+.kwrap{display:flex;align-items:stretch}
+.krail{width:196px;flex:none;padding:22px 16px 18px 20px;box-sizing:border-box;
+  border-right:1px solid var(--hairline);background:var(--canvas);display:flex;flex-direction:column}
+/* Entrance, staggered by --i (set inline, capped at 10): 25ms apart, so a
+   twelve-step route unrolls in about a quarter second after the first item.
+   Plays on mount only — the list is keyed on the route, not on the step. */
+.krail .kst{animation:krise 220ms var(--ease) both;animation-delay:calc(var(--i, 0) * 25ms)}
+@keyframes krise{from{opacity:0;transform:translateY(6px)}}
+.kst{display:flex;gap:10px;align-items:flex-start;position:relative;padding:0 0 14px;
+  text-align:left;background:none;border:0;font:inherit;color:inherit;width:100%;cursor:pointer}
+.kst:disabled{cursor:default}
+.kst::after{content:'';position:absolute;left:9.5px;top:22px;bottom:-1px;width:1px;background:var(--hairline)}
+.kst.on::after{background:color-mix(in srgb,var(--accent) 45%,transparent)}
+.kst:last-child{padding-bottom:0}
+.kst:last-child::after{display:none}
+.kdot{width:20px;height:20px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;box-sizing:border-box;border:1px solid var(--line-strong);
+  color:var(--faint);background:var(--paper);
+  transition:background var(--dur-fast) var(--ease),border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+/* The check arrives when a step is done: from small and faint, not from
+   nothing — a tick popping out of a void reads as a glitch. */
+.kst.on .kdot svg{animation:kpop 220ms var(--ease) both}
+@keyframes kpop{from{opacity:0;transform:scale(.6)}}
+.kst.on .kdot{border-color:var(--accent);color:var(--accent)}
+.kst.now .kdot{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 0 3px var(--blue-wash)}
+.kst.todo .kdot{background:var(--warn-wash);border-color:var(--warn);color:var(--warn)}
+.kt{font-size:12.5px;line-height:20px;color:var(--faint);display:flex;flex-direction:column;min-width:0}
+.kst.on .kt{color:var(--mute)}
+.kst.now .kt{color:var(--ink);font-weight:600}
+.kst.todo .kt{color:var(--ink)}
+.kst:not(:disabled):hover .kt{color:var(--ink)}
+.kt em{font-style:normal;font-size:11px;line-height:14px;font-weight:500;color:var(--warn)}
+.kbody{flex:1;min-width:0;display:flex;flex-direction:column;padding:18px 24px 18px}
+.keye{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--faint)}
+.keye i{font-style:normal;color:var(--faint-2)}
+.kh{margin:6px 0 4px;font-size:18px;font-weight:600;letter-spacing:-.01em;line-height:1.3;color:var(--ink)}
+.kbody .sellm-lead{margin-bottom:18px;font-size:12.5px}
+/* The narrow bar: hidden while the rail is up. Each segment is a button with
+   the same reach as a rail item; the line under it says what the rail would. */
+.kbar{display:none;margin:8px 0 16px}
+.kbar>div{display:flex;gap:4px;margin-bottom:6px}
+.kbar>div>button{flex:1;min-width:0;padding:6px 0;border:0;background:none;cursor:pointer}
+.kbar>div>button:disabled{cursor:default}
+.kbar i{display:block;height:3px;border-radius:3px;background:var(--line-strong)}
+.kbar .on i{background:color-mix(in srgb,var(--accent) 60%,transparent)}
+.kbar .now i{background:var(--blue);box-shadow:0 0 0 2px var(--blue-wash)}
+.kbar .todo i{background:var(--warn)}
+.kbar p{margin:0;font-size:11.5px;color:var(--faint)}
+.kbar p b{color:var(--mute);font-weight:500}
+/* Step change. Leave fast, arrive slower, both in the direction of travel
+   (--kdir is 1 forward, -1 back). Blur bridges the swap; see StepStage. The
+   leave is a transition so a second click during it retargets instead of
+   restarting; the arrive is a keyframe on a fresh mount. */
+.kstage{--kdir:1}
+.kstage .kin{animation:kin 220ms var(--ease) both}
+.kstage.out .kin{opacity:0;transform:translateY(calc(-5px * var(--kdir)));filter:blur(4px);
+  transition:opacity 110ms var(--ease-exit),transform 110ms var(--ease-exit),filter 110ms var(--ease-exit);
+  pointer-events:none}
+@keyframes kin{from{opacity:0;transform:translateY(calc(8px * var(--kdir)));filter:blur(6px)}}
+@media (prefers-reduced-motion:reduce){
+  /* The global reduced-motion rule further down switches every animation and
+     transition off, so here the step simply changes; go() skips its hold-back
+     too, so there is no blank gap. Only the shapes are neutralised in case
+     that rule is ever narrowed. */
+  .kstage.out .kin{transform:none;filter:none}
+}
+.kfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-top:auto;padding-top:18px;border-top:1px solid var(--hairline)}
+.kfoot .btn{height:34px}
+.kfoot .btn-ghost:disabled{opacity:.4}
+/* The terms form has two steps: no rail, the bar carries it at any width. */
+.kwrap:not(:has(.krail)) .kbar{display:block}
+@container (max-width:639px){
+  .krail{display:none}
+  .kbar{display:block}
+  .kbody{padding:16px 20px}
+}
 .dwhy{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--accent);padding:12px 20px 8px}
 .dlede{font-size:16px;font-weight:300;line-height:1.65;letter-spacing:-.01em;margin-bottom:14px}
 .dlede b{font-weight:600}
@@ -3100,8 +3159,22 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
 .fstat .btn{flex:none;margin-top:-2px}
 .fstat.warn{background:var(--warn-wash);color:var(--warn)}
 .fstat.warn i{background:var(--warn)}
+/* 还什么都没收到：这一行是让人去转账的，不是让人等的，所以用红。
+   只有文字和点变红，底不铺色——它旁边就是 Check now，铺了色会把按钮吃掉。 */
+.fstat.alert{color:var(--neg)}
+.fstat.alert i{background:var(--neg)}
+.fstat.alert .fchk{color:inherit;opacity:.75}
 .fstat.ok{color:var(--ink)}
 .fstat.ok i{background:var(--green);animation:none}
+/* 回执气泡里的那一行审核状态。气泡本身已经是一块底色，所以这行用卡面色加一圈
+   描边把自己和正文分开；间距比表单页那条紧，它是气泡的一部分，不是独立一节。 */
+.bub .fstat.rline{display:flex;margin:8px 0 0;padding:8px 10px;
+  background:var(--surface);box-shadow:var(--ring)}
+.fstat.rline b{font-weight:600}
+.fstat.rline .fchk{display:block;margin:2px 0 0;font-size:var(--rt-meta);color:inherit;opacity:.75}
+/* 被打回：点停下来变红，下面紧跟着评语，这一行只负责把人的目光带过去。 */
+.fstat.back{color:var(--neg)}
+.fstat.back i{background:var(--neg);animation:none}
 @media (prefers-reduced-motion:reduce){ .fstat i{animation:none} }
 .fwait i{width:8px;height:8px;border-radius:999px;background:var(--warn);
   animation:afpulse 1.4s var(--ease) infinite}
@@ -3502,8 +3575,6 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
 
 
 .sellm-lead{font-size:12px;color:var(--faint);line-height:1.6;margin-bottom:14px}
-/* 卖家卡的步骤条沿用交易卡的 .dsteps，位置略微下移 */
-.deal .dsteps{margin:14px 20px 16px}
 .sf{margin-bottom:16px}
 .sf>label,.sf>.sfl{display:block;font-size:12px;font-weight:500;color:var(--mute);margin-bottom:6px}
 .sf input[type=text]{width:100%;height:36px;padding:0 12px;border-radius:var(--r-control);
@@ -3538,16 +3609,22 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
 .sfrow{display:flex;align-items:center;gap:8px}
 .sfrow span{font-size:12px;color:var(--faint);flex:none}
 .sfchips{display:flex;flex-wrap:wrap;gap:6px}
+/* Unselected chips sit on --card, one step lighter than the --paper they
+   are on, with the stronger hairline. They used to sit on --canvas — one step
+   darker — and on a dark card the two greys were two points of lightness
+   apart: the unselected option read as a label next to the selected one, not
+   as the other thing you could press. Same relation the Discover filters
+   have. The selected chip is unchanged: white, pressed in. */
 .sfchip{height:28px;padding:0 12px;border-radius:var(--r-chip);font-size:12px;font-weight:500;
-  border:1px solid var(--hairline);background:var(--canvas);color:var(--mute);
+  border:1px solid var(--line-strong);background:var(--card);color:var(--mute);
   transition:all var(--dur-fast) var(--ease)}
-.sfchip:hover{border-color:var(--line-strong);color:var(--ink)}
+.sfchip:hover{border-color:var(--faint);background:var(--cream);color:var(--ink)}
 .sfchip.on{background:var(--ink);border-color:var(--ink);color:var(--on-inverse)}
 /* Locked route (the coins are on their way). The chosen chip keeps its colour
    so the choice stays readable; only the alternative fades. */
 .sfchip:disabled{cursor:default}
 .sfchip:disabled:not(.on){opacity:.45}
-.sfchip:disabled:not(.on):hover{border-color:var(--hairline);color:var(--mute)}
+.sfchip:disabled:not(.on):hover{border-color:var(--line-strong);background:var(--card);color:var(--mute)}
 .sfup{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:12px 14px;
   border-radius:var(--r-control);border:1px dashed var(--hairline);background:var(--canvas);
   transition:all var(--dur-fast) var(--ease)}
@@ -4206,8 +4283,14 @@ body:has(.rshow:not([hidden])) .tsts{top:54px}
 .kbn{display:flex;flex-direction:column;gap:4px;margin-top:8px;
   padding:10px 12px;border-radius:var(--r-control);font-size:12.5px;line-height:1.55}
 .kbn b{font-size:13px;font-weight:600}
-.kbn.busy{color:var(--mute);background:var(--canvas);
+.kbn.busy{flex-direction:row;align-items:center;gap:10px;color:var(--mute);background:var(--canvas);
   box-shadow:inset 0 0 0 1px var(--hairline)}
+/* The loader inside a button or a note takes the text's colour, so it is white
+   on a primary button and grey on a note without a rule per place. */
+.btn .dither,.kbn .dither,.kwait .dither,.kload .dither{color:currentColor;flex:none}
+.kwait{display:flex;align-items:center;gap:8px}
+.idacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mkempty.kload{display:flex;flex-direction:column;align-items:center;gap:12px}
 .kbn.ok{color:var(--green);background:var(--green-wash);
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--green) 28%,transparent)}
 .kbn.warn{color:var(--warn);background:var(--warn-wash);

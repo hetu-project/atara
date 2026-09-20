@@ -11,6 +11,7 @@ import { useKycGate } from '../hooks/useKycGate'
 import { useWalletTx } from '../hooks/useWalletTx'
 import type { Offer } from '../api/types'
 import { Failed, Pending } from '../components/Loading'
+import ConfirmSheet from '../components/ConfirmSheet'
 
 const FIAT_SYM: Record<string, string> = {
   CNY: '¥', HKD: 'HK$', SGD: 'S$', JPY: '¥', EUR: '€', USD: '$', AED: 'د.إ', GBP: '£',
@@ -194,42 +195,54 @@ function OfferCard({
   const { toast } = useToast()
   const tx = useWalletTx(
     (chains?.chains ?? []).find(c => c.code === o.network) ?? null, myWallet?.address)
+  /* Unlisting asks first. It used to fire on the card click: one tap on a
+     button that reads like every other card's Buy, and the wallet prompt was
+     already up — the first thing the person saw was a signature request for
+     something they had not decided to do. The sheet says what will happen and
+     takes the decision; the wallet, if the coins were locked from it, asks for
+     the signature after. */
+  const [askUnlist, setAskUnlist] = useState(false)
+  const [unlisting, setUnlisting] = useState(false)
+
+  const unlist = async () => {
+    setUnlisting(true)
+    /* 下架要把币取回钱包，而合约只认当初锁币的那个地址——后端去调必然
+       revert。所以先让后端说「该你签了」（UNLOCK_REQUIRED），签完再来一次，
+       那一次后端只核验「链上确实解开了」。 */
+    try {
+      await ep.delistOffer(o.id, identity)
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'UNLOCK_REQUIRED') {
+        /* The coins were locked by the maker's own wallet, so only that
+           wallet can release them. Ask for the signature, then come back —
+           the second call only verifies the chain actually opened. */
+        try {
+          const prep = await ep.prepareDelist(o.id, identity)
+          await tx.unlockListing({ escrow: prep.escrow, offerKey: prep.offer_key })
+          await ep.delistOffer(o.id, identity)
+        } catch (e2) {
+          toast(msgOf(e2, 'Could not unlock those coins'), { kind: 'err' })
+          setUnlisting(false)
+          return
+        }
+      } else {
+        /* This used to `return` in silence. Unlisting is the only way to get
+           locked coins back, so a button that fails without a word leaves
+           someone believing their money is stuck with no way to ask why. */
+        toast(msgOf(e, 'Could not unlist that offer'), { kind: 'err' })
+        setUnlisting(false)
+        return
+      }
+    }
+    location.reload()
+  }
 
   const take = async () => {
     /* 先问身份再切视图：否则用户先被甩进一个空页面，登录门才追上来 */
     if (onNeedSignIn) { onNeedSignIn(); return }
     /* 再过身份门。法币腿点对点走银行，付款方必须可识别——买家也要验。 */
     if (!mine && kyc.require()) return
-    if (mine) {
-      /* 下架要把币取回钱包，而合约只认当初锁币的那个地址——后端去调必然
-         revert。所以先让后端说「该你签了」（UNLOCK_REQUIRED），签完再来一次，
-         那一次后端只核验「链上确实解开了」。 */
-      try {
-        await ep.delistOffer(o.id, identity)
-      } catch (e) {
-        if (e instanceof ApiError && e.code === 'UNLOCK_REQUIRED') {
-          /* The coins were locked by the maker's own wallet, so only that
-             wallet can release them. Ask for the signature, then come back —
-             the second call only verifies the chain actually opened. */
-          try {
-            const prep = await ep.prepareDelist(o.id, identity)
-            await tx.unlockListing({ escrow: prep.escrow, offerKey: prep.offer_key })
-            await ep.delistOffer(o.id, identity)
-          } catch (e2) {
-            toast(msgOf(e2, 'Could not unlock those coins'), { kind: 'err' })
-            return
-          }
-        } else {
-          /* This used to `return` in silence. Unlisting is the only way to get
-             locked coins back, so a button that fails without a word leaves
-             someone believing their money is stuck with no way to ask why. */
-          toast(msgOf(e, 'Could not unlist that offer'), { kind: 'err' })
-          return
-        }
-      }
-      location.reload()
-      return
-    }
+    if (mine) { setAskUnlist(true); return }
     /* 从大厅点一笔单，落点是**这个人的会话**，不是一张独立的工单页。
     
        参照的 showOrder() 就是这么走的：ensureThread(o.peer) → restoreSession
@@ -263,6 +276,30 @@ function OfferCard({
   }
 
   return (
+    <>
+    {/* Outside the card's <button>: a dialog nested in a button is invalid
+        markup, and every click inside it would bubble up as a card click. */}
+    {askUnlist && (
+      <ConfirmSheet
+        title="Unlist"
+        amount={qty.toLocaleString()} unit={o.asset}
+        walletKind={myWallet?.wallet_kind ?? 'atara'}
+        busy={unlisting}
+        lead={<>
+          Take <b className="num">{qty.toLocaleString()} {o.asset}</b> off the market at{' '}
+          <b className="num">{sym}{px.toLocaleString()}</b>. The coins return to your
+          wallet; trades already in progress on this listing are not affected.
+        </>}
+        note={{ why: 'Unlisting releases the escrow',
+                how: 'If your wallet locked the coins, it will ask you to sign the release next.' }}
+        /* A plain button: the sheet is the decision, the wallet is the
+           signature, and only some listings need one. "Sign in your wallet"
+           here would promise a prompt that the external-deposit route never
+           shows. */
+        plain="Unlist"
+        onConfirm={() => void unlist()}
+        onClose={() => { if (!unlisting) setAskUnlist(false) }} />
+    )}
     <button className={'od' + (mine ? ' odmine' : '')} onClick={() => void take()}>
       <div className="od-h">
         <span className="od-peer">{m.name}
@@ -341,6 +378,7 @@ function OfferCard({
         <span className="od-cta">{mine ? 'Unlist' : side === 'buy' ? 'Buy' : 'Sell'}</span>
       </div>
     </button>
+    </>
   )
 }
 
