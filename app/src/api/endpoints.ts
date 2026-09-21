@@ -1,6 +1,6 @@
 import { ApiError, BASE, PROFILE_CHANGED, api, assert, getIdentity, readAuthToken, withConfirmation } from './client'
 import type {
-  Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, DepositStatus, EligiblePeer, KybResult, KycSession, KycStatus, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, RailGroup, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
+  Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, DepositStatus, EligiblePeer, KybResult, KycSession, KycStatus, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, RailGroup, StrandedLock, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
 } from './types'
 
 // ── 账户 ──
@@ -391,6 +391,11 @@ export const createOffer = (req: {
   min_lot: string
   network: string
   networks?: string[]
+  /* 卖单在真链上是做市方自己的钱包锁的币，后端只核验：号和那笔交易由调用方
+     带过来。后端按 offer_id 认重试——同一个号送两次只会有一张挂单，所以建单
+     失败之后拿着同一个号重发是安全的，也是唯一不会再锁一份币的做法。 */
+  offer_id?: string
+  lock_tx?: string
 }, as?: string, confirmation?: string) =>
   /* A caller that already holds a token passes it in. The sell flow does:
      it has to sign *before* the wallet locks coins on chain, so by the time
@@ -419,6 +424,13 @@ export const prepareOffer = (req: {
 /** 下架前要的解锁参数。 */
 export const prepareDelist = (id: string, as?: string) =>
   api.post<PreparedOffer>(`/offers/${id}/prepare-delist`, {}, { as })
+
+/* 锁了币却没挂成的那些。
+
+   前端自己也在 localStorage 里记一份（见 MakerOffer 的 StrandedLock），那一份
+   更快、且带着链上交易哈希；这一份是权威的，换台设备、清过站点数据之后只剩它。 */
+export const strandedLocks = (as?: string) =>
+  api.get<{ locks: StrandedLock[] }>('/offers/stranded', { as }).then(r => r.locks ?? [])
 
 export const myOffers = (as?: string) =>
   api.get<{ offers: Offer[] }>('/offers/mine', { as }).then(r => r.offers ?? [])

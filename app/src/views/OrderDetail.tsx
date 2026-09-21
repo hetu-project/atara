@@ -164,7 +164,14 @@ export default function OrderDetail({
      the money is (still locked, awaiting a ruling) and wrong about the
      consequence (no default was recorded). `completed` keeps falling through to
      the s5 copy, which already reads as a settlement. */
-  const step = o.terminal && o.terminal !== 'completed' ? o.terminal : o.state
+  /* `released` is the conditional flow's settled state; an OTC trade settles at
+     s5. A dispute resolved in the buyer's favour used to land OTC orders in the
+     former, and every map below is keyed on OTC states — so the order fell
+     through to `?? 0` and read as "In progress · Matched", the first step of a
+     trade that had already finished. The backend now picks the state by kind;
+     this normalisation keeps orders settled before that fix readable too. */
+  const state = o.kind === 'otc_take' && o.state === 'released' ? 's5' : o.state
+  const step = o.terminal && o.terminal !== 'completed' ? o.terminal : state
   /* Finished without settling: the rail stops where it is and has no current
      stop — marking the first one as `now` reads as "just started". */
   const ended = step === 'expired' || step === 'cancelled' || step === 'disputed'
@@ -606,7 +613,7 @@ function Waiting({
       `They send ${fiat} to your registered account, then upload the receipt`],
     s3v: ['Their receipt is in', 'Check it against your account before releasing'],
     s4: ['Verifying their receipt', 'Amount, reference and sender name are checked against the escrow'],
-    s5: [`${fiat} received`, 'Escrow released to them · performance written back to both records'],
+    s5: [`${fiat} received`, settledLine(o, 'Escrow released to them · performance written back to both records')],
     expired: ['Their payment window missed', `Your ${coin} came back from escrow · their miss recorded`],
     cancelled: ['Order cancelled', `Your ${coin} came back from escrow · no default recorded`],
     disputed: ['In dispute — under review',
@@ -618,7 +625,7 @@ function Waiting({
     s3: [`Waiting on ${o.counterparty_name ?? 'them'}`, 'They are sending the transfer'],
     s3v: ['Waiting on their check', 'They confirm the money landed, then escrow releases'],
     s4: ['Verifying your receipt', 'Amount, reference and sender name are checked against the escrow'],
-    s5: [`${coin} credited`, 'Settled in full · performance written back to their score'],
+    s5: [`${coin} credited`, settledLine(o, 'Settled in full · performance written back to their score')],
     expired: ['Payment window missed', `Their ${coin} was returned and the miss recorded against your score`],
     cancelled: ['Order cancelled', `Their ${coin} was returned · no default recorded`],
     disputed: ['In dispute — under review',
@@ -633,7 +640,10 @@ function Waiting({
     s3: 'Your coins stay locked while they pay. If the window lapses, escrow returns them automatically.',
     s3v: 'Release is automatic once the receipt is confirmed. Neither side can hold the funds back.',
     s4: 'Release is automatic once the receipt matches. Neither side can hold the funds back.',
-    s5: 'The evidence pack is the settlement record — receipt, escrow release and both signatures.',
+    s5: o.evidence?.arbitration
+      ? 'This one was settled by review rather than by the receipt clearing. The evidence pack '
+        + 'carries the ruling: who raised it, what was decided, and who was found responsible.'
+      : 'The evidence pack is the settlement record — receipt, escrow release and both signatures.',
     expired: 'Funds returned automatically — nothing was held. The miss stays on the record.',
     cancelled: 'Funds returned automatically — nothing was held, and no default was recorded.',
     /* Say where the money is and who moves next. Without this the screen goes
@@ -714,18 +724,112 @@ const KIND: Record<string, string> = {
   deposit: 'Deposit received',
 }
 
+/*
+The subtitle under a settled order, corrected for orders that were arbitrated.
+
+"performance written back to both records" is what an ordinary settlement does,
+and on a contested one it is wrong twice over. It skips the part both people
+care about — a person read the case and decided it — and where the reviewer
+found the seller responsible no completion was credited at all, so the sentence
+states the opposite of what happened to their record.
+*/
+function settledLine(o: Order, normal: string): string {
+  const arb = o.evidence?.arbitration
+  if (!arb) return normal
+  if (arb.fault === 'you') return 'Settled by review · you were found responsible, and it is on your record'
+  if (arb.fault === 'them') return 'Settled by review · they were found responsible, and it is on their record'
+  if (arb.fault === 'none') return 'Settled by review · neither side was found at fault, so no default was recorded'
+  return 'Settled by review · no responsibility was recorded either way'
+}
+
 function Pack({ ev, coin, fiat, ref_ }: {
   ev: NonNullable<Order['evidence']>; coin: string; fiat: string; ref_: string
 }) {
   const done = ev.outcome === 'completed'
   const rows = ev.chain ?? []
-  if (!ev.receipt_ref && !rows.length) return null
+  const arb = ev.arbitration
+  if (!ev.receipt_ref && !rows.length && !arb) return null
+
+  /* Everything that happened, in the order it happened.
+
+     The time column on the right is what this block is for: read it down and
+     you have the sequence. Rendering the ruling as its own group above the
+     chain rows broke exactly that — a dispute raised at 15:10:58 sat above an
+     escrow binding from 15:10:18 and the column ran backwards. So rows carry
+     their own timestamp and get sorted, instead of being grouped by what kind
+     of thing they are.
+
+     Sorted on parsed milliseconds, not on the strings: RFC3339 with fractional
+     seconds does not compare lexicographically against RFC3339 without them
+     ('.' sorts before 'Z'), which would put 30.5s ahead of 30s.
+
+     A row whose timestamp did not survive (malformed legacy data — see
+     whenOrNil on the backend) sorts to the top rather than disappearing. Losing
+     the fact is worse than showing it out of place. */
+  const timed: { t: number; el: React.ReactElement }[] = []
+  const at = (v?: string) => (v ? new Date(v).getTime() : 0)
+
+  if (arb) {
+    timed.push({
+      t: at(arb.raised_at),
+      el: (
+        <div className="evrow evarb" key="arb-raised">
+          <i className="warn" />
+          <span>{arb.raised_by === 'you' ? 'You raised a dispute' : 'They raised a dispute'}
+            {/* The claim is printed as it was chosen. DisputeForm's options are
+                already sentences, so a translation table here would only be one
+                more thing to drift out of step with that list. */}
+            {arb.claim ? ` · ${arb.claim}` : ''}</span>
+          {arb.raised_at && <time>{new Date(arb.raised_at).toLocaleString()}</time>}
+        </div>
+      ),
+    })
+    timed.push({
+      t: at(arb.decided_at),
+      el: (
+        <div className="evrow evarb" key="arb-ruled">
+          <i className="ok" />
+          <span>{arb.decision === 'refund'
+            ? 'Reviewed by Atara · escrow returned to the seller'
+            : 'Reviewed by Atara · escrow released to the buyer'}
+            {/* Naming the responsible side is the point of asking the reviewer
+                for it. Left unsaid, whoever is carrying the default finds out
+                from their score. */}
+            {arb.fault === 'you' && ' · you were found responsible'}
+            {arb.fault === 'them' && ' · they were found responsible'}
+            {arb.fault === 'none' && ' · neither side at fault'}</span>
+          {arb.decided_at && <time>{new Date(arb.decided_at).toLocaleString()}</time>}
+        </div>
+      ),
+    })
+  }
+  rows.forEach((c, i) => timed.push({
+    t: at(c.at),
+    el: (
+      <div className="evrow" key={c.tx_hash || c.kind + i}>
+        <i className="ok" />
+        <span>{KIND[c.kind] ?? c.kind}</span>
+        {c.tx_hash && (c.explorer
+          ? <a href={c.explorer} target="_blank" rel="noopener" className="num"
+            onClick={e => e.stopPropagation()}>
+            {c.tx_hash.slice(0, 8)}…{c.tx_hash.slice(-6)} ↗
+          </a>
+          : <em className="num">{c.tx_hash.slice(0, 8)}…{c.tx_hash.slice(-6)}</em>)}
+        <time>{new Date(c.at).toLocaleString()}</time>
+      </div>
+    ),
+  }))
+  timed.sort((a, b) => a.t - b.t)
+
   return (
     <div className="eswin evpack">
       <div className="fal">
         <span>Evidence pack · {ref_}</span>
         <b>{done ? `${coin} → ${fiat}` : ev.outcome}</b>
       </div>
+      {/* The bank receipt is pinned here rather than placed in the sequence
+          below. Its timestamp is when it was verified, not when it landed, so
+          it has no honest position in a timeline — see the note on the row. */}
       {ev.receipt_url && (
         <div className="evrow">
           <i className="ok" />
@@ -741,19 +845,7 @@ function Pack({ ev, coin, fiat, ref_ }: {
           {ev.settled_at && <time>verified {new Date(ev.settled_at).toLocaleString()}</time>}
         </div>
       )}
-      {rows.map((c, i) => (
-        <div className="evrow" key={c.tx_hash || c.kind + i}>
-          <i className="ok" />
-          <span>{KIND[c.kind] ?? c.kind}</span>
-          {c.tx_hash && (c.explorer
-            ? <a href={c.explorer} target="_blank" rel="noopener" className="num"
-              onClick={e => e.stopPropagation()}>
-              {c.tx_hash.slice(0, 8)}…{c.tx_hash.slice(-6)} ↗
-            </a>
-            : <em className="num">{c.tx_hash.slice(0, 8)}…{c.tx_hash.slice(-6)}</em>)}
-          <time>{new Date(c.at).toLocaleString()}</time>
-        </div>
-      ))}
+      {timed.map(r => r.el)}
     </div>
   )
 }

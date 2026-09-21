@@ -281,6 +281,26 @@ export interface Evidence {
   /** 同 OTC.receipt_url。 */
   receipt_url?: string
   settled_at?: string
+  /**
+   * Present only on orders a person ruled on.
+   *
+   * `raised_by` and `fault` are already resolved to the viewer's seat by the
+   * backend — "you" or "them", not user ids — the same way `phase` is. Both
+   * sides of one order are looking at different facts about it, and deriving
+   * that in two places is how two screens come to disagree.
+   *
+   * `fault` empty means the reviewer was never asked (rulings made before the
+   * console had the field). That is not the same as 'none': one says nobody was
+   * responsible, the other says nobody answered.
+   */
+  arbitration?: {
+    raised_at?: string
+    raised_by?: 'you' | 'them'
+    claim?: string
+    decided_at?: string
+    decision?: 'release' | 'refund'
+    fault?: 'you' | 'them' | 'none'
+  }
   chain?: {
     kind: string; amount?: string; tx_hash?: string
     /** 区块浏览器上这笔交易的地址。mock 链上没有，那时就不给链接。 */
@@ -402,6 +422,34 @@ export interface PreparedOffer {
   deposit_fee?: string
   /** Unix 秒。过了这个点这份配置不再自动上架，钱只能取回。 */
   deposit_expiry?: number
+}
+
+/*
+一笔币在合约里、挂单却没建出来的锁仓。见后端 app.StrandedLock。
+
+挂卖单是三步——要号 → 钱包锁币 → 建挂单——中间那一步不可撤销，第三步还会
+失败。失败之后这个号在浏览器里只活在 localStorage，换台设备就没了；服务端这
+一份是它在任何设备上都找得回来的保证。
+*/
+export interface StrandedLock {
+  offer_id: string
+  asset: string
+  qty: string
+  /** 此刻合约里还能挂出去的量。 */
+  available: string
+  /** 当初填的那份挂单，原样重发。已经带上 offer_id。 */
+  form: {
+    side: 'buy' | 'sell'
+    asset: string
+    fiat: string
+    unit_price: string
+    qty: string
+    min_lot: string
+    network: string
+    networks?: string[]
+    offer_id?: string
+  }
+  at: string
 }
 
 /** 一笔外部入金此刻怎么样了。见后端 app.DepositStatus。 */

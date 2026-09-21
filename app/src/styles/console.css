@@ -3085,6 +3085,13 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
 .evrow time{margin-left:auto;flex:none;color:var(--faint);font-size:var(--rt-meta);
   white-space:nowrap}
 
+/* 仲裁那两行。点子用告警色——这一行说的不是流程走到了哪一步，是这笔单
+   被人争过；跟旁边那串绿点一个颜色，扫过去就丢了。
+   文案比链上那几行长（谁提的、什么理由、判给谁、谁的责任），所以这两行
+   的 span 允许收缩换行，不像上面那些定长标签。 */
+.evrow.evarb span{flex:1 1 auto;min-width:0}
+.evrow i.warn{background:var(--warn)}
+
 /* ── 入金卡：非托管的第一拍 ── */
 .fund{max-width:520px;padding:14px 16px;border-radius:var(--r-card);
   background:var(--paper);box-shadow:var(--ring)}

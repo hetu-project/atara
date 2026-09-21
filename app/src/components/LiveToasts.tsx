@@ -52,6 +52,8 @@ function watching(route: Route, ev: LivePayload): boolean {
   }
   /* The maker card lives in the home thread. The card itself will move. */
   if (ev.kind === 'maker' && route.view === 'home') return true
+  /* Same card, same reason: the strip naming the stranded lock appears on it. */
+  if (ev.kind === 'lock' && route.view === 'home') return true
   return false
 }
 
@@ -81,6 +83,22 @@ function copy(ev: LivePayload): { text: string; kind: 'ok' | 'err' | 'info'; go?
         return { text: `Dispute opened on ${ref}`, kind: 'err', go: open }
       default:
         return null
+    }
+  }
+
+  /* Coins in escrow with no listing on them.
+
+     The one thing here that is about something the person tried to do and
+     believes failed: the wallet locked the coins, the listing never went up,
+     and the card said "Could not post". So this is not "something moved while
+     you were away" — it is "that thing you gave up on is recoverable, and the
+     coins were never at risk". It leads back to the listing card, where the
+     button to post it lives; posting is still their click, never ours. */
+  if (ev.kind === 'lock') {
+    return {
+      text: 'Coins locked in escrow with no listing — post it when you are ready',
+      kind: 'info',
+      go: () => go({ view: 'home' }),
     }
   }
 
