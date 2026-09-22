@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { LIVE_EVENT, type LivePayload } from '../api/events'
+import { NOTICE_EVENT, type Notice } from '../api/client'
 import { go, useRoute, type Route } from '../hooks/useRoute'
 import { useToast } from './Toast'
 
@@ -30,8 +31,15 @@ export default function LiveToasts() {
           : undefined,
       })
     }
+    /* Plain notices from the API layer (a declined signature, for one): no
+       route check, no View button — they are about what the person just did. */
+    const onNotice = (e: Event) => {
+      const n = (e as CustomEvent<Notice>).detail
+      if (n?.text) toast(n.text, { kind: n.kind })
+    }
     addEventListener(LIVE_EVENT, on)
-    return () => removeEventListener(LIVE_EVENT, on)
+    addEventListener(NOTICE_EVENT, onNotice)
+    return () => { removeEventListener(LIVE_EVENT, on); removeEventListener(NOTICE_EVENT, onNotice) }
   }, [toast])
 
   return null
@@ -44,6 +52,8 @@ function watching(route: Route, ev: LivePayload): boolean {
   }
   /* The maker card lives in the home thread. The card itself will move. */
   if (ev.kind === 'maker' && route.view === 'home') return true
+  /* Same card, same reason: the strip naming the stranded lock appears on it. */
+  if (ev.kind === 'lock' && route.view === 'home') return true
   return false
 }
 
@@ -73,6 +83,35 @@ function copy(ev: LivePayload): { text: string; kind: 'ok' | 'err' | 'info'; go?
         return { text: `Dispute opened on ${ref}`, kind: 'err', go: open }
       default:
         return null
+    }
+  }
+
+  /* Coins in escrow with no listing on them.
+
+     The one thing here that is about something the person tried to do and
+     believes failed: the wallet locked the coins, the listing never went up,
+     and the card said "Could not post". So this is not "something moved while
+     you were away" — it is "that thing you gave up on is recoverable, and the
+     coins were never at risk". It leads back to the listing card, where the
+     button to post it lives; posting is still their click, never ours. */
+  if (ev.kind === 'lock') {
+    return {
+      text: 'Coins locked in escrow with no listing — post it when you are ready',
+      kind: 'info',
+      go: () => go({ view: 'home' }),
+    }
+  }
+
+  /* A listing of this maker's came down without them clicking anything here:
+     the backend found it closed on the contract -- a delist finished from
+     another tab, a wallet transaction sent outside the app, or the second
+     half of a two-step delist that never arrived. Nothing is owed and the
+     coins are back in the wallet; the point is that the shelf now agrees. */
+  if (ev.kind === 'offer' && ev.state === 'delisted') {
+    return {
+      text: 'A listing was closed on-chain — taken down here too',
+      kind: 'info',
+      go: () => go({ view: 'home' }),
     }
   }
 

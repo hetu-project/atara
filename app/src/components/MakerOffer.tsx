@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import * as ep from '../api/endpoints'
 import { useApi } from '../hooks/useApi'
+import { LIVE_CHANGED } from '../api/events'
 import { useToast } from './Toast'
 import ConfirmSheet from './ConfirmSheet'
 import CopyButton from './CopyButton'
@@ -11,7 +12,8 @@ import { assertPasskey } from './SessionLock'
 import { isWalletTxError, useWalletTx } from '../hooks/useWalletTx'
 import { FX_IDX } from './kycforms'
 import type { Listing } from './MakerListing'
-import type { DepositStatus, Offer, PreparedOffer } from '../api/types'
+import { ApiError } from '../api/client'
+import type { DepositStatus, Offer, PreparedOffer, StrandedLock as ApiStrandedLock } from '../api/types'
 import type { TxStep } from '../hooks/useWalletTx'
 
 /**
@@ -36,6 +38,95 @@ type OfferBody = {
   side: 'sell' | 'buy'; asset: string; fiat: string
   unit_price: string; qty: string; min_lot: string
   network: string; networks: string[]
+}
+
+/*
+一笔已经锁进合约、却还没建成挂单的币。
+
+卖单在真链上是三步：要号 → 钱包锁币 → 建挂单。中间那一步是一笔链上交易，
+撤不回来；第三步还会失败（网络断了、响应丢了、令牌刚好过期）。失败时这两个
+号只活在 send() 的局部变量里，跟着这次点击一起没了——币在合约里，界面上只有
+一句「Could not post」，再点一次就是重新要号、重新锁一份，而第一份永远留在
+那儿，连下架都够不着（下架要先按 id 查到挂单行）。
+
+所以锁一成功就先把号写下来，写在 localStorage 而不是 state：这一步的失败面
+包含「把页面关了」。建单成功再抹掉。
+
+写不进去（隐私模式、关了站点数据）不该让挂单流程挂掉——那时退回原来的行为，
+本次会话里 state 仍然记得，重试照样能用。
+*/
+type StrandedLock = Recoverable & { at: number }
+
+const lockKey = (uid: string) => `atara.locked-not-listed.${uid}`
+
+function readStranded(uid: string): StrandedLock | null {
+  if (!uid) return null
+  try {
+    const raw = localStorage.getItem(lockKey(uid))
+    if (!raw) return null
+    const v = JSON.parse(raw) as StrandedLock
+    return v && v.offer_id && v.body ? v : null
+  } catch { return null }
+}
+function writeStranded(uid: string, v: StrandedLock) {
+  if (!uid) return
+  try { localStorage.setItem(lockKey(uid), JSON.stringify(v)) } catch { /* 见上 */ }
+}
+function clearStranded(uid: string) {
+  if (!uid) return
+  try { localStorage.removeItem(lockKey(uid)) } catch { /* 见上 */ }
+}
+
+/* 这笔锁仓能不能拿来挂这一单。
+
+   比的是锁本身覆盖的东西——哪条链上的哪个币、多少量。价和起订量不在其中：
+   它们不影响链上锁了什么，改了价再用同一笔锁仓挂出来是对的。 */
+const sameLock = (r: Recoverable, b: OfferBody) =>
+  r.body.asset === b.asset && r.body.qty === b.qty && r.body.network === b.network
+
+/*
+一笔能被挂出去的残留锁仓，两个来源合成的同一种东西。
+
+服务端那一份（/offers/stranded）是权威的：它从 deposits 行加链上锁仓算出来，
+换台设备、清过站点数据之后仍然找得到——这正是 localStorage 那一份做不到的。
+本地那一份胜在快，而且带着锁币那笔交易的哈希，服务端没存过它。
+
+所以两边都要，按号合并，本地的盖在上面（多带一个哈希，没坏处）。
+*/
+type Recoverable = {
+  offer_id: string
+  lock_tx: string
+  body: OfferBody
+  /* delisted：这个号下面有一张**已经下架**的挂单，而合约里的币还锁着——
+     后台强制下架（它签不了解锁）、或旧版下架在余量为零时跳过了解锁。这一类
+     的出口不是「挂出去」（号被那张挂单占着，会撞 OFFER_EXISTS），而是「解锁」：
+     把下架流程再走一遍，钱包会被要求签那笔解锁交易。 */
+  delisted?: boolean
+  /** 合约里此刻还锁着多少。只有服务端那一份知道；已下架那一类按它显示。 */
+  available?: string
+}
+
+const fromServer = (l: ApiStrandedLock): Recoverable => ({
+  offer_id: l.offer_id,
+  lock_tx: '', // 服务端没存这个；重发用不到它，它只进链上流水
+  body: {
+    side: 'sell', asset: l.form.asset, fiat: l.form.fiat,
+    unit_price: l.form.unit_price, qty: l.form.qty, min_lot: l.form.min_lot,
+    network: l.form.network, networks: l.form.networks ?? [l.form.network],
+  },
+  delisted: l.delisted === true,
+  available: l.available,
+})
+
+/* 合并两边，本地那一份优先。done 是这一次会话里已经挂出去的那些——服务端列表
+   要等下一次取回来才不含它们，中间这段时间不该还在屏幕上催。 */
+function mergeRecoverable(
+  local: Recoverable | null, server: ApiStrandedLock[] | null, done: string[],
+): Recoverable[] {
+  const by = new Map<string, Recoverable>()
+  for (const l of server ?? []) by.set(l.offer_id, fromServer(l))
+  if (local) by.set(local.offer_id, local)
+  return [...by.values()].filter(r => !done.includes(r.offer_id))
 }
 
 /* Expiry as "when · how long is left".
@@ -213,6 +304,28 @@ export default function MakerOffer({
      the deposit state stays, the poll keeps running, and a strip on the form
      leads back here. */
   const [hidden, setHidden] = useState(false)
+  /* 已经锁了币、还没挂出去的那些。
+
+     两个来源：localStorage 那一份是这台浏览器自己记的，快，且带着锁币交易的
+     哈希；服务端那一份从 deposits 行加链上锁仓算出来，换台设备、清过站点数据
+     之后只剩它。合并使用，见 mergeRecoverable。 */
+  const uid = me?.id ?? ''
+  const [stranded, setStranded] = useState<StrandedLock | null>(null)
+  useEffect(() => { setStranded(readStranded(uid)) }, [uid])
+  const { data: serverStranded, reload: reloadStranded } =
+    useApi(() => ep.strandedLocks(identity), [identity])
+  /* 后端每半分钟去链上认一次那些无主的锁仓（见 ConfirmListingLocks），认出来
+     就发一条事件。那一下浏览器没有任何理由知道，所以在这儿听着——否则这张卡
+     要一直停在「还没确认」，而后端早就确认完了。
+
+     挂单建出来时也会走这条：那时列表回空，提示自己消失。 */
+  useEffect(() => {
+    addEventListener(LIVE_CHANGED, reloadStranded)
+    return () => removeEventListener(LIVE_CHANGED, reloadStranded)
+  }, [reloadStranded])
+  /* 这一次会话里已经挂出去的号。服务端列表要等下一次取回来才不含它们。 */
+  const [done, setDone] = useState<string[]>([])
+  const recoverable = mergeRecoverable(stranded, serverStranded, done)
   const sell = curSide === 'Sell crypto'
   const pending = sent && !!dep
   /* 放在取地址那段之前：下面那个 effect 读它，而 effect 必须排在组件里所有
@@ -321,7 +434,12 @@ export default function MakerOffer({
   const curFiat = fiats.includes(fiat) ? fiat : (fiats[0] ?? '')
 
   const sym = FIAT_SYM[curFiat] ?? ''
-  const avail = num(w?.assets.find(a => a.asset === curCoin)?.on_chain ?? '0')
+  /* The balance on the network the listing will lock on. The same coin sits on
+     several chains as several rows; matching on the asset alone picked the
+     first row, so a maker listing on BSC was shown -- and pre-checked against
+     -- their balance on whatever chain the wallet listed first. */
+  const avail = num(w?.assets.find(a => a.asset === curCoin && a.network === curNet)?.on_chain
+    ?? w?.assets.find(a => a.asset === curCoin && !a.network)?.on_chain ?? '0')
 
   /* 参考价。这一版只结算美元稳定币，所以「币的美元价」恒为 1，
      指数就是法币指数本身——真接上行情源时这里换成报价。 */
@@ -424,13 +542,18 @@ export default function MakerOffer({
 
   const send = async (body: OfferBody) => {
     setBusy(true)
+    /* 卖单在真链上是三步，顺序不能换：
+         ① 要号——lockListing 的 offerId 是合约主键，不先有号就没法锁
+         ② 钱包签 approve + lockListing，币真的进合约
+         ③ 拿着号来建挂单，后端去链上核对锁了什么
+       买单不锁币（法币腿走银行），一步就够。
+
+       ② 之后 ③ 之前失败过，就不能从 ① 重来：那会是第二个号、第二笔锁币。
+       所以②一成功先把号写下来（见 StrandedLock），③失败时它留在那儿，重试
+       从③接着走。extra 声明在 try 外面，好让 catch 也读得到——出错时「币进
+       没进合约」决定了那句话该怎么说。 */
+    let extra: { offer_id?: string; lock_tx?: string } = {}
     try {
-      /* 卖单在真链上是三步，顺序不能换：
-           ① 要号——lockListing 的 offerId 是合约主键，不先有号就没法锁
-           ② 钱包签 approve + lockListing，币真的进合约
-           ③ 拿着号来建挂单，后端去链上核对锁了什么
-         买单不锁币（法币腿走银行），一步就够。 */
-      let extra: { offer_id?: string; lock_tx?: string } = {}
       /* A buy listing locks nothing, so there is no transaction — but posting
          it is a public commitment to pay, and it is approved the way every
          other commitment here is: an external wallet signs a message that
@@ -448,15 +571,57 @@ export default function MakerOffer({
           await assertPasskey()
         }
       }
+      /* The passkey step comes first. It is the person's authorisation of
+         this listing, and the coins move on chain in the very next step —
+         asking for it afterwards (which createOffer used to do on its own)
+         meant approving and locking first, then being asked "do you agree?",
+         and a "no" left the coins locked with nothing to show for it. */
+      let confirmation: string | undefined
+      if (sell) confirmation = await ep.confirmOffer(body.asset, body.qty, identity)
+
       if (onChain && sell && chain?.deployed) {
-        const prep = await ep.prepareOffer(body, identity)
-        const hash = await tx.lockListing({
-          escrow: prep.escrow, token: prep.token,
-          offerKey: prep.offer_key, amountWei: prep.amount_wei,
-        })
-        extra = { offer_id: prep.offer_id, lock_tx: hash }
+        /* 这笔币已经锁过一次了（上一次建单没成），就拿着它的号去建单——
+           重新 prepare 会拿到一个新号，钱包会再锁一份，而第一份没人认领。
+
+           在合并后的那份里找，不是只看本地：上一次锁币发生在另一台设备上时，
+           本地什么都不记得，而服务端记得。 */
+        const held = recoverable.find(r => sameLock(r, body)) ?? null
+        if (held) {
+          extra = { offer_id: held.offer_id, lock_tx: held.lock_tx }
+        } else {
+          const prep = await ep.prepareOffer(body, identity)
+          const hash = await tx.lockListing({
+            escrow: prep.escrow, token: prep.token,
+            offerKey: prep.offer_key, amountWei: prep.amount_wei,
+          })
+          extra = { offer_id: prep.offer_id, lock_tx: hash }
+          /* 币进合约的那一刻就记下来，在建单之前。这两行之间是唯一一段
+             「钱已经动了而没有任何地方记着」的窗口，把它压到最短。 */
+          const mark: StrandedLock = {
+            offer_id: prep.offer_id, lock_tx: hash, body, at: Date.now(),
+          }
+          writeStranded(uid, mark)
+          setStranded(mark)
+        }
       }
-      const o = await ep.createOffer({ ...body, ...extra }, identity)
+      let o: Offer
+      try {
+        o = await ep.createOffer({ ...body, ...extra }, identity, confirmation)
+      } catch (e) {
+        /* The token lives 120 s and the wallet may have taken longer than that
+           over approve + lock. The coins are locked under extra.offer_id by
+           now, so do not start over: sign once more and post the same listing.
+           Any other failure is a real one and propagates. */
+        const stale = e instanceof ApiError && /^(CONFIRMATION_|SIGNATURE_REQUIRED$)/.test(e.code)
+        if (!stale || !sell) throw e
+        const again = await ep.confirmOffer(body.asset, body.qty, identity)
+        o = await ep.createOffer({ ...body, ...extra }, identity, again)
+      }
+      /* 挂单建出来了，这笔锁仓有人认领了，两边的痕迹都可以抹掉。 */
+      clearStranded(uid)
+      setStranded(null)
+      if (extra.offer_id) setDone(d => [...d, extra.offer_id as string])
+      reloadStranded()
       tx.setStep({ k: 'idle' })
       setConfirm(null)
       /* Say it landed, and say whether coins actually moved.
@@ -476,7 +641,88 @@ export default function MakerOffer({
       // 钱包那一侧的错已经在交易进度那里显示过了，别再重复一遍。
       // 判断靠错误类型而不是 tx.step —— 闭包里那个 step 是这次点击开始时的旧值。
       if (!isWalletTxError(e)) {
+        /* 币已经进合约了就要说出来。一句光秃秃的「Could not post」会让人以为
+           这一下什么都没发生——而钱包里确实少了那笔钱，下一个动作多半是再点
+           一次。下面那条提示会接着说该怎么办。 */
+        const msg = e instanceof Error ? e.message : 'Could not post'
+        setErr(extra.lock_tx ? `${msg} — your coins are locked in escrow, not lost.` : msg)
+      }
+    } finally { setBusy(false) }
+  }
+
+  /* 把已经锁好的那笔币重新挂出去。
+
+     不再 prepare、不再锁币：号和交易都是现成的，缺的只是建单这一步。后端按
+     offer_id 认同一笔重试，所以这颗按钮按几次都只会有一张挂单——上一次真的
+     建成而只是响应丢了的话，它会把那一张原样还回来。 */
+  const repost = async (rec: Recoverable) => {
+    if (busy) return
+    setBusy(true)
+    setErr('')
+    try {
+      const confirmation = await ep.confirmOffer(rec.body.asset, rec.body.qty, identity)
+      const o = await ep.createOffer(
+        { ...rec.body, offer_id: rec.offer_id, lock_tx: rec.lock_tx }, identity, confirmation)
+      if (stranded?.offer_id === rec.offer_id) {
+        clearStranded(uid)
+        setStranded(null)
+      }
+      setDone(d => [...d, rec.offer_id])
+      reloadStranded()
+      toast(`Listed · ${Number(o.qty).toLocaleString()} ${o.asset} locked in escrow`, { kind: 'ok' })
+      onPosted(o, FIAT_SYM[rec.body.fiat] ?? '')
+    } catch (e) {
+      /* 这个号已经被一张挂单占着了。
+
+         合约对同一个号是加仓（`_lockListing` 走 total += amount），所以这笔币
+         就在那张挂单的锁仓里——要拿回去下架它，而不是在这儿一直重试。会走到
+         这儿的是一份过期的本机记录：在另一台设备上，同一个号被改了价挂了出去，
+         而这台浏览器还记着旧的那份。留着它只会是一条永远点不动的提示。 */
+      if (e instanceof ApiError && e.code === 'OFFER_EXISTS') {
+        if (stranded?.offer_id === rec.offer_id) {
+          clearStranded(uid)
+          setStranded(null)
+        }
+        setDone(d => [...d, rec.offer_id])
+        reloadStranded()
+        setErr('Those coins are already part of a listing you posted — '
+          + 'delist it to take them out of escrow.')
+      } else if (!isWalletTxError(e)) {
         setErr(e instanceof Error ? e.message : 'Could not post')
+      }
+    } finally { setBusy(false) }
+  }
+
+  /* 解锁一笔「挂单已下架、币却还锁在合约里」的锁仓。
+
+     走的就是下架那条两步流程：后端先说「该你签了」（UNLOCK_REQUIRED），钱包
+     签完再回来销账。第二步没成也不要紧——链上已经解开了，后端每三十秒会自己
+     对一次链把账补上；这时候说「解锁失败」是假话。 */
+  const unlock = async (rec: Recoverable) => {
+    if (busy) return
+    setBusy(true)
+    setErr('')
+    let unlocked = false
+    try {
+      try {
+        await ep.delistOffer(rec.offer_id, identity)
+      } catch (e) {
+        if (!(e instanceof ApiError && e.code === 'UNLOCK_REQUIRED')) throw e
+        const prep = await ep.prepareDelist(rec.offer_id, identity)
+        await tx.unlockListing({ escrow: prep.escrow, offerKey: prep.offer_key })
+        unlocked = true
+        await ep.delistOffer(rec.offer_id, identity)
+      }
+      setDone(d => [...d, rec.offer_id])
+      reloadStranded()
+      toast(`Unlocked · ${rec.body.asset} is back in your wallet`, { kind: 'ok' })
+    } catch (e) {
+      if (unlocked) {
+        setDone(d => [...d, rec.offer_id])
+        reloadStranded()
+        toast('Coins unlocked · the record catches up within a minute', { kind: 'info' })
+      } else if (!isWalletTxError(e)) {
+        setErr(e instanceof Error ? e.message : 'Could not unlock those coins')
       }
     } finally { setBusy(false) }
   }
@@ -556,6 +802,57 @@ export default function MakerOffer({
 
         {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
         <TxNote step={tx.step} explorer={chain?.explorer ?? ''} />
+
+        {/* 币在合约里、挂单没建成的那些。
+
+            它说的是一件已经发生的事实（币锁进去了），和一个还没做完的动作
+            （挂出去），所以它不是错误提示，而是一条待办——错误提示会跟着下
+            一次点击消失，这一条不会，它只在挂单真的建出来之后才消失。
+
+            没有「知道了」那种按钮：关掉它并不会把币还回来，而这一条是这笔币
+            在界面上唯一的入口。挂出去之后不想要，走下架，那时合约才会退币。
+
+            **上架这一下必须由人来点。** 后端认得出这笔锁仓，也存得下当初那份
+            表单，技术上完全可以自己把它挂出去——但他锁币时同意的是「按那个价
+            挂那么多」，而那可能是两小时前的价。币在合约里跑不掉（合约认的
+            maker 就是他，下架退回他自己的地址），所以这里没有替他做决定的
+            必要。后端只负责让他知道。
+
+            列表而不是单条：来源有两个（本机记的、服务端算的），而服务端那边
+            完全可能有不止一笔——比如在另一台设备上断在半路的那些。 */}
+        {recoverable.map(rec => rec.delisted ? (
+          /* The mirror image: a listing already taken down whose coins the
+             contract still holds. The way out is the unlock, not a repost --
+             this id has a listing on it, and posting again would be refused. */
+          <div className="fstat warn" key={rec.offer_id}>
+            <i />
+            <span>
+              <b className="num">{Number(rec.available ?? rec.body.qty).toLocaleString()} {rec.body.asset}</b>
+              {' '}from a listing you took down is still locked in escrow — the listing
+              came down before the contract let the coins go. They are yours; unlock
+              to take them back to your wallet.
+            </span>
+            <button type="button" className="btn btn-ghost btn-sm" disabled={busy}
+              onClick={() => void unlock(rec)}>
+              {busy ? 'Unlocking…' : 'Unlock'}
+            </button>
+          </div>
+        ) : (
+          <div className="fstat warn" key={rec.offer_id}>
+            <i />
+            <span>
+              <b className="num">{Number(rec.body.qty).toLocaleString()} {rec.body.asset}</b>
+              {' '}is locked in escrow from an earlier attempt that did not finish
+              posting. We checked the contract — the coins are there and they are
+              yours. Nothing goes on the book until you say so: post it at the rate
+              below, or post it and then delist to take the coins back out.
+            </span>
+            <button type="button" className="btn btn-ghost btn-sm" disabled={busy}
+              onClick={() => void repost(rec)}>
+              {busy ? 'Posting…' : 'Post it'}
+            </button>
+          </div>
+        ))}
 
         {/* The way back to a deposit whose sheet was dismissed. Same .fstat block
             as inside the sheet, same live line: the thing being waited for has

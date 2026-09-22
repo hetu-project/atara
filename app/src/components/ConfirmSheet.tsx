@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { IPasskey, IWallet } from './icons'
 
@@ -15,19 +16,31 @@ import { IPasskey, IWallet } from './icons'
  *
  * Atara 钱包 + 有 passkey：passkey 就是签名的那把钥匙，说「用 passkey 确认」。
  *
- * Atara 钱包 + 没有 passkey：先补一把。没有它的话，「你的钥匙你签」这句话在
- * 这条路上根本不成立——按钮不该假装能签。
+ * Atara 钱包 + 没有 passkey：先补一把，仍在这张确认里。console.html 的
+ * cok 是这一下先注册、装好了再签同一笔，不把人踢去 Settings。A demo
+ * seat has no Privy session and cannot mint a key — it must not be told to.
  */
 export interface ConfirmRow { k: string; v: React.ReactNode }
 
 export default function ConfirmSheet({
-  title, amount, unit, lead, rows, extra, note, walletKind, plain, busy, blocked, quiet, okLabel,
+  title, amount, unit, unitPos = 'post', lead, rows, extra, note, walletKind, plain, busy, blocked, quiet, okLabel,
   onConfirm, onClose,
 }: {
   title: string
   /** 大数。挂单是币量，吃单是要付的法币。 */
   amount?: string
   unit?: string
+  /** Which side the unit sits on.
+   *
+   *  'post' is a quantity of something — `33 USDT`.
+   *  'pre'  is a currency symbol — `¥779,589.65`.
+   *
+   *  It is not only word order. The unit renders muted and a size down from
+   *  the number, so a fiat symbol baked into `amount` instead comes out in
+   *  the same weight as the figure, and a currency code appended on top of a
+   *  symbol already in the string gives `¥779589.65CNY`. The margin on the
+   *  unit sits on its right, which is the gap a prefix needs. */
+  unitPos?: 'pre' | 'post'
   lead: React.ReactNode
   rows?: ConfirmRow[]
   /** 入金方式那一排之类，挂在说明和额度卡之间。 */
@@ -61,29 +74,79 @@ export default function ConfirmSheet({
   onConfirm: () => void
   onClose: () => void
 }) {
-  const { user } = usePrivy()
+  const { user, authenticated, linkPasskey } = usePrivy()
   const ext = walletKind === 'ext'
   const hasPk = (user?.linkedAccounts ?? []).some(a => a.type === 'passkey')
+  const [linking, setLinking] = useState(false)
+  const [linkErr, setLinkErr] = useState('')
+
+  /* Signed-in Atara wallet, no key yet. The first click registers one
+     here; the second signs. Demo identities skip this — they have no
+     Privy session, and linkPasskey throws instead of minting. */
+  const needsPk = !plain && !ext && authenticated && !hasPk
+
+  useEffect(() => {
+    if (hasPk) setLinking(false)
+  }, [hasPk])
 
   const [icon, label] = plain
     ? [null, plain]
     : ext
     ? [<IWallet key="w" />, okLabel ?? 'Sign in your wallet']
+    : needsPk
+    ? [<IPasskey key="p" />, 'Add a passkey to approve']
     : hasPk
-      ? [<IPasskey key="p" />, okLabel ?? 'Confirm with passkey']
-      : [<IPasskey key="p" />, okLabel ?? 'Add a passkey to approve']
+    ? [<IPasskey key="p" />, okLabel ?? 'Confirm with passkey']
+    : [null, okLabel ?? 'Confirm']
+
+  const wait = linking
+    ? 'Creating your passkey…'
+    : busy
+      ? (plain ? 'Working…' : ext ? 'Waiting for your wallet…' : 'Waiting for Touch ID…')
+      : label
+
+  const click = () => {
+    if (busy || blocked || linking) return
+    if (!needsPk) {
+      onConfirm()
+      return
+    }
+    /* First click: mint the key in this sheet. Do not settle the order. */
+    setLinkErr('')
+    setLinking(true)
+    try {
+      const r = linkPasskey() as unknown as Promise<unknown> | void
+      if (r && typeof (r as Promise<unknown>).then === 'function') {
+        void (r as Promise<unknown>).then(() => {
+          setLinking(false)
+        }).catch((e: unknown) => {
+          setLinking(false)
+          setLinkErr(e instanceof Error ? e.message : 'Could not add a passkey')
+        })
+      } else {
+        setLinking(false)
+      }
+    } catch (e) {
+      setLinking(false)
+      setLinkErr(e instanceof Error ? e.message : 'Could not add a passkey')
+    }
+  }
 
   return (
     <div id="confirm" className="show" role="dialog" aria-modal="true" aria-label={title}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      onClick={e => {
+        if (e.target === e.currentTarget && !linking && !busy) onClose()
+      }}>
       <div className="paysheet">
         <div className="pshead">
-          <button className="psx" aria-label="Close" onClick={onClose}>✕</button>
+          <button className="psx" aria-label="Close" onClick={onClose} disabled={linking || busy}>✕</button>
           <span id="pstitle">{title}</span>
         </div>
         {amount && (
           <div className="psamt">
-            <b className="num">{amount}</b>{unit ? <i>{unit}</i> : null}
+            {unit && unitPos === 'pre' ? <i>{unit}</i> : null}
+            <b className="num">{amount}</b>
+            {unit && unitPos === 'post' ? <i>{unit}</i> : null}
           </div>
         )}
         <div className="psfor">{lead}</div>
@@ -105,9 +168,15 @@ export default function ConfirmSheet({
             <span className="psfund">{note.how}</span>
           </div>
         )}
+        {linkErr ? (
+          <div className="psrows">
+            <span className="pslab" style={{ color: 'var(--warn)' }}>{linkErr}</span>
+          </div>
+        ) : null}
         <button className={'btn psok ' + (quiet ? 'btn-secondary quiet' : 'btn-primary')}
-          disabled={busy || blocked} onClick={onConfirm}>
-          {icon} {busy ? 'Working…' : label}
+          disabled={busy || blocked || linking} onClick={click}>
+          {(linking || (busy && !plain)) ? <i className="pkpulse" /> : icon}{' '}
+          {wait}
         </button>
       </div>
     </div>

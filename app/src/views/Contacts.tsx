@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import * as ep from '../api/endpoints'
 import { LIVE_CHANGED } from '../api/events'
 import Avatar from '../components/Avatar'
@@ -157,6 +157,44 @@ function AddContact({
 }) {
   const { toast } = useToast()
   const [tab, setTab] = useState<'find' | 'past'>('find')
+  /* Which way the panel is moving, so the incoming content enters from the
+     side the pill is travelling towards. Without it both panes always slide
+     in from the same edge and a switch back reads as another switch forward.
+
+     A ref, not state: it is read while rendering the very frame the tab
+     changes on, and putting it in state would need a second render to take
+     effect — by which point the animation has already started from the wrong
+     side. It never needs to trigger a render of its own. */
+  const dir = useRef(1)
+
+  /* The panel's height, measured rather than declared.
+
+     The two tabs are different heights and so is the search list as results
+     come and go, and none of that is animatable on its own: `height:auto` and
+     a grid `1fr` both just resolve to whatever the content needs, with no
+     property changing for a transition to pick up. So the content is measured
+     and the number is handed to CSS.
+
+     One observer covers every cause — switching tabs, results arriving,
+     results clearing — because it watches the content box rather than the
+     thing that changed it. Undefined until the first measurement, which
+     leaves the panel on `auto`: better an unanimated first paint than a
+     clipped one. */
+  const box = useRef<HTMLDivElement>(null)
+  const [h, setH] = useState<string>()
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setH(`${el.offsetHeight}px`))
+    ro.observe(el)
+    setH(`${el.offsetHeight}px`)
+    return () => ro.disconnect()
+  }, [])
+  const go = (t: 'find' | 'past') => {
+    if (t === tab) return
+    dir.current = t === 'past' ? 1 : -1
+    setTab(t)
+  }
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<Account[] | null>(null)
   const [err, setErr] = useState('')
@@ -229,14 +267,30 @@ function AddContact({
           </button>
         </header>
         <div className="mbody">
-          <div className="acx">
-            <div className="acseg" role="tablist">
+          <div className="acbody">
+            {/* --i drives the pill: 0 is the left segment, 1 the right. The
+                position lives in CSS so the markup does not have to know how
+                wide a segment is. */}
+            <div className="acseg" role="tablist"
+              style={{ '--i': tab === 'find' ? 0 : 1 } as CSSProperties}>
               <button className={'acs' + (tab === 'find' ? ' on' : '')} role="tab"
-                onClick={() => setTab('find')}>By name or address</button>
+                aria-selected={tab === 'find'}
+                onClick={() => go('find')}>By name or address</button>
               <button className={'acs' + (tab === 'past' ? ' on' : '')} role="tab"
-                onClick={() => setTab('past')}>From past trades</button>
+                aria-selected={tab === 'past'}
+                onClick={() => go('past')}>From past trades</button>
             </div>
 
+            {/* The pane is keyed on the tab so React replaces it rather than
+                patching it in place — the enter animation has to run against
+                a fresh node, and a patched one would keep the old opacity.
+
+                The grid wrapper carries the height change; the inner div is
+                what the 0fr/1fr transition measures. */}
+            <div className="acpanel" style={{ '--h': h } as CSSProperties}>
+              <div ref={box}>
+                <div className="acpane" key={tab}
+                  style={{ '--d': dir.current } as CSSProperties}>
             {tab === 'find' ? (
               <>
                 <label className="acf"><span>Name or address</span>
@@ -305,6 +359,9 @@ function AddContact({
                 </div>
               </>
             )}
+                </div>
+              </div>
+            </div>
 
             {err ? <p className="acnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
           </div>

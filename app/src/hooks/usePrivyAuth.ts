@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { usePrivy } from '@privy-io/react-auth'
+import { usePrivy, useSignMessage, useWallets } from '@privy-io/react-auth'
+import { createWalletClient, custom, type Address } from 'viem'
 import * as ep from '../api/endpoints'
-import { authChanged, setTokenSource } from '../api/client'
+import { authChanged, getIdentity, setMessageSigner, setTokenSource } from '../api/client'
 
 /**
  * Privy 与后端账户之间的那一座桥。
@@ -35,6 +36,45 @@ export function usePrivyAuth(signed: boolean, signIn: (address: string) => void)
      page loaded fine. Installing it here means it is in place before any child
      effect fires. It is idempotent and touches nothing React owns. */
   setTokenSource(() => getAccessToken())
+
+  /* And a way to sign a confirmation. Installed during render for the same
+     reason as the token getter, and whenever the person is signed in — not
+     only once useWallets lists something.
+
+     Two kinds of wallet, two signers:
+
+       external (MetaMask, OKX…) — sign through its EIP-1193 provider, which
+         is what useWallets hands out;
+       embedded (Google / Twitter sign-in) — sign through Privy's own hook. It
+         does not depend on the embedded wallet having appeared in useWallets
+         yet. That list lags the sign-in by a beat, and a Send clicked in that
+         beat used to go out unsigned and come back "sign it with your passkey
+         first" — the backend was right, the client just had no signer.
+
+     The backend recovers the address from the signature and compares it to
+     the account's, so a wrong pick here fails closed, never open. */
+  const { wallets } = useWallets()
+  const { signMessage: privySign } = useSignMessage()
+  const embedded = user?.wallet?.walletClientType === 'privy' ? user.wallet.address : ''
+  setMessageSigner(!authenticated ? null : async (message: string) => {
+    const want = getIdentity().toLowerCase()
+    const w = wallets.find(x => x.address.toLowerCase() === want) ?? wallets[0]
+    if (w && w.walletClientType !== 'privy') {
+      const provider = await w.getEthereumProvider()
+      const account = w.address as Address
+      const client = createWalletClient({ account, transport: custom(provider) })
+      return client.signMessage({ account, message })
+    }
+    const r = await privySign({ message }, {
+      address: embedded || w?.address,
+      uiOptions: {
+        title: 'Sign with your passkey',
+        description: 'This confirms the action below. Nothing moves until you also approve the transaction that follows.',
+        buttonText: 'Sign and continue',
+      },
+    })
+    return r.signature
+  })
 
   useEffect(() => {
     if (!ready || !authenticated || signed || signingOut.current) return

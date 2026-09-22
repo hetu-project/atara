@@ -1,4 +1,6 @@
 import type { ApiErrorBody, Confirmation, Grade } from './types'
+import { clearShared } from './share'
+import { WalletTxError, signatureDeclined } from './walletError'
 
 /**
  * 后端地址。
@@ -33,10 +35,21 @@ export class ApiError extends Error {
 }
 
 /**
- * 当前身份。后端鉴权是 mock——X-Atara-User 头直接注入身份，没有会话。
- * 演示一笔交易的两侧必须能切身份，所以这个值是可写的，存在 localStorage 里。
+ * 当前身份的**演示用**句柄。
+
+ * 真正的身份是 Privy 的 bearer token，后端只认它。这个句柄只在两种情况下
+ * 有意义：本地开发把后端开成 ATARA_DEV_AUTH=1 时，X-Atara-User 头直接注入
+ * 身份；以及演示时开两个窗口各带一个 ?as= 同时盯住一笔交易的两侧。
+ *
+ * 所以它只在 dev 构建里发出去（见 DEV_HEADERS）。生产构建一个字节都不带：
+ * 后端反正不认，带着只会让下一个接手的人以为它还有效。
  */
 let identity = readIdentity()
+
+/** dev 构建才附带的头。生产构建返回空对象。 */
+export function devHeaders(as?: string): Record<string, string> {
+  return import.meta.env.DEV ? { 'X-Atara-User': as ?? identity } : {}
+}
 
 function readIdentity(): string {
   try {
@@ -95,6 +108,16 @@ export const PROFILE_CHANGED = 'atara:profile-changed'
  */
 export const AUTH_CHANGED = 'atara:auth-changed'
 
+/**
+ * 一条要给人看的全局提示。这一层是纯函数，够不着 React 的 toast；
+ * 发一个事件，LiveToasts 收到后弹到右上角。
+ */
+export const NOTICE_EVENT = 'atara:notice'
+export interface Notice { text: string; kind: 'ok' | 'err' | 'info' }
+export function notify(text: string, kind: Notice['kind'] = 'info'): void {
+  dispatchEvent(new CustomEvent<Notice>(NOTICE_EVENT, { detail: { text, kind } }))
+}
+
 /** Announce that sign-in or sign-out completed. */
 export function authChanged(): void {
   dispatchEvent(new CustomEvent(AUTH_CHANGED))
@@ -102,6 +125,11 @@ export function authChanged(): void {
 
 export function clearIdentity(): void {
   identity = 'demo'
+  /* Whatever the shared layer is holding belonged to the account that is
+     leaving. The chain config would survive a sign-out harmlessly, but the
+     wallet would not, and a cache that is right most of the time is the kind
+     that gets trusted. */
+  clearShared()
   try {
     localStorage.removeItem('atara-identity')
     sessionStorage.removeItem('atara-signed')
@@ -141,12 +169,9 @@ export async function readAuthToken(): Promise<string | null> {
 }
 
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const headers: Record<string, string> = {
-    /* Still sent: it is what the dev-auth path reads, and it is also how the
-       demo watches a trade from both seats. The backend ignores it whenever a
-       bearer token is present, so it cannot override a real identity. */
-    'X-Atara-User': opts.as ?? identity,
-  }
+  /* Dev builds send the seat header for the two-window demo and the
+     ATARA_DEV_AUTH path; production sends nothing the backend would not read. */
+  const headers: Record<string, string> = devHeaders(opts.as)
   if (readToken) {
     try {
       const t = await readToken()
@@ -171,7 +196,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     } catch {
       throw new ApiError(res.status, {
         code: 'BAD_RESPONSE',
-        message: `${res.status} 返回的不是 JSON：${text.slice(0, 120)}`,
+        message: `${res.status} did not return JSON: ${text.slice(0, 120)}`,
       })
     }
   }
@@ -180,7 +205,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     const body = parsed as { error?: ApiErrorBody } | null
     const err = new ApiError(res.status, body?.error ?? {
       code: 'HTTP_' + res.status,
-      message: `请求失败（${res.status}）`,
+      message: `Request failed (${res.status})`,
     })
     /* 身份不存在了：这是重试也好不了的错，重试只会把它变成一场 401 风暴。
        清掉身份并广播一次，由 App 退回未登录态。 */
@@ -205,11 +230,42 @@ export const api = {
     request<T>(path, { ...opts, method: 'DELETE' }),
 }
 
+/* How to get the wallet to sign a message.
+
+   Installed by usePrivyAuth the same way the token getter is: this file is
+   plain functions and cannot use hooks. Until it is installed, signature-grade
+   confirmations go out unsigned — the backend then refuses them unless it is
+   running in dev-auth mode, which is the two-seat demo and has no wallet. */
+let signMessage: ((message: string) => Promise<string>) | null = null
+
+export function setMessageSigner(fn: ((message: string) => Promise<string>) | null): void {
+  signMessage = fn
+}
+
+/**
+ * The exact text the wallet signs. The backend recomposes it from the request
+ * and recovers the signer, so this must match app/confirm.go byte for byte:
+ * one field per line, parts one per line, no trailing newline.
+ */
+export function confirmMessage(scope: string, parts: string[], grade: Grade, issued: number): string {
+  return [
+    'Atara confirmation',
+    `scope: ${scope}`,
+    ...parts.map(p => `part: ${p}`),
+    `grade: ${grade}`,
+    `issued: ${issued}`,
+  ].join('\n')
+}
+
 /**
  * 换一枚确认令牌。
  *
  * 令牌绑定 (scope + parts) 的摘要：换了金额或对手方，旧令牌就不认了。
  * 120 秒、一次性。所以**不要缓存复用**——每次动钱前重新签发。
+ *
+ * 签名档要先让钱包签一段写明这次操作的文字（界面上叫「用 Passkey 签名」，
+ * 手势是同一个）。后端拿签名恢复出地址、和账户上的地址比对，对不上不发令牌。
+ * 承诺档不签：它只表示「我接受这些条款」，一个活着的会话就够。
  */
 export async function assert(
   scope: string,
@@ -217,7 +273,32 @@ export async function assert(
   grade: Grade,
   as?: string,
 ): Promise<string> {
-  const r = await api.post<Confirmation>('/passkey/assert', { scope, parts, grade }, { as })
+  const body: Record<string, unknown> = { scope, parts, grade }
+  if (grade === 'signature' && !signMessage && await readAuthToken()) {
+    /* Signed in, but no signer installed yet — Privy is still waking up. The
+       backend would refuse an unsigned request anyway; say why here, in words
+       about the wallet rather than the protocol. (No token means the dev seat,
+       which the backend lets through unsigned on purpose.) */
+    const msg = 'Your wallet is not ready to sign yet — try again in a moment'
+    notify(msg, 'err')
+    throw new WalletTxError(msg)
+  }
+  if (grade === 'signature' && signMessage) {
+    const issued = Math.floor(Date.now() / 1000)
+    body.issued = issued
+    try {
+      body.signature = await signMessage(confirmMessage(scope, parts, grade, issued))
+    } catch (e) {
+      /* Declined in the wallet. Say so once, in the corner, then hand callers
+         a marked error so their own inline error line stays quiet — the raw
+         viem text ("User rejected the request. Details: … Version: viem@…")
+         is not something a person should read. */
+      const msg = signatureDeclined(e)
+      notify(msg, 'err')
+      throw new WalletTxError(msg)
+    }
+  }
+  const r = await api.post<Confirmation>('/passkey/assert', body, { as })
   return r.confirmation
 }
 

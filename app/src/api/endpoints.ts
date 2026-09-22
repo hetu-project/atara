@@ -1,6 +1,7 @@
-import { ApiError, BASE, PROFILE_CHANGED, api, getIdentity, readAuthToken, withConfirmation } from './client'
+import { ApiError, BASE, PROFILE_CHANGED, api, assert, getIdentity, readAuthToken, withConfirmation } from './client'
+import { shared } from './share'
 import type {
-  Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, DepositStatus, EligiblePeer, KybResult, KycSession, KycStatus, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, RailGroup, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
+  Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, DepositStatus, EligiblePeer, KybResult, KycSession, KycStatus, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, RailGroup, StrandedLock, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
 } from './types'
 
 // ── 账户 ──
@@ -37,7 +38,12 @@ export const rename = async (displayName: string, as?: string) => {
   return u
 }
 
-export const wallet = (as?: string) => api.get<Wallet>('/wallet', { as })
+/* Deduped, not cached: balances change, and a stale one here is a number
+   somebody is about to act on. The window is only "while a request is already
+   in flight", which is exactly long enough to collapse the burst of identical
+   calls a screenful of order cards fires in one tick. */
+export const wallet = (as?: string) =>
+  shared(`wallet:${as ?? ''}`, 0, () => api.get<Wallet>('/wallet', { as }))
 
 // ── 目录 ──
 
@@ -46,7 +52,12 @@ export const assets = () =>
 
 /** 结算法币，按走廊分组。目录只发这一版支持的——范围由后端声明。 */
 /** 链上合约地址。mock 下回一份空的，前端据此知道这一版不发交易。 */
-export const chainInfo = () => api.get<ChainInfo>('/catalog/chain')
+/* Which chain the backend is on, and where the contracts live. It cannot
+   change while the process is up, so this one is worth holding — but for a
+   bounded time rather than the life of the tab: a backend restarted onto a
+   different chain should not be papered over by a cache nobody can clear. */
+export const chainInfo = () =>
+  shared('chain', 5 * 60_000, () => api.get<ChainInfo>('/catalog/chain'))
 
 /**
  * 法币收款渠道。**必须问后端,不能在前端写死。**
@@ -120,12 +131,15 @@ export const tasks = (as?: string) =>
 /**
  * 吃单。**不需要确认令牌**——吃单只建工单，还没承诺、没动钱。
  * 但事务内会预留可成交量，并发抢不到会拿到 ABOVE_AVAILABLE_QTY。
+ *
+ * No `card_id`: taking an offer does not draw on an allowance. The backend
+ * used to accept one here and write it onto the order unchecked, which made
+ * the cancellation refund credit a stranger's card. No caller ever sent it.
  */
 export const take = (offerId: string, body: {
   amount: string
   amount_kind: 'coin' | 'fiat'
   network: string
-  card_id?: string
 }) => api.post<Order>(`/offers/${offerId}/take`, body)
 
 /**
@@ -163,7 +177,12 @@ export const receipt = (orderId: string, fileRefs: string[], as?: string) =>
  * 自己核自己等于退回成「等对方点确认」，那正是协议要取代的东西。
  */
 export const verifyReceipt = (orderId: string, ok: boolean, reason = '', as?: string) =>
-  api.post<Order>(`/orders/${orderId}/verify-receipt`, { ok, reason }, { as })
+  ok
+    /* Clearing releases escrow, so it is signature grade — the same passkey
+       step as funding. Rejecting only freezes money and needs nothing extra. */
+    ? withConfirmation('verify', [orderId], 'signature',
+        tok => api.post<Order>(`/orders/${orderId}/verify-receipt`, { ok, reason }, { as, confirmation: tok }), as)
+    : api.post<Order>(`/orders/${orderId}/verify-receipt`, { ok, reason }, { as })
 
 /**
  * 开一张争议案卷。
@@ -209,7 +228,7 @@ export async function upload(file: File, as?: string): Promise<string> {
     | null
   if (!res.ok || !body || 'error' in body) {
     throw new ApiError(res.status, body && 'error' in body ? body.error : {
-      code: 'UPLOAD_FAILED', message: `上传失败（${res.status}）`,
+      code: 'UPLOAD_FAILED', message: `Upload failed (${res.status})`,
     })
   }
   return body.file_ref
@@ -311,6 +330,10 @@ export const createWithdrawal = (req: WithdrawReq, as?: string) =>
 export const broadcastWithdrawal = (id: string, txHash: string, as?: string) =>
   api.post<Withdrawal>(`/withdrawals/${id}/broadcast`, { tx_hash: txHash }, { as })
 
+/** 钱包里拒签了：关掉这条从未签出交易的记录，别让它永远停在 submitted。 */
+export const abandonWithdrawal = (id: string, as?: string) =>
+  api.post<Withdrawal>(`/withdrawals/${id}/abandon`, {}, { as })
+
 // ── Discover 与做市准入 ──
 
 export const markets = () =>
@@ -386,10 +409,25 @@ export const createOffer = (req: {
   min_lot: string
   network: string
   networks?: string[]
-}, as?: string) =>
-  withConfirmation('offer', [req.asset, req.qty],
-    req.side === 'sell' ? 'signature' : 'commit',
-    token => api.post<Offer>('/offers', req, { confirmation: token, as }), as)
+  /* 卖单在真链上是做市方自己的钱包锁的币，后端只核验：号和那笔交易由调用方
+     带过来。后端按 offer_id 认重试——同一个号送两次只会有一张挂单，所以建单
+     失败之后拿着同一个号重发是安全的，也是唯一不会再锁一份币的做法。 */
+  offer_id?: string
+  lock_tx?: string
+}, as?: string, confirmation?: string) =>
+  /* A caller that already holds a token passes it in. The sell flow does:
+     it has to sign *before* the wallet locks coins on chain, so by the time
+     it gets here the confirmation is minutes old and must not be re-issued. */
+  confirmation
+    ? api.post<Offer>('/offers', req, { confirmation, as })
+    : withConfirmation('offer', [req.asset, req.qty],
+        req.side === 'sell' ? 'signature' : 'commit',
+        token => api.post<Offer>('/offers', req, { confirmation: token, as }), as)
+
+/** The confirmation a sell listing needs, obtainable ahead of the lock. Same
+    scope and parts as createOffer, or the backend will not accept it. */
+export const confirmOffer = (asset: string, qty: string, as?: string) =>
+  assert('offer', [asset, qty], 'signature', as)
 
 /** 挂卖单第一步：要号，并拿到锁币要用的参数。 */
 /** 一笔外部入金到账了没有。只有这笔入金的主人查得到。 */
@@ -404,6 +442,13 @@ export const prepareOffer = (req: {
 /** 下架前要的解锁参数。 */
 export const prepareDelist = (id: string, as?: string) =>
   api.post<PreparedOffer>(`/offers/${id}/prepare-delist`, {}, { as })
+
+/* 锁了币却没挂成的那些。
+
+   前端自己也在 localStorage 里记一份（见 MakerOffer 的 StrandedLock），那一份
+   更快、且带着链上交易哈希；这一份是权威的，换台设备、清过站点数据之后只剩它。 */
+export const strandedLocks = (as?: string) =>
+  api.get<{ locks: StrandedLock[] }>('/offers/stranded', { as }).then(r => r.locks ?? [])
 
 export const myOffers = (as?: string) =>
   api.get<{ offers: Offer[] }>('/offers/mine', { as }).then(r => r.offers ?? [])

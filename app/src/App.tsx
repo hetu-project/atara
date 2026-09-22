@@ -41,8 +41,12 @@ export default function App() {
   /* 会话锁。密码只解开这个界面，不批准任何东西——转账和额度永远走钱包
      那一侧的签名。没设过密码就先带他去设，设好再替他锁上，那一下的意图不丢。 */
   /* 有 passkey 就不必再设密码：锁上之后那把钥匙能打开它。 */
-  const { user: privyUser } = usePrivy()
-  const hasPasskey = (privyUser?.linkedAccounts ?? []).some(a => a.type === 'passkey')
+  const { user: privyUser, ready: privyReady } = usePrivy()
+  /* null until Privy has loaded: the lock screen must not conclude "no passkey"
+     from an account that simply has not arrived yet. */
+  const hasPasskey = privyReady
+    ? (privyUser?.linkedAccounts ?? []).some(a => a.type === 'passkey')
+    : null
   const lk = useSessionLock(signed, hasPasskey)
   const [folded, setFolded] = useState(
     () => { try { return localStorage.getItem('atara-left') === '1' } catch { return false } })
@@ -157,7 +161,7 @@ export default function App() {
       <PwSetup why={lk.setup.why} onClose={lk.closeSetup} onDone={lk.finishSetup} />
     )}
     {lk.locked && (
-      <LockScreen hasPasskey={hasPasskey} name={handle}
+      <LockScreen hasPasskey={hasPasskey}
         onUnlock={() => lk.setLocked(false)}
         onSignOut={() => { lk.setLocked(false); signOutAll(signOut); go({ view: 'discover' }) }} />
     )}

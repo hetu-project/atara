@@ -1,4 +1,4 @@
-import { BASE, getIdentity, readAuthToken } from './client'
+import { BASE, devHeaders, readAuthToken } from './client'
 
 /**
  * The live stream that tells this browser when to refetch.
@@ -56,7 +56,7 @@ export function openEventStream(): () => void {
     ctrl = new AbortController()
     try {
       const token = await readAuthToken()
-      const headers: Record<string, string> = { 'X-Atara-User': getIdentity() }
+      const headers: Record<string, string> = devHeaders()
       if (token) headers.Authorization = 'Bearer ' + token
 
       const res = await fetch(BASE + '/events', { headers, signal: ctrl.signal })

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AUTH_CHANGED, ApiError } from '../api/client'
+import { isWalletTxError } from '../api/walletError'
 
 /**
  * Errors that retrying cannot fix. Asking again just fills the log: the record
@@ -84,7 +85,7 @@ export function useApi<T>(
         if (!alive) return
         fails.current += 1
         setError(e instanceof ApiError ? e : new ApiError(0, {
-          code: 'NETWORK', message: e instanceof Error ? e.message : '请求失败',
+          code: 'NETWORK', message: e instanceof Error ? e.message : 'Request failed',
         }))
       })
       .finally(() => {
@@ -158,9 +159,13 @@ export function useAction() {
     try {
       return await fn()
     } catch (e: unknown) {
-      setError(e instanceof ApiError ? e : new ApiError(0, {
-        code: 'NETWORK', message: e instanceof Error ? e.message : '请求失败',
-      }))
+      /* A declined wallet signature has already been toasted by the API layer;
+         repeating it under the button would read as a second failure. */
+      if (!isWalletTxError(e)) {
+        setError(e instanceof ApiError ? e : new ApiError(0, {
+          code: 'NETWORK', message: e instanceof Error ? e.message : 'Request failed',
+        }))
+      }
       return null
     } finally {
       setPending(false)

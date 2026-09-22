@@ -46,7 +46,7 @@ function firstFlaggedStep(
 
 export default function MakerFlow({
   phase, identity, initial, issues, draft, draftStep, kyb: initialKyb,
-  resubmit, onPending, onSubmitted, onBackOut,
+  resubmit, onPending, onSubmitted, onFailed, onBackOut,
 }: {
   phase: 'kyc' | 'listing'
   identity: string
@@ -84,6 +84,9 @@ export default function MakerFlow({
   onPending?: (phase: 'kyc' | 'listing') => void
   /** 提交成功。form 交回去是给回执用的——那张「查看提交内容」要照着它画。 */
   onSubmitted: (phase: 'kyc' | 'listing', form: Record<string, unknown>) => void
+  /** 提交失败：请求没落地。只用来撤掉「审核中」那条待办——表单留着，错误就在
+      它下面。原来这里复用 onSubmitted，而那一路顺手把表单关了，错误随表单一起消失。 */
+  onFailed?: (phase: 'kyc' | 'listing') => void
   /** 交易条款第一步的返回。参照那颗箭头退回身份表单，我们这边身份已经交了、
       表单不在了，所以退回对话——「先不弄」是个真实的意图，得有地方去。 */
   onBackOut?: () => void
@@ -361,8 +364,11 @@ export default function MakerFlow({
       setErr(e instanceof Error ? e.message : 'Could not submit')
       /* The request failed, so nothing is in flight any more. Leaving the
          thread on "checking…" would have it wait forever on a reply that
-         is never coming. */
-      onSubmitted(phase, {})
+         is never coming. Only the pending marker comes off: the form stays
+         open with the error under its button. (This used to call
+         onSubmitted, whose other job is to close the form — so the error
+         above was set on a component that vanished in the same tick.) */
+      onFailed?.(phase)
     } finally { setBusy(false) }
   }
 
@@ -505,7 +511,12 @@ export default function MakerFlow({
                         /* 换主体类型清空表单：两条路的字段完全不同，留着上一条路
                            填的东西会串到这一条路的同名字段上。但证件读出来的那几项
                            不是「填的」——清掉它们，下一步会变回一排要手打的空框。 */
-                        onClick={() => { setKind(k); setForm({ ...verified }) }}>{k}</button>
+                        /* Clear the form outright. `verified` is memoised on the
+                           kind that is *about to change*, so spreading it here put
+                           the outgoing kind's verified fields — a company's, say —
+                           into the incoming kind's form. The effect on `verified`
+                           re-applies the right set once kind has actually changed. */
+                        onClick={() => { setKind(k); setForm({}) }}>{k}</button>
                     ))}
                   </div>
                 </div>

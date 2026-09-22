@@ -24,12 +24,47 @@ type State =
   | { s: 'ok'; name: string; ref: string; url?: string }
   | { s: 'bad'; name: string; why: string }
 
+/*
+What a receipt, a piece of evidence or an onboarding document is allowed to be.
+
+Images and PDF, and deliberately nothing else. The list is short because
+everything on it has to be openable by the person on the other end — a market
+maker checking a bank transfer, a reviewer reading a licence. A .docx or a
+.zip uploads perfectly well and then arrives as a download of unknown type in
+the middle of a two-hour verification window, which is worse than being told
+up front that it will not do.
+
+`accept` on the input is only a filter on the picker: the dialog offers "all
+files" and curl ignores it entirely. So it is repeated as a real check below,
+and again on the server — three places because they answer three different
+questions (what to offer, what to tell you immediately, what to actually
+store).
+*/
+const OK_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']
+const OK_ACCEPT = OK_TYPES.join(',')
+/** The same list as a sentence. Derived, so the words cannot drift from the
+    filter the way a hand-written hint does. */
+const OK_LABEL = 'JPG, PNG, GIF, WebP or PDF'
+
+/** Does the browser think this file is one of the allowed kinds?
+ *
+ *  Type first, because it is what the server will decide on. An empty type
+ *  (which happens: an unknown extension, some Android pickers) falls through
+ *  to the extension rather than being refused — the server sniffs the bytes
+ *  and has the final say, and refusing here on a guess would block a real
+ *  receipt over a missing MIME string. */
+const OK_EXT = /\.(jpe?g|png|gif|webp|pdf)$/i
+function allowed(f: File): boolean {
+  if (f.type) return OK_TYPES.includes(f.type.toLowerCase())
+  return OK_EXT.test(f.name)
+}
+
 export default function FilePick({
   onDone,
   value,
   label = 'Attach',
   hint,
-  accept = 'image/*,application/pdf',
+  accept = OK_ACCEPT,
   identity,
   className = '',
   variant = 'field',
@@ -65,6 +100,15 @@ export default function FilePick({
   useEffect(() => () => job.current?.abort(), [])
 
   const send = (f: File) => {
+    /* Type first, because it costs nothing to check and the alternative is
+       sending sixteen megabytes before being told no. The server checks the
+       bytes themselves — this one only saves the trip. */
+    if (!allowed(f)) {
+      const why = `${OK_LABEL} only — that one is ${f.type || 'a kind we cannot read'}`
+      setSt({ s: 'bad', name: f.name, why })
+      toast(why, { kind: 'err' })
+      return
+    }
     /* 先在本地拦大小。后端那边是 io.LimitReader 静默截断——超了不报错，
        而是存下一个被砍掉一半的文件。等到审核员打不开才发现就太晚了。 */
     if (f.size > ep.MAX_UPLOAD) {
@@ -118,9 +162,20 @@ export default function FilePick({
         <button type="button" disabled={disabled && !up}
           className={'btn ' + (className || 'btn-primary') + ' fpbtn1' + (up ? ' uping' : '')}
           style={up ? ({ ['--pct' as string]: st.pct + '%' } as React.CSSProperties) : undefined}
+          /* Say it here too, for anyone who reaches the button by keyboard or
+             screen reader rather than by reading the line under it. */
+          title={`${OK_LABEL}, up to ${mb(ep.MAX_UPLOAD)}`}
           onClick={() => { if (up) { job.current?.abort(); return } pick.current?.click() }}>
           {up ? `${st.pct}% · Cancel` : label}
         </button>
+        {/* The field variant has always carried this line; the button variant
+            had nothing, so the one place a bank receipt is attached was also
+            the one place that never said what a receipt may be. A rejection
+            replaces it, because at that moment the rule matters more than the
+            restatement of it. */}
+        <span className={'fphint' + (st.s === 'bad' ? ' bad' : '')}>
+          {st.s === 'bad' ? st.why : `${OK_LABEL} · up to ${mb(ep.MAX_UPLOAD)}`}
+        </span>
       </>
     )
   }
@@ -135,7 +190,7 @@ export default function FilePick({
         }}>
         <span className="fptx">
           <b>{label}</b>
-          <em>{st.s === 'idle' ? (hint ?? 'Image or PDF, up to ' + mb(ep.MAX_UPLOAD))
+          <em>{st.s === 'idle' ? (hint ?? `${OK_LABEL}, up to ${mb(ep.MAX_UPLOAD)}`)
             : st.s === 'bad' ? st.why : st.name}</em>
         </span>
         <span className="sfst">

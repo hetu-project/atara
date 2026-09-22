@@ -487,6 +487,9 @@ export default function MakerThread({
           resubmit={card === 'listing' && listDone}
           onPending={setPending}
           onSubmitted={submitted}
+          /* Failure only clears the "checking…" marker. The form stays put
+             with its error; closing it is what a successful hand-in earns. */
+          onFailed={p => setPending(cur => (cur === p ? null : cur))}
           onBackOut={() => setToListing(false)} />
       ) : null}
       <div ref={bottom} />
