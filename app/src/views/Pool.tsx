@@ -215,12 +215,23 @@ function OfferCard({
       if (e instanceof ApiError && e.code === 'UNLOCK_REQUIRED') {
         /* The coins were locked by the maker's own wallet, so only that
            wallet can release them. Ask for the signature, then come back —
-           the second call only verifies the chain actually opened. */
+           the second call records it and settles any takes on the listing. */
+        let unlocked = false
         try {
           const prep = await ep.prepareDelist(o.id, identity)
           await tx.unlockListing({ escrow: prep.escrow, offerKey: prep.offer_key })
+          unlocked = true
           await ep.delistOffer(o.id, identity)
         } catch (e2) {
+          if (unlocked) {
+            /* The chain has the coins back; only our own bookkeeping call
+               failed. Saying "could not unlock" here would be false, and the
+               listing is not stuck: the backend re-reads the chain every
+               thirty seconds and takes it down on its own. */
+            toast('Coins unlocked · the listing comes down within a minute', { kind: 'info' })
+            location.reload()
+            return
+          }
           toast(msgOf(e2, 'Could not unlock those coins'), { kind: 'err' })
           setUnlisting(false)
           return

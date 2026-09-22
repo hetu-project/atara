@@ -97,6 +97,13 @@ type Recoverable = {
   offer_id: string
   lock_tx: string
   body: OfferBody
+  /* delisted：这个号下面有一张**已经下架**的挂单，而合约里的币还锁着——
+     后台强制下架（它签不了解锁）、或旧版下架在余量为零时跳过了解锁。这一类
+     的出口不是「挂出去」（号被那张挂单占着，会撞 OFFER_EXISTS），而是「解锁」：
+     把下架流程再走一遍，钱包会被要求签那笔解锁交易。 */
+  delisted?: boolean
+  /** 合约里此刻还锁着多少。只有服务端那一份知道；已下架那一类按它显示。 */
+  available?: string
 }
 
 const fromServer = (l: ApiStrandedLock): Recoverable => ({
@@ -107,6 +114,8 @@ const fromServer = (l: ApiStrandedLock): Recoverable => ({
     unit_price: l.form.unit_price, qty: l.form.qty, min_lot: l.form.min_lot,
     network: l.form.network, networks: l.form.networks ?? [l.form.network],
   },
+  delisted: l.delisted === true,
+  available: l.available,
 })
 
 /* 合并两边，本地那一份优先。done 是这一次会话里已经挂出去的那些——服务端列表
@@ -679,6 +688,40 @@ export default function MakerOffer({
     } finally { setBusy(false) }
   }
 
+  /* 解锁一笔「挂单已下架、币却还锁在合约里」的锁仓。
+
+     走的就是下架那条两步流程：后端先说「该你签了」（UNLOCK_REQUIRED），钱包
+     签完再回来销账。第二步没成也不要紧——链上已经解开了，后端每三十秒会自己
+     对一次链把账补上；这时候说「解锁失败」是假话。 */
+  const unlock = async (rec: Recoverable) => {
+    if (busy) return
+    setBusy(true)
+    setErr('')
+    let unlocked = false
+    try {
+      try {
+        await ep.delistOffer(rec.offer_id, identity)
+      } catch (e) {
+        if (!(e instanceof ApiError && e.code === 'UNLOCK_REQUIRED')) throw e
+        const prep = await ep.prepareDelist(rec.offer_id, identity)
+        await tx.unlockListing({ escrow: prep.escrow, offerKey: prep.offer_key })
+        unlocked = true
+        await ep.delistOffer(rec.offer_id, identity)
+      }
+      setDone(d => [...d, rec.offer_id])
+      reloadStranded()
+      toast(`Unlocked · ${rec.body.asset} is back in your wallet`, { kind: 'ok' })
+    } catch (e) {
+      if (unlocked) {
+        setDone(d => [...d, rec.offer_id])
+        reloadStranded()
+        toast('Coins unlocked · the record catches up within a minute', { kind: 'info' })
+      } else if (!isWalletTxError(e)) {
+        setErr(e instanceof Error ? e.message : 'Could not unlock those coins')
+      }
+    } finally { setBusy(false) }
+  }
+
   const chips = (list: string[], sel: string, pick: (v: string) => void) => (
     <div className="sfchips">
       {list.map(x => (
@@ -772,7 +815,24 @@ export default function MakerOffer({
 
             列表而不是单条：来源有两个（本机记的、服务端算的），而服务端那边
             完全可能有不止一笔——比如在另一台设备上断在半路的那些。 */}
-        {recoverable.map(rec => (
+        {recoverable.map(rec => rec.delisted ? (
+          /* The mirror image: a listing already taken down whose coins the
+             contract still holds. The way out is the unlock, not a repost --
+             this id has a listing on it, and posting again would be refused. */
+          <div className="fstat warn" key={rec.offer_id}>
+            <i />
+            <span>
+              <b className="num">{Number(rec.available ?? rec.body.qty).toLocaleString()} {rec.body.asset}</b>
+              {' '}from a listing you took down is still locked in escrow — the listing
+              came down before the contract let the coins go. They are yours; unlock
+              to take them back to your wallet.
+            </span>
+            <button type="button" className="btn btn-ghost btn-sm" disabled={busy}
+              onClick={() => void unlock(rec)}>
+              {busy ? 'Unlocking…' : 'Unlock'}
+            </button>
+          </div>
+        ) : (
           <div className="fstat warn" key={rec.offer_id}>
             <i />
             <span>

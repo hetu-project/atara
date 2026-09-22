@@ -102,6 +102,19 @@ function copy(ev: LivePayload): { text: string; kind: 'ok' | 'err' | 'info'; go?
     }
   }
 
+  /* A listing of this maker's came down without them clicking anything here:
+     the backend found it closed on the contract -- a delist finished from
+     another tab, a wallet transaction sent outside the app, or the second
+     half of a two-step delist that never arrived. Nothing is owed and the
+     coins are back in the wallet; the point is that the shelf now agrees. */
+  if (ev.kind === 'offer' && ev.state === 'delisted') {
+    return {
+      text: 'A listing was closed on-chain — taken down here too',
+      kind: 'info',
+      go: () => go({ view: 'home' }),
+    }
+  }
+
   if (ev.kind === 'maker') {
     switch (ev.state) {
       case 'kyc_ok':

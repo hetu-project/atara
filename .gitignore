@@ -120,6 +120,14 @@ docs/MAKER-REVIEW-AI.md
 docs/信任分.md
 docs/共识系统.md
 docs/身份系统审查.md
+docs/codereview-2026-09-20.md
+docs/architecture-chain-reconcile.md
+docs/plan-chain-reconcile.md
 # 站点构建产物（scripts/build-site.sh 拼出来的，每次重建）
 .vercel-out/
 .vercel/
+
+# admin 是一个嵌套的独立 git 仓库，不属于这个仓库的历史。
+# 不忽略的话，git add . 会把它记成一个 gitlink——别人 clone 下来是个空目录，
+# 而且指向一个谁也拉不到的提交。
+admin/

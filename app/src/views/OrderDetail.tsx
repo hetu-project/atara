@@ -172,11 +172,23 @@ export default function OrderDetail({
      this normalisation keeps orders settled before that fix readable too. */
   const state = o.kind === 'otc_take' && o.state === 'released' ? 's5' : o.state
   const step = o.terminal && o.terminal !== 'completed' ? o.terminal : state
+  /* A dispute the clock raised, not a person. The verification window closed
+     with nobody having spoken, so the coins froze and a reviewer was asked —
+     but the receipt is still sitting there unread, and the side it is
+     addressed to can still clear it and finish the trade.
+
+     The backend decides this, not the card: PhaseFor hands back a phase for an
+     escalated dispute and nothing at all for a contested one, which is the
+     same rule that decides whether the API would accept the click. Reading it
+     off `phase` keeps the two from drifting apart. */
+  const escalated = step === 'disputed' && !!o.phase
+
   /* Finished without settling: the rail stops where it is and has no current
      stop — marking the first one as `now` reads as "just started". */
-  const ended = step === 'expired' || step === 'cancelled' || step === 'disputed'
+  const ended = !escalated && (step === 'expired' || step === 'cancelled' || step === 'disputed')
   const idx = ended ? -1
-    : ({ match: 0, s1: 1, s3: 2, s3v: 3, s4: 3, s5: 4 } as Record<string, number>)[step] ?? 0
+    : escalated ? 3
+      : ({ match: 0, s1: 1, s3: 2, s3v: 3, s4: 3, s5: 4 } as Record<string, number>)[step] ?? 0
   /* `yours` is the taker. The match stop used to count as mine for both sides,
      so the maker got Confirm and Drop too — and both came back 403, because the
      backend only lets the owner move a match. Nothing was ever at risk; the
@@ -193,8 +205,11 @@ export default function OrderDetail({
     match: 'Pending', s1: sell ? 'Escrowing' : 'Waiting',
     s3: sell ? 'Waiting' : 'Your turn', s3v: 'Verifying', s4: 'Verifying',
     s5: 'Done',
+    // Not 'In dispute': nobody is accusing anybody, and the trade can still
+    // finish without a ruling.
+    escalated: 'Overdue',
     expired: 'Timed out', cancelled: 'Cancelled', disputed: 'In dispute',
-  } as Record<string, string>)[step] ?? 'In progress'
+  } as Record<string, string>)[escalated ? 'escalated' : step] ?? 'In progress'
 
   /* 状态行那句话按买卖方向分叉——两侧看到的事实本来就不一样 */
   const line = sell ? ({
@@ -207,7 +222,8 @@ export default function OrderDetail({
     expired: <>Their payment window missed · your {coin} returned from escrow</>,
     cancelled: <>Order cancelled · your {coin} returned from escrow</>,
     disputed: <>In dispute · your {coin} stays locked until this is settled</>,
-  } as Record<string, JSX.Element>)[step] : ({
+    escalated: <>Verification overdue · your {coin} stays locked until you confirm or a reviewer decides</>,
+  } as Record<string, JSX.Element>)[escalated ? 'escalated' : step] : ({
     match: <>Buy {coin} for <b className="amt">{fiat}</b></>,
     s1: <>Buy {coin} for <b className="amt">{fiat}</b> · verifying their escrow</>,
     s3: <>Your turn — pay <b className="amt">{fiat}</b> · their {coin} is in escrow</>,
@@ -217,7 +233,8 @@ export default function OrderDetail({
     expired: <>Payment window missed · their {coin} was returned</>,
     cancelled: <>Order cancelled · their {coin} was returned</>,
     disputed: <>In dispute · the {coin} stays locked until this is settled</>,
-  } as Record<string, JSX.Element>)[step]
+    escalated: <>They did not check in time · the {coin} stays locked, nothing was returned</>,
+  } as Record<string, JSX.Element>)[escalated ? 'escalated' : step]
 
   return wrap(
     <>
@@ -229,7 +246,7 @@ export default function OrderDetail({
           <span className="dsum">{line}</span>
           {left > 0 && (
             <span className={'cd num' + (left <= 120 ? ' tight' : '')}
-              title="Miss this window and the coins return — recorded as a default">
+              title={deadlineHint[step] ?? ''}>
               {leftText(left)}
             </span>
           )}
@@ -365,17 +382,27 @@ export default function OrderDetail({
                   )}
                 </div>
               </>
-            ) : step === 's3v' && o.phase === 'verify' ? (
+            ) : (step === 's3v' || escalated) && o.phase === 'verify' ? (
               <>
                 <div className="dhead">
-                  <b className="damt num">Verify their receipt</b>
-                  <span className="dsub">{fiat} reported sent — check it landed before releasing</span>
+                  <b className="damt num">
+                    {escalated ? 'Overdue — you can still release' : 'Verify their receipt'}
+                  </b>
+                  <span className="dsub">
+                    {escalated
+                      ? `${fiat} reported sent — the window closed and this went to review`
+                      : `${fiat} reported sent — check it landed before releasing`}
+                  </span>
                 </div>
-                <Peer o={o} ccy={ccy} />
+                <Peer o={o} ccy={ccy} live={escalated} />
                 {/* 放款依据是银行凭证，不是任何一方的确认意愿——所以核验的是收款方 */}
                 <p className="dmech">
-                  Release is yours to confirm because the money lands in your account. Amount, reference
-                  and sender name should match the order.
+                  {escalated
+                    ? 'The coins are frozen — nothing was returned to either side. Confirming the '
+                      + 'receipt still releases them and closes the review. Amount, reference and '
+                      + 'sender name should match the order.'
+                    : 'Release is yours to confirm because the money lands in your account. Amount, '
+                      + 'reference and sender name should match the order.'}
                 </p>
                 <div className="dfoot">
                   <a href="#" className="lnk dspx" style={{ marginRight: 'auto' }}
@@ -387,8 +414,10 @@ export default function OrderDetail({
                 </div>
               </>
             ) : (
-              <Waiting o={o} sell={sell} step={step} coin={coin} fiat={fiat} ccy={ccy}
-                canCancel={yours} onCancel={() => setQuit('cancel')} pending={pending} />
+              <Waiting o={o} sell={sell} step={escalated ? 'escalated' : step}
+                coin={coin} fiat={fiat} ccy={ccy}
+                canCancel={yours} onCancel={() => setQuit('cancel')}
+                onDispute={() => setDisp(true)} pending={pending} />
             )}
           </div>
         </div></div>
@@ -503,7 +532,7 @@ const DOCS: [string, string][] = [
 ]
 
 /** 对手方那几行在每个阶段都长一样，抽出来。 */
-function Peer({ o, ccy }: { o: Order; ccy: string }) {
+function Peer({ o, ccy, live }: { o: Order; ccy: string; live?: boolean }) {
   const name = o.counterparty_name ?? '—'
   const p = o.peer_profile
   /* 点开的是这份材料的说明——它是什么、谁出的、这一家交没交。 */
@@ -546,8 +575,13 @@ function Peer({ o, ccy }: { o: Order; ccy: string }) {
           releasing" and then show everything except the thing being checked —
           the person holding the money had to decide on a file they could not
           open. The settled view leaves this out because the evidence pack below
-          already carries it with its verification timestamp. */}
-      {o.otc?.receipt_url && !o.terminal && (
+          already carries it with its verification timestamp.
+
+          `live` is for the escalated window: the order is terminal in the
+          database but the release button is still on the card, so this hid the
+          file from the one person still being asked to judge it — the exact
+          failure this row was added to fix, reached by a different route. */}
+      {o.otc?.receipt_url && (!o.terminal || live) && (
         <div><dt>Receipt</dt>
           <dd>
             <a className="lnk" href={o.otc.receipt_url} target="_blank" rel="noopener"
@@ -592,12 +626,31 @@ function Peer({ o, ccy }: { o: Order; ccy: string }) {
  * 等待与终态。用户在这几步是闲着的，恰恰是最想回头核对对手方的时候——
  * 所以照样把资料摆出来，只是没有动作按钮。
  */
+/*
+What actually happens when the countdown reaches zero.
+
+This was one sentence for every stop: "the coins return, recorded as a
+default". It was true at s3 and nowhere else. At match and s1 nothing has
+moved and nothing is recorded, and at s3v nothing is returned at all any more
+— the coins freeze and a reviewer picks it up. A tooltip on a running clock is
+read by the person deciding whether they have time to step away, so it is the
+last place to be approximately right.
+*/
+const deadlineHint: Record<string, string> = {
+  match: 'Let this lapse and the match closes. Nothing has moved — recorded as unfilled, not as a default.',
+  s1: 'Let this lapse and the order closes before escrow is in place. No coins move, no default recorded.',
+  s3: 'Miss this window and the coins return to them — recorded as a default.',
+  s3v: 'Miss this window and the coins freeze for review. Nothing is returned to either side, '
+    + 'and you can still confirm the receipt afterwards.',
+}
+
 function Waiting({
-  o, sell, step, coin, fiat, ccy, canCancel, onCancel, pending,
+  o, sell, step, coin, fiat, ccy, canCancel, onCancel, onDispute, pending,
 }: {
   o: Order; sell: boolean; step: string; coin: string; fiat: string; ccy: string
   canCancel?: boolean
   onCancel: () => void
+  onDispute: () => void
   pending: boolean
 }) {
   const head: Record<string, [string, string]> = sell ? {
@@ -618,6 +671,8 @@ function Waiting({
     cancelled: ['Order cancelled', `Your ${coin} came back from escrow · no default recorded`],
     disputed: ['In dispute — under review',
       `Your ${coin} stays locked in the contract until this is settled`],
+    escalated: ['Verification overdue — under review',
+      `Your ${coin} stays locked · confirm the receipt and it releases without a ruling`],
   } : {
     match: [`Waiting on ${o.counterparty_name ?? 'them'} to confirm`,
       'Nothing moves until they do · if they do not confirm, the match lapses'],
@@ -630,6 +685,8 @@ function Waiting({
     cancelled: ['Order cancelled', `Their ${coin} was returned · no default recorded`],
     disputed: ['In dispute — under review',
       `The ${coin} stays locked in the contract until this is settled`],
+    escalated: ['They did not check in time — under review',
+      `The ${coin} stays locked · nothing was returned to them`],
   }
   const mech: Record<string, string> = {
     match: 'The side that took the listing confirms — you committed when the listing '
@@ -638,9 +695,16 @@ function Waiting({
       ? 'Your coins sit in the escrow contract — not with Atara, not with them. They release only when the buyer’s payment clears verification.'
       : 'Locked at listing, bound to your order now. If the binding fails, the trade closes — no exposure to you.',
     s3: 'Your coins stay locked while they pay. If the window lapses, escrow returns them automatically.',
-    s3v: 'Release is automatic once the receipt is confirmed. Neither side can hold the funds back.',
+    /* This used to promise that neither side could hold the funds back, while
+       the window closing returned them to the side that had not looked at the
+       receipt — so the one person who could hold them back was the only one
+       the sentence was addressed to. Nothing is returned here now. */
+    s3v: 'Once the receipt is confirmed, escrow releases. If the window closes with nobody '
+      + 'confirming, the coins freeze and a reviewer takes it — they are not returned to either side.',
+    escalated: 'Nothing was returned and nobody was paid. The coins stay in the contract until '
+      + 'the receipt is confirmed or a reviewer decides.',
     s4: 'Release is automatic once the receipt matches. Neither side can hold the funds back.',
-    s5: o.evidence?.arbitration
+    s5: wasRuled(o.evidence?.arbitration)
       ? 'This one was settled by review rather than by the receipt clearing. The evidence pack '
         + 'carries the ruling: who raised it, what was decided, and who was found responsible.'
       : 'The evidence pack is the settlement record — receipt, escrow release and both signatures.',
@@ -699,6 +763,20 @@ function Waiting({
           </a>
         </div>
       )}
+      {/* The side that already paid, waiting on the other to look at the
+          receipt. This screen had no control at all: the backend has always
+          accepted a dispute from either party at s3v, but the only link that
+          opened one lived in the upload pane, which this person left the
+          moment they submitted. So the one with money out the door and the
+          most reason to speak up was the one with nothing to press. */}
+      {step === 's3v' && o.phase === 'lock' && (
+        <div className="dfoot">
+          <a href="#" className="lnk dspx" style={{ marginRight: 'auto' }}
+            onClick={e => { e.preventDefault(); if (!pending) onDispute() }}>
+            Report a problem
+          </a>
+        </div>
+      )}
     </>
   )
 }
@@ -725,6 +803,24 @@ const KIND: Record<string, string> = {
 }
 
 /*
+Was this order actually ruled on by a person?
+
+Not the same question as "did it ever reach `disputed`", which is what the
+arbitration object answers. An escalated window lands there with nobody having
+said anything, and the receiving side can then clear the receipt and settle it
+themselves — no reviewer ever opens it. Three separate places asked the easy
+question and told the settled order it had been decided by a review that never
+happened, one of them pointing at a ruling the evidence pack does not contain.
+*/
+type Arbitration = NonNullable<NonNullable<Order['evidence']>['arbitration']>
+
+// A type guard, so the callers that go on to read the ruling get it narrowed
+// rather than re-checking the same fields with a non-null assertion.
+function wasRuled(arb?: Arbitration): arb is Arbitration {
+  return !!(arb && (arb.decided_at || arb.decision))
+}
+
+/*
 The subtitle under a settled order, corrected for orders that were arbitrated.
 
 "performance written back to both records" is what an ordinary settlement does,
@@ -735,7 +831,7 @@ states the opposite of what happened to their record.
 */
 function settledLine(o: Order, normal: string): string {
   const arb = o.evidence?.arbitration
-  if (!arb) return normal
+  if (!wasRuled(arb)) return normal
   if (arb.fault === 'you') return 'Settled by review · you were found responsible, and it is on your record'
   if (arb.fault === 'them') return 'Settled by review · they were found responsible, and it is on their record'
   if (arb.fault === 'none') return 'Settled by review · neither side was found at fault, so no default was recorded'
@@ -775,7 +871,18 @@ function Pack({ ev, coin, fiat, ref_ }: {
       el: (
         <div className="evrow evarb" key="arb-raised">
           <i className="warn" />
-          <span>{arb.raised_by === 'you' ? 'You raised a dispute' : 'They raised a dispute'}
+          {/* 'system' is a window that closed, not an accusation. It used to
+              fall through to "They raised a dispute", so the person who had
+              already paid was told the other side had complained about them —
+              on an order where the other side had said nothing at all. */}
+          <span>{arb.raised_by === 'system'
+            ? 'Verification window closed · sent for review'
+            : arb.raised_by === 'you' ? 'You raised a dispute'
+              : arb.raised_by === 'them' ? 'They raised a dispute'
+                /* Unknown, which now means only legacy rows. Naming a side we
+                   cannot establish is how the escalation came to be reported
+                   to the payer as the other side complaining about them. */
+                : 'A dispute was raised'}
             {/* The claim is printed as it was chosen. DisputeForm's options are
                 already sentences, so a translation table here would only be one
                 more thing to drift out of step with that list. */}
@@ -784,6 +891,15 @@ function Pack({ ev, coin, fiat, ref_ }: {
         </div>
       ),
     })
+  }
+  /* Only once a reviewer has actually ruled.
+
+     This row used to be pushed whenever there was a dispute at all, so an
+     order still waiting for review announced "Reviewed by Atara · escrow
+     released to the buyer" — a decision nobody had made, about coins that had
+     not moved, sorted to the top of the timeline because an absent timestamp
+     reads as 0. Escalations made it common; it was always wrong. */
+  if (wasRuled(arb)) {
     timed.push({
       t: at(arb.decided_at),
       el: (

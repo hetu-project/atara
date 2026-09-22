@@ -127,6 +127,8 @@ export interface Offer {
   /** 法币单位——与 remaining_qty 不是同一个单位，不可混比。 */
   min_lot: string
   status: 'active' | 'filled' | 'delisted'
+  /** 下架的来源：做市方自己 / 后台强制 / 对账器发现链上已关。只在 delisted 时有值。 */
+  delist_reason?: 'maker' | 'admin' | 'chain' | ''
   maker: Maker
   created_at: string
 }
@@ -282,7 +284,12 @@ export interface Evidence {
   receipt_url?: string
   settled_at?: string
   /**
-   * Present only on orders a person ruled on.
+   * Present on orders that reached `disputed`, ruled on or not.
+   *
+   * `raised_by: 'system'` means nobody raised anything — a window closed with
+   * neither side having spoken. `decided_at` is absent until a reviewer
+   * actually rules, and the two are independent: an escalation sits here with
+   * a `raised_at` and no decision at all.
    *
    * `raised_by` and `fault` are already resolved to the viewer's seat by the
    * backend — "you" or "them", not user ids — the same way `phase` is. Both
@@ -295,7 +302,7 @@ export interface Evidence {
    */
   arbitration?: {
     raised_at?: string
-    raised_by?: 'you' | 'them'
+    raised_by?: 'you' | 'them' | 'system'
     claim?: string
     decided_at?: string
     decision?: 'release' | 'refund'
@@ -450,6 +457,8 @@ export interface StrandedLock {
     offer_id?: string
   }
   at: string
+  /** 挂单已下架、币却还锁在合约里。出口是解锁，不是重发——见后端 StrandedLock.Delisted。 */
+  delisted?: boolean
 }
 
 /** 一笔外部入金此刻怎么样了。见后端 app.DepositStatus。 */

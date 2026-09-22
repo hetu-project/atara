@@ -120,12 +120,15 @@ export const tasks = (as?: string) =>
 /**
  * 吃单。**不需要确认令牌**——吃单只建工单，还没承诺、没动钱。
  * 但事务内会预留可成交量，并发抢不到会拿到 ABOVE_AVAILABLE_QTY。
+ *
+ * No `card_id`: taking an offer does not draw on an allowance. The backend
+ * used to accept one here and write it onto the order unchecked, which made
+ * the cancellation refund credit a stranger's card. No caller ever sent it.
  */
 export const take = (offerId: string, body: {
   amount: string
   amount_kind: 'coin' | 'fiat'
   network: string
-  card_id?: string
 }) => api.post<Order>(`/offers/${offerId}/take`, body)
 
 /**
