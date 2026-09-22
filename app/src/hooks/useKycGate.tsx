@@ -73,16 +73,10 @@ export function KycProvider({ identity, children }: { identity: string; children
      只在审核中问，而且问一阵就停：真实口径下审核是人在看件，可能挂几个小时，
      那种时候每秒敲一次后端毫无意义。停了也不会卡住——重新打开这张卡或者
      刷新页面都会重新拉一次。 */
-  const pending = !!app && ((app.kyc_done && !app.kyc_ok) || (app.listing_done && !app.approved))
-  useEffect(() => {
-    if (!pending) return
-    let left = 40 // ~60s
-    const t = setInterval(() => {
-      if (left-- <= 0) { clearInterval(t); return }
-      reload()
-    }, 1500)
-    return () => clearInterval(t)
-  }, [pending, reload])
+  /* That poll is the useApi one above (4s while `waiting`, which is this same
+     condition). There used to be a second timer here asking every 1.5s for a
+     minute on top of it — two pollers for one question, and this one kept
+     going in a background tab, which useApi's poll already knows not to do. */
 
   /* A review landing on the server is an event, not something this page
      discovers by asking. The poll above is a backstop for a dropped stream. */

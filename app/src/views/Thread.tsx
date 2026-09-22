@@ -8,6 +8,7 @@ import Avatar from '../components/Avatar'
 import Composer from '../components/Composer'
 import { useToast } from '../components/Toast'
 import { useApi } from '../hooks/useApi'
+import { useKycGate } from '../hooks/useKycGate'
 import { go } from '../hooks/useRoute'
 import OrderDetail from './OrderDetail'
 import { scoreText } from '../api/types'
@@ -52,7 +53,16 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
   const { toast } = useToast()
   const fail = (msg: string) => toast(msg, { kind: 'err' })
   const { start } = useAssessment()
+  /* Same identity gate as Home and the Pool. This was the one place a take
+     could be placed without it — the fiat leg is bank-to-bank between two
+     people, and the payer has to be someone. */
+  const kyc = useKycGate()
   const { data: cdata } = useApi(() => ep.contacts(identity), [identity])
+  /* Read once here, hand to every card. Neither of these varies per order —
+     one is which chain the backend is on, the other is whose money this is —
+     and a thread renders one card per order. */
+  const { data: chains } = useApi(() => ep.chainInfo(), [])
+  const { data: myWallet } = useApi(() => ep.wallet(identity), [identity])
 
   /* 对手方预填成「正在说话的这个人」——在他的会话里下单，不该再选一次。 */
   const mk = (k: ActKind): Act => ({
@@ -79,6 +89,7 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
   /* 对手方是写死的——你就在跟他说话。Home 那边要先撮合出一个人来，
      这里不用，也不该让人再选一次。 */
   const order = async (a: Act) => {
+    if (kyc.require()) return
     setBusy(true)
     try {
       const m = await ep.match({
@@ -104,6 +115,13 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
     if (!b || busy) return
     setBusy(true)
     try { await ep.postChat(peer, b, identity); setText(''); reload() }
+    catch (e) {
+      /* The draft stays in the box — it was not sent, so it is still theirs
+         to send. What must not happen is silence: a message that vanished
+         from the input and never arrived, or one still sitting there with no
+         word on why. */
+      fail(e instanceof Error ? e.message : 'Could not send that message')
+    }
     finally { setBusy(false) }
   }
 
@@ -134,9 +152,14 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
                 {x.order.assessment && <AssessCard a={x.order.assessment} peer={name} />}
                 {/* Hand the card the order this stream already fetched. Left to
                     itself it polls once a second for a row that arrives here
-                    anyway, three seconds at a time, from the same endpoint. */}
+                    anyway, three seconds at a time, from the same endpoint.
+
+                    Same for the chain config and the wallet: neither varies
+                    per order, and a thread of twenty-one orders used to ask
+                    for each of them twenty-one times. */}
                 <OrderDetail id={x.order.id} bare identity={identity} onBack={() => {}}
-                  order={x.order} onChanged={reload} />
+                  order={x.order} onChanged={reload}
+                  chains={chains} myWallet={myWallet} />
               </Fragment>
             )))}
           {/* Three different silences: still loading, failed, genuinely empty.

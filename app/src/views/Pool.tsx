@@ -203,6 +203,12 @@ function OfferCard({
      the signature after. */
   const [askUnlist, setAskUnlist] = useState(false)
   const [unlisting, setUnlisting] = useState(false)
+  /* Taking asks too, with the amount editable. One tap on the card used to
+     place a take for the whole remaining quantity -- no number typed, no
+     confirmation -- and reserve the maker's entire listing by accident. */
+  const [askTake, setAskTake] = useState(false)
+  const [amt, setAmt] = useState('')
+  const [taking, setTaking] = useState(false)
 
   const unlist = async () => {
     setUnlisting(true)
@@ -248,12 +254,34 @@ function OfferCard({
     location.reload()
   }
 
-  const take = async () => {
+  /* The card tap: gates first, then the sheet. Placing happens in `take`. */
+  const open = () => {
     /* 先问身份再切视图：否则用户先被甩进一个空页面，登录门才追上来 */
     if (onNeedSignIn) { onNeedSignIn(); return }
     /* 再过身份门。法币腿点对点走银行，付款方必须可识别——买家也要验。 */
     if (!mine && kyc.require()) return
     if (mine) { setAskUnlist(true); return }
+    /* Empty, with what is available in the placeholder — the shape the
+       original sheet used. Prefilling put the raw remaining quantity in the
+       box (`106647.010944`, six decimals of float noise) next to a hint that
+       printed the same number formatted, so the two disagreed on screen. An
+       empty field also asks the question the sheet exists to ask: how much,
+       rather than "confirm taking all of it". */
+    setAmt('')
+    setAskTake(true)
+  }
+
+  /* What the sheet's amount field allows: above zero, within what is left,
+     and worth at least the maker's smallest lot in fiat. */
+  const amtNum = Number(amt)
+  const amtFiat = amtNum * px
+  const amtBad = !(amtNum > 0) ? 'Enter an amount above zero'
+    : amtNum > qty ? `Only ${qty.toLocaleString()} ${o.asset} is available`
+      : amtFiat < Number(o.min_lot) ? `${m.name}'s smallest lot is ${sym}${Number(o.min_lot).toLocaleString()}`
+        : ''
+
+  const take = async (amount: string) => {
+    setTaking(true)
     /* 从大厅点一笔单，落点是**这个人的会话**，不是一张独立的工单页。
     
        参照的 showOrder() 就是这么走的：ensureThread(o.peer) → restoreSession
@@ -267,8 +295,9 @@ function OfferCard({
       /* 按币的数量下单：法币金额是换算出来的，整条挂单那一档会因为四舍五入
          比可成交量多出几分，然后被后端拒掉。 */
       const ord = await ep.take(o.id, {
-        amount: o.remaining_qty, amount_kind: 'coin', network: o.networks[0] ?? o.network,
+        amount, amount_kind: 'coin', network: o.networks[0] ?? o.network,
       })
+      setAskTake(false)
       /* 先下单再起跑，而且回放的是**这一单存下来的**那一份评估。
       
          反过来（先按挂单评一次再下单）会出现两组分：后端按种子算分，挂单号
@@ -283,7 +312,7 @@ function OfferCard({
          else for the error to appear — swallowing it made a failed click
          look like a dead button. */
       toast(msgOf(e, 'Could not open that order'), { kind: 'err' })
-    }
+    } finally { setTaking(false) }
   }
 
   return (
@@ -311,7 +340,55 @@ function OfferCard({
         onConfirm={() => void unlist()}
         onClose={() => { if (!unlisting) setAskUnlist(false) }} />
     )}
-    <button className={'od' + (mine ? ' odmine' : '')} onClick={() => void take()}>
+    {askTake && (
+      <ConfirmSheet
+        title={o.side === 'sell' ? 'Buy' : 'Sell'}
+        /* The symbol is the unit, sitting in front, and the figure is
+           separated. Baking `¥` into the string put it in the figure's own
+           weight and size, and `unit` then appended the currency code on top
+           of it: `¥779589.65CNY`, unseparated, with the code jammed against
+           the last digit because the unit's margin is on its right — where a
+           prefix needs it. */
+        amount={amtBad ? undefined
+          : amtFiat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        unit={sym} unitPos="pre"
+        walletKind={myWallet?.wallet_kind ?? 'atara'}
+        busy={taking}
+        blocked={!!amtBad}
+        lead={<>
+          {o.side === 'sell' ? 'Buy' : 'Sell'} <b className="num">{o.asset}</b> with{' '}
+          <b>{m.name}</b> at <b className="num">{sym}{px.toLocaleString()}</b> per unit.
+          Taking reserves that much of their listing for you until you confirm.
+        </>}
+        extra={
+          <label className="sf">
+            <span className="sfl">Amount ({o.asset})</span>
+            {/* type is spelled out because the stylesheet keys off it. HTML
+                defaults a missing type to text; CSS attribute selectors do
+                not — they match what is written, so `.sf input[type=text]`
+                skipped this one entirely and it fell back to the browser's
+                own white box in the middle of a dark sheet. */}
+            <input className="num" type="text" inputMode="decimal" value={amt} autoFocus
+              onChange={e => setAmt(e.target.value.trim())}
+              placeholder={`up to ${qty.toLocaleString()}`} />
+            {/* An empty field is not a mistake, it is the question. Showing
+                "Enter an amount above zero" the instant the sheet opens tells
+                somebody off for not having typed yet; the button is already
+                disabled, which is the honest way to say the same thing. The
+                original hid this line entirely until a submit failed. */}
+            <small className={amt && amtBad ? 'bad' : ''}>
+              {(amt && amtBad)
+                || `${qty.toLocaleString()} ${o.asset} available · smallest lot ${sym}${Number(o.min_lot).toLocaleString()}`}
+            </small>
+          </label>
+        }
+        /* Taking is a commitment, not a signature: nothing moves until the
+           taker confirms on the next step. */
+        plain={o.side === 'sell' ? 'Take · buy' : 'Take · sell'}
+        onConfirm={() => { if (!amtBad) void take(amt) }}
+        onClose={() => { if (!taking) setAskTake(false) }} />
+    )}
+    <button className={'od' + (mine ? ' odmine' : '')} onClick={open}>
       <div className="od-h">
         <span className="od-peer">{m.name}
           <i className="od-id num">{m.peer_code}</i>

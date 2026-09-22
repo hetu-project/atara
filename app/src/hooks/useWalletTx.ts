@@ -82,9 +82,14 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
       throw new Error(`${info.name} has no escrow contract yet — nothing can be locked there`)
     }
     const want = (expected ?? '').toLowerCase()
-    const w = (want && wallets.find(x => x.address.toLowerCase() === want)) || wallets[0]
-    if (!w) throw new Error('No wallet connected — sign in with a wallet first')
-    if (want && w.address.toLowerCase() !== want) {
+    if (!wallets.length) throw new Error('No wallet connected — sign in with a wallet first')
+    /* No expected address means /wallet has not answered yet. Falling back to
+       wallets[0] here used to pick whichever wallet Privy listed first — often
+       the empty embedded one — and sign from it. Waiting a moment is the
+       honest answer; guessing an address to move money from is not. */
+    if (!want) throw new Error('Your wallet is still loading — try again in a moment')
+    const w = wallets.find(x => x.address.toLowerCase() === want)
+    if (!w) {
       /* 登录的那个地址此刻没连上。硬用另一个钱包签会把币从别人的地址上扣，
          或者当场失败——两种都比说清楚糟。 */
       throw new Error(
@@ -149,6 +154,35 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
   }, [info, wallets, expected])
 
   /**
+   * approve 到一个精确的量。
+   *
+   * 现有额度非零又不够时，先归零再批：主网 USDT（Tether）拒绝非零→非零的
+   * approve（防前跑），直接批新值那笔交易会 revert。测试网自部署的代币没有这
+   * 条规矩，所以本地看不出来。两笔钱包签名，各自等回执。
+   */
+  type Conn = Awaited<ReturnType<typeof connect>>
+  const approveExact = async (
+    pub: Conn['pub'], wallet: Conn['wallet'], chain: Conn['chain'],
+    account: Address, token: Address, spender: Address,
+    allowed: bigint, amount: bigint, prompt: string,
+  ): Promise<Hex> => {
+    const one = async (value: bigint, msg: string, mining: string) => {
+      setStep({ k: 'wallet', msg })
+      const h = await wallet.writeContract({
+        address: token, abi: ERC20, functionName: 'approve', args: [spender, value], chain, account,
+      })
+      setStep({ k: 'mining', msg: mining, hash: h })
+      const rc = await pub.waitForTransactionReceipt({ hash: h })
+      if (rc.status !== 'success') throw new Error('The approval transaction failed')
+      return h
+    }
+    if (allowed > 0n) {
+      await one(0n, 'Reset the old approval in your wallet first', 'Resetting approval')
+    }
+    return one(amount, prompt, 'Approving')
+  }
+
+  /**
    * approve 到位再锁币。
    *
    * 先查现有额度：够就不再签一次——多弹一次钱包不只是麻烦，人会以为出错了。
@@ -183,14 +217,8 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
         address: token, abi: ERC20, functionName: 'allowance', args: [account, escrow],
       })
       if (allowed < amount) {
-        setStep({ k: 'wallet', msg: 'Approve the escrow contract in your wallet' })
-        const h = await wallet.writeContract({
-          address: token, abi: ERC20, functionName: 'approve',
-          args: [escrow, amount], chain, account,
-        })
-        setStep({ k: 'mining', msg: 'Approving', hash: h })
-        const rc = await pub.waitForTransactionReceipt({ hash: h })
-        if (rc.status !== 'success') throw new Error('The approval transaction failed')
+        await approveExact(pub, wallet, chain, account, token, escrow, allowed, amount,
+          'Approve the escrow contract in your wallet')
       }
 
       setStep({ k: 'wallet', msg: 'Sign in your wallet to lock the coins into escrow' })
@@ -234,14 +262,8 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
         setStep({ k: 'idle' })
         return ''
       }
-      setStep({ k: 'wallet', msg: 'Approve the spending contract in your wallet' })
-      const h = await wallet.writeContract({
-        address: token, abi: ERC20, functionName: 'approve',
-        args: [spender, amount], chain, account,
-      })
-      setStep({ k: 'mining', msg: 'Approving', hash: h })
-      const rc = await pub.waitForTransactionReceipt({ hash: h })
-      if (rc.status !== 'success') throw new Error('The approval transaction failed')
+      const h = await approveExact(pub, wallet, chain, account, token, spender, allowed, amount,
+        'Approve the spending contract in your wallet')
       setStep({ k: 'done', hash: h })
       return h
     } catch (e) {
@@ -357,6 +379,59 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
     }
   }, [connect])
 
+  /**
+   * taker 卖币：把自己的币存进托管合约，绑到这笔订单上。
+   *
+   * 这一笔必须由**用户的钱包**发。后端的 SignDeposit 用的是平台签名方的私钥，
+   * 合约会把付款方记成平台——放款付的是平台的币、退款退回平台，用户的币一分
+   * 不动。所以真链上接单只能走 via=external，然后由这里发 deposit。
+   *
+   * 收款方（beneficiary）写进仓位就改不了，放款只认它；参数从后端的
+   * order.escrow 拿，不在前端算。
+   */
+  const deposit = useCallback(async (p: {
+    escrow: string; token: string; orderKey: string; amountWei: string; beneficiary: string
+  }): Promise<string> => {
+    try {
+      const { account, pub, wallet, chain } = await connect()
+      const amount = BigInt(p.amountWei)
+      const token = p.token as Address
+      const escrow = p.escrow as Address
+      const bal = await pub.readContract({
+        address: token, abi: ERC20, functionName: 'balanceOf', args: [account],
+      })
+      if (bal < amount) {
+        const dec = await pub.readContract({
+          address: token, abi: ERC20, functionName: 'decimals',
+        }).catch(() => 18)
+        const fmt = (v: bigint) => (Number(v) / 10 ** Number(dec)).toLocaleString()
+        throw new Error(
+          `${short(account)} holds ${fmt(bal)} of ${short(token)} — this order needs ${fmt(amount)}`)
+      }
+      const allowed = await pub.readContract({
+        address: token, abi: ERC20, functionName: 'allowance', args: [account, escrow],
+      })
+      if (allowed < amount) {
+        await approveExact(pub, wallet, chain, account, token, escrow, allowed, amount,
+          'Approve the escrow contract in your wallet')
+      }
+      setStep({ k: 'wallet', msg: 'Sign in your wallet to deposit the coins into escrow' })
+      const h = await wallet.writeContract({
+        address: escrow, abi: ESCROW, functionName: 'deposit',
+        args: [p.orderKey as Hex, token, amount, p.beneficiary as Address], chain, account,
+      })
+      setStep({ k: 'mining', msg: 'Depositing', hash: h })
+      const rc = await pub.waitForTransactionReceipt({ hash: h })
+      if (rc.status !== 'success') throw new Error('The deposit transaction was rejected on chain')
+      setStep({ k: 'done', hash: h })
+      return h
+    } catch (e) {
+      const msg = readable(e)
+      setStep({ k: 'error', msg })
+      throw new WalletTxError(msg)
+    }
+  }, [connect])
+
   /* Sign a plain message — no transaction, no gas. What a buy listing asks
      for: it locks nothing on chain, so there is nothing to send, but posting
      it is still a commitment and the wallet is where commitments are signed.
@@ -377,7 +452,7 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
   }, [connect])
 
   return {
-    step, setStep, lockListing, unlockListing, approveSpending, transferToken, transferNative,
+    step, setStep, lockListing, unlockListing, deposit, approveSpending, transferToken, transferNative,
     signMessage,
     ready: wallets.length > 0,
   }

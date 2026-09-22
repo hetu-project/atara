@@ -148,6 +148,10 @@
   --dur-instant: 80ms; --dur-fast: 140ms; --dur-normal: 220ms;
   --ease: cubic-bezier(.23,1,.32,1);
   --ease-exit: cubic-bezier(.4,0,1,1);
+  /* 欠阻尼：冲过终点约 8% 再收回来。只用在**位置**上，而且只在有东西能把
+     那一点冲程吃掉的地方（轨道裁切、或者位移够小）。给颜色、透明度、高度
+     用会变成闪一下，那不是弹性是错误。 */
+  --ease-spring: cubic-bezier(.34,1.35,.5,1);
   --focus-w: 2px; --focus-o: 2px;
   --sans:'Inter',-apple-system,'PingFang SC',system-ui,sans-serif;
   --serif:'Newsreader',Georgia,'Songti SC',serif;
@@ -514,10 +518,29 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
 #cplist .cp.pend .cpav{opacity:.5}
 #cplist .cp.pend .n i{color:var(--warn)}
 /* 添加联系人弹窗 */
-.acseg{display:flex;gap:2px;padding:3px;margin-bottom:16px;border-radius:var(--r-control);background:var(--card)}
-.acs{flex:1;padding:6px 8px;border:0;border-radius:6px;background:none;cursor:pointer;
+/* 分段控件。
+
+   两个 tab 各自开关自己的 .on 背景时，白色药丸是**瞬移**的——右边凭空出现、
+   左边凭空消失，没有任何东西在移动，所以读起来像闪一下而不是切一下。改成
+   一颗真的药丸在轨道里滑：位置由 --i（0 或 1）驱动。
+
+   overflow:hidden 是给回弹用的。--ease-spring 会冲过头一点，那一点正好被
+   轨道边缘裁掉——看起来像撞到墙再弹回来，而不是跑出框外。少了它，冲程就得
+   压到看不出弹性，或者药丸会在极点探出轨道。 */
+.acseg{position:relative;display:flex;gap:2px;padding:3px;margin-bottom:16px;
+  border-radius:var(--r-control);background:var(--card);overflow:hidden;isolation:isolate}
+/* 药丸本体。宽度是「轨道内宽的一半减去那 2px 的缝」，所以两档都贴合。 */
+.acseg::before{content:'';position:absolute;z-index:0;top:3px;bottom:3px;left:3px;
+  width:calc((100% - 6px - 2px) / 2);border-radius:6px;
+  background:var(--paper);box-shadow:var(--lift-lo);
+  transform:translateX(calc(var(--i) * (100% + 2px)));
+  transition:transform var(--dur-normal) var(--ease-spring)}
+.acs{position:relative;z-index:1;flex:1;padding:6px 8px;border:0;border-radius:6px;background:none;cursor:pointer;
   font:inherit;font-size:12.5px;color:var(--mute)}
-.acs.on{background:var(--paper);color:var(--ink);font-weight:500;box-shadow:var(--lift-lo)}
+/* 药丸交给 ::before 了，这里只剩文字——背景和阴影留在这儿会跟着滑动的那颗
+   重影。font-weight 不参与过渡：字重动起来会让文字宽度抖，比不动更难看。 */
+.acs{transition:color var(--dur-fast) var(--ease)}
+.acs.on{color:var(--ink);font-weight:500}
 .acf{display:block;margin-bottom:14px}
 .acf>span{display:block;margin-bottom:6px;font-size:12px;color:var(--faint)}
 .acf>span em{font-style:normal;opacity:.7}
@@ -530,6 +553,47 @@ main.lout .nav,main.lout #tasklist .chatrow,main.lout .luser{min-height:40px}
   cursor:pointer;font:inherit;font-size:12.5px;color:var(--mute)}
 .acchip:hover{border-color:var(--line-strong);color:var(--ink)}
 .acchip.on{background:var(--blue-wash);border-color:var(--blue);color:var(--accent);font-weight:500}
+/* 「添加联系人」弹层的表单体。它一度叫 .acx，而那个类名早已被授权卡编辑器
+   里的小 × 删除按钮占着——于是这个容器继承了一颗按钮的样子：整片区域
+   cursor:pointer、font-size:10px，而且 .acx:hover 一触发就给整张表单刷上
+   var(--canvas) 底色、把文字染成 var(--neg)。鼠标一进弹层背景就变，原因在
+   一条谁都不会想到去看的按钮规则里。
+   容器不需要任何自身样式，但要有自己的名字——没有名字就会再被认领一次。 */
+.acbody{}
+
+/* 面板换内容。
+
+   两件事一起做，缺一件都会露馅：
+     高度  两个 tab 的内容不一样高，直接换会让整张卡跳一下——而卡片是居中
+           的，跳的是上下两边。grid-template-rows 从 0fr 到 1fr 是这个项目
+           里已经在用的写法（见 main 那条 grid-template-columns）。
+     内容  淡入 + 顺着切换方向位移 8px。方向由 --d 给（-1 或 1）：往右边
+           那个 tab 切，新内容就从右边进来，跟药丸走同一个方向。两块内容
+           反向走会读成「撞在一起」。
+
+   位移只用 --ease 不用 --ease-spring：这里没有轨道去吃掉冲程，文字冲过头
+   再回来就是在抖。弹性留给药丸，它有边可以撞。 */
+/* 高度由 JS 量出来写进 --h（见 Contacts.tsx 的 ResizeObserver）。
+
+   这里**不能**用 grid-template-rows 0fr→1fr 那一套：那个技巧是给「折叠 /
+   展开」用的，两端是两个不同的值。这里两端都是 1fr，内容变高只是行自己
+   重新算了一遍——没有属性发生变化，也就没有东西可过渡。height:auto 同理。
+
+   所以只能量。ResizeObserver 盯的是内容本身，顺带把搜索结果出现/消失那次
+   高度变化也接住了——那一下以前也是硬跳的。
+   量不到时（首帧、或 JS 还没跑）退回 auto，不裁内容。 */
+.acpanel{height:var(--h,auto);overflow:hidden;transition:height var(--dur-normal) var(--ease)}
+.acpane{animation:acpane var(--dur-normal) var(--ease) both}
+@keyframes acpane{
+  from{opacity:0;transform:translateX(calc(var(--d,1) * 8px))}
+  to{opacity:1;transform:none}
+}
+/* 动效是锦上添花，不是信息。关掉之后每一步仍然到得了同一个地方。 */
+@media (prefers-reduced-motion:reduce){
+  .acseg::before{transition:none}
+  .acpanel{transition:none}
+  .acpane{animation:none}
+}
 .acnote{font-size:12px;line-height:1.6;color:var(--faint);margin:0 0 12px}
 .acfoot{display:flex;align-items:center;gap:12px;margin-top:18px}
 .acfoot .btn{margin-left:auto}
@@ -895,6 +959,9 @@ main.lout .nav .c.dot{position:absolute;top:7px;right:13px;
 .asplit .al{display:inline-flex;align-items:center;gap:6px}
 .asplit .al::before{content:'';width:6px;height:6px;border-radius:999px;background:var(--blue)}
 .asplit>div:last-child .al::before{background:var(--warn)}
+/* 「读不到」那一档。跟金额同一个字号占位，这样答案回来时数字不会跳行；
+   颜色压下去，因为它不是一个数，不该跟旁边的余额一样有分量。 */
+.adim{color:var(--faint)}
 .atot .ad{font-size:13px;color:var(--mute);margin-left:var(--sp-2)}
 /* 明细是 Total 的下一级，靠留白归组，不再加第二条线 */
 /* min() 兜底：容器比下限还窄时，minmax 会把列撑出容器造成裁切 */
@@ -1296,6 +1363,10 @@ a.dspx{color:#d0574d}
 .acin::placeholder{color:var(--placeholder)}
 .acin[type=text]{width:200px}
 .acdate{width:140px;color-scheme:light dark}
+/* 条件行上的小 × 删除按钮。**当前没有任何元素用它**——留着是因为条件编辑器
+   还在改，但它曾经被「添加联系人」的表单容器误用过（见 .acbody）：一条写给
+   按钮的 :hover 落在一个容器上，表现出来就是「鼠标一进面板背景就莫名变色」。
+   要复用先确认它落在按钮上，不是容器上。 */
 .acx{border:0;background:none;cursor:pointer;color:var(--faint-2);font-size:10px;
   padding:4px;border-radius:var(--r-chip);line-height:1}
 .acx:hover{color:var(--neg);background:var(--canvas)}
@@ -1888,9 +1959,16 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
   background:var(--paper);
   box-shadow:0 0 0 1px var(--hairline), 0 16px 40px oklch(16% .01 265/.3), 0 48px 96px oklch(16% .01 265/.34);
   animation:psin .44s cubic-bezier(.16,1,.3,1) both}
-.lkav{width:46px;height:46px;border-radius:50%;margin:0 auto 14px;display:flex;
+.lkav{width:46px;height:46px;border-radius:50%;margin:0 auto 14px;display:flex;position:relative;
   align-items:center;justify-content:center;font-size:17px;font-weight:600;color:#fff;
   background:hsl(var(--pc,221) 52% 46%);background-size:cover;background-position:center}
+/* Lock badge on the avatar: the avatar says whose session, the badge says what state it is in. */
+.lkav i{position:absolute;right:-5px;bottom:-5px;width:20px;height:20px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;color:var(--ink);
+  background:var(--paper);box-shadow:0 0 0 1px var(--hairline)}
+.lkav i svg{width:11px;height:11px}
+.lkwho{display:block;font-style:normal;font-size:12px;color:var(--faint);margin:-4px 0 10px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lksheet h3{font-size:18px;font-weight:600;letter-spacing:-.01em;margin-bottom:8px}
 .lksheet p{font-size:12.5px;line-height:1.65;color:var(--faint);margin:0 auto 20px;max-width:274px}
 /* 间距不能靠错误槽撑着——没有错误时它塌成 0，按钮就贴到输入框上了 */
@@ -1946,6 +2024,9 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 @keyframes psamt{from{opacity:0;transform:scale(.9);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
 .psfor{text-align:center;font-size:13px;color:var(--mute);line-height:1.6;margin:0 auto 18px;max-width:322px}
 .psfor b{font-weight:600;color:var(--ink)}
+/* 自带下边距，所以紧跟按钮时把按钮那条上边距吃掉——两者相加是 40px，
+   在一个 412px 宽的弹层里那是一段空白，不是一个间距。 */
+.psrows+.psok{margin-top:0}
 .psrows{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:20px;
   padding-top:16px;border-top:1px solid var(--hairline)}
 .pslab{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
@@ -2013,7 +2094,25 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .pst small{font-size:11px;color:var(--faint)}
 .pstick{font-style:normal;margin-left:auto;font-size:11px;color:var(--accent);flex:none;width:10px}
 /* 确认按钮：有按下深度，点下去像真的压了一下 */
-.psok{width:100%;justify-content:center;height:48px;border-radius:14px;font-size:14.5px;font-weight:600;
+/* 确认弹层里的字段，以及它和主按钮之间的距离。
+
+   这里原来什么都没写，于是那一块只有 .sf 自带的 16px 下边距——比 .psrows
+   的 20px 窄，也没有它那条分隔线，输入框、提示、按钮挤成一坨。而 .psok
+   自己不带上边距：它一直是靠前一块给的，所以「前一块是什么」决定了这个
+   缝隙，谁传进来的 extra 没考虑这件事，谁就贴上去。
+
+   给 extra 这一档单独定死，与 .psrows 对齐；同时 .psok 补一条 margin-top
+   兜底——用它自己的值而不是叠加，避免和 .psrows 的 20px 加起来变成 40px。 */
+.paysheet .sf{margin-bottom:0}
+/* 标签到输入框：6px 是给密集表单的，在这张弹层上标签是一个提问，
+   跟答案之间该有一口气。 */
+.paysheet .sf>.sfl{margin-bottom:8px}
+/* 字段下面那行提示。原来是一个没有任何样式的 <small>：浏览器默认字号、
+   默认颜色、零边距，所以它直接坐在输入框的边框上。 */
+.paysheet .sf small{display:block;margin-top:8px;font-size:11.5px;line-height:1.5;
+  color:var(--faint)}
+.paysheet .sf small.bad{color:var(--neg)}
+.psok{margin-top:20px;width:100%;justify-content:center;height:48px;border-radius:14px;font-size:14.5px;font-weight:600;
   box-shadow:0 6px 16px oklch(58% .19 258/.32);
   transition:transform var(--dur-instant) var(--ease),box-shadow var(--dur-fast) var(--ease)}
 .psok:active{transform:translateY(2px);box-shadow:0 2px 6px oklch(58% .19 258/.3)}
@@ -3585,11 +3684,15 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
 .sellm-lead{font-size:12px;color:var(--faint);line-height:1.6;margin-bottom:14px}
 .sf{margin-bottom:16px}
 .sf>label,.sf>.sfl{display:block;font-size:12px;font-weight:500;color:var(--mute);margin-bottom:6px}
-.sf input[type=text]{width:100%;height:36px;padding:0 12px;border-radius:var(--r-control);
+/* 不写 [type=text]。HTML 省略 type 时默认就是 text，但 CSS 属性选择器认的是
+   「写出来的属性」——漏写一个 type 就整条规则不命中，输入框回退成浏览器默认
+   的白底方框，而这是个深色弹层。已经这样出过一次。
+   排除 checkbox / radio：那两个要的不是一个 36px 的整行盒子。 */
+.sf input:not([type=checkbox]):not([type=radio]){width:100%;height:36px;padding:0 12px;border-radius:var(--r-control);
   border:1px solid var(--hairline);background:var(--canvas);color:var(--ink);font-size:13px;
   font-family:inherit;outline:none;transition:border-color var(--dur-fast) var(--ease)}
-.sf input[type=text]:hover{border-color:var(--line-strong)}
-.sf input[type=text]:focus{border-color:var(--accent)}
+.sf input:not([type=checkbox]):not([type=radio]):hover{border-color:var(--line-strong)}
+.sf input:not([type=checkbox]):not([type=radio]):focus{border-color:var(--accent)}
 .sf input.inv{border-color:var(--neg)}
 /* 错误行：撑开而不是凭空出现。
    原来是 display:none → block，那一下整个表单下方的内容全部瞬移。准入向导
@@ -3712,6 +3815,13 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
   transition:width var(--dur-fast) linear}
 /* 按钮形态的进度：一层深色底从左往右推。页脚那一行放不下独立的进度条，
    而进度画在按钮自己身上，「点它=取消」这件事也就不用再解释。 */
+/* 按钮形态下「能传什么」那行小字。字段形态一直有（.fptx em），按钮形态
+   没有——而回执上传正好走的是按钮形态，于是唯一真的在传银行凭证的地方，
+   是唯一没说过规则的地方。
+   basis:100% 让它在 .dfoot 那一行里自己换行，不去挤按钮。 */
+.fphint{flex-basis:100%;text-align:right;margin-top:6px;font-size:11.5px;
+  line-height:1.5;color:var(--faint)}
+.fphint.bad{color:var(--neg)}
 .fpbtn1.uping{position:relative;overflow:hidden}
 .fpbtn1.uping::before{content:'';position:absolute;inset:0;width:var(--pct,0%);
   background:rgba(0,0,0,.22);transition:width var(--dur-fast) linear}

@@ -336,8 +336,17 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
       if (m.violation) { fail(m.violation.message); return }
       if (!m.candidates?.length) { fail('No live offers on that side right now'); return }
       /* 指名了就用指名的，没指名交给撮合的头名——成绩最好的排在前面，
-         所以排序本身就是默认选择。 */
-      const pick = (a.peer && m.candidates.find(c => c.name === a.peer)) || m.candidates[0]
+         所以排序本身就是默认选择。
+
+         指名的人不在结果里就停下，不换人。原来这里回落到头名，于是一句
+         「跟 Alice 买 500」会悄悄变成跟一个陌生人下单，而下单是即时的——
+         人看到卡片上的名字时，单已经在那个人手里了。 */
+      const named = a.peer ? m.candidates.find(c => c.name === a.peer) : undefined
+      if (a.peer && !named) {
+        fail(`${a.peer} has nothing live on that side right now — pick someone else or leave the name out`)
+        return
+      }
+      const pick = named ?? m.candidates[0]
       if (!pick) { fail('No live offers on that side right now'); return }
       setCands(m.candidates)
       setChosen(pick)

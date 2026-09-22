@@ -23,13 +23,24 @@ import { IPasskey, IWallet } from './icons'
 export interface ConfirmRow { k: string; v: React.ReactNode }
 
 export default function ConfirmSheet({
-  title, amount, unit, lead, rows, extra, note, walletKind, plain, busy, blocked, quiet, okLabel,
+  title, amount, unit, unitPos = 'post', lead, rows, extra, note, walletKind, plain, busy, blocked, quiet, okLabel,
   onConfirm, onClose,
 }: {
   title: string
   /** 大数。挂单是币量，吃单是要付的法币。 */
   amount?: string
   unit?: string
+  /** Which side the unit sits on.
+   *
+   *  'post' is a quantity of something — `33 USDT`.
+   *  'pre'  is a currency symbol — `¥779,589.65`.
+   *
+   *  It is not only word order. The unit renders muted and a size down from
+   *  the number, so a fiat symbol baked into `amount` instead comes out in
+   *  the same weight as the figure, and a currency code appended on top of a
+   *  symbol already in the string gives `¥779589.65CNY`. The margin on the
+   *  unit sits on its right, which is the gap a prefix needs. */
+  unitPos?: 'pre' | 'post'
   lead: React.ReactNode
   rows?: ConfirmRow[]
   /** 入金方式那一排之类，挂在说明和额度卡之间。 */
@@ -133,7 +144,9 @@ export default function ConfirmSheet({
         </div>
         {amount && (
           <div className="psamt">
-            <b className="num">{amount}</b>{unit ? <i>{unit}</i> : null}
+            {unit && unitPos === 'pre' ? <i>{unit}</i> : null}
+            <b className="num">{amount}</b>
+            {unit && unitPos === 'post' ? <i>{unit}</i> : null}
           </div>
         )}
         <div className="psfor">{lead}</div>

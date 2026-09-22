@@ -1,4 +1,5 @@
 import type { ApiErrorBody, Confirmation, Grade } from './types'
+import { clearShared } from './share'
 import { WalletTxError, signatureDeclined } from './walletError'
 
 /**
@@ -124,6 +125,11 @@ export function authChanged(): void {
 
 export function clearIdentity(): void {
   identity = 'demo'
+  /* Whatever the shared layer is holding belonged to the account that is
+     leaving. The chain config would survive a sign-out harmlessly, but the
+     wallet would not, and a cache that is right most of the time is the kind
+     that gets trusted. */
+  clearShared()
   try {
     localStorage.removeItem('atara-identity')
     sessionStorage.removeItem('atara-signed')
@@ -190,7 +196,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     } catch {
       throw new ApiError(res.status, {
         code: 'BAD_RESPONSE',
-        message: `${res.status} 返回的不是 JSON：${text.slice(0, 120)}`,
+        message: `${res.status} did not return JSON: ${text.slice(0, 120)}`,
       })
     }
   }
@@ -199,7 +205,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     const body = parsed as { error?: ApiErrorBody } | null
     const err = new ApiError(res.status, body?.error ?? {
       code: 'HTTP_' + res.status,
-      message: `请求失败（${res.status}）`,
+      message: `Request failed (${res.status})`,
     })
     /* 身份不存在了：这是重试也好不了的错，重试只会把它变成一场 401 风暴。
        清掉身份并广播一次，由 App 退回未登录态。 */

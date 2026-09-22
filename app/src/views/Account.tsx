@@ -203,12 +203,21 @@ export default function Account({ identity }: { identity: string }) {
                 <b className="num">
                   {loadingWallet ? <i className="sk" style={{ width: '4em' }} /> : <>$<CountUp value={avail} /></>}
                 </b></div>
+              {/* Three states, not two. The chain being unreadable used to
+                  render as $0 — on the one line of this page whose job is to
+                  say where money that is not in the wallet has gone. A zero
+                  there reads as "nothing is locked", which is the opposite of
+                  "I could not find out". */}
               <div><span className="al">In escrow contracts</span>
                 <b className="num">
-                  {loadingWallet ? <i className="sk" style={{ width: '4em' }} /> : <>$<CountUp value={esc} /></>}
+                  {loadingWallet ? <i className="sk" style={{ width: '4em' }} />
+                    : w?.escrow_unknown ? <span className="adim">—</span>
+                      : <>$<CountUp value={esc} /></>}
                 </b>
-                <span className="ad">{loadingWallet ? ' ' : <>{escN} trades locked ·{' '}
-                  <a href="#/payments" className="lnk">View ›</a></>}</span></div>
+                <span className="ad">{loadingWallet ? ' '
+                  : w?.escrow_unknown ? 'Could not read the contract just now — retrying'
+                    : <>{escN} trades locked ·{' '}
+                      <a href="#/payments" className="lnk">View ›</a></>}</span></div>
             </div>
             <div className="aacts">
               <button className="btn btn-secondary aact-in" onClick={() => setSheet('receive')}>

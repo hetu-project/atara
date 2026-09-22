@@ -309,6 +309,7 @@ export function SendModal({
 
   const { data: chains } = useApi(() => ep.chainInfo(), [])
   const { data: myWallet } = useApi(() => ep.wallet(identity), [identity])
+  const { toast } = useToast()
 
   /* 余额为 0 的不列：转不出去的东西摆在选择列表里，只会让人点进去才发现。 */
   const sendable = assets.filter(a => Number(a.on_chain) > 0)
@@ -373,13 +374,30 @@ export function SendModal({
         { to_address: v, to_chain: net, asset: pick!.asset, amount }, identity)
       /* Two ways to move money on an EVM chain: a token is a contract call,
          the gas coin is a plain value transfer. Same receipt either way. */
-      const hash = isNative
-        ? await wtx.transferNative({ to: v, amountWei: wei.toString() })
-        : await wtx.transferToken({ token: tok!.address, to: v, amountWei: wei.toString() })
+      let hash: string
+      try {
+        hash = isNative
+          ? await wtx.transferNative({ to: v, amountWei: wei.toString() })
+          : await wtx.transferToken({ token: tok!.address, to: v, amountWei: wei.toString() })
+      } catch (e) {
+        /* Declined in the wallet, or it failed before a hash existed. The
+           record was written first, so close it — otherwise it sits under
+           "withdrawals" as something in flight for ever. */
+        await ep.abandonWithdrawal(wd.id, identity).catch(() => {})
+        throw e
+      }
+      let recorded = true
       try {
         await ep.broadcastWithdrawal(wd.id, hash, identity)
       } catch {
-        /* The coins already left the wallet. A failed record is not a failed send. */
+        /* The coins already left the wallet. A failed record is not a failed
+           send — but it is not nothing either: say so, with the hash, so the
+           person can paste it to support instead of finding the row stuck. */
+        recorded = false
+      }
+      if (!recorded) {
+        toast(`Sent on chain (${hash.slice(0, 10)}…) but the record did not update — keep this hash; `
+          + 'the console can verify it from the chain', { kind: 'err' })
       }
       setSent({
         to: v, hash, amount, asset: pick!.asset,
@@ -619,7 +637,14 @@ export function AllowanceModal({
     per_payment: edit?.per_payment ?? '500',
     window_cap: edit?.window_cap ?? '2000',
     cycle: (edit?.cycle ?? 'weekly') as 'weekly' | 'monthly',
-    expires: edit?.expires_at ? '90 days' : '90 days',
+    /* Editing used to land on "90 days" whatever the allowance had, so every
+       edit silently re-armed a 90-day clock — on a "Not set" allowance too.
+       Start from what it has: no expiry stays "Not set", and a dated one
+       picks the bucket its remaining time is closest to. (Picking a bucket on
+       save still restarts that clock; the form has no "keep the date" option.) */
+    expires: !edit ? '90 days'
+      : !edit.expires_at ? 'Not set'
+        : (Date.parse(edit.expires_at) - Date.now()) / 86_400_000 <= 60 ? '30 days' : '90 days',
   })
   /* 出错的是哪一行。只在底下挂一句话的话，人盯着按钮以为没反应——
      截图里那句「Per-payment cap cannot exceed the window cap」就是这样：
@@ -659,7 +684,11 @@ export function AllowanceModal({
          拿自己的私钥去签——批的是后端的币，用户钱包里一分没动。 */
       const tok = chain?.tokens?.[useCoin]
       if (walletKind === 'ext' && chain?.deployed && chain.spending && tok?.address) {
-        const wei = BigInt(Math.round(Number(f.window_cap) * 10 ** tok.decimals)).toString()
+        /* parseUnits, not Number × 10^decimals: at 18 decimals anything over
+           ~9,007 tokens is past 2^53 and Math.round hands BigInt a float that
+           is not the integer typed in. The approval on chain would differ from
+           the cap on screen by a few hundred wei — small, but wrong. */
+        const wei = parseUnits(f.window_cap, tok.decimals).toString()
         await wtx.approveSpending({
           spending: chain.spending, token: tok.address, amountWei: wei,
         })

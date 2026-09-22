@@ -1,4 +1,5 @@
 import { ApiError, BASE, PROFILE_CHANGED, api, assert, getIdentity, readAuthToken, withConfirmation } from './client'
+import { shared } from './share'
 import type {
   Account, Allowance, ApiErrorBody, Assessment, BankAccount, CatalogAsset, ChainInfo, PreparedOffer, ConditionCatalog, Contact, DepositStatus, EligiblePeer, KybResult, KycSession, KycStatus, MakerApp, Market, MatchResult, Message, Offer, Order, Payee, RailGroup, StrandedLock, Task, Thread, ThreadSummary, User, Wallet, Withdrawal,
 } from './types'
@@ -37,7 +38,12 @@ export const rename = async (displayName: string, as?: string) => {
   return u
 }
 
-export const wallet = (as?: string) => api.get<Wallet>('/wallet', { as })
+/* Deduped, not cached: balances change, and a stale one here is a number
+   somebody is about to act on. The window is only "while a request is already
+   in flight", which is exactly long enough to collapse the burst of identical
+   calls a screenful of order cards fires in one tick. */
+export const wallet = (as?: string) =>
+  shared(`wallet:${as ?? ''}`, 0, () => api.get<Wallet>('/wallet', { as }))
 
 // ── 目录 ──
 
@@ -46,7 +52,12 @@ export const assets = () =>
 
 /** 结算法币，按走廊分组。目录只发这一版支持的——范围由后端声明。 */
 /** 链上合约地址。mock 下回一份空的，前端据此知道这一版不发交易。 */
-export const chainInfo = () => api.get<ChainInfo>('/catalog/chain')
+/* Which chain the backend is on, and where the contracts live. It cannot
+   change while the process is up, so this one is worth holding — but for a
+   bounded time rather than the life of the tab: a backend restarted onto a
+   different chain should not be papered over by a cache nobody can clear. */
+export const chainInfo = () =>
+  shared('chain', 5 * 60_000, () => api.get<ChainInfo>('/catalog/chain'))
 
 /**
  * 法币收款渠道。**必须问后端,不能在前端写死。**
@@ -217,7 +228,7 @@ export async function upload(file: File, as?: string): Promise<string> {
     | null
   if (!res.ok || !body || 'error' in body) {
     throw new ApiError(res.status, body && 'error' in body ? body.error : {
-      code: 'UPLOAD_FAILED', message: `上传失败（${res.status}）`,
+      code: 'UPLOAD_FAILED', message: `Upload failed (${res.status})`,
     })
   }
   return body.file_ref
@@ -318,6 +329,10 @@ export const createWithdrawal = (req: WithdrawReq, as?: string) =>
 /** 回填你自己签出来的那笔转账。没有这一步，提现永远停在 submitted。 */
 export const broadcastWithdrawal = (id: string, txHash: string, as?: string) =>
   api.post<Withdrawal>(`/withdrawals/${id}/broadcast`, { tx_hash: txHash }, { as })
+
+/** 钱包里拒签了：关掉这条从未签出交易的记录，别让它永远停在 submitted。 */
+export const abandonWithdrawal = (id: string, as?: string) =>
+  api.post<Withdrawal>(`/withdrawals/${id}/abandon`, {}, { as })
 
 // ── Discover 与做市准入 ──
 

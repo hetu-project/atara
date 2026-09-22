@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useMe } from '../hooks/useMe'
+import { ILock } from './icons'
 
 /**
  * 会话锁。
@@ -11,6 +13,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  */
 
 const PW_KEY = 'atara-pw'
+/* Both live in sessionStorage next to the signed-in flag: a reload keeps the
+   session, so it has to keep the lock too. */
+const LOCK_KEY = 'atara-locked'
+const ACTIVE_KEY = 'atara-last-active'
 
 /** 演示开关：?lock=20 把闲置阈值压到 20 秒，好当场看它落锁。 */
 export const LOCK_IDLE = (() => {
@@ -26,7 +32,11 @@ function writePw(v: string) {
 }
 
 /**
- * 闲置计时。任何真实操作都重新计时；锁着的时候不计。
+ * Idle timer. Any real interaction re-arms it; it does not run while locked.
+ *
+ * The last interaction is also stamped into sessionStorage (at most once every
+ * few seconds — wheel events fire continuously) so that a tab reloaded or
+ * restored after sitting idle comes back locked rather than open.
  */
 export function useIdleLock(enabled: boolean, onIdle: () => void) {
   const cb = useRef(onIdle)
@@ -34,7 +44,15 @@ export function useIdleLock(enabled: boolean, onIdle: () => void) {
   useEffect(() => {
     if (!enabled) return
     let t = window.setTimeout(() => cb.current(), LOCK_IDLE)
-    const arm = () => { clearTimeout(t); t = window.setTimeout(() => cb.current(), LOCK_IDLE) }
+    let stamped = 0
+    const stamp = () => {
+      const now = Date.now()
+      if (now - stamped < 5000) return
+      stamped = now
+      try { sessionStorage.setItem(ACTIVE_KEY, String(now)) } catch { /* private window */ }
+    }
+    stamp()
+    const arm = () => { clearTimeout(t); t = window.setTimeout(() => cb.current(), LOCK_IDLE); stamp() }
     const evs = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const
     evs.forEach(e => addEventListener(e, arm, { passive: true }))
     return () => {
@@ -118,14 +136,26 @@ export async function assertPasskey(): Promise<void> {
 // ── 锁屏 ────────────────────────────────────────────────────────────
 
 export function LockScreen({
-  name, hasPasskey, onUnlock, onSignOut,
+  hasPasskey, onUnlock, onSignOut,
 }: {
-  name: string
-  /** 这个账户上有没有 passkey。有就不问密码——那把钥匙比密码强。 */
-  hasPasskey: boolean
+  /**
+   * Whether this account has a passkey. If so, no password is asked for — the
+   * key is the stronger of the two. `null` while Privy has not answered yet:
+   * after a reload this screen mounts before that, and guessing "no" would
+   * flash a password field that vanishes a moment later.
+   */
+  hasPasskey: boolean | null
   onUnlock: () => void
   onSignOut: () => void
 }) {
+  /* Whose session this is. On a shared screen the person coming back may not be
+     the one who left, and "Not you? Sign out" only makes sense if the screen
+     says who "you" is — the same avatar and name as the sidebar, not the first
+     digit of a wallet address. */
+  const me = useMe()
+  const addr = me?.address ?? ''
+  const short = addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : ''
+  const named = !!me?.display_name && me.display_name !== short
   const pw = readPw()
   const [v, setV] = useState('')
   const [err, setErr] = useState('')
@@ -133,8 +163,14 @@ export function LockScreen({
   const [busy, setBusy] = useState(false)
   /* 先给哪一种。passkey 更好用，但它可能在这个域名上根本不存在——
      见下面 byPasskey 的注释——所以这是个可以退的选择，不是定局。 */
-  const [byPw, setByPw] = useState(!hasPasskey)
-  const ini = (name.trim()[0] || 'D').toUpperCase()
+  /* null = not decided yet, because hasPasskey is not known yet. The choice is
+     made once, from the first real answer; after that the person switches it
+     with the buttons below, not Privy. */
+  const [byPw, setByPw] = useState<boolean | null>(hasPasskey === null ? null : !hasPasskey)
+  useEffect(() => {
+    if (hasPasskey !== null) setByPw(cur => cur === null ? !hasPasskey : cur)
+  }, [hasPasskey])
+  const ini = (me?.display_name || addr || '·').charAt(0).toUpperCase()
   const span = LOCK_IDLE >= 60000
     ? `${Math.round(LOCK_IDLE / 60000)} minutes`
     : `${Math.round(LOCK_IDLE / 1000)} seconds`
@@ -151,14 +187,18 @@ export function LockScreen({
          **绑在域名上**的。同一个账户换一个部署地址——本地、IP、vercel.app、
          自己的域名——账户上还写着「有 passkey」，浏览器这边却一把都找不到。
          那时屏幕上只剩一颗按不动的按钮和「签出」，而人什么都没做错。 */
-      const why = e instanceof Error ? e.message : 'Could not verify your passkey'
-      /* 浏览器**故意**不区分「用户取消」和「这里没有这把钥匙」——区分了就等于
-         告诉一个页面某个账户有没有注册过。所以两种可能都要说，并且给出那条
-         一定管用的退路。没有这一句的话，屏幕上只有一条含糊的报错和一颗
-         按不动的按钮。 */
-      setErr(pw ? why
-        : why + ' — it may have been cancelled, or set up at a different address '
-          + 'and so is not available here. Signing out and back in will let you in.')
+      /* The browser **deliberately** reports "the user cancelled" and "there is no
+         such key here" as one and the same NotAllowedError — telling them apart
+         would let a page learn whether an account is registered. So both
+         possibilities are named, together with the one way in that always works.
+         The browser's own message stays in the console: it is a spec citation
+         written for developers, not for the person at the screen. */
+      const denied = e instanceof DOMException && e.name === 'NotAllowedError'
+      if (denied) console.warn('passkey assertion refused:', e.message)
+      const why = denied
+        ? 'The passkey check was cancelled, or no passkey for this account is available on this device.'
+        : e instanceof Error ? e.message : 'Could not verify your passkey.'
+      setErr(pw ? why : why + ' Signing out and back in will let you in.')
       if (pw) setByPw(true)
     } finally { setBusy(false) }
   }
@@ -175,16 +215,23 @@ export function LockScreen({
   return (
     <div id="lock" className="show" role="dialog" aria-modal="true" aria-label="Session locked">
       <div className="lksheet">
-        <span className="lkav">{ini}</span>
+        <span className="lkav" aria-hidden>{ini}<i><ILock /></i></span>
+        {(named || short) && (
+          <em className="lkwho">{named ? `${me!.display_name} · ${short}` : short}</em>
+        )}
         {/* 标题跟着屏上真正摆着的东西走：没有密码框就别叫人输密码。 */}
         <h3>{byPw ? 'Enter your password' : 'Session locked'}</h3>
         <p>
           For your security, this session locks after {span} of inactivity.
-          {byPw
-            ? ' Enter your password to continue.'
+          {byPw === null ? ''
+            : byPw ? ' Enter your password to continue.'
             : ' Unlock with your passkey to continue.'}
         </p>
-        {byPw ? (
+        {byPw === null ? (
+          /* Privy has not said yet how this account can unlock. Hold the sheet's
+             shape with a disabled button rather than guess a field. */
+          <button className="btn btn-primary lkok" disabled>Checking your account…</button>
+        ) : byPw ? (
           <>
             <input type="password" className={'pwin' + (shake ? ' shake' : '')} key={shake}
               autoFocus autoComplete="off" aria-label="Password" value={v}
@@ -230,10 +277,35 @@ export function LockScreen({
  * 多问一道密码——那把钥匙本来就比密码强，再要一个只是多一件要记的事。
  * 两样都没有才带他去设一把，设好了再替他锁上，他点那一下的意图不丢。
  */
-export function useSessionLock(signed: boolean, hasPasskey = false) {
-  const [locked, setLocked] = useState(false)
+/** Was the console locked when this tab last rendered, or idle past the threshold? */
+function lockedOnLoad(signed: boolean): boolean {
+  if (!signed) return false
+  try {
+    if (sessionStorage.getItem(LOCK_KEY) === '1') return true
+    const last = Number(sessionStorage.getItem(ACTIVE_KEY) || 0)
+    return last > 0 && Date.now() - last > LOCK_IDLE
+  } catch { return false }
+}
+
+/**
+ * @param hasPasskey `null` while Privy has not yet said whether this account has
+ * a passkey. Treated as "maybe": the lock is neither dropped nor refused on it.
+ */
+export function useSessionLock(signed: boolean, hasPasskey: boolean | null = false) {
+  const [locked, setLockedState] = useState(() => lockedOnLoad(signed))
   const [setup, setSetup] = useState<{ why?: string } | null>(null)
-  const canOpen = hasPasskey || !!readPw()
+  const canOpen = hasPasskey === null ? true : hasPasskey || !!readPw()
+
+  /* Mirrored into sessionStorage so a reload while locked comes back locked.
+     React state alone lasts exactly until F5 — the first thing a passer-by
+     tries. */
+  const setLocked = useCallback((v: boolean) => {
+    setLockedState(v)
+    try {
+      if (v) sessionStorage.setItem(LOCK_KEY, '1')
+      else sessionStorage.removeItem(LOCK_KEY)
+    } catch { /* private window */ }
+  }, [])
 
   const lock = useCallback(() => {
     if (!hasPasskey && !readPw()) {
@@ -244,14 +316,22 @@ export function useSessionLock(signed: boolean, hasPasskey = false) {
       return
     }
     setLocked(true)
-  }, [hasPasskey])
+  }, [hasPasskey, setLocked])
+
+  /* A lock nothing can open is a lockout, not a lock. Once Privy has answered
+     and there is neither a passkey nor a password, drop it — the same rule
+     lock() applies before locking. Signing out drops it as well. */
+  useEffect(() => {
+    if (!locked) return
+    if (!signed || (hasPasskey === false && !readPw())) setLocked(false)
+  }, [locked, signed, hasPasskey, setLocked])
 
   useIdleLock(signed && !locked, () => { if (canOpen) setLocked(true) })
 
   return {
     locked, setLocked, lock,
     setup, closeSetup: () => setSetup(null),
-    /* 设完密码就替他锁上——那本来就是他点那一下要的结果 */
+    /* Lock as soon as the password is set — that is what the click was for. */
     finishSetup: () => { setSetup(null); setLocked(true) },
   }
 }

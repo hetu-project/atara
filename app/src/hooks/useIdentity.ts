@@ -71,11 +71,11 @@ export function useIdentity() {
   return { handle, signed, change, signIn, signOut }
 }
 
-/** 种子数据里的身份。UserByHandle 支持按 display_name 匹配。 */
+/** Identities in the seed data. UserByHandle also matches on display_name. */
 export const SEED_HANDLES = [
-  { handle: 'demo', label: 'Demo（你）' },
-  { handle: 'CrabWalk Trading', label: 'CrabWalk Trading（做市方 · 卖 USDT/CNY）' },
-  { handle: 'Lotus Capital', label: 'Lotus Capital（做市方 · 买 USDT/CNY）' },
-  { handle: 'Golden Gate', label: 'Golden Gate（做市方）' },
-  { handle: 'reviewer', label: 'Reviewer（审核员）' },
+  { handle: 'demo', label: 'Demo (you)' },
+  { handle: 'CrabWalk Trading', label: 'CrabWalk Trading (maker · sells USDT/CNY)' },
+  { handle: 'Lotus Capital', label: 'Lotus Capital (maker · buys USDT/CNY)' },
+  { handle: 'Golden Gate', label: 'Golden Gate (maker)' },
+  { handle: 'reviewer', label: 'Reviewer (arbiter)' },
 ]

@@ -55,6 +55,10 @@ export interface Wallet {
   custody: string
   on_chain_usd: string
   in_escrow_usd: string
+  /** True when the escrow figures could not be read off the chain. They come
+      back as zero in that case, and zero is a number somebody might act on —
+      so the page says it could not read rather than printing it. */
+  escrow_unknown?: boolean
   total_usd: string
   assets: WalletAsset[]
   escrow_contract: { address: string; network: string }
@@ -162,6 +166,11 @@ export interface Escrow {
   confirmations: number
   required: number
   needs_funding: boolean
+  /** 卖币的 taker 要从自己钱包 deposit 时用的参数，只在待入金时有值。见后端 app.FundingPlan。 */
+  order_key?: string
+  token?: string
+  amount_wei?: string
+  beneficiary?: string
 }
 
 export interface OtcLeg {
@@ -280,8 +289,10 @@ export interface OrderAssessment {
 export interface Evidence {
   outcome: 'completed' | 'cancelled' | 'expired' | 'disputed'
   receipt_ref?: string
-  /** 同 OTC.receipt_url。 */
+  /** 同 OTC.receipt_url——最后一页，给只读一个的旧客户端。 */
   receipt_url?: string
+  /** 每一页。结算记录要装的是放款当时真正依据的那些东西。 */
+  receipts?: ReceiptPage[]
   settled_at?: string
   /**
    * Present on orders that reached `disputed`, ruled on or not.

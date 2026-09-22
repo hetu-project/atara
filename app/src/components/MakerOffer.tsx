@@ -434,7 +434,12 @@ export default function MakerOffer({
   const curFiat = fiats.includes(fiat) ? fiat : (fiats[0] ?? '')
 
   const sym = FIAT_SYM[curFiat] ?? ''
-  const avail = num(w?.assets.find(a => a.asset === curCoin)?.on_chain ?? '0')
+  /* The balance on the network the listing will lock on. The same coin sits on
+     several chains as several rows; matching on the asset alone picked the
+     first row, so a maker listing on BSC was shown -- and pre-checked against
+     -- their balance on whatever chain the wallet listed first. */
+  const avail = num(w?.assets.find(a => a.asset === curCoin && a.network === curNet)?.on_chain
+    ?? w?.assets.find(a => a.asset === curCoin && !a.network)?.on_chain ?? '0')
 
   /* 参考价。这一版只结算美元稳定币，所以「币的美元价」恒为 1，
      指数就是法币指数本身——真接上行情源时这里换成报价。 */

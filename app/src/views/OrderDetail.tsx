@@ -8,9 +8,10 @@ import DocView, { DOC_META } from '../components/DocView'
 import Avatar from '../components/Avatar'
 import { useAction, useApi } from '../hooks/useApi'
 import { useMe } from '../hooks/useMe'
+import { useWalletTx } from '../hooks/useWalletTx'
 import CopyButton from '../components/CopyButton'
 import { Row } from '../components/prim'
-import type { Order } from '../api/types'
+import type { ChainInfo, Order, Wallet } from '../api/types'
 import { scoreBand, scoreText } from '../api/types'
 
 const FIAT_SYM: Record<string, string> = {
@@ -24,8 +25,14 @@ const flag = (c: string) => {
   const cc = c === 'EUR' ? 'EU' : c.slice(0, 2)
   return String.fromCodePoint(...[...cc].map(ch => 0x1f1e6 + ch.charCodeAt(0) - 65))
 }
+/* The fiat leg to the cent. This used to Math.round: 2 USDT at 7.3 showed as
+   ¥15 against a bank transfer of ¥14.60, and the receipt never matched the
+   number on screen. Whole amounts still print whole; anything else keeps its
+   two decimals, which is what the bank shows. */
 const money = (v: number, c: string) =>
-  `${FIAT_SYM[c] ?? ''}${Math.round(v).toLocaleString()} ${c}`
+  `${FIAT_SYM[c] ?? ''}${Number.isInteger(v)
+    ? v.toLocaleString()
+    : v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${c}`
 
 /**
  * 剩余时间。单位要一直看得出来。
@@ -64,6 +71,7 @@ const leftText = (s: number) => {
  */
 export default function OrderDetail({
   id, onBack, bare, identity, order, onChanged,
+  chains: chainsIn, myWallet: walletIn,
 }: {
   id: string
   onBack: () => void
@@ -74,6 +82,13 @@ export default function OrderDetail({
   order?: Order
   /** Ask the owner of that data to refresh, after an action changed the order. */
   onChanged?: () => void
+  /** The chain config and this account's wallet, when the caller already has
+      them. Neither varies per order — one is which chain the backend is on,
+      the other is whose money this is — so a parent rendering many cards
+      should read them once and hand them down. Same arrangement as `order`
+      above, for the same reason. */
+  chains?: ChainInfo | null
+  myWallet?: Wallet | null
 }) {
   /* Fetch only when nobody handed us the order.
    *
@@ -137,6 +152,30 @@ export default function OrderDetail({
      call sat inside the card — see useMe for what those queued requests cost. */
   const me = useMe()
   const walletKind = me?.wallet_kind === 'ext' ? 'ext' : 'atara'
+  /* The chain this order settles on, for the one transaction this card may
+     have to send: a seller's deposit into escrow. On a real chain that must
+     come from the taker's own wallet -- the backend refuses to sign it (see
+     Accept's EXTERNAL_WALLET_REQUIRED), because it would be signing with the
+     platform's key and the contract would record the platform as payer. */
+  /* Fetch only when nobody handed them over, exactly as with `order`.
+
+     A conversation renders one card per order, so a thread of twenty-one
+     asked for these forty-two times and got the same two answers. The
+     endpoints dedupe now (see api/share.ts), which alone stops the flood —
+     but a card asking the network for something its parent is already holding
+     is the shape of the problem, and the dedupe is only a floor under it.
+
+     The standalone /order/:id page has no parent to hand them over, so it
+     still reads them itself. */
+  const ownChains = useApi(
+    () => (chainsIn !== undefined ? Promise.resolve(chainsIn) : ep.chainInfo()), [chainsIn])
+  const ownWallet = useApi(
+    () => (walletIn !== undefined ? Promise.resolve(walletIn) : ep.wallet(identity)),
+    [walletIn, identity])
+  const chains = chainsIn !== undefined ? chainsIn : ownChains.data
+  const myWallet = walletIn !== undefined ? walletIn : ownWallet.data
+  const chainRow = (chains?.chains ?? []).find(c => c.code === (o?.escrow?.network || o?.otc?.network)) ?? null
+  const wtx = useWalletTx(chainRow, myWallet?.address)
 
   const wrap = (node: React.ReactNode) =>
     bare ? <>{node}</> : <Shell onBack={onBack}>{node}</Shell>
@@ -150,6 +189,35 @@ export default function OrderDetail({
     : Math.max(0, o.seconds_left)
 
   const act = async (fn: () => Promise<unknown>) => { await run(fn); reload() }
+  /* The seller's deposit, sent from their own wallet with the parameters the
+     backend put on the order (key, token, wei, beneficiary) -- nothing hashed
+     or scaled here. Callable again from the s1 card if the first attempt was
+     declined in the wallet. */
+  const fundFromWallet = async () => {
+    const e = o.escrow
+    if (!e?.order_key || !e.token || !e.amount_wei || !e.beneficiary) {
+      throw new Error('Funding details are not on the order yet — reload and try again')
+    }
+    await wtx.deposit({
+      escrow: e.contract, token: e.token, orderKey: e.order_key,
+      amountWei: e.amount_wei, beneficiary: e.beneficiary,
+    })
+  }
+  /* Buying: a plain commitment, the maker's coins are already escrowed.
+     Selling on a real chain: commit with via=external, then deposit from the
+     wallet. Selling on the mock chain: the old path, the backend signs. This
+     used to call ep.accept(o) for both sides, which on a real chain made the
+     backend fund the escrow with the platform's own coins. */
+  const acceptOrder = async () => {
+    if (!sell || chains?.impl !== 'evm') { await ep.accept(o); return }
+    const fresh = await ep.accept(o, 'external')
+    const e = fresh.escrow
+    if (!e?.order_key || !e.token || !e.amount_wei || !e.beneficiary) return // the s1 card offers the deposit
+    await wtx.deposit({
+      escrow: e.contract, token: e.token, orderKey: e.order_key,
+      amountWei: e.amount_wei, beneficiary: e.beneficiary,
+    })
+  }
   /* your_side, not side: `side` is the taker's direction and is the same string
      for both parties, so the maker used to read the whole card from the taker's
      seat — "their coins were returned" about his own coins. */
@@ -273,6 +341,26 @@ export default function OrderDetail({
                       记进你的成绩单。参照在这里也插了一道。 */}
                   <button className="btn btn-primary" disabled={pending}
                     onClick={() => setAsk(true)}>Confirm</button>
+                </div>
+              </>
+            ) : step === 's1' && sell && yours && o.escrow?.funding_via === 'external'
+                && o.escrow.order_key && !o.escrow.tx_hash ? (
+              /* The seller committed but the deposit has not landed: the wallet
+                 prompt was declined, or the page moved on before it. The order
+                 sits at s1 until the contract sees the coins, so the way to
+                 send them stays on the card. */
+              <>
+                <div className="dhead">
+                  <b className="damt num">Deposit {coin}</b>
+                  <span className="dsub">from your wallet into the escrow contract</span>
+                </div>
+                <p className="dmech">
+                  Your wallet is the payer and {o.counterparty_name ?? 'the buyer'} is the payee on the
+                  contract — that cannot change afterwards. Detection is automatic once the deposit confirms.
+                </p>
+                <div className="dfoot">
+                  <button className="btn btn-primary" disabled={pending}
+                    onClick={() => void act(fundFromWallet)}>Deposit from wallet</button>
                 </div>
               </>
             ) : step === 's3' && o.phase === 'pay' ? (
@@ -494,7 +582,7 @@ export default function OrderDetail({
                但这个数现在只由后端的 demo/real 计时决定，接口上没有发下来。 */
             { k: 'Window', v: <>4 h · missing it marks your record</> },
           ]}
-          onConfirm={() => { setAsk(false); void act(() => ep.accept(o)) }}
+          onConfirm={() => { setAsk(false); void act(acceptOrder) }}
           onClose={() => setAsk(false)} />
       )}
     </>,
@@ -584,11 +672,40 @@ function Peer({ o, ccy, live }: { o: Order; ccy: string; live?: boolean }) {
       {o.otc?.receipt_url && (!o.terminal || live) && (
         <div><dt>Receipt</dt>
           <dd>
-            <a className="lnk" href={o.otc.receipt_url} target="_blank" rel="noopener"
-              onClick={e => e.stopPropagation()}>Open original ↗</a>
-            <span className="dreq" style={{ marginLeft: 8 }}>
-              uploaded by the paying side
-            </span>
+            {/* Every page, not the newest one.
+
+                A payment is often more than one file — the transfer screen,
+                the bank's confirmation, a statement line when neither carries
+                the reference. The upload has taken the whole set for a while
+                and the backend has sent it as `receipts` for just as long,
+                with a note saying the single `receipt_url` beside it is "not
+                enough for the side that has to check the payment". This is
+                the client that was still reading the single one: somebody
+                submitted two screenshots and the other side was asked to
+                release on the strength of the second. */}
+            {(o.otc.receipts?.length ?? 0) > 1 ? (
+              <>
+                {o.otc.receipts!.map((r, i) => (
+                  <a className="lnk" key={r.ref} href={r.url} target="_blank" rel="noopener"
+                    style={i ? { marginLeft: 10 } : undefined}
+                    onClick={e => e.stopPropagation()}>
+                    Page {i + 1}{r.verified ? ' ✓' : ''} ↗
+                  </a>
+                ))}
+                <span className="dreq" style={{ marginLeft: 8 }}>
+                  {o.otc.receipts!.length} pages · uploaded by the paying side
+                </span>
+              </>
+            ) : (
+              <>
+                <a className="lnk" href={o.otc.receipts?.[0]?.url ?? o.otc.receipt_url}
+                  target="_blank" rel="noopener"
+                  onClick={e => e.stopPropagation()}>Open original ↗</a>
+                <span className="dreq" style={{ marginLeft: 8 }}>
+                  uploaded by the paying side
+                </span>
+              </>
+            )}
           </dd></div>
       )}
       {doc && (
@@ -724,7 +841,16 @@ function Waiting({
         <b className="damt num">{h[0]}</b>
         <span className="dsub">{h[1]}</span>
       </div>
-      <Peer o={o} ccy={ccy} />
+      {/* `live` on an escalation, so the payer can still open what they sent.
+
+          The receipt row hides itself once an order is terminal, on the
+          reasoning that the evidence pack below carries the file from then
+          on. An escalated order is terminal in the database while nothing has
+          settled — and the pack only exists for terminal orders, so before
+          the escalation there was no pack and after it there was no row. The
+          person who is out the money had no way to see their own receipt at
+          the one moment they might be asked about it. */}
+      <Peer o={o} ccy={ccy} live={step === 'escalated'} />
       {/* 入金观察窗：等的就是「钱真的进合约了」这个证据，给他看链上的过程，
           而不是一根干等的倒计时 */}
       {step === 's1' && o.escrow && (
@@ -949,12 +1075,24 @@ function Pack({ ev, coin, fiat, ref_ }: {
       {ev.receipt_url && (
         <div className="evrow">
           <i className="ok" />
-          <span>Bank receipt</span>
+          {/* 一页就叫「Bank receipt」，多页要说清有几页——这个包是结算记录，
+              少印一页等于记录里没有它。 */}
+          <span>{(ev.receipts?.length ?? 0) > 1
+            ? `Bank receipt · ${ev.receipts!.length} pages`
+            : 'Bank receipt'}</span>
+          {(ev.receipts?.length ?? 0) > 1 && ev.receipts!.slice(0, -1).map((r, i) => (
+            <a href={r.url} target="_blank" rel="noopener" key={r.ref}
+              style={{ marginRight: 8 }}
+              onClick={e => e.stopPropagation()}>Page {i + 1} ↗</a>
+          ))}
           {/* 打开的是当时交上来的原件，不是一个「已上传」的字样 */}
-          <a href={ev.receipt_url} target="_blank" rel="noopener"
+          <a href={ev.receipts?.at(-1)?.url ?? ev.receipt_url}
+            target="_blank" rel="noopener"
             /* 链接文字不印 file_ref：那是一个 uuid，对人没有任何意义，
                而这一行左边已经说了它是什么。 */
-            onClick={e => e.stopPropagation()}>Open original ↗</a>
+            onClick={e => e.stopPropagation()}>
+            {(ev.receipts?.length ?? 0) > 1 ? `Page ${ev.receipts!.length} ↗` : 'Open original ↗'}
+          </a>
           {/* settled_at 是回执核验通过的时刻，不是放款时刻——放款在它之后。
               单独排一行「Settled」会排在放款下面，时间却更早，整列读下来
               像时间倒流了。它属于这份回执，就跟着回执。 */}
