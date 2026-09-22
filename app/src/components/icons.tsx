@@ -1,6 +1,6 @@
 /**
- * 图标逐个取自 console.html，路径原样搬过来——
- * 重画一遍等于换了一套图标，视觉上立刻能看出不是同一个产品。
+ * Icons taken one by one from console.html, paths copied as-is --
+ * redrawing them would amount to a different icon set, visibly not the same product.
  */
 type P = { size?: number }
 export type Icon = (p?: P) => JSX.Element
@@ -51,7 +51,7 @@ export const IChart = ({ size }: P = {}) => (
   </svg>
 )
 
-/** 外链角标。导航行尾那个小箭头。 */
+/** External-link marker. The small arrow at the end of a nav row. */
 export const IGo = () => (
   <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor"
     strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
@@ -122,7 +122,7 @@ export const IBank = () => (
   </svg>
 )
 
-/* ── 账户页用的小图标，逐字取自 console.html ── */
+/* -- Small icons used on the account page, taken verbatim from console.html -- */
 export const CHIP = () => (
   <svg className="cchip" width="21" height="15" viewBox="0 0 22 16" fill="none"
     stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" aria-hidden>
@@ -164,11 +164,12 @@ export const IFlip = () => (
     <path d="M3 9.5a5 5 0 0 0 9.6 1.3" /><path d="M13 13v-2.4h-2.4" /></svg>
 )
 
-/* 用户菜单：设置与锁屏。描边风格与同一组图标保持一致。 */
-/* 齿轮，路径照搬参照。原来画的是「一个圆心加八条射线」——那是亮度/太阳的
-   画法，摆在 Settings 旁边读作「外观」，而这一项是安全设置。
-   viewBox 与描边粗细也跟着参照走：24 的框配 stroke-width 2，缩到 15px 时
-   齿牙才不会糊成一团。 */
+/* User menu: settings and lock screen. Stroke style kept consistent with the same icon group. */
+/* Gear, path copied from the reference. The original drawing was "a centre circle plus eight
+   rays" -- that is how brightness/sun is drawn, and next to Settings it reads as "appearance",
+   whereas this entry is a security setting.
+   viewBox and stroke width follow the reference too: a 24 box with stroke-width 2, so the teeth
+   do not smear together when scaled down to 15px. */
 export const IGear = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -184,8 +185,9 @@ export const ILock = () => (
   </svg>
 )
 
-/* 确认弹窗那颗按钮上的图标。两种钥匙分得开：passkey 是生物识别的那把，
-   钱包是外部应用——同一个图标会让人以为两条路是同一件事。 */
+/* Icons on the buttons in the confirmation dialog. The two keys stay distinguishable: the passkey
+   is the biometric one, the wallet is an external app -- one shared icon would suggest the two
+   paths are the same thing. */
 export const IPasskey = () => (
   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor"
     strokeWidth="1.5" strokeLinecap="round" aria-hidden>
@@ -201,7 +203,7 @@ export const IWallet = () => (
   </svg>
 )
 
-/** 重试：一圈带箭头的弧线。用在 AI 回答失败之后。 */
+/** Retry: an arc with an arrowhead. Used after an AI answer fails. */
 export const IRetry = () => (
   <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor"
     strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

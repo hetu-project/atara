@@ -35,19 +35,19 @@ const money = (v: number, c: string) =>
     : v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${c}`
 
 /**
- * 剩余时间。单位要一直看得出来。
+ * Time remaining. The unit has to stay legible throughout.
  *
- * 原来只有 `mm:ss` 一种写法，于是四小时的付款窗口渲染成 `240:00`，然后
- * 239:59、239:58 一路往下——没有任何地方写着那是分钟。看的人只能猜，而这个
- * 数正是「错过会记进成绩单」的那个数，猜错的代价不是看错一眼。
+ * It used to have one format, `mm:ss`, so a four-hour payment window rendered as `240:00`, then 239:59, 239:58 and
+ * on down -- with nothing anywhere saying those were minutes. The reader could only guess, and this number is
+ * precisely the one where missing it goes on your record, so guessing wrong costs more than a misread.
  *
- * 分三档，每一档都带着单位：
- *   ≥ 1 天   `14d 2h`   —— 凭证档的异议窗口、兜底转人工
- *   ≥ 1 小时 `3h 58m`   —— 法币腿、核验窗口。到这个尺度上秒是噪音
- *   其余     `9:58`     —— 秒开始有意义了，用大家都认得的钟面写法
+ * Three bands, each carrying its unit:
+ *   >= 1 day   `14d 2h`   -- the evidence tier's dispute window, the fallback to human review
+ *   >= 1 hour  `3h 58m`   -- the fiat leg, the verification window. Seconds are noise at this scale
+ *   otherwise  `9:58`     -- seconds start to matter, written in the clock format everyone recognises
  *
- * 不做成「4 小时 / 4h」这种整数近似：窗口快走完时，`0h` 和 `12m` 是两件
- * 完全不同的事。
+ * No rounding to whole units like "4 hours / 4h": as a window runs out, `0h` and `12m` are two completely
+ * different things.
  */
 const leftText = (s: number) => {
   if (s >= 86400) return `${Math.floor(s / 86400)}d ${Math.floor((s % 86400) / 3600)}h`
@@ -58,16 +58,15 @@ const leftText = (s: number) => {
 }
 
 /**
- * 一张工单的全过程，与 console.html 的 .deal 卡同构：
- * 状态行（可折叠）→ 轨道 → 主数字 → KV 组 → 说明句 → 动作行。
+ * The whole course of one ticket, isomorphic with console.html's .deal card:
+ * status line (collapsible) -> track -> headline figure -> KV groups -> explanation -> action row.
  *
- * 轮询 1 秒：s1 的绑定、s4 的放款都是后端调度器推的，不轮询看不到状态变化；
- * 演示口径下各站只有几秒，轮询必须比它快。
- */
-/**
- * @param bare 只出这张卡，不套页面外壳。参照里工单卡是长在对话流里的
- *   （.deal 直接挂在 #log 下面），不是另开一页——「他说发货了」和「这单
- *   还等着凭证」摆在一起才对得上号。
+ * Polled at 1 second: s1's binding and s4's release are both pushed by the backend scheduler, and without polling
+ * the state changes are invisible; in demo terms each station lasts only seconds, so polling has to be faster.
+ *
+ * @param bare Render only this card, with no page shell. In the reference the ticket card grows inside the
+ *   conversation stream (.deal hangs directly under #log) rather than on a separate page -- "he says he shipped"
+ *   and "this order is still waiting on proof" only line up when placed together.
  */
 export default function OrderDetail({
   id, onBack, bare, identity, order, onChanged,
@@ -134,8 +133,8 @@ export default function OrderDetail({
 
   const { run, pending, error: actErr } = useAction()
   const [open, setOpen] = useState(true)
-  /* 下单前那一道确认。开着的时候装的就是这一单——不另存一份参数，
-     人看到的和发出去的必须是同一个东西。 */
+  /* The confirmation before ordering. While open it holds this very order -- no second copy of the parameters is
+     kept, because what the person sees and what goes out must be the same object. */
   const [ask, setAsk] = useState(false)
   /* Drop / cancel / reject close money-adjacent state. One more click,
      because a missed tap on a text link used to unwind escrow. */
@@ -279,7 +278,7 @@ export default function OrderDetail({
     expired: 'Timed out', cancelled: 'Cancelled', disputed: 'In dispute',
   } as Record<string, string>)[escalated ? 'escalated' : step] ?? 'In progress'
 
-  /* 状态行那句话按买卖方向分叉——两侧看到的事实本来就不一样 */
+  /* The status line's sentence forks by buy/sell direction -- the facts the two sides see genuinely differ */
   const line = sell ? ({
     match: <>Sell {coin} for <b className="amt">{fiat}</b></>,
     s1: <>Sell {coin} for <b className="amt">{fiat}</b> · your coins locking into escrow</>,
@@ -337,8 +336,8 @@ export default function OrderDetail({
                 <div className="dfoot">
                   <a href="#" className="dcancel lnk"
                     onClick={e => { e.preventDefault(); setQuit('drop') }}>Drop</a>
-                  {/* 确认之前再停一下：这一下之后付款窗口就开始走，错过会
-                      记进你的成绩单。参照在这里也插了一道。 */}
+                  {/* One more pause before confirming: after this the payment window starts running, and missing it
+                      goes on your record. The reference inserts a step here too. */}
                   <button className="btn btn-primary" disabled={pending}
                     onClick={() => setAsk(true)}>Confirm</button>
                 </div>
@@ -370,12 +369,12 @@ export default function OrderDetail({
                   <span className="dsub">to the account below, then upload the receipt</span>
                 </div>
 
-                {/* 跟这张卡别的阶段同一种排版:标签在左、值在右、发丝线分行。
+                {/* The same layout as this card's other stages: label left, value right, hairline between rows.
 
-                    这里一度改成「标签大写压在值上面」那一套,于是同一张卡走到
-                    下一步就换了一种语言,而它明明还是那张卡。要抄进银行 App 的
-                    两样各带一颗复制键,那是这一步的重点——重点不必靠另起一套
-                    排版来强调。 */}
+                    This was once changed to the "uppercase label above the value" style, so the same card switched
+                    language on reaching the next step while still being the same card. The two things to be copied
+                    into a banking app each carry a copy button, and that is this step's point -- a point that does
+                    not need a second layout language to make it. */}
                 <dl className="dpay">
                   {o.payout ? (
                     <>
@@ -385,15 +384,15 @@ export default function OrderDetail({
                       </dd></div>
                       <div><dt>Account</dt><dd>
                         <span className="dmono">{o.payout.account_no}</span>
-                        {/* 号码是手抄进银行 App 的,给复制键而不是让人对着念。 */}
+                        {/* The number is hand-copied into a banking app, so give a copy button rather than making people read it aloud. */}
                         <CopyButton text={o.payout.account_no} label="Copy account number"
                           done="Account number copied" className="cpbtn" />
                         <span className="dreq">{o.payout.region}</span>
                       </dd></div>
                     </>
                   ) : (
-                    /* 说清楚缺的是哪一半。「问对方要」是唯一剩下的动作,而它
-                       只在人知道这里没有东西在加载时才说得通。 */
+                    /* Say plainly which half is missing. "Ask them for it" is the only action left, and it only makes
+                       sense once the person knows nothing is still loading here. */
                     <div><dt>Pay to</dt><dd>
                       <span style={{ color: 'var(--warn)' }}>
                         No account on file — ask them for their bank details before
@@ -412,8 +411,8 @@ export default function OrderDetail({
                     </span>
                   </dd></div>
                   <div><dt>Reference</dt><dd>
-                    {/* 附言是唯一必须原样到达银行的字符串——一次没复制成功,
-                        事后就是一笔没人能对上号的汇款。 */}
+                    {/* The reference is the one string that has to reach the bank verbatim -- one failed copy and it
+                        becomes a transfer nobody can reconcile afterwards. */}
                     <span className="dmono">{o.ref}</span>
                     <CopyButton text={o.ref} label="Copy reference"
                       done="Reference copied" className="cpbtn" />
@@ -431,8 +430,8 @@ export default function OrderDetail({
                       <Row key={f.ref} lead={i + 1} title={f.name}
                         trail={
                           <>
-                            {/* 打开看一眼是唯一能确认传对了的办法——文件名
-                                证明不了什么,手机相册里每张照片名字都一样。 */}
+                            {/* Opening it is the only way to confirm the right thing was uploaded -- a filename
+                                proves nothing, and every photo in a phone's camera roll has the same name. */}
                             {f.url && (
                               <a className="lnk" href={f.url} target="_blank" rel="noopener">View</a>
                             )}
@@ -451,8 +450,8 @@ export default function OrderDetail({
                 <div className="dfoot">
                   <a href="#" className="lnk ecancel" style={{ marginRight: 'auto' }}
                     onClick={e => { e.preventDefault(); setQuit('cancel') }}>Cancel order</a>
-                  {/* 付款这一步最容易出事——钱已经出去了,对方却说没收到。
-                      出口得在这儿,而不是等人去找客服。 */}
+                  {/* The payment step is where things most often go wrong -- the money has gone out and the other
+                      side says it never arrived. The way out has to be here, not somewhere they have to hunt support for. */}
                   <a href="#" className="lnk dspx"
                     onClick={e => { e.preventDefault(); setDisp(true) }}>Report a problem</a>
                   <FilePick variant="button" label={pages.length ? 'Add another' : 'Upload receipt'}
@@ -483,7 +482,7 @@ export default function OrderDetail({
                   </span>
                 </div>
                 <Peer o={o} ccy={ccy} live={escalated} />
-                {/* 放款依据是银行凭证，不是任何一方的确认意愿——所以核验的是收款方 */}
+                {/* Release is based on the bank receipt, not on either party's willingness to confirm -- hence the payee is the one who verifies */}
                 <p className="dmech">
                   {escalated
                     ? 'The coins are frozen — nothing was returned to either side. Confirming the '
@@ -558,8 +557,9 @@ export default function OrderDetail({
           title="Confirm order"
           amount={money(Number(o.otc?.fiat_amount ?? 0), ccy).replace(/\s.*$/, '')}
           walletKind={walletKind}
-          /* 买方接单不动自己的钱——对方的币早锁在合约里了，我之后才去银行
-             转账。所以是普通按钮。卖方接单要把币锁进合约，那一下才走签名。 */
+          /* A buyer accepting an order moves none of their own money -- the counterparty's coins were locked in the
+             contract long ago and the bank transfer comes later. So an ordinary button. A seller accepting has to
+             lock coins into the contract, and only that goes through signing. */
           plain={sell ? undefined : 'Confirm order'}
           busy={pending}
           lead={<>
@@ -576,10 +576,10 @@ export default function OrderDetail({
                 : <>{fiat} · bank transfer, outside Atara</> },
             { k: sell ? 'They pay' : 'Their account',
               v: sell ? <>{fiat} · to your registered account</> : <>Full details on the next step</> },
-            /* 窗口是这张卡上唯一一个「错过有后果」的数，所以它单独一行，
-               而不是塞进上面那句话里。 */
-            /* 4 小时与轨道上那一站写的是同一个窗口。写死在两处是有风险的，
-               但这个数现在只由后端的 demo/real 计时决定，接口上没有发下来。 */
+            /* The window is the only number on this card where missing it has consequences, so it gets its own line
+               rather than being tucked into the sentence above. */
+            /* The 4 hours and the station on the track describe the same window. Hardcoding it in two places is a
+               risk, but this number is currently decided solely by the backend's demo/real timer and is not sent over the API. */
             { k: 'Window', v: <>4 h · missing it marks your record</> },
           ]}
           onConfirm={() => { setAsk(false); void act(acceptOrder) }}
@@ -613,24 +613,25 @@ function Rail({ at, sell }: { at: number; sell: boolean }) {
    from offering something that would be refused. */
 const MAX_PAGES = 8
 
-/** 资质件六项。缺件也照实显示——让对方自己给缺口定价，不替他隐藏。 */
+/** The six qualification documents. Missing ones are shown truthfully -- let the other side price the gap rather than hiding it for them. */
 const DOCS: [string, string][] = [
   ['kyc', 'KYC'], ['pof', 'PoF'], ['stm', 'Stmts'],
   ['poa', 'PoA'], ['sow', 'SoW'], ['chain', 'Chain'],
 ]
 
-/** 对手方那几行在每个阶段都长一样，抽出来。 */
+/** The counterparty rows look the same at every stage, so they are extracted. */
 function Peer({ o, ccy, live }: { o: Order; ccy: string; live?: boolean }) {
   const name = o.counterparty_name ?? '—'
   const p = o.peer_profile
-  /* 点开的是这份材料的说明——它是什么、谁出的、这一家交没交。 */
+  /* What opens is the description of this document -- what it is, who issues it, and whether this party submitted it. */
   const [doc, setDoc] = useState('')
   return (
     <dl className="dpay">
       <div><dt>Counterparty</dt>
         <dd><span className="cplink still"><Avatar name={name} />{name}</span></dd></div>
-      {/* 成绩单和资质件是决定要不要跟这个人做这一单的依据，所以摆在
-          金额旁边，不是藏在对方主页里。数据跟工单一起来，两个数同一时刻。 */}
+      {/* The scorecard and qualification documents are the basis for deciding whether to do this order with this
+          person, so they sit beside the amount rather than being buried on their profile. The data arrives with the
+          ticket, so both numbers come from the same moment. */}
       {p && (
         <div><dt>Track record</dt>
           <dd>{p.deals} trades · {p.disputes} disputes · {scoreText(p.trust_score)}</dd></div>
@@ -653,8 +654,8 @@ function Peer({ o, ccy, live }: { o: Order; ccy: string; live?: boolean }) {
         <dd>{Number(o.amount.amount).toLocaleString()} {o.amount.asset}</dd></div>
       {o.fee && Number(o.fee.amount) > 0 && (
         <div><dt>Fee</dt>
-          {/* 手续费按原样印，不四舍五入到整。money() 是给几万块的金额用的，
-              用在 29.28 上会印成「¥29」——抹掉的正好是这个数的大部分。 */}
+          {/* The fee is printed as-is, not rounded to whole units. money() is for amounts in the tens of thousands;
+              used on 29.28 it prints "29" -- dropping most of the number. */}
           <dd>{FIAT_SYM[o.fee.currency] ?? ''}{o.fee.amount} {o.fee.currency}{' '}
             <span className="dreq">{o.fee.bps / 100}%</span></dd></div>
       )}
@@ -711,15 +712,15 @@ function Peer({ o, ccy, live }: { o: Order; ccy: string; live?: boolean }) {
       {doc && (
         <DocView doc={doc} has={!!p?.docs?.[doc]} peer={name} onClose={() => setDoc('')} />
       )}
-      {/* 对手方的分,下单那一刻定的快照。
+      {/* The counterparty's score, a snapshot fixed at the moment of ordering.
 
-          跟 Discover 上那个环是**同一个数**——它们本来是两个各算各的函数,
-          于是同一张卡上并排着 74 和 56,谁也解释不了对方。现在同源。
+          The **same number** as the ring on Discover -- they used to be two functions each computing their own, so
+          the same card carried 74 and 56 side by side with neither explaining the other. They now share a source.
 
-          存快照而不是现算:重算的话,历史单的分会跟着这个商户后来的成交和
-          纠纷变,而这个数说的是「下单那一刻我们怎么看他」。 */}
-      {/* 文案跟 Discover 上那个环逐字一致:同一个数,两处叫法不同的话,
-          人会以为是两个东西——而它们本来就是被当成两个东西的。 */}
+          A snapshot rather than a live computation: recomputed, a historical order's score would move with that
+          merchant's later settlements and disputes, when this number says "how we saw them at the moment of ordering". */}
+      {/* The copy matches the ring on Discover verbatim: the same number under two different names makes people
+          think they are two things -- which is exactly how they were treated before. */}
       <div><dt>{o.trust_score === null ? 'Not rated' : 'AI score'}</dt>
         <dd>
           {o.trust_score === null ? (
@@ -740,8 +741,8 @@ function Peer({ o, ccy, live }: { o: Order; ccy: string; live?: boolean }) {
 }
 
 /**
- * 等待与终态。用户在这几步是闲着的，恰恰是最想回头核对对手方的时候——
- * 所以照样把资料摆出来，只是没有动作按钮。
+ * Waiting and terminal states. The user is idle at these steps, which is precisely when they most want to go back
+ * and check the counterparty -- so the details are laid out as usual, only with no action buttons.
  */
 /*
 What actually happens when the countdown reaches zero.
@@ -851,8 +852,8 @@ function Waiting({
           person who is out the money had no way to see their own receipt at
           the one moment they might be asked about it. */}
       <Peer o={o} ccy={ccy} live={step === 'escalated'} />
-      {/* 入金观察窗：等的就是「钱真的进合约了」这个证据，给他看链上的过程，
-          而不是一根干等的倒计时 */}
+      {/* The deposit watch window: what is being waited on is the evidence that the money really entered the
+          contract, so show them the on-chain process rather than a bare countdown */}
       {step === 's1' && o.escrow && (
         <div className="eswin">
           <div className="fal">
@@ -873,7 +874,7 @@ function Waiting({
                 : <>Confirming on-chain · <b className="num">{o.escrow.confirmations}/{o.escrow.required}</b></>}</span>
             </div>
           ) : (
-            /* 买方向：币在对方挂单那一刻就进合约了，这里只是查锁仓、绑订单 */
+            /* Buy direction: the coins entered the contract the moment the counterparty listed, so this only checks the lock and binds the order */
             <div className="fwait"><i />Checking the listing lock…</div>
           )}
         </div>
@@ -908,17 +909,17 @@ function Waiting({
 }
 
 /**
- * 证据包 —— 这单最后凭什么收的口。
+ * The evidence bundle -- what this order was finally closed out on.
  *
- * 参照里 s5 那行的「Evidence ›」点开的就是这张卡本身（链接在 .row1 里，
- * 点击冒泡上去把卡展开），所以它不是另一张卡，是同一张卡的终态。工单接口
- * 一个就够，用户自己也看出来了：两张截图内容一样，只是状态不同。
+ * In the reference, the "Evidence ›" on the s5 row opens this very card (the link is inside .row1, and the click
+ * bubbles up to expand the card), so it is not another card but the same card's terminal state. One ticket endpoint
+ * is enough, as the user worked out for themselves: the two screenshots had the same content, only different states.
  *
- * 三样东西，缺哪样就不显示哪样——证据包的意义在于「这些是真的发生过的」，
- * 补一行占位就把它变成了装饰：
- *   银行凭证   付款方交上来的那份文件，点开是原件
- *   链上流水   锁仓 / 绑定 / 放款，每一步带哈希，能到浏览器上自己核
- *   结算时刻   核验通过的那一刻
+ * Three things, and whichever is missing is simply not shown -- the point of an evidence bundle is "these really
+ * happened", and padding a row turns it into decoration:
+ *   Bank receipt   the file the payer submitted, opening to the original
+ *   On-chain trail lock / bind / release, each with a hash, verifiable on an explorer
+ *   Settlement time the moment verification passed
  */
 const KIND: Record<string, string> = {
   lock: 'Coins locked in escrow',
@@ -1075,8 +1076,8 @@ function Pack({ ev, coin, fiat, ref_ }: {
       {ev.receipt_url && (
         <div className="evrow">
           <i className="ok" />
-          {/* 一页就叫「Bank receipt」，多页要说清有几页——这个包是结算记录，
-              少印一页等于记录里没有它。 */}
+          {/* One page is just "Bank receipt"; several have to say how many -- this bundle is the settlement record,
+              and a page left unprinted is a page missing from the record. */}
           <span>{(ev.receipts?.length ?? 0) > 1
             ? `Bank receipt · ${ev.receipts!.length} pages`
             : 'Bank receipt'}</span>
@@ -1085,17 +1086,17 @@ function Pack({ ev, coin, fiat, ref_ }: {
               style={{ marginRight: 8 }}
               onClick={e => e.stopPropagation()}>Page {i + 1} ↗</a>
           ))}
-          {/* 打开的是当时交上来的原件，不是一个「已上传」的字样 */}
+          {/* What opens is the original as submitted, not the words "uploaded" */}
           <a href={ev.receipts?.at(-1)?.url ?? ev.receipt_url}
             target="_blank" rel="noopener"
-            /* 链接文字不印 file_ref：那是一个 uuid，对人没有任何意义，
-               而这一行左边已经说了它是什么。 */
+            /* The link text does not print file_ref: that is a uuid and means nothing to a person, and the left of
+               this row has already said what it is. */
             onClick={e => e.stopPropagation()}>
             {(ev.receipts?.length ?? 0) > 1 ? `Page ${ev.receipts!.length} ↗` : 'Open original ↗'}
           </a>
-          {/* settled_at 是回执核验通过的时刻，不是放款时刻——放款在它之后。
-              单独排一行「Settled」会排在放款下面，时间却更早，整列读下来
-              像时间倒流了。它属于这份回执，就跟着回执。 */}
+          {/* settled_at is the moment receipt verification passed, not the moment of release -- release comes after
+              it. A separate "Settled" row would sort below release while carrying an earlier time, and reading down
+              the column would look like time running backwards. It belongs to this receipt, so it follows the receipt. */}
           {ev.settled_at && <time>verified {new Date(ev.settled_at).toLocaleString()}</time>}
         </div>
       )}

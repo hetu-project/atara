@@ -1,7 +1,8 @@
-/* 动作行的数据与解析器，逐字取自 console.html。
+/* Data and parser for the action bar, taken verbatim from console.html.
  *
- * liveParse 是「边打字边填句」那一下：把一句话拆成槽位，说到的实心、
- * 没说到的按合理猜测填上并标虚线。它是纯函数，只依赖传进来的联系人名单。
+ * liveParse is the "fill in the sentence as you type" step: split a sentence into slots, solid for
+ * what was said, filled in by reasonable guess and dashed for what was not. It is a pure function,
+ * depending only on the contact list passed in.
  */
 /* eslint-disable */
 // @ts-nocheck
@@ -42,22 +43,22 @@ function compileConds(conds,timeout){
   if(has('time')) p.date=has('time').p.date;
   else if(has('data')) p.date='the data target';
   if(has('approve')) p.within=timeout;
-  /* main 是给托管状态机用的四条主分支；kind 是「实际在等什么」，
-     给轨道站名和文案用——API data 编译到 On a date，但它等的是指标不是日期 */
+  /* main is the four top-level branches used by the escrow state machine; kind is "what it is actually
+     waiting for", used for the track station names and the copy -- API data compiles to On a date, but what it waits for is a metric, not a date */
   const kind = has('approve') ? 'approve' : has('evidence') ? 'evidence'
              : has('data') ? 'data' : has('time') ? 'time' : 'now';
-  /* 超时兜底不是「释放条件」的一部分——它是条件没成立时的处置，
-     混在同一句里既读不懂，用户也从没在编辑器里选过它 */
+  /* The timeout fallback is not part of the "release condition" -- it is what happens when the condition
+     does not hold, and mixing the two into one sentence is both unreadable and never something a user picked in the editor */
   return {main, kind, text, fallback:timeout, p};
 }
 
 const ACT_DEF={
-  /* 数量位只填数字（币的数量）——货币符号不进数量位，支付法币在 with 槽 */
+  /* The amount slot takes digits only (a coin quantity) -- currency symbols do not go in the amount slot, the fiat paid lives in the with slot */
   buy: {verb:'buy',      unit:'coin', mid:'with'},
   sell:{verb:'sell',     unit:'coin', mid:'for'},
-  /* Transfer 与 Conditional order 是同一个动词的两档（When 为空/非空），
-     只留一个入口：Conditional order，动词 transfer，When 默认 Immediately。
-     Buy/Sell 的条件由协议写死（回执+确认窗口），不进这个槽。 */
+  /* Transfer and Conditional order are two settings of the same verb (When empty / non-empty), so only
+     one entry point is kept: Conditional order, verb transfer, When defaulting to Immediately.
+     Buy/Sell conditions are fixed by the protocol (receipt + confirmation window) and do not enter this slot. */
   cond:{verb:'transfer', unit:'coin', mid:'to'},
 };
 
@@ -68,26 +69,26 @@ function liveParse(q, CPS){
           : /\b(transfer|send|pay)\b|转|付/.test(ql)?'cond' : null;
   if(!k) return null;
   const r={k, src:{}};
-  /* 「100 usdt」= 100 个币，不是 ¥100 的预算——数字紧跟币种按数量解析 */
-  /* 「u」是 USDT 的口语别名——「200 u」是 200 个币，不是 ¥200 */
+  /* "100 usdt" = 100 coins, not a budget of 100 yuan -- a number directly followed by a currency parses as a quantity */
+  /* "u" is the colloquial alias for USDT -- "200 u" is 200 coins, not 200 yuan */
   const amc=q.match(/(\d[\d,]*(?:\.\d+)?)\s*(usdt|usdc|btc|eth|u)\b/i);
   const am=q.match(/(?:\$|¥)?\s?(\d[\d,]*(?:\.\d+)?)\s*(k|K|m|M|万)?/);
   if(amc){r.amt=parseFloat(amc[1].replace(/,/g,'')); r.amtCoin=true; r.src.amt=1;
     r.coin=amc[2].toLowerCase()==='u'?'USDT':amc[2].toUpperCase(); r.src.coin=1}
-  if(k==='buy'||k==='sell')r.amtCoin=true;   /* 买卖的数量一律是币 */
+  if(k==='buy'||k==='sell')r.amtCoin=true;   /* buy/sell quantities are always in coins */
   else if(am){let v=parseFloat(am[1].replace(/,/g,'')); const u=(am[2]||'').toLowerCase();
     if(am[2]==='万')v*=1e4; else if(u==='k')v*=1e3; else if(u==='m')v*=1e6;
     if(v>0){r.amt=Math.round(v); r.src.amt=1}}
   const co=ql.match(/\b(usdt|usdc|btc|eth)\b/); if(co&&!r.coin){r.coin=co[1].toUpperCase(); r.src.coin=1}
   const FMAP={rmb:'CNY',cny:'CNY',hkd:'HKD',sgd:'SGD',jpy:'JPY',eur:'EUR',aed:'AED',gbp:'GBP',usd:'USD'};
-  /* with/for 后面的币种 = 支付法币（「with rmb」）；裸写的币种词次之 */
+  /* The currency after with/for = the fiat paid ("with rmb"); a bare currency word ranks below it */
   const fiA=ql.match(/(?:with|for|in|用)\s+(rmb|cny|hkd|sgd|jpy|eur|aed|gbp|usd|人民币)/);
   const fiB=ql.match(/\b(rmb|cny|hkd|sgd|jpy|eur|aed|gbp|usd)\b/);
   const fitok=fiA?fiA[1]:(fiB?fiB[1]:null);
   if(fitok){r.fiat=FMAP[fitok==='人民币'?'rmb':fitok]; r.src.fiat=1}
   const cp=CPS.find(c=>ql.includes(c.name.toLowerCase())||ql.includes(c.name.split(' ')[0].toLowerCase()));
   if(cp){r.peer=cp.name; r.src.peer=1}
-  /* 条件是组合:一句话可以同时命中多个原子(「双方确认且到 1 号」) */
+  /* Conditions compose: one sentence can hit several atoms at once ("both sides confirm and by the 1st") */
   r.conds=[];
   if(/receipt|回执/.test(ql)) r.conds.push({t:'evidence',p:{proof:'Bank receipt'}});
   else if(/on\s*deliver|delivered|proof|发货|收货|凭证/.test(ql)) r.conds.push({t:'evidence',p:{proof:'Delivery record'}});

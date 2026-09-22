@@ -21,24 +21,24 @@ function agentIndex(n: string): number {
 }
 
 /**
- * 右栏三块，顺序与 console.html 的 #rgrid 一致：
- * 订单状态 → agent 指标 → 评估。
+ * Three blocks in the right column, in the same order as console.html's #rgrid:
+ * order status -> agent metrics -> assessment.
  *
- * 栏顶不挂总标题：三块各自有名字，再挂一个会跟模块名重复。
+ * No overall heading at the top of the column: the three blocks have their own names, and another one would duplicate them.
  */
 export default function RightPanel({
   identity, onOpen, onFold,
 }: { identity: string; onOpen: (o: Order) => void; onFold: () => void }) {
   return (
     <aside id="right" className="lay-b" aria-label="Assessment and agent status">
-      {/* 把手贴在这一栏的 border-left 上。放在栏里而不是放在 main 里，是因为
-          收起、未登录这两种状态下右栏的 pointer-events/display 已经把它一起
-          关掉了——放外面就得再写两条规则去追同一件事。 */}
+      {/* The handle sits against this column's border-left. Inside the column rather than in main, because in the
+          collapsed and signed-out states the right column's pointer-events/display already switch it off with
+          everything else -- outside, two more rules would be needed chasing the same thing. */}
       <PanelGrip />
       <div className="rgrid" id="rgrid">
-        {/* DOM 顺序无所谓：grid-area 指定位置。
-            lay-b 下 Assessment 吃掉 Agent status（后者 display:none），
-            所以这里不渲染它——渲染了也看不见，只会多一次取数。 */}
+        {/* DOM order is irrelevant: grid-area places them.
+            Under lay-b, Assessment absorbs Agent status (the latter is display:none), so it is not rendered here --
+            rendering it would show nothing and only cost another fetch. */}
         <Assessment onFold={onFold} />
         <OrderStatus identity={identity} onOpen={onOpen} />
       </div>
@@ -48,11 +48,12 @@ export default function RightPanel({
 
 type Filt = 'all' | 'you' | 'wait'
 
-/* 卡上那句状态文案。由 phase + actor 拼出来——
-   「谁在等谁」是这张卡唯一的重点，别的信息在工单页里。
+/* The status line on the card. Assembled from phase + actor --
+   "who is waiting on whom" is this card's only point; everything else is on the ticket page.
 
-   phase 为空是后端的设计：终态、条件支付、以及还没接单的 match 站都没有阶段。
-   那几种情况按 console.html 的 OSTATE 兜底，措辞两边保持一致。 */
+   An empty phase is by the backend's design: terminal states, conditional payments and the match stage before an
+   order is taken all have no phase.
+   Those cases fall back to console.html's OSTATE, with the wording kept identical on both sides. */
 function label(o: Order): string {
   if (o.terminal === 'disputed') return 'In dispute — reviewing evidence'
   switch (o.phase) {
@@ -62,7 +63,7 @@ function label(o: Order): string {
     case 'verify': return 'Verify their receipt'
     case 'wait':   return 'Waiting on their transfer'
   }
-  // 还没接单：球在接单人手里
+  // Not yet taken: the ball is with whoever takes it
   if (o.state === 'match') return 'Needs your approval'
   return 'Waiting on the other side'
 }
@@ -71,7 +72,7 @@ function OrderStatus({
   identity, onOpen,
 }: { identity: string; onOpen: (o: Order) => void }) {
   const [filt, setFilt] = useState<Filt>('all')
-  // 工单状态由后端调度器推进，不轮询就看不到变化。
+  // Ticket state is advanced by the backend scheduler; without polling, changes are invisible.
   /* 15s as a backstop; the live stream is what normally refreshes this. Every
      order transition in the product publishes one, including the ones the
      scheduler makes while nobody is clicking anything — which is what this was
@@ -84,8 +85,8 @@ function OrderStatus({
   }, [reload])
   const live = (data ?? []).filter(o => !o.terminal || o.terminal === 'disputed')
 
-  /* 筛选只有两类值得分：球在我手里、球在别处。
-     再细分成七种状态就成了选项迷宫——状态本来就写在每张卡上。 */
+  /* Only two filter values are worth distinguishing: the ball is with me, or it is elsewhere.
+     Subdividing into seven states turns it into a maze of options -- the state is written on every card anyway. */
   const sets: Record<Filt, Order[]> = {
     all: live,
     you: live.filter(o => o.actor === 'you' || o.state === 'match' || o.terminal === 'disputed'),
@@ -114,18 +115,18 @@ function OrderStatus({
       </div>
       <div className="rmb" id="ro-list">
         {list.length ? list.map(o => {
-          /* 方向：轮到你的是要付出去的钱（−），等对方的是要进来的（+）。
-             金额是这张卡的主角——扫一排卡就是扫「进出各多少」 */
+          /* Direction: your turn means money going out (-), waiting on them means money coming in (+).
+             The amount is this card's subject -- scanning a row of cards is scanning "how much in and out" */
           const mine = o.actor === 'you' || o.state === 'match'
           const tone = o.terminal === 'disputed' ? 'disp' : mine ? 'you' : 'run'
           const dir = tone === 'you' || tone === 'disp' ? 'out' : 'in'
           const amt = Math.round(Number(o.amount?.amount ?? 0))
           const who = o.counterparty_name ?? ''
           return (
-            /* 点一张卡进这一单的会话，不是另开一个工单页。参照就是这么做的
-               （restoreSession(t.sess) + switchView('chat')）。会话里有这一单
-               完整的记录：当时那七票、工单卡、后来说过的每一句话。另开一页
-               只能看到卡，看不到它是怎么来的。 */
+            /* Clicking a card opens that order's conversation, not a separate ticket page. That is what the
+               reference does (restoreSession(t.sess) + switchView('chat')). The conversation holds the complete
+               record of this order: the seven votes at the time, the ticket card, every word said since. A separate
+               page shows only the card, not how it got there. */
             <button key={o.id} className={`rocard ${tone}`} onClick={() => onOpen(o)}>
               <span className="roc-st"><i />{label(o)}</span>
               {amt
@@ -150,21 +151,21 @@ function OrderStatus({
   )
 }
 
-/** 四步骨架。空态也摆出来——用户能提前知道会经历什么，而不是看一句「什么都没跑」。 */
+/** The four-step skeleton. Laid out in the empty state too -- the user gets to know in advance what is coming, rather than reading "nothing has run". */
 const IDLE_STEPS = ['Read the order', 'Collected evidence', 'Agent checks', 'Consensus']
 
 /**
- * 评估。版式 B：上一排「环 | 星盘」，进度在下，候命排贴底。
+ * Assessment. Layout B: "ring | constellation" on the top row, progress below, the standby roster along the bottom.
  *
- * 空闲态的环只画不扫——「还没开始」和「0 分」看起来必须不一样。
- * 跑起来之后票一张一张落：七个一起转圈没有信息量，票本来就是一个一个落的。
+ * In the idle state the ring is drawn without sweeping -- "not started yet" and "score 0" must not look the same.
+ * Once running, votes land one at a time: seven spinners at once carry no information, and votes land one at a time by nature.
  */
 function Assessment({ onFold }: { onFold: () => void }) {
-  /* 点名册里的 agent：整条 Assessment 换成它的档案页（arunAgentPane）。
-     再点同一个或按 Back 回来。 */
+  /* Clicking an agent in the roster: the whole Assessment block is replaced by its profile page (arunAgentPane).
+     Click the same one again or press Back to return. */
   const [agent, setAgent] = useState<number | null>(null)
-  /* 下面那一格显示哪一步的详情。空着就跟着「最后一个有详情、且已经开跑的步骤」
-     走——刚跑到 agent checks 时看的是票，跑完了自动落到结论。人点过之后就听他的。 */
+  /* Which step's detail the cell below shows. Left empty it follows "the last step that has detail and has
+     started" -- at agent checks it shows the votes, and once finished it lands on the verdict. Once the user has clicked, follow them. */
   const [pick, setPick] = useState('')
   const { run, running } = useAssessment()
   const rosterRef = useRef<HTMLDivElement>(null)
@@ -201,18 +202,19 @@ function Assessment({ onFold }: { onFold: () => void }) {
     if (i >= 0) openAgent(i)
   }
 
-  /* 每个 agent 的状态：还没表态 = conferring（跑着）或 idle，表过态就封印。
-  
-     **按名字取，不按下标。** 后端现在发的就是界面上这七个名字。以前两边各
-     有一套（Sanctions screening / Source of funds… 对 Identity / Provenance…），
-     只能按下标配，而顺序一旦不同，Identity 那一格印的就是制裁那一票的理由——
-     每句话都挂在错误的标题下，读的人无从发现。名字对齐之后这一整类问题没有了；
-     万一哪天又对不上，取不到就是没表态，宁可空着也不显示别人的票。 */
-  /* 哪几步有东西可看。read 只是「读过了」，pull 那一步的来源清单后端没发下来
-     （只给了数量），所以这一版只有 agent checks 和 consensus 两步有详情。 */
+  /* Each agent's state: not yet spoken = conferring (running) or idle; once spoken it is sealed.
+
+     **Keyed by name, not by index.** The backend now sends exactly the seven names shown in the UI. The two sides
+     used to each have their own set (Sanctions screening / Source of funds... versus Identity / Provenance...),
+     which could only be paired by index, and once the orders differed the Identity cell printed the sanctions
+     vote's reasoning -- every sentence under the wrong heading, with no way for the reader to notice. Aligning the
+     names removed this entire class of problem; and should they ever diverge again, a miss simply means "has not
+     spoken", which is better left blank than showing someone else's vote. */
+  /* Which steps have something to show. read only means "has been read", and the backend does not send the source
+     list for the pull step (only a count), so in this version only agent checks and consensus have detail. */
   const hasDetail = (k: string) =>
     (k === 'check' && (run?.votes.length ?? 0) > 0) || (k === 'cons' && !!run?.done)
-  /* 人点过就听他的；没点过跟着最后一个跑起来的、有详情的步骤走。 */
+  /* Once the user has clicked, follow them; before that, follow the last started step that has detail. */
   const auto = [...(run?.steps ?? [])].reverse()
     .find(st => st.st !== 'wait' && hasDetail(st.k))?.k ?? ''
   const sel = hasDetail(pick) ? pick : auto
@@ -234,13 +236,14 @@ function Assessment({ onFold }: { onFold: () => void }) {
         <span className={'aflive' + (running ? ' on' : '')}>
           <i /><em>{running ? 'running' : run?.done ? 'done' : 'idle'}</em>
         </span>
-        {/* 收起右栏。常驻显示——原来它站在标题前面、静止时宽度为 0，
-            非得把鼠标停在标题行上才露出来；要摸索才找得到的开关等于没有。
-            改站行尾解决了当初把它藏起来的那个理由：它不再插在标题左边，
-            Assessment 和下面的 Order status 自然对得齐。顺带重开按钮
-            (.rshow) 也在右上角，收起和展开落在同一个位置。
-            状态和视图级的 rout 分开记：rout 是「这个视图没有右栏」，
-            rfold 是「用户自己收起来了」，两者不该互相覆盖。 */}
+        {/* Collapse the right column. Permanently visible -- it used to sit before the heading with zero width at
+            rest, so it only appeared once the mouse rested on the heading row; a control you have to hunt for is
+            no control at all.
+            Moving it to the end of the row resolved the reason it was hidden in the first place: it no longer sits
+            to the left of the heading, so Assessment lines up naturally with Order status below. Incidentally the
+            reopen button (.rshow) is at the top right too, so collapsing and expanding happen in the same place.
+            Its state is tracked separately from the view-level rout: rout means "this view has no right column",
+            rfold means "the user collapsed it", and neither should override the other. */}
         <button className="rfoldx" type="button" title="Collapse panel" aria-label="Collapse panel"
           onClick={onFold}>
           <IPanel mirror />
@@ -265,7 +268,7 @@ function Assessment({ onFold }: { onFold: () => void }) {
               passed={run?.votes.filter(v => v.v === 'pass').length}
               total={run?.threshold} />
           </div>
-          {/* .rstats 在 lay-b 下是 display:none，星盘才是这一格的内容 */}
+          {/* .rstats is display:none under lay-b; the constellation is this cell's content */}
           <div className="rsplit">
             <div className="rtable" id="rs-table"><Constellation live={!!run} done={!!run?.done} /></div>
           </div>
@@ -290,8 +293,8 @@ function Assessment({ onFold }: { onFold: () => void }) {
                         <div className={`arstep ${st.st}${sel === st.k ? ' open' : ''}`} key={st.k}>
                           <span className="arsi"><i>{st.st === 'done' ? '✓' : ''}</i></span>
                           <div className="arsm">
-                            {/* 有详情的那几步才可点——点一个没有内容的步骤，
-                                下面什么都不换，人会以为点坏了。 */}
+                            {/* Only steps with detail are clickable -- clicking one with no content changes nothing
+                                below, and people assume it is broken. */}
                             <div className="arst" role={can ? 'button' : undefined}
                               tabIndex={can ? 0 : undefined}
                               onClick={can ? () => setPick(st.k) : undefined}
@@ -307,7 +310,7 @@ function Assessment({ onFold }: { onFold: () => void }) {
                       )
                     })}
                   </div>
-                  {/* 点一行进那个 agent 的档案，跟点下面候命排是同一条路。 */}
+                  {/* Clicking a row opens that agent's profile, the same path as clicking the standby roster below. */}
                   {sel && (
                     <div className="ardock">
                       {sel === 'cons' ? <Verdict run={run} /> : run.votes.map(v => (
@@ -378,25 +381,26 @@ function Assessment({ onFold }: { onFold: () => void }) {
 }
 
 /**
- * 跑完之后的结论，一段说人话的话。
+ * The verdict after a run, said in plain language.
  *
- * 七票分成四个主题讲：身份和行为合成「对手方」，来源和图谱合成「资金」，
- * 制裁是「合规」，报价是「市场」。逐票念七遍没人读得完，而这四句正是
- * 下单的人真正在问的四件事。带 note 的那几票单独拎出来，说清为什么记下
- * 它却不拦——记下来和拦下来是两回事，混在一起人会以为这单出了问题。
+ * The seven votes are told as four themes: identity and behaviour combine into "counterparty", provenance and
+ * graph into "funds", sanctions is "compliance", pricing is "market". Reciting seven votes one by one is more than
+ * anyone will read, and these four are exactly the four questions the person placing the order is actually asking.
+ * Votes carrying a note are pulled out separately, explaining why it was recorded but not blocked -- recording and
+ * blocking are two different things, and merged together people assume something is wrong with the order.
  *
- * 成员按**后端那套名字**取，不按下标。下标对不上：RISK_AGENTS 是
- * Identity / Provenance / Graph / Sanctions / Behavior / Pricing / Velocity，
- * 而后端发的是 Sanctions screening / Source of funds / Counterparty history…
- * 两边都是七个，顺序却不同——按下标取会把制裁那一票印成「对手方」那一行，
- * 每句话都对不上它的理由，而读的人无从发现。
+ * Members are keyed by **the backend's names**, not by index. The indices do not correspond: RISK_AGENTS is
+ * Identity / Provenance / Graph / Sanctions / Behavior / Pricing / Velocity, while the backend sends
+ * Sanctions screening / Source of funds / Counterparty history...
+ * Both have seven, in different orders -- keyed by index, the sanctions vote would be printed on the
+ * "counterparty" row, with every sentence mismatched to its reasoning and no way for the reader to notice.
  *
- * 名字取不到就不出那一行，不拿别的凑数。
+ * A name that cannot be found simply omits that row; nothing else is substituted for it.
  */
-/* 成员用的是后端现在发的那七个名字（= 界面上候命排那七个）。上一版写的是
-   后端改名之前那套（Counterparty history / Source of funds…），改完名之后
-   一个都匹配不上，于是这四行全空——而这段话只剩一个开头和一个结论，中间
-   什么都没有。名字改在两处，得两处一起改。 */
+/* Members use the seven names the backend currently sends (= the seven in the standby roster in the UI). The
+   previous version used the set from before the backend renamed them (Counterparty history / Source of funds...),
+   and after the rename not one of them matched, so all four rows came out empty -- leaving this passage with an
+   opening and a conclusion and nothing in between. The names live in two places and have to change in both. */
 const THEMES: [string, string[]][] = [
   ['Counterparty', ['Identity', 'Behavior']],
   ['Funds', ['Provenance', 'Graph']],
@@ -435,7 +439,7 @@ function Verdict({ run }: { run: Run }) {
   )
 }
 
-/** 相对时间。列表上只要「多久以前」，绝对时刻在工单页里。 */
+/** Relative time. A list only needs "how long ago"; the absolute moment is on the ticket page. */
 function ago(iso?: string): string {
   if (!iso) return ''
   const s = Math.round((Date.now() - +new Date(iso)) / 1000)

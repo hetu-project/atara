@@ -1,6 +1,6 @@
 /**
- * 头像。色相由名字算出来——同一个人在任何地方都是同一个颜色，
- * 不用维护一张配色表。取自 console.html 的 avSpan。
+ * Avatar. The hue is derived from the name -- the same person is the same
+ * color everywhere, with no palette table to maintain. Taken from console.html's avSpan.
  */
 export function avInit(name: string): string {
   return name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()

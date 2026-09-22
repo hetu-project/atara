@@ -1,43 +1,46 @@
 import { useEffect, useRef, useState } from 'react'
 
 /**
- * 全局提示气泡，接管原生 `title`，也接管 `.info` 上的 `data-tip`。
+ * Global tooltip bubble, taking over both the native `title` and `data-tip` on `.info`.
  *
- * 原生 title 有三个毛病：停上去约一秒才出、样式由操作系统画（和界面完全两套）、
- * 触屏上根本不出。项目里有 41 处在用它。
+ * The native title has three problems: it takes about a second to appear, it is drawn by the
+ * operating system (a completely different look from the UI), and it never appears on touch
+ * screens. 41 places in this project use it.
  *
- * 做法是**不改那 41 个调用点**：在指上去的瞬间把 title 摘下来存着，离开时
- * 原样还回去。这样静止时 title 仍在 DOM 里——它对那 17 个没有 aria-label 的
- * 图标按钮来说是唯一的无障碍名，摘掉就等于让读屏软件念不出那颗按钮是干什么的。
+ * The approach is to **leave those 41 call sites alone**: lift the title off at the moment of
+ * hover, keep it, and put it back on leave. That way the title is still in the DOM at rest --
+ * for the 17 icon buttons with no aria-label it is the only accessible name they have, and
+ * removing it would leave a screen reader unable to say what the button does.
  *
- * 代价是这套要在悬停时改 DOM 属性，看着有点野。替代方案是把 41 处
- * `title=` 全改成 `data-tip=` 并逐个补 aria-label——改动面大得多，而且
- * 给本来就有可见文字的元素补 aria-label 会覆盖掉那段文字作为无障碍名，
- * 读屏念出来的和屏幕上写的会对不上。
+ * The cost is that this mutates DOM attributes on hover, which looks a bit feral. The alternative
+ * is to change all 41 `title=` to `data-tip=` and add an aria-label to each -- a far larger
+ * change, and adding aria-label to elements that already have visible text overrides that text as
+ * the accessible name, so what the screen reader says stops matching what is on screen.
  *
- * `data-tip` 是另一路：console.html 用全局 `.info-pop` 读它。React 抄了
- * 属性和 `.info-pop` 样式，没把那段 JS 搬过来，所以 Account 上的小 i
- * 悬停一直是空的。这里并进同一套气泡，不再单独养一层。
+ * `data-tip` is the other path: console.html reads it with a global `.info-pop`. React copied the
+ * attribute and the `.info-pop` styles but never brought that JS across, so the little i on
+ * Account has been hovering empty ever since. It is merged into the same bubble here rather than
+ * kept as a separate layer.
  */
 
-/* 出现前的停顿。原生大约一秒；120ms 已经足够滤掉「鼠标划过去」，
-   又不会让人觉得要等。 */
+/* The pause before it appears. The native one is about a second; 120ms is already enough to filter
+   out "the mouse passed over it" without feeling like a wait. */
 const DELAY = 120
-/* 气泡和元素之间留的空。太贴会看不出它指着谁。 */
+/* The gap left between bubble and element. Too close and you cannot tell what it points at. */
 const GAP = 8
 
 interface Show {
   text: string
   x: number
   y: number
-  /** 放在元素上方还是下方——顶部空间不够时翻到下面。 */
+  /** Above or below the element -- flips below when there is not enough room at the top. */
   below: boolean
 }
 
 export default function Tooltip() {
   const [show, setShow] = useState<Show | null>(null)
   const timer = useRef(0)
-  /* 当前被摘掉 title 的那个元素。离开时要还回去，所以得记着。 */
+  /* The element whose title is currently lifted. It has to be given back on leave, so it is remembered. */
   const held = useRef<{ el: Element; title: string } | null>(null)
   const bubble = useRef<HTMLDivElement>(null)
 
@@ -60,15 +63,15 @@ export default function Tooltip() {
       if (!(t instanceof Element)) return
       const el = t.closest('[data-tip], [title]')
       if (!el || el === held.current?.el) return
-      /* data-tip 是故意写长说明的（Account 小 i）；title 是短标签。
-         两者都有时认 data-tip，避免短 title 把长说明盖掉。 */
+      /* data-tip is deliberately a long explanation (the little i on Account); title is a short label.
+         When both exist, data-tip wins, so a short title does not mask a long explanation. */
       const text = el.getAttribute('data-tip') || el.getAttribute('title')
       if (!text) return
 
       hide()
       const native = el.getAttribute('title')
       if (native) {
-        /* 先摘下来：不摘的话浏览器过一秒还会把自己那个灰框叠上来。 */
+        /* Lift it off first: without that the browser still stacks its own grey box on top a second later. */
         el.removeAttribute('title')
         held.current = { el, title: native }
       } else {
@@ -78,8 +81,8 @@ export default function Tooltip() {
       clearTimeout(timer.current)
       timer.current = setTimeout(() => {
         const r = el.getBoundingClientRect()
-        /* 上方放不下就翻到下面。不翻的话贴在顶栏上的按钮，
-           气泡会被裁在视口外，等于没有。 */
+        /* Flip below when it does not fit above. Without the flip, a button pinned to the top bar gets
+           its bubble clipped outside the viewport, which amounts to having none. */
         const below = r.top < 56
         setShow({
           text,
@@ -92,10 +95,10 @@ export default function Tooltip() {
 
     document.addEventListener('mouseover', enter, true)
     document.addEventListener('mouseout', hide, true)
-    /* 键盘走到的元素也要出提示——只认鼠标的话，用 Tab 的人永远看不到它。 */
+    /* Elements reached by keyboard get a tooltip too -- mouse-only means people using Tab never see it. */
     document.addEventListener('focusin', enter, true)
     document.addEventListener('focusout', hide, true)
-    /* 滚动和按键时收起：位置是按当时的 rect 算死的，页面一动它就指错地方。 */
+    /* Dismiss on scroll and keypress: the position is computed from the rect at the time, so any page movement makes it point at the wrong thing. */
     addEventListener('scroll', hide, true)
     addEventListener('keydown', hide, true)
     return () => {
@@ -109,8 +112,8 @@ export default function Tooltip() {
     }
   }, [])
 
-  /* 贴边时横向收一下，免得被视口裁掉。要等气泡渲染出来才知道它多宽，
-     所以在这里量完再调。 */
+  /* Pull it in horizontally near an edge so it is not clipped by the viewport. Its width is only known
+     once the bubble has rendered, so measure here and then adjust. */
   useEffect(() => {
     const b = bubble.current
     if (!show || !b) return

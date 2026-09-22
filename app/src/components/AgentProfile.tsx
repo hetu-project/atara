@@ -2,11 +2,12 @@ import { RISK_AGENTS, agentGlyph } from './agents'
 import type { Run, Vote } from '../hooks/useAssessment'
 
 /**
- * 单个 agent 的档案页。结构逐处对齐 console.html 的 arunAgentPane：
- * 顶上名片头（徽记 · 名字 · 判定 · 来源），下面按有没有跑过分内容——
- * 没跑过只留「它量什么」+ No reading yet；跑过了才出这一笔的读数和底稿。
+ * Profile page for a single agent. The structure mirrors console.html's arunAgentPane
+ * point for point: a name card up top (badge - name - verdict - source), then content
+ * that depends on whether it has ever run -- if it has not, only "what it measures"
+ * plus No reading yet; once it has, this run's reading and worksheet appear.
  *
- * 底稿数据来自 RISK_AGENTS[i].ev，和参照同一份，不另编。
+ * Worksheet data comes from RISK_AGENTS[i].ev, the same source as the reference; nothing is invented.
  */
 
 type Src = { n: string; d: string }

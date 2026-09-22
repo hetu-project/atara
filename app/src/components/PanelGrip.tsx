@@ -1,47 +1,48 @@
 import { useCallback, useEffect, useRef } from 'react'
 
 /**
- * 右栏边缘的拖拽把手：按住那条缝左右拖，右栏就宽了窄了。
+ * The drag handle on the right column's edge: hold that seam and drag sideways to widen or narrow the right column.
  *
- * 为什么值得做：中栏和右栏是对半分的，而「这一刻我在读哪一边」是随时在变的——
- * 谈价钱的时候想要对话宽一点，核对七票共识的时候想要右栏宽一点。默认的 1:1
- * 对两边都不够好，而这件事只有用户自己知道。
+ * Why it is worth doing: the middle and right columns split the space evenly, while "which side am I reading
+ * right now" changes constantly -- negotiating a price wants a wider conversation, checking seven consensus
+ * votes wants a wider right column. The default 1:1 is not good enough for either, and only the user knows which.
  *
- * 实现上只动一个 CSS 变量（main 上的 --rw），列宽的计算仍然全在样式表里。
+ * The implementation only touches one CSS variable (--rw on main); column width computation still lives entirely in the stylesheet.
  */
 
-/* 右栏宽度的上下限。
-   下限沿用这一栏自己的说法——420 是证据条两列排得开的宽度；
-   上限是 #right 的 max-width，再往宽拖也只是在它左边留白。 */
+/* Upper and lower bounds on the right column's width.
+   The lower bound follows this column's own reasoning -- 420 is the width at which the evidence strip's two
+   columns fit; the upper bound is #right's max-width, beyond which dragging only adds whitespace to its left. */
 const MIN = 420
 const MAX = 1040
-/* 中栏的下限。拖到这条线就停：对话比旁观机器干活重要，不能为了右栏把它挤没。 */
+/* Lower bound for the middle column. Dragging stops at this line: the conversation matters more than watching the machine work, and the right column must not squeeze it away. */
 const MID_MIN = 420
-/* 1240 以下列宽在样式表里是写死的（media query），那时不给拖。 */
+/* Below 1240 the column widths are fixed in the stylesheet (media query), and dragging is disabled there. */
 const MIN_WIDTH = 1240
-/* 键盘每下走多少。太小要按几十下，太大调不准。 */
+/* How far each keypress moves. Too small and it takes dozens of presses, too large and it cannot be aimed. */
 const STEP = 16
 const KEY = 'atara-rw'
 
 export default function PanelGrip() {
   const el = useRef<HTMLDivElement>(null)
 
-  /* 用户选的宽度。存 ref 不存 state：这个数只写进一个 CSS 变量，不参与渲染。
-     进 state 的话，拖动时每一帧都要走一遍 React 的 diff，而每一帧真正要改的
-     只有一个字符串。null 表示他还没拖过，那就什么都不写，保持默认的 1fr。 */
+  /* The width the user picked. Stored in a ref rather than state: this number is only written into one CSS
+     variable and takes no part in rendering. In state, every frame of the drag would run a full React diff
+     when the only thing that actually changes per frame is one string. null means they have never dragged, in
+     which case nothing is written and the default 1fr stands. */
   const want = useRef<number | null>(null)
 
   const shell = () => el.current?.closest('main')
 
-  /* 第三条 track 此刻实际有多宽。每次现量，不记账：列宽还受窗口大小、左栏
-     折叠、media query 影响，记下来的那个数随时会过期。 */
+  /* How wide the third track actually is at this moment. Measured fresh each time, never bookkept: column
+     width also depends on window size, left-column collapse and media queries, so any recorded number goes stale immediately. */
   const track = (m: Element) => {
     const mid = m.querySelector('#mid')
     return mid ? Math.round(m.getBoundingClientRect().right - mid.getBoundingClientRect().right) : 0
   }
 
-  /* 能拖到的范围。上限不只是 MAX：还得给中栏留下 MID_MIN，
-     否则在 1240 附近可以把对话挤成一条缝。 */
+  /* The draggable range. The upper bound is not just MAX: MID_MIN has to be left for the middle column, or
+     around 1240 the conversation could be squeezed into a sliver. */
   const limits = (m: Element) => {
     const mid = m.querySelector('#mid')
     const box = m.getBoundingClientRect()
@@ -54,10 +55,11 @@ export default function PanelGrip() {
     return Math.min(hi, Math.max(lo, Math.round(v)))
   }
 
-  /* 把当前意图画到列宽上。
-     --rw 和 --rwout 必须成对换：收起动画能不能插值，前提是展开态和收起态的
-     track 写法同构（样式表里 main 那段注释讲的就是这件事）。默认两边都是 fr，
-     一旦拖出 px 宽度，收起态也得跟着换成 px，不然收起会从动画退回硬切。 */
+  /* Paint the current intent onto the column widths.
+     --rw and --rwout must be swapped as a pair: whether the collapse animation can interpolate depends on the
+     expanded and collapsed states writing their tracks isomorphically (which is what that comment on main in
+     the stylesheet is about). Both are fr by default, and once a px width has been dragged out, the collapsed
+     state has to become px too, or collapsing falls back from an animation to a hard cut. */
   const paint = useCallback((m: Element) => {
     const s = (m as HTMLElement).style
     const v = want.current
@@ -80,7 +82,7 @@ export default function PanelGrip() {
     try {
       if (want.current == null) localStorage.removeItem(KEY)
       else localStorage.setItem(KEY, String(want.current))
-    } catch { /* 隐身窗口 */ }
+    } catch { /* private window */ }
   }
 
   const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -89,11 +91,12 @@ export default function PanelGrip() {
     e.preventDefault()
     const grip = e.currentTarget
     grip.setPointerCapture(e.pointerId)
-    /* 拖动期间关掉列宽的 340ms 过渡。不关的话面板永远慢光标三分之一秒，
-       手感像在拉一根皮筋。 */
+    /* Turn off the 340ms column-width transition while dragging. Left on, the panel is permanently a third of
+       a second behind the cursor and feels like pulling a rubber band. */
     m.classList.add('rdrag')
-    /* 从当前实际列宽起步，而不是从上次存的值——中途折过左栏、改过窗口的话，
-       存的那个数和屏幕上看到的已经对不上，一按下去面板会先跳一下。 */
+    /* Start from the actual current column width rather than the last stored value -- if the left column was
+       folded or the window resized in between, the stored number no longer matches what is on screen and the
+       panel jumps the moment the handle is pressed. */
     want.current = clamp(m, track(m))
     paint(m)
 
@@ -113,17 +116,17 @@ export default function PanelGrip() {
     grip.addEventListener('pointercancel', up)
   }
 
-  /* 键盘也要能调。只能拖的控件对不用鼠标的人等于不存在，而这是个 separator，
-     方向键是它的既定操作方式。左键往左推那条缝，也就是右栏变宽。 */
+  /* It has to be adjustable from the keyboard too. A control that can only be dragged does not exist for people
+     who do not use a mouse, and this is a separator, for which arrow keys are the established interaction. */
   const onKey = (e: React.KeyboardEvent) => {
     const m = shell()
     if (!m || innerWidth < MIN_WIDTH) return
     const d = e.key === 'ArrowLeft' ? STEP : e.key === 'ArrowRight' ? -STEP : 0
     if (d) {
       e.preventDefault()
-      /* 基准取已经记下的那个数，只有从没调过时才去量布局。量的话连按会失灵：
-         过渡在同一个 tick 里还没开始跑，每一下读到的都是同一个起点，按五下
-         只走一格（实测 5×16 只挪了 16）。 */
+      /* Base it on the number already recorded, and only measure the layout when nothing has ever been adjusted.
+         Measuring breaks repeated presses: the transition has not started within the same tick, so every press
+         reads the same starting point and five presses move one step (measured: 5x16 moved only 16). */
       want.current = clamp(m, (want.current ?? track(m)) + d)
       paint(m)
       save()
@@ -133,8 +136,8 @@ export default function PanelGrip() {
     }
   }
 
-  /* 双击回到默认。拖歪了想回到对半分，否则只能一点点试——而「原来是多宽」
-     没人记得住。 */
+  /* Double-click returns to the default. After dragging it askew you may want the even split back, and otherwise
+     the only option is trial and error -- nobody remembers "how wide was it originally". */
   const reset = () => {
     const m = shell()
     if (!m) return
@@ -150,12 +153,13 @@ export default function PanelGrip() {
       const raw = localStorage.getItem(KEY)
       const n = raw == null ? NaN : Number(raw)
       if (Number.isFinite(n)) want.current = n
-    } catch { /* 隐身窗口 */ }
+    } catch { /* private window */ }
 
-    /* 窗口变了要重画：一是窄屏得把内联变量撤掉，让样式表那两条 media query
-       说了算（内联的自定义属性优先级压过它们，不撤的话 1240 以下会顶着一个
-       为宽屏拖出来的宽度）；二是上限跟着窗口变，中栏的 420 得一直留得住。
-       撤的只是画面，want 留着——屏幕宽回来照样还原。 */
+    /* A window change requires a repaint: first, narrow screens need the inline variable removed so those two
+       media queries in the stylesheet take over (an inline custom property outranks them, and without removing
+       it, below 1240 you are stuck with a width dragged out for a wide screen); second, the upper bound moves
+       with the window, and the middle column's 420 has to stay reserved throughout.
+       Only the painting is removed; want is kept -- widen the screen again and it is restored. */
     const sync = () => paint(m)
     sync()
     addEventListener('resize', sync)

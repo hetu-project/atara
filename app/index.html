@@ -32,7 +32,7 @@
     if (!local && localStorage.getItem('atara-gate') !== '1') location.replace('/')
   } catch (e) { /* storage blocked — let them through rather than trap them */ }
 
-  /* 内联在 head 里：晚一步就会先闪一眼浅色再切深色。与旧 console.html 同一手法。 */
+  /* Inlined in head: one step later and it would flash light before switching to dark. The same technique as the old console.html. */
   try {
     var t = localStorage.getItem('atara-theme')
       || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')

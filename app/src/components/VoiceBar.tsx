@@ -1,14 +1,15 @@
 import { useEffect, useRef } from 'react'
 import type { IFlytekStreamer } from '../services/iflytek'
 
-/** 波形柱数。够密才像波形，太密在 400px 宽的手机上会挤成一块灰。 */
+/** Number of waveform bars. Dense enough to read as a waveform, but too dense and it smears into grey on a 400px phone. */
 const BARS = 28
 
 /**
- * 录音中的那条胶囊：波形 + 取消 + 完成。
+ * The pill shown while recording: waveform + cancel + done.
  *
- * 波形是**真实音量**，不是循环动画。差别在麦克风坏了、系统静音了、
- * 或者根本没对着说的时候——假动画照跳，真波形是平的，一眼看得出来。
+ * The waveform is **real volume**, not a looping animation. The difference shows when the
+ * mic is broken, the system is muted, or nobody is actually speaking into it -- a fake
+ * animation keeps bouncing, a real waveform goes flat, and you can see it instantly.
  */
 export default function VoiceBar({
   streamer,
@@ -22,18 +23,19 @@ export default function VoiceBar({
   const wave = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    /* 音量直接写进 DOM，不进 state：60fps 的 setState 会把整棵输入框
-       每秒重渲染六十次，而变的只是 28 根柱子的高度。 */
+    /* Volume is written straight into the DOM, never into state: setState at 60fps would
+       re-render the whole composer sixty times a second when all that changed is the height
+       of 28 bars. */
     const bars = Array.from(wave.current?.children ?? []) as HTMLElement[]
-    /* 右进左出的滚动历史。只留一个数组，每帧整体左移一格。 */
+    /* Scrolling history, entering right and leaving left. One array, shifted one slot per frame. */
     const hist = new Array<number>(BARS).fill(0)
     let raf = 0
     let last = 0
 
     const tick = (t: number) => {
       raf = requestAnimationFrame(tick)
-      /* 屏幕是 120Hz 也只走 ~24 格/秒：每帧都推一格的话，波形快得看不出
-         哪一下对应哪个字。 */
+      /* Even on a 120Hz screen this advances only ~24 slots/second: pushing one per frame
+         makes the waveform too fast to tell which bump belongs to which word. */
       if (t - last < 42) return
       last = t
 
@@ -50,8 +52,8 @@ export default function VoiceBar({
 
   return (
     <div className="vrec" role="group" aria-label="Recording">
-      {/* 波形是装饰：它说的事（在录音）已经由下面两颗按钮的存在说清楚了，
-          读屏再念一遍 28 根柱子只是噪音。 */}
+      {/* The waveform is decorative: what it says (recording is on) is already clear from the
+          two buttons below it, and reading out 28 bars again is just noise for a screen reader. */}
       <div className="vwave" ref={wave} aria-hidden="true">
         {Array.from({ length: BARS }, (_, i) => (
           <i key={i} />

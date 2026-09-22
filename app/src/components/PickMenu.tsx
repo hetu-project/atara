@@ -3,17 +3,18 @@ import { avHue, avInit } from './Avatar'
 
 export interface PickItem {
   v: string
-  n: string           // 主行，纯文本。用户填的名字会出现在这里，所以它永远不是 HTML
-  av?: string         // 主行前面画一个头像，传名字；头像由这里生成，不由调用方拼字符串
-  d?: string          // 副行：为什么选它。不可用的项要写清为什么，不是单纯置灰让人猜
+  n: string           // Main row, plain text. User-supplied names land here, so it is never HTML
+  av?: string         // Draw an avatar before the main row; pass the name -- the avatar is generated here, not string-built by the caller
+  d?: string          // Sub row: why pick it. Unavailable items must say why rather than just greying out and leaving people to guess
   off?: boolean
 }
 
 /**
- * 胶囊上的下拉，与 console.html 的 pickMenu 同构（#astrip.ddmenu > .asopt）。
+ * Dropdown on a pill, isomorphic with console.html's pickMenu (#astrip.ddmenu > .asopt).
  *
- * 挂进句子容器、用 offset 局部定位——不碰视口坐标：
- * 视口测量在无头环境里给过假数据，局部偏移不会。
+ * Mounted into the sentence container and positioned locally via offset -- viewport
+ * coordinates are never touched: viewport measurement has returned bogus data in
+ * headless environments, local offsets do not.
  */
 export default function PickMenu({
   anchor, items, onPick, onClose,

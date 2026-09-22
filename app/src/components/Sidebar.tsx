@@ -9,7 +9,7 @@ import { useKycGate } from '../hooks/useKycGate'
 import type { Icon } from './icons'
 import { NEW_ORDER, OPEN_DESK, setDeskOpen, type Route } from '../hooks/useRoute'
 
-/** 导航四项 + 两条外链，顺序与 console.html 一致。 */
+/** Four nav items plus two external links, in the same order as console.html. */
 const NAVS: { view: Route['view']; label: string; icon: Icon }[] = [
   { view: 'home', label: 'New order', icon: INewOrder },
   { view: 'discover', label: 'Discover', icon: IDiscover },
@@ -34,15 +34,15 @@ export default function Sidebar({
   const kyc = useKycGate()
   const row = useRef<HTMLDivElement>(null)
 
-  /* 悬停就展开，不用点。
+  /* Opens on hover, no click needed.
    *
-   * 菜单是 .luserrow 的子节点（CSS 里它 position:absolute 挂在这一格上），
-   * 所以鼠标从这一格移到菜单上不会触发 leave——中间不存在要跨过去的空档，
-   * 不需要为此留延时。这里那 120ms 只防边缘抖动：贴着边框走的时候
-   * enter/leave 会连着来好几对，不缓一下菜单会闪。
+   * The menu is a child of .luserrow (the CSS positions it absolutely against this cell), so moving the mouse
+   * from this cell onto the menu does not fire leave -- there is no gap to cross in between, and no delay is
+   * needed for that. The 120ms here only guards against edge jitter: tracing the border fires several
+   * enter/leave pairs in a row, and without a buffer the menu flickers.
    *
-   * 只认鼠标：触屏上点一下会先发一个 pointerenter，菜单弹开，紧接着 click
-   * 又把它 toggle 回去——净效果是「点了没反应」。那条路留给下面的 onClick。 */
+   * Mouse only: on a touch screen a tap first sends pointerenter, opening the menu, and the click right after
+   * toggles it back shut -- net effect, "tapping does nothing". That path is left to the onClick below. */
   const shut = useRef(0)
   const hoverIn = (e: React.PointerEvent) => {
     if (e.pointerType !== 'mouse' || !signed) return
@@ -56,7 +56,7 @@ export default function Sidebar({
   }
   useEffect(() => () => clearTimeout(shut.current), [])
 
-  // 点外面或 Esc 关掉菜单
+  // Close the menu on outside click or Esc
   useEffect(() => {
     if (!menu) return
     const away = (e: MouseEvent) => { if (!row.current?.contains(e.target as Node)) setMenu(false) }
@@ -67,11 +67,12 @@ export default function Sidebar({
   }, [menu])
   const { data: me, reload: reloadMe } = useApi(() => ep.me(identity), [identity])
   const { data: allow, reload: reloadAllow } = useApi(() => ep.allowances(identity), [identity])
-  // 会话列表就是左栏下半区。没有会话时整块（连标题）都不出现——
-  // 空标题比没有标题更让人以为是加载失败。
-  /* 轮询：会话列表要跟着两件事变——我刚下的单会新开一条会话，对方发来的
-     消息会顶起一条旧会话。不轮询的话，下完单落到聊天里，左栏却没有这一行，
-     得刷新整页才出现；对方说了话也一样，安安静静地什么都不发生。 */
+  // The conversation list is the lower half of the left column. With no conversations the whole block
+  // (heading included) is absent -- an empty heading suggests a failed load more than no heading does.
+  /* Polling: the conversation list has to follow two things -- an order I just placed opens a new conversation,
+     and a message from the other side bumps an old one. Without polling, placing an order lands in the chat while
+     the left column has no row for it until the whole page is reloaded; the same when the other side speaks, and
+     nothing happens at all, quietly. */
   /* 15s as a backstop; LIVE_CHANGED below is what normally refreshes this. */
   const { data: feed, reload: reloadFeed } = useApi(() => ep.threads(identity), [identity], 15000)
 
@@ -86,9 +87,9 @@ export default function Sidebar({
      know there is something there. */
   const pending = feed?.pending ?? 0
 
-  /* 改完名要立刻变。这份 /me 是左栏自己的，账户页那边 reload 的是它那一份——
-     不听这个广播的话，左下角会一直停在改名前：新账户那就是一串地址，
-     而用户刚刚明明给自己起了名字。 */
+  /* A rename has to show immediately. This /me belongs to the left column, while the account page reloads its own
+     copy -- without listening to this broadcast, the bottom left stays on the pre-rename value: for a new account
+     that is a string of address, when the user has just given themselves a name. */
   useEffect(() => {
     const again = () => { reloadMe(); reloadAllow() }
     addEventListener(PROFILE_CHANGED, again)
@@ -97,31 +98,31 @@ export default function Sidebar({
 
   const addr = me?.address ?? ''
   const short = addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : ''
-  /* 新建的钱包没有名字，后端就拿短地址当展示名——那时再拼一次地址
-     会写成「Tc72vq…tnhc · Tc72vq…tnhc」。名字就是地址时不重复。 */
+  /* A newly created wallet has no name, so the backend uses the short address as the display name -- appending the
+     address again then produces "Tc72vq...tnhc - Tc72vq...tnhc". No repetition when the name is the address. */
   const named = !!me?.display_name && me.display_name !== short
   /* The initial for the avatar. Falls back to the address, never to a letter
      that stands for a name nobody has — a profile that failed to load should
      look unloaded, not like somebody else's account. */
   const initial = (me?.display_name || addr || '·').charAt(0).toUpperCase()
-  /* 把 Atara AI 那条线程从列表里剔掉：它下面已经有一行常驻的入口了。
-     desk 现在是库里一个真实的 agent 账号（messages.peer_id 要外键），
-     所以一旦跟它说过话，会话列表里就会自动多出同名的一行——同一条对话
-     在侧栏出现两次，点哪一个都对，但看着像是有两条。 */
+  /* Strip the Atara AI thread out of the list: there is already a permanent entry row for it below.
+     desk is now a real agent account in the database (messages.peer_id needs a foreign key), so once you have
+     spoken to it, a row with the same name appears automatically in the conversation list -- the same conversation
+     twice in the sidebar, either of which works, but it looks like there are two. */
   const chats = (threads ?? []).filter(t => t.peer_id !== ep.DESK_ID)
 
   return (
     <nav id="left" aria-label="Navigation">
       <div className="lbrandrow">
-        {/* 折叠态：logo 的位置就是展开按钮 */}
+        {/* Collapsed: the logo's position is the expand button */}
         <button className="lfold" title="Expand sidebar" aria-label="Expand sidebar"
           aria-expanded={!folded} onClick={() => onFold(false)}>
           <span className="lmark" aria-hidden><i /></span>
           <span className="lfi"><IPanel /></span>
         </button>
-        {/* 站点根，不是 '../index.html'。相对路径要求控制台正好深一层——它现在
-            确实在 /app 下，但那是部署布局，不是这个组件知道的事；换一层目录
-            这里就会悄悄指到别处去。'/' 永远是落地页。 */}
+        {/* Site root, not '../index.html'. A relative path assumes the console is exactly one level deep -- which it
+            currently is, under /app, but that is a deployment layout, not something this component knows; move it one
+            directory and this quietly points somewhere else. '/' is always the landing page. */}
         <a className="lbrand" href="/" aria-label="Back to site">
           <span className="lmark" aria-hidden><i /></span><b>Atara</b>
         </a>
@@ -136,23 +137,24 @@ export default function Sidebar({
             return (
               <button key={n.view} className={'nav' + (route.view === n.view ? ' on' : '')}
                 title={n.label}
-                /* 未登录时，除了 Discover 都要先登录。原来点 New order 会
-                   落到 Discover——那是「未登录的起点是市场」那条规则的副作用，
-                   但从用户看就是「我点了 A，你给我 B」。直接弹登录门。 */
+                /* While signed out, everything but Discover requires signing in first. Clicking New order used to
+                   land on Discover -- a side effect of the "signed out starts at the market" rule, but from the
+                   user's side it is "I clicked A and you gave me B". Open the sign-in door directly. */
                 onClick={() => {
                   if (!signed && n.view !== 'discover') { onSignIn(); return }
-                  /* 「New order」就是开一张新台面：准入那条对话得先收起来，
-                     不然点了它还停在原来那串消息上，看着像没反应。
-                     回得去——Chats 里的 Atara AI 一直在。
+                  /* "New order" means opening a fresh desk: the onboarding conversation has to collapse first, or
+                     clicking it leaves the same string of messages on screen and looks like nothing happened.
+                     It is reachable again -- Atara AI under Chats is always there.
 
-                     还要喊一声 NEW_ORDER：评估状态挂在 App 级的 provider 上，
-                     跨视图一直活着，而人本来就在首页时点这颗按钮，路由不变、
-                     Home 不重挂——上一单的评估痕迹就会一直留在新台面上。 */
+                     NEW_ORDER has to be shouted too: assessment state hangs off an App-level provider and stays
+                     alive across views, and when the person is already on the home page this button changes no
+                     route and does not remount Home -- so the previous order's assessment trace would stay on the
+                     new desk. */
                   if (n.view === 'home') {
                     kyc.closeMaker()
-                    /* 两个都要：变量管「首页还没挂载」那条路（从别的视图点过来，
-                       事件发出去时监听器还不存在，直接丢），事件管「人已经在
-                       首页」那条路（路由不变，不重挂，只有事件通知得到）。 */
+                    /* Both are needed: the variable covers the "home is not mounted yet" path (arriving from another
+                       view, where the listener does not exist when the event fires and it is simply dropped), and the
+                       event covers the "already on home" path (no route change, no remount, only an event gets through). */
                     setDeskOpen(false)
                     dispatchEvent(new CustomEvent(NEW_ORDER))
                   }
@@ -172,17 +174,17 @@ export default function Sidebar({
             )
           })}
           <div className="navsep" aria-hidden />
-          {/* 指向公开站点上的那份，跟旧版部署一致。参照里写的是相对路径
-              href="api.html"——那是因为 console.html 当时就挂在 loka.cash 上，
-              相对路径正好落到同一个域。控制台搬到自己的服务器之后，
-              相对路径就指不到那份文档了，所以这里写绝对地址。 */}
+          {/* Points at the copy on the public site, matching the old deployment. The reference writes a relative path,
+              href="api.html" -- because console.html was hosted on loka.cash at the time, so a relative path landed on
+              the same origin. Once the console moved to its own server, the relative path no longer reached that
+              document, hence the absolute address here. */}
           <a className="nav" id="navapi" href="https://www.loka.cash/api.html"
             target="_blank" rel="noopener"
             title="Atara API — developer reference">
             <span className="ni"><IApi /></span>Atara API
             <span className="navgo" aria-hidden><IGo /></span>
           </a>
-          {/* 同一套多 agent 辩论用在另一种判断上：那边评一支股票，这边评一个对手方 */}
+          {/* The same multi-agent debate applied to a different judgement: there it rates a stock, here a counterparty */}
           <a className="nav" id="navloka" href="https://trade.loka.cash/app" target="_blank"
             rel="noopener" title="Investment Analysis — multi-agent research">
             <span className="ni"><IChart /></span>Investment Analysis
@@ -192,31 +194,31 @@ export default function Sidebar({
 
         <div className="lsec" id="tasksec" hidden={!signed}>Chats</div>
         <div id="tasklist">
-          {/* Atara AI 是常驻的第一条会话——准入、审核这些事都在它里面发生。
-              参照里它一直在列表上；我们原来只在开向导时临时显示一个标题，
-              流程走完就找不回去了，「我的申请审到哪了」没有入口。 */}
+          {/* Atara AI is the permanent first conversation -- onboarding, review and the rest all happen inside it.
+              In the reference it is always in the list; we used to show a heading only temporarily while the wizard
+              was open, so once the flow was done there was no way back and "where has my application got to" had no entry point. */}
           {signed && (
             <button className={'cp chatrow' + (route.view === 'home' ? ' on' : '')} title="Atara AI"
               onClick={() => {
-                /* 和 New order 相反的一下：这条入口就是「我要看那条对话」。
-                   同样两个都发，理由见上面那条注释。 */
+                /* The opposite of New order: this entry point means "I want to see that conversation".
+                   Both are sent here too, for the reason in the comment above. */
                 setDeskOpen(true)
                 dispatchEvent(new CustomEvent(OPEN_DESK))
                 go({ view: 'home' })
                 kyc.openMaker()
               }}>
               <span className="cpav deskav" aria-hidden><i /></span>
-              {/* 参照里这一行只有名字。别的会话那行小字是「最后一条消息」，
-                  这里塞一句固定副标题会把名字挤到截断。 */}
+              {/* In the reference this row carries only the name. The small line on other conversations is "last
+                  message", and a fixed subtitle here would squeeze the name into truncation. */}
               <span className="n"><em>Atara AI</em></span>
             </button>
           )}
           {chats.map(t => (
-            /* chatrow 不是装饰：头像那条规则是 `#tasklist .chatrow .cpav`，
-               少这个类名，选择器不命中，头像退回 .cpav 的 20px——而设计稿
-               这里是 34px。折叠侧栏时藏名字的那条规则也挂在它上面。
-               CSS 是照参照抄过来的，JSX 没把选择器要求的结构一起抄，
-               于是样式静悄悄地不生效。 */
+            /* chatrow is not decorative: the avatar rule is `#tasklist .chatrow .cpav`, and without this class name the
+               selector does not match and the avatar falls back to .cpav's 20px -- whereas the design is 34px here.
+               The rule that hides names when the sidebar is collapsed hangs off it too.
+               The CSS was copied from the reference while the JSX did not bring across the structure the selectors
+               require, so the styles silently failed to apply. */
             <button key={t.peer_id} className="cp chatrow" title={t.peer_name}
               onClick={() => go({ view: 'thread', peer: t.peer_id })}>
               <Avatar name={t.peer_name} cls="cpav" />
@@ -224,13 +226,13 @@ export default function Sidebar({
                 <em>{t.peer_name}</em>
                 <i>{t.last}</i>
               </span>
-              {/* .cpt 在两边的 CSS 里都不存在，这个时间一直是没样式的裸文本。
-                  参照用的是 .chmeta 包一个 <time>，未读角标也在这一格里。 */}
+              {/* .cpt does not exist in either stylesheet, so this time has always been unstyled bare text.
+                  The reference uses .chmeta wrapping a <time>, with the unread badge in the same cell. */}
               <span className="chmeta">
                 <time>{fmtClock(t.last_at)}</time>
-                {/* 角标印条数而不是一个圆点：「有新消息」和「攒了七条没看」
-                    是两件事，后者才会让人决定现在就点进去。
-                    侧栏收起时 CSS 会把它变成头像角上的一点（.chatrow:has(.unread)）。 */}
+                {/* The badge prints a count rather than a dot: "there are new messages" and "seven have piled up unread"
+                    are two different things, and only the latter makes someone decide to open it now.
+                    With the sidebar collapsed the CSS turns it into a dot on the avatar's corner (.chatrow:has(.unread)). */}
                 {!!t.unread && t.unread > 0 && (
                   <span className="v dot unread num"
                     aria-label={`${t.unread} unread`}>{t.unread > 99 ? '99+' : t.unread}</span>
@@ -241,8 +243,8 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* 未登录时账户位就是登录入口——那一格本来就在讲「你是谁」；
-          登录后它是账户菜单，退出也在这里。 */}
+      {/* While signed out the account cell is the sign-in entry point -- that cell is about "who you are" anyway;
+          signed in, it is the account menu, and sign out lives here too. */}
       <div className="luserrow" ref={row}
         onPointerEnter={hoverIn} onPointerLeave={hoverOut}>
         <button className="luser" aria-haspopup="menu" aria-expanded={menu}
@@ -276,23 +278,22 @@ export default function Sidebar({
               onClick={() => { setMenu(false); go({ view: 'account' }) }}>
               <IUser />Profile
             </button>
-            {/* 参照里 Settings 切的是账户页的另一种模式（ACCT_MODE），
-                只显示 Security 那一段。原来这里直接跳账户页——那不是
-                「不生效」，是把两件事当成了一件：账户页是资产和挂单，
-                安全设置是另一回事。 */}
+            {/* In the reference, Settings switches to another mode of the account page (ACCT_MODE) and shows only the
+                Security section. This used to jump straight to the account page -- that was not "not working", it was
+                treating two things as one: the account page is assets and listings, security settings are a different matter. */}
             <button className="umitem" role="menuitem"
               onClick={() => { setMenu(false); go({ view: 'settings' }) }}>
               <IGear />Settings
             </button>
             <div className="umsep" />
-            {/* 锁屏：把界面盖住，回来要点一下。参照里还带一道演示密码，
-                那是演示件——这里不做假的凭据校验，只做「离开座位」这件事。 */}
+            {/* Lock screen: cover the UI, requiring a click to come back. The reference also carries a demo password,
+                which is a demo artefact -- no fake credential check is done here, only the "left the desk" part. */}
             <button className="umitem" role="menuitem"
               onClick={() => { setMenu(false); onLock() }}>
               <ILock />Lock session
             </button>
-            {/* 退出 = 回到未登录的控制台：能看不能动。
-                后端没有会话可以作废——这里清的是本机的身份选择。 */}
+            {/* Sign out = back to the signed-out console: look but do not touch.
+                The backend has no session to invalidate -- what is cleared here is the local identity selection. */}
             <button className="umitem" role="menuitem"
               onClick={() => { setMenu(false); onSignOut() }}>
               <IOut />Log out
@@ -316,7 +317,7 @@ const IOut = () => (
     <path d="M7 8h7M11.5 5.5 14 8l-2.5 2.5" /></svg>
 )
 
-/** 会话行右上角只给时分——日期在会话里，列表上不重复。 */
+/** The conversation row's top right shows only hours and minutes -- the date is inside the conversation and is not repeated in the list. */
 function fmtClock(iso: string): string {
   if (!iso) return ''
   const d = new Date(iso)

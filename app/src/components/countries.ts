@@ -1,16 +1,19 @@
 /**
- * ISO 3166-1 国家与地区。键是两位代码,值是英文名。
+ * ISO 3166-1 countries and territories. Keys are two-letter codes, values are English names.
  *
- * 为什么要整份:公司可以注册在任何一个地方。表单原来只给了
- * 「Hong Kong / Singapore / BVI / Cayman / Other」五项,而 /kyb 从一份真实
- * 的英国注册证书上读出 GB——地址被锁成伦敦的,国家却只能从一个没有英国的
- * 列表里挑。AI 审核当场抓到了这个矛盾,而那个矛盾是表单自己造出来的。
+ * Why the full list: a company can be registered anywhere. The form originally offered only
+ * five options -- Hong Kong / Singapore / BVI / Cayman / Other -- while /kyb read GB off a real
+ * UK certificate of incorporation: the address got locked to London while the country had to be
+ * picked from a list that did not contain the UK. The AI reviewer caught the contradiction on the
+ * spot, and the form itself had manufactured it.
  *
- * 「可搜索却搜不到你的国家」跟当初那个 bug 是同一个病,所以这里不裁剪:
- * 离岸辖区（BVI、开曼、马恩岛、泽西）也都在,它们正是注册地里最常见的那几个。
+ * "Searchable but your country is not in it" is the same disease as that bug, so nothing is
+ * trimmed here: offshore jurisdictions (BVI, Cayman, Isle of Man, Jersey) are all present, and
+ * they are exactly the most common places of incorporation.
  *
- * 名字由 Intl.DisplayNames 生成后落盘,不在运行时算——表单存的是代码,
- * 显示的是名字,而名字变了不该让历史数据对不上号。
+ * Names are generated with Intl.DisplayNames and then written to disk rather than computed at
+ * runtime -- the form stores the code and displays the name, and a name changing should not
+ * make historical data stop lining up.
  */
 export const COUNTRIES: Record<string, string> = {
   AF: 'Afghanistan',

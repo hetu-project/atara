@@ -31,16 +31,17 @@ const SIGNED = 'atara-signed'
  * gets shown. Seeded handles are in SEED_HANDLES.
  */
 export function useIdentity() {
-  // ?as=<handle> 覆盖当前身份并写进 localStorage，同时视为已登录。
-  // 演示台的必需品：开两个窗口各带一个 as，就能同时盯住交易的两侧。
-  // 只在 dev 构建生效：生产里后端不认这个头，让它「看起来登录了」只会
-  // 得到一屏 401。
+  // ?as=<handle> overrides the current identity, writes it to localStorage and counts as signed in.
+  // Essential for the demo desk: open two windows each with its own as and you can watch both
+  // sides of a trade at once.
+  // Dev builds only: in production the backend does not honour this header, so making it
+  // "look signed in" would just yield a screen full of 401s.
   const asParam = () => (import.meta.env.DEV ? new URLSearchParams(location.search).get('as') : null)
   const [handle, setHandle] = useState(() => {
     const as = asParam()
     if (as) {
       setIdentity(as)
-      try { sessionStorage.setItem(SIGNED, '1') } catch { /* 隐身窗口 */ }
+      try { sessionStorage.setItem(SIGNED, '1') } catch { /* private window */ }
       return as
     }
     return getIdentity()
@@ -55,16 +56,16 @@ export function useIdentity() {
     setHandle(h)
   }, [])
 
-  /** 登录落座：记住身份，并把个人区打开。 */
+  /** Sign-in: remember the identity and open the personal pane. */
   const signIn = useCallback((h: string) => {
     setIdentity(h)
     setHandle(h)
-    try { sessionStorage.setItem(SIGNED, '1') } catch { /* 隐身窗口 */ }
+    try { sessionStorage.setItem(SIGNED, '1') } catch { /* private window */ }
     setSigned(true)
   }, [])
 
   const signOut = useCallback(() => {
-    try { sessionStorage.removeItem(SIGNED) } catch { /* 隐身窗口 */ }
+    try { sessionStorage.removeItem(SIGNED) } catch { /* private window */ }
     setSigned(false)
   }, [])
 

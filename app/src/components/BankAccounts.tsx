@@ -8,14 +8,15 @@ import { useToast } from './Toast'
 import type { BankAccount } from '../api/types'
 
 /**
- * 法币收款账户：只有我自己的。
+ * Fiat receiving accounts: mine only.
  *
- * OTC 的法币腿点对点走银行——账号是给对手方的，钱不经过 Atara。对手方的
- * 银行信息属于那笔交易，不属于我的账户簿，所以这里不混进来。链上地址也不在
- * 这儿：它是 Send 里的快捷选择，跟「怎么收法币」是两件事。
+ * The fiat leg of OTC goes peer to peer through banks -- the account number is for the counterparty,
+ * and the money never passes through Atara. The counterparty's bank details belong to that trade, not
+ * to my address book, so they are not mixed in here. On-chain addresses are not here either: those are
+ * a shortcut inside Send, which is a different question from "how do I receive fiat".
  *
- * 一行一个账户，点进去看详情，详情里才有编辑和删除——账号是手抄进来的，
- * 改和删都不该在列表上一键完成。
+ * One account per row, click through for detail, and edit and delete live only in the detail -- the
+ * account number was copied in by hand, and neither editing nor deleting should be one click from a list.
  */
 
 /* Which currencies an account may be in comes from the server, because the
@@ -37,18 +38,18 @@ interface Form {
 }
 const blank = (): Form => ({ id: '', holder: '', bank: '', no: '', ccy: 'CNY', region: '', country: '' })
 
-// ── 银行组合框 ──────────────────────────────────────────────────────
+// -- Bank combobox ------------------------------------------------------
 
 /**
- * 银行是可搜索的下拉，但**永远留着自由输入这条出口**。
- * 一个能拦住用户填自己真实银行的下拉框就是个 bug——这张表是省打字用的，
- * 不是权威登记册。
+ * The bank is a searchable dropdown, but it **always keeps the free-text escape hatch**.
+ * A dropdown that can stop a user entering their actual bank is a bug -- this table exists to save
+ * typing, not as an authoritative register.
  */
 function BankBox({
   value, ccy, onPick,
 }: {
   value: string; ccy: string
-  /** hit 是目录里命中的那一家；自由输入时为 null。上层据此推国家与币种。 */
+  /** hit is the catalog entry that matched; null on free text. The layer above infers country and currency from it. */
   onPick: (v: string, hit: { n: string; c: string } | null) => void
 }) {
   const [open, setOpen] = useState(false)
@@ -63,7 +64,7 @@ function BankBox({
   }, [])
 
   const q = value.trim().toLowerCase()
-  /* 空查询不该给一串按字母排的头几家——按当前选中的币种猜国家更有用 */
+  /* An empty query should not show the first few banks in alphabetical order -- guessing the country from the currently selected currency is more useful */
   const hits = q
     ? BANKS.filter(x => `${x.n} ${x.a} ${CTRY[x.c] ?? ''}`.toLowerCase().includes(q)).slice(0, 8)
     : BANKS.filter(x => CTRY_CCY[x.c] === ccy).slice(0, 8)
@@ -95,11 +96,12 @@ function BankBox({
   )
 }
 
-// ── 删除确认 ────────────────────────────────────────────────────────
+// -- Delete confirmation ------------------------------------------------
 
 /**
- * 不可逆操作的确认盖住整屏、盖在原弹窗之上，默认焦点落在「取消」。
- * 做成卡片里的一条提示，看起来和「顺便说一句」同级，配不上「删了要重抄账号」。
+ * Confirmation for an irreversible action covers the whole screen, on top of the original modal, with
+ * default focus on Cancel. As an inline note inside a card it would look like an aside, which does not
+ * match "deleting this means copying the account number again".
  */
 function Danger({
   title, body, ok, onOk, onClose,
@@ -125,7 +127,7 @@ function Danger({
   )
 }
 
-// ── 主体 ────────────────────────────────────────────────────────────
+// -- Main ---------------------------------------------------------------
 
 export function BankAccountsPanel({ identity }: { identity: string }) {
   const { data: list, reload } = useApi(() => ep.bankAccounts(identity), [identity])
@@ -135,12 +137,14 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const [del, setDel] = useState(false)
-  /* 哪一栏没填对。参照的做法是按钮常亮、点了才指出问题——
-     而不是把按钮置灰：灰按钮只说「不行」，不说哪儿不行，人得自己
-     一栏栏回去找。空表单上更糟，四栏都空着，按钮从头灰到尾。 */
+  /* Which field is wrong. The reference keeps the button always active and points out the problem on
+     click -- rather than greying the button out: a grey button only says "no", not where the problem is,
+     leaving the user to hunt field by field. It is worse on an empty form, where all four fields are
+     blank and the button is grey from start to finish. */
   const [bad, setBad] = useState('')
-  /* 用户自己点过币种没有。点过就不再替他改——选一家香港的银行把币种翻成
-     HKD 是帮忙，但如果他刚刚亲手选了 USD，再翻回去就是跟他较劲。 */
+  /* Whether the user has picked a currency themselves. Once they have, stop changing it for them --
+     flipping the currency to HKD when a Hong Kong bank is selected is helpful, but flipping it back
+     after they just picked USD by hand is arguing with them. */
   const [ccyTouched, setCcyTouched] = useState(false)
   /* Before the catalogue arrives, offer the currencies this version has always
      settled rather than an empty row — an empty row reads as "none", and the
@@ -163,10 +167,10 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
   const [noLeft, setNoLeft] = useState(false)
 
   const save = async () => {
-    // 校验顺序跟栏位顺序一致：先指出最上面那一个，人从上往下改就行。
+    // Validation order follows field order: point at the topmost one first, so the user can work downwards.
     if (!f.holder.trim()) { setBad('holder'); return }
     if (!f.bank.trim()) { setBad('bank'); return }
-    // 编辑时账号留空 = 不改；新增必须填。走 checkAcct，跟边填边提示同一套规则。
+    // On edit, a blank account number means no change; on create it is required. Goes through checkAcct, the same rules as the live hints.
     // Only 'bad' blocks: a warning is a hint about something unusual, and the
     // person typing knows their own account better than the table does.
     if (!f.id && (chk.s === 'empty' || chk.s === 'bad')) { setBad('no'); return }
@@ -199,8 +203,9 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
 
         <div className={'sf' + (bad === 'bank' ? ' bad' : '')}>
           <span className="sfl">Bank</span>
-          {/* 选中目录里的一家就把国家和币种带出来——不然这个下拉只省了几个
-              字母。地区只在空着时填：人已经写了「Shenzhen, CN」就别改成「China」。 */}
+          {/* Selecting a catalog entry brings the country and currency with it -- otherwise this dropdown
+              only saves a few letters. The region is only filled when empty: if they already wrote
+              "Shenzhen, CN", do not rewrite it to "China". */}
           <BankBox value={f.bank} ccy={f.ccy}
             onPick={(v, hit) => {
               const next = { ...f, bank: v, country: hit?.c ?? '' }
@@ -279,7 +284,7 @@ export function BankAccountsPanel({ identity }: { identity: string }) {
           <button className="btn btn-primary" onClick={() => {
             setF({ id: acct.id, holder: acct.holder, bank: acct.bank, no: '',
               ccy: acct.currency, region: acct.region, country: '' })
-            // 编辑已有账户：币种是他当初定的，不该被选银行这个动作翻掉。
+            // Editing an existing account: the currency is what they set back then, and picking a bank should not flip it.
             setBad(''); setCcyTouched(true); setView('form')
           }}>Edit</button>
         </div>

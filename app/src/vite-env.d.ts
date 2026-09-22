@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  /** 后端地址。留空则用相对路径 /api/v1，要求前后端同源。 */
+  /** Backend address. Leave empty to use the relative path /api/v1, which requires front and back ends to be same-origin. */
   readonly VITE_API_BASE?: string
 }
 

@@ -7,25 +7,25 @@ import { useApi } from './useApi'
 import { go } from './useRoute'
 
 interface Ctx {
-  /** 返回 true 表示被拦下了：调用方应当停手，门会自己弹出来。 */
+  /** Returns true when the caller was blocked: stop what you were doing, the door will open by itself. */
   require: () => boolean
-  /** 打开准入对话。带 intent 就直接把那一段的表单铺出来。 */
+  /** Open the onboarding conversation. With an intent, lay that section's form out straight away. */
   openMaker: (intent?: 'listing' | 'offer') => void
-  /** 收起准入对话，回到那句「你想结算什么」。侧栏的「New order」用它。 */
+  /** Collapse the onboarding conversation, back to the "what would you like to settle" line. The sidebar's New order uses this. */
   closeMaker: () => void
-  /** 身份是否已经审过。账户页要照实显示，不能写死成「已验证」。 */
+  /** Whether the identity has been reviewed. The account page has to show this truthfully rather than hardcoding "verified". */
   kycOk: boolean
-  /** 交过材料但还没审完——这两个状态在界面上不是一回事。 */
+  /** Documents submitted but review not finished -- these two states are not the same thing in the UI. */
   kycPending: boolean
   /**
-   * 整份申请。给要看挂单那一段的地方用（准入 CTA 的文案）。
-   * 各处自己再拉一遍的话，放行之后有的地方变了有的没变——而且没人轮询，
-   * 那一份会一直停在「审核中」。 */
+   * The whole application. For places that need the listing section (the onboarding CTA's copy).
+   * If each place fetched it again, some would update after approval and others would not -- and with
+   * nobody polling, that copy would sit on "under review" forever. */
   app: MakerApp | null
   /**
-   * 准入向导那张卡。参照里它不是弹窗，是挂在 Atara AI 会话里的一张卡片
-   * （console.html 的 paintMaker），所以由首页把它渲染进对话区，
-   * 而不是在这里盖一层 overlay。
+   * The onboarding wizard card. In the reference it is not a modal but a card inside the Atara AI
+   * conversation (console.html's paintMaker), so the home page renders it into the conversation area
+   * rather than covering the screen with an overlay here.
    */
   maker: React.ReactNode | null
 }
@@ -36,24 +36,24 @@ const KycCtx = createContext<Ctx>({
 export const useKycGate = () => useContext(KycCtx)
 
 /**
- * 首次交易前的身份门。
+ * The identity door before the first trade.
  *
- * 为什么买家也要验：OTC 的法币腿点对点走银行，付款方必须是可识别的人——
- * 这不是做市方专属的要求。所以 `kyc_ok` 这一个标记同时管两件事：
- * 能不能下单，以及做市准入走到了哪一步。
+ * Why buyers have to verify too: the fiat leg of OTC goes peer to peer through banks, so the payer has to be
+ * an identifiable person -- this is not a maker-only requirement. So the single `kyc_ok` flag governs two
+ * things at once: whether an order can be placed, and how far maker onboarding has got.
  */
 export function KycProvider({ identity, children }: { identity: string; children: React.ReactNode }) {
-  /* 有东西在等审核时才轮询。
+  /* Only poll while something is awaiting review.
 
-     放行是 10 秒后由定时器做的（生产环境是人），而那一下没有任何东西把
-     结果推到这个页面上——事件流断了、或者根本没连上,人就永远停在
-     「已收到,审核中」那句话上,而库里早就写着通过了。
+     Approval happens ten seconds later on a timer (a human in production), and nothing pushes that result to
+     this page -- with the event stream broken, or never connected, the person sits on "received, under review"
+     forever while the database has said approved all along.
 
-     下面那个 LIVE_EVENT 是正路,这一条是它断掉时的兜底。注释原来就写着
-     「上面那个轮询是兜底」,但上面从来没有轮询——这次把它补上。
+     The LIVE_EVENT below is the proper path; this one is the fallback for when it breaks. The comment here
+     always claimed "the polling above is the fallback", but there never was any polling above -- this adds it.
 
-     没东西在等的时候不轮询:绝大多数时间这个页面上没有任何在审的东西,
-     每四秒问一次「有变化吗」是在问一个答案永远不变的问题。 */
+     No polling when nothing is pending: for the vast majority of the time nothing on this page is under
+     review, and asking "any change?" every four seconds is asking a question whose answer never changes. */
   const [waiting, setWaiting] = useState(false)
   const { data: app, reload } = useApi(
     () => ep.makerApp(identity), [identity], waiting ? 4000 : undefined)
@@ -62,17 +62,18 @@ export function KycProvider({ identity, children }: { identity: string; children
   }, [app])
   const [open, setOpen] = useState(false)
   const [why, setWhy] = useState<'trade' | 'maker'>('trade')
-  /* 「为什么要验」那一句已经说过了。原来是把 why 改成 maker 来收起它——
-     副作用是通过之后说的话也跟着变了：本来只想下单的人，会被告知
-     「下一步配置你卖什么」。参照那边这两件事是分开的（KYC_AFTER）。 */
+  /* The "why you need to verify" line has already been said. This used to collapse it by switching why to
+     maker -- with the side effect that what is said after approval changed too: someone who only wanted to
+     place an order was told "next, configure what you sell". The reference keeps these two apart (KYC_AFTER). */
   const [explained, setExplained] = useState(false)
 
-  /* 材料交上去之后，放行是后端隔几秒改的状态——不问它就永远显示「审核中」，
-     人只能自己刷页面。所以在审核中这段时间里问一问。
+  /* After the documents go in, approval is a state the backend changes a few seconds later -- without asking,
+     it shows "under review" forever and the only recourse is refreshing the page. So ask during the window
+     while review is pending.
 
-     只在审核中问，而且问一阵就停：真实口径下审核是人在看件，可能挂几个小时，
-     那种时候每秒敲一次后端毫无意义。停了也不会卡住——重新打开这张卡或者
-     刷新页面都会重新拉一次。 */
+     Only while pending, and it stops after a while: in real terms review is a human looking at documents and
+     may take hours, and hammering the backend once a second then is pointless. Stopping does not wedge
+     anything -- reopening this card or refreshing the page fetches again. */
   /* That poll is the useApi one above (4s while `waiting`, which is this same
      condition). There used to be a second timer here asking every 1.5s for a
      minute on top of it — two pollers for one question, and this one kept
@@ -97,12 +98,13 @@ export function KycProvider({ identity, children }: { identity: string; children
     return true
   }, [app])
 
-  /* 卡片长在首页的对话区里，所以开之前先把人带回首页——
-     否则在 Discover 上点「验证」会什么都看不见。 */
-  /* 两段表单开着没有。这两个状态原来在 MakerThread 内部，外面只能靠一个
-     计数器隔空去点它；挪上来之后，输入框上方那条待办和对话里那颗按钮读的
-     是同一份状态——表单已经铺开时待办条就该闭嘴，而它得看得见才知道。
-     计数器也就不需要了：状态只有一处，设 true 就是开。 */
+  /* The card lives in the home page's conversation area, so take the person back to home before opening it --
+     otherwise clicking Verify on Discover shows nothing at all. */
+  /* Whether each of the two form sections is open. These two states used to live inside MakerThread, and the
+     outside could only poke at them from a distance through a counter; lifted up here, the to-do strip above
+     the input and the button in the conversation read the same state -- the to-do strip should go quiet once
+     the form is laid out, and it has to be able to see that.
+     The counter is then unnecessary: there is one copy of the state, and setting true means open. */
   const [toListing, setToListing] = useState(false)
   const [toOffer, setToOffer] = useState(false)
   const openMaker = useCallback((intent?: 'listing' | 'offer') => {
@@ -120,8 +122,8 @@ export function KycProvider({ identity, children }: { identity: string; children
     kycPending: !!app?.kyc_done && !app?.kyc_ok,
     app: app ?? null,
     maker: showMaker ? (
-      /* 提交后不关：往下追加回执、审核中、通过几条消息。直接关掉的话
-         界面一片空白，人会以为没提交成功。 */
+      /* Do not close after submitting: receipt, under review and approved messages are appended below. Closing
+         outright leaves a blank screen, and people assume the submission failed. */
       <MakerThread app={app ?? null} identity={identity} from={why}
         toListing={toListing} toOffer={toOffer}
         setToListing={setToListing} setToOffer={setToOffer} onDone={reload} />
@@ -132,8 +134,8 @@ export function KycProvider({ identity, children }: { identity: string; children
   return (
     <KycCtx.Provider value={value}>
       {children}
-      {/* 不把人默默甩进一张表单：先说清为什么要验，他点了头再进。
-          跳转本身不是提示。这一层仍然是弹窗，参照也是。 */}
+      {/* Do not drop people silently into a form: explain why verification is needed first, and go in once they
+          have agreed. A navigation is not an explanation. This layer is still a modal, as it is in the reference. */}
       {open && why === 'trade' && !explained && !app?.kyc_done && (
         <Explain onClose={() => setOpen(false)}
           onGo={() => { go({ view: 'home' }); setExplained(true) }} />
@@ -146,9 +148,9 @@ function Explain({ onClose, onGo }: { onClose: () => void; onGo: () => void }) {
   return (
     <div id="modal" role="dialog" aria-modal="true"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      {/* msq 是参照给这类「一句话 + 一个动作」的弹窗留的窄居中版式，
-          配 sqi 那块图标。原来只用了 mcard，于是文字左对齐、没有图标，
-          跟参照差得很明显。 */}
+      {/* msq is the narrow centred layout the reference reserves for "one sentence plus one action" dialogs,
+          paired with that sqi icon block. This used to use mcard alone, leaving the text left-aligned with no
+          icon, visibly different from the reference. */}
       <div className="mcard msq">
         <header className="mhead">
           <h3>Verify your identity</h3>

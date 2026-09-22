@@ -24,23 +24,25 @@ import { usePrivyAuth } from './hooks/usePrivyAuth'
 import { go, useRoute } from './hooks/useRoute'
 
 /**
- * 三栏骨架，结构与 console.html 的 <main> 一致：
- * #left 导航 / #mid 唯一工作面 / #right 评估与订单状态。
+ * Three-column skeleton, structurally identical to console.html's <main>:
+ * #left nav / #mid the single work surface / #right assessment and order status.
  *
- * 样式表用的是 id 选择器，所以这里的 id 不是装饰——改名就没样式了。
+ * The stylesheet uses id selectors, so the ids here are not decorative -- rename one and the styles are gone.
  */
 export default function App() {
   const { handle, signed, signIn, signOut } = useIdentity()
   const { login, signOutAll } = usePrivyAuth(signed, signIn)
   const { route } = useRoute()
-  /* 右栏是用户自己收起来的——和「这个视图本来就没有右栏」(rout) 分开记，
-     否则从 Discover 切回新建单，右栏会莫名其妙地不见。
-     键名跟 console.html 一样：在那边收过，这边打开也还是收着。 */
+  /* The right column was collapsed by the user -- tracked separately from "this view never had a right
+     column" (rout), otherwise switching from Discover back to a new order makes the right column
+     inexplicably vanish.
+     Same storage key as console.html: collapse it there and it is still collapsed here. */
   const [rfold, setRfold] = useState(
     () => { try { return localStorage.getItem('atara-rfold') === '1' } catch { return false } })
-  /* 会话锁。密码只解开这个界面，不批准任何东西——转账和额度永远走钱包
-     那一侧的签名。没设过密码就先带他去设，设好再替他锁上，那一下的意图不丢。 */
-  /* 有 passkey 就不必再设密码：锁上之后那把钥匙能打开它。 */
+  /* Session lock. The password only unlocks this UI, it approves nothing -- transfers and allowances
+     always go through a signature on the wallet side. If no password was ever set, take them to set one
+     first and lock for them afterwards, so the intent behind that click is not lost. */
+  /* With a passkey there is no need for a password: that key opens it once locked. */
   const { user: privyUser, ready: privyReady } = usePrivy()
   /* null until Privy has loaded: the lock screen must not conclude "no passkey"
      from an account that simply has not arrived yet. */
@@ -64,48 +66,50 @@ export default function App() {
     return openEventStream()
   }, [signed])
 
-  /* 后端换过库、或账户被删之后，本机存的身份就指向一个不存在的人。
-     那时所有请求都是 401——退回未登录并弹门，而不是让界面一直重试。 */
+  /* After the backend swaps databases, or the account is deleted, the identity stored locally points at
+     someone who does not exist. Every request is then a 401 -- fall back to signed out and show the door,
+     rather than letting the UI retry forever. */
   useEffect(() => {
     const gone = () => { signOutAll(signOut); login() }
     addEventListener(IDENTITY_GONE, gone)
     return () => removeEventListener(IDENTITY_GONE, gone)
   }, [signOut, signOutAll, login])
 
-  /* 未登录不是白屏：大厅照常渲染，个人区（会话列表、右栏）收起，
-     动手那一下才弹登录门。CSS 认的是 :root[data-locked]。 */
+  /* Signed out is not a blank screen: the hall renders as usual, the personal area (conversation list,
+     right column) collapses, and the sign-in door only appears on the first action. The CSS keys off :root[data-locked]. */
   useEffect(() => {
     if (signed) delete document.documentElement.dataset.locked
     else document.documentElement.dataset.locked = '1'
   }, [signed])
 
-  /* 折叠状态记在 <main class="lout"> 上——参照就是这么做的，整套收起样式
-     （68px 图标条、隐藏文字、logo 变展开按钮）都挂在 main.lout 下面。
-     之前写的是 documentElement 上的 lfolded，那个类在样式表里根本不存在，
-     所以按钮点了什么都不发生。 */
+  /* The collapsed state is recorded on <main class="lout"> -- that is what the reference does, and the
+     whole collapsed style set (68px icon rail, hidden labels, logo turning into an expand button) hangs
+     off main.lout. This used to write lfolded on documentElement, a class that does not exist anywhere in
+     the stylesheet, so clicking the button did nothing at all. */
   useEffect(() => {
-    try { localStorage.setItem('atara-left', folded ? '1' : '0') } catch { /* 隐身窗口 */ }
+    try { localStorage.setItem('atara-left', folded ? '1' : '0') } catch { /* private window */ }
   }, [folded])
   useEffect(() => {
-    try { localStorage.setItem('atara-rfold', rfold ? '1' : '0') } catch { /* 隐身窗口 */ }
+    try { localStorage.setItem('atara-rfold', rfold ? '1' : '0') } catch { /* private window */ }
   }, [rfold])
 
   return (
-    /* Toast 放在最外层：任何一层里的任何动作都可能需要报一句，
-       包在里面的话，外层出的事就没地方说。 */
+    /* Toast sits at the outermost layer: any action in any layer may need to say something, and wrapped
+       further in, whatever happens in an outer layer would have nowhere to say it. */
     <ToastProvider>
     <LiveToasts />
     <AssessmentProvider>
     <KycProvider identity={handle}>
-    {/* 右栏属于「有对话的那两个视图」：新建一单，以及某个人的会话。
+    {/* The right column belongs to "the two views that have a conversation": a new order, and someone's thread.
     
-        参照是 main.classList.toggle('rout', v!=='chat')——它那边只有一个 chat
-        视图，composer 和会话都在里面。我们拆成了 home 和 thread 两个，所以
-        条件要写成这两个的并集。原来只判 home，于是从大厅点 Buy 落到会话之后，
-        右栏被 rout 压成 1px，那一单的七票共识一个字都看不见。
+        The reference does main.classList.toggle('rout', v!=='chat') -- it only has one chat view, with the
+        composer and the conversation both inside it. We split that into home and thread, so the condition
+        has to be the union of the two. It used to test home only, so after clicking Buy in the hall and
+        landing in a conversation, rout squeezed the right column down to 1px and not a word of that order's
+        seven-vote consensus was visible.
     
-        其他视图收起它，中栏才拿到整条剩余宽度；.view 的 max-width:960px +
-        align-self:center 这时才起作用，卡片是居中的。 */}
+        Other views collapse it so the middle column gets the whole remaining width; .view's max-width:960px
+        + align-self:center only take effect then, centring the cards. */}
     <main className={[(route.view === 'home' || route.view === 'thread') && signed
       ? '' : 'rout', folded ? 'lout' : '',
       rfold ? 'rfold' : ''].filter(Boolean).join(' ') || undefined}>
@@ -115,7 +119,7 @@ export default function App() {
         onLock={lk.lock} />
 
       <section id="mid">
-        {/* 未登录的起点是市场：能看的东西在这儿，下单页留给登录后 */}
+        {/* The starting point when signed out is the market: what there is to look at is here, and the order page is for after sign-in */}
         {route.view === 'home' && (signed
           ? <Home identity={handle} />
           : <Pool identity={handle} onNeedSignIn={login} />)}
@@ -135,26 +139,27 @@ export default function App() {
       </section>
 
       <RightPanel identity={handle}
-        /* 没有对手方的单（还没撮合上）只能去工单页——没有会话可进。 */
+        /* Orders with no counterparty (not yet matched) can only go to the ticket page -- there is no conversation to enter. */
         onOpen={o => (o.counterparty_id
           ? go({ view: 'thread', peer: o.counterparty_id })
           : go({ view: 'order', id: o.id }))}
         onFold={() => setRfold(true)} />
 
-      {/* 收起之后要能还原。这颗按钮只在「用户收起了、而且这个视图本来有
-          右栏」时出现——视图本来就没有右栏时给一颗展开按钮，点了什么也
-          不会发生。
+      {/* It has to be restorable once collapsed. This button only appears when "the user collapsed it and
+          this view has a right column in the first place" -- offering an expand button on a view that never
+          had one leaves a button that does nothing when clicked.
 
-          条件必须和上面 main 那个 rout 判断用同一个并集（home + thread）。
-          原来这里只判 home：在首页收起右栏、再走进某个人的会话，那边右栏
-          照样是收起的，而这颗重开按钮被判没了——会话页里再没有任何入口能
-          把它拉回来，只能退回首页展开再走一遍。 */}
+          The condition must use the same union (home + thread) as the rout test on main above.
+          This used to test home only: collapse the right column on the home page, then walk into someone's
+          conversation, and the right column was still collapsed there while this reopen button was judged
+          away -- leaving no entry point anywhere in the conversation page to bring it back, short of going
+          back to home, expanding, and walking in again. */}
       <button className="rshow" type="button" title="Show panel" aria-label="Show panel"
         hidden={!rfold || !((route.view === 'home' || route.view === 'thread') && signed)}
         onClick={() => setRfold(false)}>
         <IPanel mirror />
       </button>
-      {/* 登录弹窗由 Privy 自己渲染，挂在 body 上——这里不需要留位置 */}
+      {/* The sign-in dialog is rendered by Privy itself and mounted on body -- no space needs reserving here */}
     </main>
 
     {lk.setup && (
@@ -167,7 +172,7 @@ export default function App() {
     )}
     </KycProvider>
     </AssessmentProvider>
-    {/* 挂一次就够：它用事件委托接管全局的 title，不需要包住谁。 */}
+    {/* Mounting it once is enough: it takes over title globally through event delegation and does not need to wrap anything. */}
     <Tooltip />
     </ToastProvider>
   )

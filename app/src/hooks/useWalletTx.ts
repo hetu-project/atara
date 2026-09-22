@@ -9,14 +9,15 @@ import { WalletTxError, readable } from '../api/walletError'
 export { WalletTxError, isWalletTxError } from '../api/walletError'
 
 /**
- * 用用户自己的钱包发交易。
+ * Send transactions from the user's own wallet.
  *
- * 为什么必须是用户自己发：托管合约把 msg.sender 记成出币的人。后端代签的话，
- * 进托管的是后端那个地址的币——那就不是非托管了，用户的钱包里什么都没少，
- * 界面上却说他锁了币。
+ * Why it has to be the user's own: the escrow contract records msg.sender as the person putting up the coins.
+ * With the backend co-signing, what enters escrow is the backend address's coins -- which is no longer
+ * non-custodial: nothing has left the user's wallet while the UI claims they locked coins.
  *
- * 合约地址、代币地址、精度全部来自 GET /catalog/chain，不写死在这里：
- * 换一次合约，写死的前端会把钱 approve 给旧合约，而且要到锁币那一刻才发现。
+ * Contract address, token address and decimals all come from GET /catalog/chain and are not hardcoded here:
+ * swap a contract once and a hardcoded frontend approves the money to the old one, which is only discovered
+ * at the moment of locking.
  */
 
 const short = (a: string) => (a.length > 10 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a)
@@ -49,7 +50,7 @@ const ESCROW = [
     outputs: [] },
 ] as const
 
-/** 走到哪一步了。文案直接显示给人看——钱包要弹两次，得说清各是什么。 */
+/** Which step it has reached. The copy is shown directly to the user -- the wallet pops up twice, so each has to be explained. */
 export type TxStep =
   | { k: 'idle' }
   | { k: 'wallet'; msg: string }
@@ -58,12 +59,12 @@ export type TxStep =
   | { k: 'error'; msg: string }
 
 /**
- * @param info 这笔交易要发在哪条链上。挂单选了哪个网络就传哪条——
- *   不是「后端连着哪条」：一条挂单说自己在 BASE 上，钱包就该切到 BASE。
- * @param expected 这个账户的地址。Privy 手里往往不止一个钱包——开了托管
- *   钱包之后，每个人都多一个空的内置钱包。按下标取 wallets[0] 会随机拿到
- *   其中一个，于是余额查的是空钱包、交易也从空钱包发出去，报「余额不足」
- *   而人明明看着自己账上有钱。要按地址认。
+ * @param info Which chain this transaction goes out on. Pass whichever network the listing chose --
+ *   not "whichever the backend is connected to": a listing that says it is on BASE means the wallet should switch to BASE.
+ * @param expected This account's address. Privy often holds more than one wallet -- once the custodial
+ *   wallet is enabled, everyone gains an extra empty built-in one. Taking wallets[0] by index picks one of
+ *   them at random, so the balance is read from the empty wallet and the transaction goes out from it too,
+ *   reporting "insufficient balance" while the person can plainly see funds in their account. Match by address.
  */
 export function useWalletTx(info: ChainRow | null, expected?: string) {
   const { wallets } = useWallets()
@@ -90,8 +91,8 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
     if (!want) throw new Error('Your wallet is still loading — try again in a moment')
     const w = wallets.find(x => x.address.toLowerCase() === want)
     if (!w) {
-      /* 登录的那个地址此刻没连上。硬用另一个钱包签会把币从别人的地址上扣，
-         或者当场失败——两种都比说清楚糟。 */
+      /* The signed-in address is not connected right now. Forcibly signing with another wallet would deduct
+         coins from someone else's address, or fail on the spot -- both worse than saying so plainly. */
       throw new Error(
         `This account is ${short(expected!)}, but that wallet is not connected right now`)
     }
@@ -103,12 +104,12 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
       blockExplorers: info.explorer
         ? { default: { name: 'explorer', url: info.explorer } } : undefined,
     })
-    /* 切链要在拿 provider 之后：Privy 的 switchChain 换的是这个钱包的当前链，
-       provider 拿早了还指着旧链，交易会发到另一条链上去。 */
+    /* Switch chains after getting the provider: Privy's switchChain changes this wallet's current chain, and a
+       provider obtained too early still points at the old one, sending the transaction to a different chain. */
     const provider = await w.getEthereumProvider()
-    /* eth_chainId 各家回的形式不一样：多数是 "0x61"，也有回十进制字符串
-       "97" 或直接一个数字的。一律按 16 进制解析的话，"97" 会被读成 151，
-       于是明明在对的链上也判成不对。 */
+    /* eth_chainId comes back in different forms from different wallets: mostly "0x61", but some return a decimal
+       string "97" or a plain number. Parsing everything as hex reads "97" as 151, so being on the right chain is
+       judged wrong. */
     const raw = await provider.request({ method: 'eth_chainId' })
     const current = typeof raw === 'string' && raw.startsWith('0x')
       ? parseInt(raw, 16)
@@ -117,14 +118,14 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
       try {
         await w.switchChain(info.chain_id)
       } catch (e) {
-        /* 钱包里没添加过这条链时，switch 会报 4902（不认识）。测试网尤其
-           常见——没人手动加过 BSC 测试网。这时该替他加上，而不是甩一句
-           「请自己切过去」让他去翻钱包设置。 */
+        /* When the chain has never been added to the wallet, switch reports 4902 (unrecognised). This is especially
+           common on testnets -- nobody has added BSC testnet by hand. The right move is to add it for them rather
+           than throwing out a "please switch yourself" and leaving them to dig through wallet settings. */
         const code = (e as { code?: number })?.code
         const unknown = code === 4902 || /Unrecognized chain|not been added/i.test(String(e))
         if (!unknown) {
-          /* 把钱包此刻在哪条链上一起说出来。只说「请切到 X」的话，人已经在
-             X 上时这句话是无解的——上一版就是这样，原因其实在别处。 */
+          /* Say which chain the wallet is on right now as well. Saying only "please switch to X" is unanswerable
+             when the person is already on X -- which is what the previous version did, while the cause lay elsewhere. */
           throw new Error(
             `Wallet is on chain ${current}; this listing needs ${info.name} (chain ${info.chain_id})`)
         }
@@ -154,11 +155,12 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
   }, [info, wallets, expected])
 
   /**
-   * approve 到一个精确的量。
+   * approve an exact amount.
    *
-   * 现有额度非零又不够时，先归零再批：主网 USDT（Tether）拒绝非零→非零的
-   * approve（防前跑），直接批新值那笔交易会 revert。测试网自部署的代币没有这
-   * 条规矩，所以本地看不出来。两笔钱包签名，各自等回执。
+   * When an existing non-zero allowance is not enough, zero it first and then approve: mainnet USDT (Tether)
+   * rejects a non-zero -> non-zero approve (front-running protection), so approving the new value directly
+   * reverts. Self-deployed testnet tokens have no such rule, which is why this is invisible locally. Two wallet
+   * signatures, each awaiting its own receipt.
    */
   type Conn = Awaited<ReturnType<typeof connect>>
   const approveExact = async (
@@ -183,11 +185,12 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
   }
 
   /**
-   * approve 到位再锁币。
+   * approve into place and then lock the coins.
    *
-   * 先查现有额度：够就不再签一次——多弹一次钱包不只是麻烦，人会以为出错了。
-   * 只 approve 这一笔的量，不给无限额度：合约万一有洞，无限额度意味着钱包里
-   * 这个币可以被一次性搬空。
+   * Check the existing allowance first: if it is enough, do not sign again -- an extra wallet popup is not just
+   * an annoyance, people read it as something having gone wrong.
+   * Approve only this transaction's amount, never an unlimited allowance: should the contract have a hole, an
+   * unlimited allowance means this token can be drained from the wallet in one go.
    */
   const lockListing = useCallback(async (p: {
     escrow: string; token: string; offerKey: string; amountWei: string
@@ -202,9 +205,9 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
         address: token, abi: ERC20, functionName: 'balanceOf', args: [account],
       })
       if (bal < amount) {
-        /* 把地址、代币合约和两个数一起说出来。只说「余额不足」的话，同一个
-           钱包里可能躺着好几个都叫 USDT 的代币，人对着其中一个的余额看，
-           永远想不通为什么不够。 */
+        /* Report the address, the token contract and both numbers together. Saying only "insufficient balance"
+           leaves someone staring at the balance of one of possibly several tokens in the same wallet all called
+           USDT, never able to work out why it is not enough. */
         const dec = await pub.readContract({
           address: token, abi: ERC20, functionName: 'decimals',
         }).catch(() => 18)
@@ -239,12 +242,12 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
   }, [connect])
 
   /**
-   * 给支出合约签一笔 approve。
+   * Sign an approve for the spender contract.
    *
-   * 额度就是支配权：说「允许这个 agent 每周花 2000」，链上对应的就是
-   * 允许支出合约动这么多币。以前这颗按钮写着「Approve in wallet」，
-   * 实际只是 POST 给后端，由后端拿自己的私钥去签——那批的是后端的币，
-   * 用户钱包里一分没动，链上什么授权都没有。
+   * An allowance is spending authority: saying "let this agent spend 2000 a week" corresponds on chain to
+   * letting the spender contract move that many coins. This button used to say "Approve in wallet" while it
+   * merely POSTed to the backend, which signed with its own private key -- approving the backend's coins, with
+   * nothing moved in the user's wallet and no authorisation on chain at all.
    */
   const approveSpending = useCallback(async (p: {
     spending: string; token: string; amountWei: string
@@ -258,7 +261,7 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
         address: token, abi: ERC20, functionName: 'allowance', args: [account, spender],
       })
       if (allowed >= amount) {
-        // 已经批够了就不再签一次。多弹一次钱包，人会以为上次没成功。
+        // Already approved enough, so do not sign again. An extra wallet popup makes people think the last one failed.
         setStep({ k: 'idle' })
         return ''
       }
@@ -356,7 +359,7 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
     }
   }, [connect])
 
-  /** 下架：把没被订单绑走的量取回钱包。只有原 maker 能调。 */
+  /** Delist: take back the amount not tied up by orders. Only the original maker can call it. */
   const unlockListing = useCallback(async (p: {
     escrow: string; offerKey: string
   }): Promise<string> => {
@@ -380,14 +383,15 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
   }, [connect])
 
   /**
-   * taker 卖币：把自己的币存进托管合约，绑到这笔订单上。
+   * taker sells coins: deposit their own coins into the escrow contract, bound to this order.
    *
-   * 这一笔必须由**用户的钱包**发。后端的 SignDeposit 用的是平台签名方的私钥，
-   * 合约会把付款方记成平台——放款付的是平台的币、退款退回平台，用户的币一分
-   * 不动。所以真链上接单只能走 via=external，然后由这里发 deposit。
+   * This one must be sent from the **user's wallet**. The backend's SignDeposit uses the platform signer's
+   * private key, so the contract records the platform as the payer -- release pays out the platform's coins and
+   * a refund returns to the platform, while the user's coins never move. So taking an order on a real chain can
+   * only go through via=external, with the deposit sent from here.
    *
-   * 收款方（beneficiary）写进仓位就改不了，放款只认它；参数从后端的
-   * order.escrow 拿，不在前端算。
+   * The beneficiary is written into the position and cannot be changed afterwards; release recognises only it.
+   * The parameters come from the backend's order.escrow and are not computed in the frontend.
    */
   const deposit = useCallback(async (p: {
     escrow: string; token: string; orderKey: string; amountWei: string; beneficiary: string

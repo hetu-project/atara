@@ -1,150 +1,159 @@
 # Atara Console
 
-Atara 结算协议的控制台前端。Vite + React + TypeScript。
+Console frontend for the Atara settlement protocol. Vite + React + TypeScript.
 
-## 跑起来
+## Running it
 
-需要后端先起着（`atara-pay` 仓库）：
+The backend has to be up first (the `atara-pay` repo):
 
 ```bash
 cd ../../atara-pay && make run      # :8080
 ```
 
-然后：
+Then:
 
 ```bash
 npm install
 npm run dev                          # :5173
 ```
 
-dev server 把 `/api` 代理到 `http://localhost:8080`，浏览器视角同源——
-不依赖后端 CORS，也不会因为预检失败而卡在「看起来没请求出去」。
-后端在别处就设 `ATARA_API`：
+The dev server proxies `/api` to `http://localhost:8080`, so from the browser's point of
+view everything is same-origin — no dependence on backend CORS, and no getting stuck on
+"the request seems not to have gone out" because a preflight failed.
+If the backend is elsewhere, set `ATARA_API`:
 
 ```bash
 ATARA_API=http://10.0.0.5:8080 npm run dev
 ```
 
-## 演示两侧
+## Watching both sides of a trade
 
-后端鉴权是 mock：`X-Atara-User` 头直接注入身份，没有会话。所以右上角有身份切换器，
-URL 也支持 `?as=<handle>`：
+Backend auth is mocked: the `X-Atara-User` header injects an identity directly, with no
+session. Hence the identity switcher in the top right, and `?as=<handle>` in the URL:
 
 ```
 http://localhost:5173/?as=demo
 http://localhost:5173/?as=CrabWalk%20Trading
 ```
 
-**开两个窗口各带一个 as**，就能同时盯住一笔交易的两侧。这不是调试后门——
-同一张工单，两方看到的阶段是互补的（一方 `pay/you` 时另一方必然 `wait/them`），
-不切身份就看不到协议最核心的那一步：**回执要由收款方核验，上传者自己核不了**。
+**Open two windows, each with its own `as`**, and you can watch both sides of one trade at
+once. This is not a debugging backdoor — for the same ticket the two parties see
+complementary phases (when one is at `pay/you` the other is necessarily at `wait/them`),
+and without switching identity you never see the most important step in the protocol:
+**the receipt has to be verified by the payee; the uploader cannot verify their own**.
 
-## 结构
+## Structure
 
 ```
 src/
   api/
-    types.ts       后端 JSON 的类型，字段逐一对齐 atara-pay 的 dto.go
-    client.ts      fetch 封装：错误信封、身份头、确认令牌
-    endpoints.ts   每个端点一个函数，令牌档位的分叉规则封在这里
+    types.ts       types for the backend's JSON, field by field against atara-pay's dto.go
+    client.ts      fetch wrapper: error envelope, identity header, confirmation tokens
+    endpoints.ts   one function per endpoint; the token-tier forking rule is encapsulated here
   hooks/
-    useApi.ts      取数与轮询
-    useIdentity.ts 身份（mock 鉴权）
-    useRoute.ts    哈希路由
+    useApi.ts      fetching and polling
+    useIdentity.ts identity (mock auth)
+    useRoute.ts    hash routing
   views/
-    Market.tsx     池子 + 吃单
-    OrderDetail.tsx 承诺 / 回执 / 核验 / 轨道 / 链上事实 / 流水
-    Tasks.tsx      待办投影 + 我的工单
-    Wallet.tsx     账户与资金
-  components/bits.tsx  阶段徽标、轨道、错误框
+    Market.tsx     the pool + taking orders
+    OrderDetail.tsx commit / receipt / verify / track / on-chain facts / trail
+    Tasks.tsx      the to-do projection + my tickets
+    Wallet.tsx     account and funds
+  components/bits.tsx  phase badges, track, error box
   styles/
-    tokens.css     设计变量，原样取自旧 console.html
+    tokens.css     design variables, taken verbatim from the old console.html
     app.css
 ```
 
-## 三条约定
+## Three conventions
 
-**金额一律是字符串。** 后端的金额是十进制字符串主单位，前端**绝不**把它转成
-`number`——18 位精度下 float 会静默改掉尾数。要算就上 decimal 库。
+**Amounts are always strings.** The backend's amounts are decimal strings in major units,
+and the frontend **never** converts them to `number` — at 18 digits of precision, float
+silently alters the trailing digits. If you need arithmetic, reach for a decimal library.
 
-**阶段不自己推。** `phase` / `actor` 由后端按当前调用者的视角算好，前端直接渲染。
-不要在前端重建状态机——两边各写一份必然走歧。
+**Do not derive phases yourself.** `phase` / `actor` are computed by the backend from the
+current caller's perspective, and the frontend renders them directly. Do not rebuild the
+state machine in the frontend — two implementations will inevitably diverge.
 
-**错误按 code 分支。** `message` 是给人看的英文文案，会变；`code` 是契约。
-后端给的 `remedy` 是「可点的替代」，`ErrorBox` 已经把它渲染成按钮。
+**Branch on `code`, not `message`.** `message` is English prose for humans and will change;
+`code` is the contract. The `remedy` the backend supplies is "a clickable alternative", and
+`ErrorBox` already renders it as a button.
 
-## 覆盖范围
+## Coverage
 
-六个视图，后端端点全部接通：
+Six views, with every backend endpoint wired up:
 
-| 视图 | 内容 |
+| View | Contents |
 |---|---|
-| **Trade** | 池子、吃单（币/法币两种口径） |
-| **Tasks** | 待办投影 + 我的工单 |
-| **Discover** | 三个纵向、做市准入两段审核、挂单、审核台（reviewer 角色） |
-| **People** | 对手方名录、会话（聊天与订单卡同流） |
-| **Money** | 支配权（额度）、收款方地址簿、提现闭环（含 tx 回填） |
-| **Account** | 身份、资金、托管合约 |
-| **工单详情** | 承诺 / 回执 / 核验 / 轨道 / 链上事实 / 流水 |
+| **Trade** | the pool, taking orders (in coin or fiat terms) |
+| **Tasks** | the to-do projection + my tickets |
+| **Discover** | three verticals, two-stage maker onboarding review, listings, the review queue (reviewer role) |
+| **People** | counterparty directory, conversations (chat and order cards in one stream) |
+| **Money** | spending authority (allowances), payee address book, the withdrawal loop (including tx write-back) |
+| **Account** | identity, funds, escrow contract |
+| **Ticket detail** | commit / receipt / verify / track / on-chain facts / trail |
 
-**未接**：条件支付（`conditional_transfer`）。后端实现完整但 V1 不启用，
-端点是 `/orders/parse`、`POST /orders`、`/orders/{id}/evidence`、`/orders/{id}/confirm`。
+**Not wired up**: conditional payments (`conditional_transfer`). The backend implementation
+is complete but V1 does not enable it; the endpoints are `/orders/parse`, `POST /orders`,
+`/orders/{id}/evidence` and `/orders/{id}/confirm`.
 
-## 契约回归
+## Contract regression
 
 ```bash
 python3 scripts/contract-check.py
 ```
 
-经 dev server 代理跑一遍核心链路，验证前端 API 层与后端契约一致。
-前后端都起着时运行。
+Runs the core paths through the dev server proxy and verifies that the frontend API layer
+matches the backend contract. Run it with both the frontend and the backend up.
 
-## 部署
+## Deployment
 
-**这一步最容易出错**：`dev` 靠 Vite 代理把 `/api` 转给后端，
-生产环境**没有代理**。两条路，选一条：
+**This is the step that most often goes wrong**: `dev` relies on the Vite proxy to forward
+`/api` to the backend, and **production has no proxy**. Two options, pick one:
 
-### A · 反向代理（推荐）
+### A - Reverse proxy (recommended)
 
-前后端同源，前端用相对路径，不需要 CORS：
+Frontend and backend are same-origin, the frontend uses relative paths, and no CORS is needed:
 
 ```bash
-npm run build           # 产物在 dist/
+npm run build           # output in dist/
 ```
 
-Nginx / Caddy 把 `/api` 转给后端：
+Nginx / Caddy forwards `/api` to the backend:
 
 ```nginx
 location /api/ { proxy_pass http://backend:8080; }
 location /     { root /srv/atara-console/dist; try_files $uri /index.html; }
 ```
 
-`try_files ... /index.html` 是必须的——哈希路由的深链刷新会 404。
+`try_files ... /index.html` is mandatory — refreshing a hash-route deep link would otherwise 404.
 
-### B · 前后端不同源
+### B - Different origins
 
-构建时给出完整后端地址：
+Give the full backend address at build time:
 
 ```bash
 VITE_API_BASE=https://api.example.com/api/v1 npm run build
 ```
 
-后端要放行前端域名：
+The backend has to allow the frontend's domain:
 
 ```bash
 ATARA_CORS_ORIGINS=https://console.example.com
 ```
 
-**别在生产用 `ATARA_CORS_ORIGINS=*`**（那是 demo 默认值）——
-带身份头的请求对任何来源都放行，等于没有同源保护。
+**Do not use `ATARA_CORS_ORIGINS=*` in production** (that is the demo default) — requests
+carrying an identity header would be accepted from any origin, which amounts to no
+same-origin protection at all.
 
-### 仓库根的 vercel.json 不覆盖这个目录
+### The repo root's vercel.json does not cover this directory
 
-根目录那份是纯静态部署（`outputDirectory: "."`），只发 `index.html` /
-`console.html` / `api.html`。**这个 React 控制台不在它的范围里**，
-要单独部署（或把 `app/dist` 的构建产物并进去）。
+The one at the root is a purely static deployment (`outputDirectory: "."`) and ships only
+`index.html` / `console.html` / `api.html`. **This React console is not in its scope** and
+has to be deployed separately (or have `app/dist`'s build output merged into it).
 
-## 与旧版的关系
+## Relationship to the old version
 
-仓库根目录的 `console.html` 是重写前的单文件版本（10394 行），保留供视觉对照。
-`index.html` 是落地页，本轮未动。
+`console.html` in the repo root is the single-file version from before the rewrite (10,394
+lines), kept for visual comparison. `index.html` is the landing page and was not touched in
+this round.

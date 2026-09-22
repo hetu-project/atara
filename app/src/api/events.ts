@@ -117,10 +117,11 @@ function parseFrame(raw: string): LivePayload | undefined {
   if (!event) return
   let extra: LivePayload = { kind: event }
   if (data) {
-    /* 展开在前、kind 在后：SSE 的 `event:` 那一行才是「这是什么事件」的
-       权威，data 里带的是 peer / order_id 这些附加信息。反过来写的话，
-       data 里若出现一个 kind 就会把 event 行盖掉——而那一行是我们自己
-       发的，data 是从 JSON 解出来的。 */
+    /* Spread first, kind second: the SSE `event:` line is the authority on
+       what the event is, while data carries extras like peer / order_id. The
+       other way round, a stray kind inside data would overwrite the event
+       line -- and that line is one we emit ourselves, whereas data is parsed
+       out of JSON. */
     try { extra = { ...(JSON.parse(data) as Partial<LivePayload>), kind: event } }
     catch { /* a malformed frame still means "something changed" */ }
   }

@@ -1,12 +1,12 @@
 /**
- * 钱包那一侧出的错。
+ * Errors coming from the wallet side.
  *
- * 打上标记，好让调用方知道「这条已经在别处显示过了」——交易进度那一行，
- * 或者右上角的 toast——不然同一句话会被外层的错误提示再显示一遍，
- * 看着像出了两次错。
+ * Tagged so callers know "this one has already been shown elsewhere" -- on the
+ * transaction progress line, or in the toast at the top right -- otherwise the outer
+ * error banner shows the same sentence a second time and it looks like two failures.
  *
- * 放在 api/ 而不是 hooks/：确认签名是 api/client.ts 发起的，它也要能抛这个
- * 错，而 api 层不该反过来依赖 hooks 层。
+ * Lives in api/ rather than hooks/: signature confirmation is initiated by api/client.ts,
+ * which also needs to throw this, and the api layer must not depend on the hooks layer.
  */
 export class WalletTxError extends Error {
   readonly walletTx = true
@@ -14,7 +14,7 @@ export class WalletTxError extends Error {
 export const isWalletTxError = (e: unknown): e is WalletTxError =>
   e instanceof Error && (e as WalletTxError).walletTx === true
 
-/** 钱包报错常常是一大段 JSON-RPC 原文。取第一句给人看，别把整段糊上去。 */
+/** Wallet errors are often a wall of raw JSON-RPC text. Show the first sentence, do not paste the whole thing. */
 export function readable(e: unknown): string {
   const raw = e instanceof Error ? e.message : String(e)
   if (/User rejected|denied transaction|User denied/i.test(raw)) {
@@ -26,7 +26,7 @@ export function readable(e: unknown): string {
   return raw.split('\n')[0]!.slice(0, 200)
 }
 
-/** 拒签确认消息时说的话。和拒掉一笔交易分开：这里还没有任何东西发出去。 */
+/** What we say when a confirmation message signature is rejected. Kept separate from rejecting a transaction: nothing has been sent yet at this point. */
 export function signatureDeclined(e: unknown): string {
   const raw = e instanceof Error ? e.message : String(e)
   if (/User rejected|denied|cancel/i.test(raw)) {

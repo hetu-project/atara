@@ -7,7 +7,8 @@ import type { ApiError } from '../api/client'
  * was still out, and the same words once it had failed. Three situations that
  * ask three different things of the reader — wait, add one, try again — drawn
  * as one. The wallet card on the account page already refuses to do this for
- * numbers ("先画 $0 再跳到真数，等于先说了一句假话"); lists deserve the same.
+ * numbers ("painting $0 first and then jumping to the real figure is telling
+ * a lie first"); lists deserve the same.
  *
  * Pending keeps the height and says "not yet". Failed says what went wrong and
  * hands over the one action that helps. Neither is used once data has arrived:
