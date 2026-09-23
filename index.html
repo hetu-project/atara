@@ -109,9 +109,9 @@
      amount of resizing helped: a list has no structure to read. Now it
      is four zones — premise, the pair, the split, the action — and the
      two numbers that matter sit side by side as equals. */
-  /* 照搬对标稿的 hero 卡：外框 rounded-3xl(24px) + p-1(4px) + bg-white/5 +
-     backdrop-blur + 1px 白边；内层 rounded-[22px] + bg-white/95 + p-8/p-10。
-     同心圆角在对标稿里就是 24 = 22 + 2，这里按 4px 边距取 26/22。 */
+  /* The hero card copied from the reference: an outer frame of rounded-3xl (24px) + p-1 (4px) + bg-white/5 +
+     backdrop-blur + a 1px white border; the inner layer rounded-[22px] + bg-white/95 + p-8/p-10.
+     Concentric radii in the reference are 24 = 22 + 2; here, with a 4px inset, they are 26/22. */
   .ticket{
     position:relative;z-index:2;align-self:center;justify-self:end;margin:0;
     animation:tkrise .9s var(--ease) .24s both;
@@ -123,9 +123,9 @@
     color:oklch(20% .022 267);font-size:.8rem;line-height:1.4;
   }
 
-  /* 表格照搬对标稿：三列、行距 space-y-6(24px)、表头下一条 border-gray-100、
-     数值 text-2xl(24px)/500、% text-lg(18px)、标签 text-sm(14px)、
-     内层 bg-white/95 + rounded-[22px] + p-8(md:p-10)。 */
+  /* The table copied from the reference: three columns, row spacing space-y-6 (24px), a border-gray-100 under the
+     header, values text-2xl (24px)/500, percentages text-lg (18px), labels text-sm (14px),
+     inner layer bg-white/95 + rounded-[22px] + p-8 (md:p-10). */
   .cmp{position:relative;display:grid;
     grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);
     align-items:center;row-gap:24px;
@@ -147,11 +147,11 @@
   .out[data-out="3"]{grid-row:5}
   .sep{box-shadow:none}
 
-  /* 表头下的分隔线。挂在格子上会断成三段（两格是居中收缩的），用跨全宽的伪元素 */
+  /* The divider under the header. Hung on the cells it breaks into three pieces (two of them are centred and shrink), so a pseudo-element spanning the full width is used */
   .cmp::before{content:"";grid-column:1/-1;grid-row:1;align-self:end;
     height:1px;background:oklch(94% .004 264)}
 
-  /* padding 简写会覆盖 .cmp-hd 的 padding-bottom——与分隔线的距离用 margin 给 */
+  /* The padding shorthand would override .cmp-hd's padding-bottom -- the distance to the divider is given with margin instead */
   .cmp-us{justify-self:start;align-self:end;margin-bottom:14px;
     padding:.25rem .75rem;border-radius:999px;
     text-transform:uppercase;
@@ -167,8 +167,8 @@
     padding-inline-start:.75rem;
     font-size:.875rem;font-weight:500;color:oklch(52% .018 264)}
 
-  /* 数值 24px/500，% 18px。对标稿的 % 用 text-blue-400（白底约 2.5:1，不达 AA），
-     这里换成品牌蓝浅一档 */
+  /* Values 24px/500, percentages 18px. The reference uses text-blue-400 for the percentage (about 2.5:1 on white, which fails AA),
+     so this uses one step lighter than the brand blue instead */
   .nv{font-size:1.5rem;font-weight:500;line-height:1.15;letter-spacing:-.02em;
     font-variant-numeric:tabular-nums}
   .nu{font-style:normal;font-size:1.125rem;font-weight:400;margin-left:.06em;
@@ -177,15 +177,15 @@
   .cmp-t .nu{color:oklch(52% .018 264)}
 
 
-  /* 风险档位：三格条 + 颜色。填几格是第一重信号，颜色是第二重——
-     只靠颜色区分对色觉障碍不成立。档位在 .ticket 上，值随对手方变。 */
+  /* Risk tier: three bars plus colour. How many bars are filled is the first signal and colour is the second --
+     relying on colour alone does not work for colour-vision deficiency. The tier lives on .ticket and the value changes with the counterparty. */
   .ticket{--risk:var(--blue)}
   .ticket.risk-mid{--risk:oklch(53% .15 62)}
   .ticket.risk-hi{--risk:oklch(50% .21 27)}
   .vline{display:inline-flex;align-items:baseline;gap:.34rem}
   .cmp-v[data-out="0"]{color:var(--risk)}
   .cmp-v[data-out="0"] .nu{color:var(--risk);opacity:.72}
-  /* 风险仪表：弧长 + 指针角度 + 颜色三重信号。半圆弧长 = π×8 ≈ 25.1 */
+  /* Risk gauge: arc length + needle angle + colour, three signals. The semicircle's arc length = pi x 8, roughly 25.1 */
   .rgauge{align-self:center;width:28px;height:19px;overflow:visible;color:var(--risk)}
   .rgauge path{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
   .rg-track{opacity:.2}
@@ -201,7 +201,7 @@
   .risk-mid .rg-needle{transform:rotate(0deg)}
   .risk-hi  .rg-needle{transform:rotate(62deg)}
 
-  /* 末行：text-sm font-medium bg-blue-50/50 py-2 px-3 rounded-lg leading-snug */
+  /* Last row: text-sm font-medium bg-blue-50/50 py-2 px-3 rounded-lg leading-snug */
   .vword{margin-inline-start:-.75rem;padding:.5rem .75rem;border-radius:8px;background:oklch(94% .035 258 / .75);
     font-size:.875rem;font-weight:500;line-height:1.375;text-align:center}
 
@@ -222,12 +222,12 @@
   }
 
   .ecosystem{position:absolute;z-index:3;left:50%;bottom:1.2rem;width:min(calc(100% - 2 * var(--pad)),var(--maxw));transform:translateX(-50%);display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2.4rem;border-top:1px solid var(--line);padding-top:1rem}
-  /* 标题折两行收窄，别把 logo 带挤到右边去 */
+  /* Narrow the heading to two lines without pushing the logo strip off to the right */
   .ecosystem-label{max-width:7.5rem;font-size:.64rem;line-height:1.45;text-transform:uppercase;letter-spacing:.13em;color:var(--muted-white)}
   .logo-window{overflow:hidden}
   .logo-track{display:flex;align-items:center;width:max-content;gap:clamp(2.5rem,4.5vw,5rem);animation:marquee 35s linear infinite}
-  /* 这批校徽本身就是白色线稿。原来那组滤镜里的 brightness(0) invert(1)
-     会把所有明暗一律压成纯白，盾牌里的刻线全糊死成一坨实心块——只留去色 */
+  /* These university crests are white line art to begin with. The brightness(0) invert(1) in the original filter set
+     flattened every value to pure white, so the engraved lines inside a shield smeared into one solid block -- only the desaturation is kept */
   .logo-track img{display:block;max-width:6.2rem;max-height:1.75rem;object-fit:contain;filter:grayscale(1);opacity:.72}
   @keyframes marquee{to{transform:translateX(-50%)}}
 
@@ -244,8 +244,8 @@
      the stack scrolls past at the page's own pace. No mode swapping,
      no pin height to tune: the browser does all of it. */
   .protocol-section{background:#fff;padding-block:var(--gap-section)}
-  /* 卡片保留，但不用 SaaS 那套：小圆角、无阴影、无渐变，靠一条发丝线立边界 */
-  /* 这一段比别处宽：三张宽卡需要横向空间。左栏 314px 时标题排四行，加宽到约 420 才三行 */
+  /* Cards are kept, but not the SaaS kind: small radii, no shadow, no gradient, with a hairline establishing the edge */
+  /* This section is wider than the others: three wide cards need horizontal room. At a 314px left column the heading runs to four lines, and widening to about 420 brings it to three */
   .protocol-section .wrap{max-width:1320px}
   .protocol-layout{display:grid;grid-template-columns:minmax(0,.74fr) minmax(0,1.26fr);
     gap:clamp(2.25rem,4vw,4rem);align-items:start}
@@ -255,7 +255,7 @@
   .protocol-intro .section-lede{max-width:30ch;margin-top:1.4rem;
     font-size:clamp(1rem,.25vw + .95rem,1.125rem);line-height:1.65;color:oklch(52% .012 267)}
 
-  /* 卡片：rounded-[2rem] + shadow-[0_8px_40px_rgb(0,0,0,.06)] + hairline，卡间用 gap 不用分隔线 */
+  /* Card: rounded-[2rem] + shadow-[0_8px_40px_rgb(0,0,0,.06)] + hairline, with gap between cards rather than dividers */
   .protocol-list{min-width:0;display:flex;flex-direction:column;gap:clamp(1.5rem,2.5vw,2.25rem)}
   .protocol-item{position:relative;padding:clamp(1.75rem,2.8vw,3rem);
     border-radius:4px;background:#fff;border:1px solid var(--hairline)}
@@ -266,32 +266,32 @@
   .protocol-item > p{max-width:52ch;margin:1rem 0 0;font-size:1rem;
     line-height:1.65;color:oklch(52% .012 267)}
 
-  /* 要点：两列网格，无标记——对号去掉（Ellie 2026-08-20） */
+  /* Bullets: a two-column grid with no markers -- the ticks were dropped (Ellie 2026-08-20) */
   .protocol-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
     align-items:start;gap:1rem 1.5rem;margin:2rem 0 0;padding:0;list-style:none}
   .protocol-checks li{font-size:.875rem;line-height:1.4;color:oklch(42% .015 267)}
 
-  /* 插图不再自带边框——卡已经有一条了，框里套框最难看。靠留白与卡分开 */
+  /* The illustration no longer carries its own border -- the card already has one, and a frame inside a frame is the ugliest option. Whitespace separates it from the card */
   .protocol-figure{margin:clamp(1.75rem,3vw,2.5rem) 0 0;overflow:hidden;background:none}
   .protocol-figure .pfig{display:block;width:100%;height:auto}
-  /* 图里的动画默认暂停，等这一条滚进视口（.reveal 打上 .in）才播，且只播一次 */
+  /* Animations in the figures are paused by default and only play once this section scrolls into view (.reveal gains .in), and only once */
   .protocol-item.in .pfig *{animation-play-state:running}
   @media(max-width:560px){.protocol-checks{grid-template-columns:1fr}}
   @media(prefers-reduced-motion:reduce){
     .protocol-item .pfig *{animation:none}
   }
 
-  /* ── stack：Three.js 轴测场景 + HUD。原设计是全屏独立页，这里改成页面里的一段：
-     canvas 尺寸跟着 section 而不是视口，body 的 overflow 不动。 ── */
-  /* 下面紧接 #engine 的圆角深色卡，两块深色之间原来只夹着卡片自己的 18px 白边，
-     读起来像渲染出错。这里留出真正的白间距，让那道白是设计而不是缝。 */
+  /* -- stack: a Three.js isometric scene + HUD. The original design was a full-screen standalone page; here it becomes
+     one section of the page: the canvas sizes to the section rather than the viewport, and body's overflow is untouched. -- */
+  /* The rounded dark card of #engine follows directly below, and the two dark blocks used to be separated only by the
+     card's own 18px of white, which read as a rendering fault. This leaves real white space, so that white is design rather than a seam. */
 
 
 
-  /* ── #arch 方案 A：精简主图 + 交互展开（2026-08-24，按 Ellie 的四层架构图重做）──
-     主图每层只留：编号+代号+职能 · 大图标 · 一句价值 · 关键词。
-     子项明细收进悬停/聚焦展开（触屏常开）。右侧两张价值卡。
-     底部流程条 = 可点导航：点哪层，滚到哪层并高亮。 */
+  /* -- #arch scheme A: a simplified main diagram plus interactive expansion (2026-08-24, redone from Ellie's four-layer architecture diagram) --
+     Each layer in the main diagram keeps only: number + code + function - a large icon - one line of value - keywords.
+     Sub-item detail is tucked into hover/focus expansion (always open on touch). Two value cards on the right.
+     The process strip at the bottom is clickable navigation: click a layer to scroll to it and highlight it. */
   .ap-section{background:var(--paper);padding-block:var(--gap-section);
     --ap-line:oklch(91% .006 267);--ap-muted:oklch(46% .015 267);
     --ap-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace}
@@ -306,7 +306,7 @@
 
   .ap-grid{display:block}
 
-  /* ── 层 ── */
+  /* -- Layers -- */
   .ap-layer{position:relative;display:grid;
     grid-template-columns:clamp(150px,15vw,190px) minmax(0,1fr);
     gap:clamp(1rem,2.5vw,2rem);margin-bottom:3.25rem}
@@ -320,7 +320,7 @@
     letter-spacing:-.02em;overflow-wrap:anywhere}
   .ap-role{font-size:.875rem;color:var(--ap-muted)}
 
-  /* Apple 面板语言：无边框、无阴影，层级靠面板底色与留白；悬停只把材质微调深一档 */
+  /* Apple panel language: no borders, no shadows, with hierarchy from panel background and whitespace; hover only nudges the material one step darker */
   .ap-card{position:relative;display:grid;
     grid-template-columns:minmax(0,1fr) clamp(180px,17vw,235px);
     column-gap:clamp(1.25rem,2vw,2rem);align-items:center;
@@ -328,14 +328,15 @@
     border-radius:18px;background:#f5f5f7;
     transition:background .3s linear}
   .ap-top,.ap-more{grid-column:1}
-  /* 等距插画：程序生成（第九稿手摆坐标的教训），线稿 + 品牌蓝点睛 */
+  /* Isometric illustration: procedurally generated (the lesson of the ninth draft's hand-placed coordinates), line art with brand blue as the accent */
   .ap-illo{grid-column:2;grid-row:1/span 2;margin:0;align-self:center}
   .ap-illo-svg{display:block;width:100%;height:auto;overflow:visible}
   .ap-layer:hover .ap-card,.ap-layer:focus-within .ap-card{background:#efeff2}
 
   .ap-top{display:block}
-  /* 必须显式成块：行内 span 忽略宽高，SVG 会掉到替换元素默认 150px。
-     裸 glyph，不套底板——容器越少越像产品页 */
+  /* It has to be made a block explicitly: an inline span ignores width and height, and the SVG would fall back to the
+     replaced element's default 150px.
+     A bare glyph with no backing plate -- the fewer containers, the more it reads as a product page */
   .ap-ic{display:inline-grid;place-items:center;flex:0 0 34px;width:34px;height:34px;
     color:var(--blue)}
   .ap-ic svg{width:30px;height:30px}
@@ -346,7 +347,7 @@
   .ap-meta{width:100%;margin:.8rem 0 0;font-size:.9rem;line-height:1.5;
     color:var(--ap-muted)}
 
-  /* 明细：0fr→1fr 展开；间距放在内层，折叠才能真正归零 */
+  /* Detail: expands 0fr -> 1fr; the spacing lives on the inner layer, so collapsing can really reach zero */
   .ap-more{display:grid;grid-template-rows:0fr;opacity:0;
     transition:grid-template-rows .34s var(--ease),opacity .22s linear}
   .ap-more>div{overflow:hidden}
@@ -358,22 +359,22 @@
   .ap-layer:hover .ap-more,.ap-layer:focus-within .ap-more{grid-template-rows:1fr;opacity:1}
   .ap-card:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 
-  /* ── 右侧价值卡 ── */
-  /* 两张大价值卡横排在四层之下（参考 LokaWorld 的大色块卡）*/
+  /* -- Value cards on the right -- */
+  /* Two large value cards laid side by side beneath the four layers (following LokaWorld's large colour blocks) */
   .ap-values{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;
     margin-top:3.25rem}
   .ap-vcard{padding:clamp(2rem,3vw,2.75rem);border-radius:18px;background:#f5f5f7;
     transition:background .35s var(--ease),transform .35s var(--ease)}
   .ap-vcard h3,.ap-vcard li,.ap-vcard .ap-ic{transition:color .35s linear,border-color .35s linear}
   .ap-vcard:hover{transform:translateY(-4px)}
-  /* 悬停变色：两张卡统一翻品牌蓝（"悬停=通电"）。灰卡不翻深色——
-     翻深会和旁边那张静态深卡撞色，同屏两张一样黑 */
+  /* Hover colour change: both cards flip to brand blue ("hover = powered on"). The grey card does not flip to dark --
+     that would clash with the static dark card beside it, putting two identical blacks on one screen */
   .ap-vcard:not(.is-key):hover{background:var(--blue)}
   .ap-vcard:not(.is-key):hover h3{color:#fff}
   .ap-vcard:not(.is-key):hover li{color:oklch(100% 0 0 / .82);border-color:oklch(100% 0 0 / .16)}
   .ap-vcard:not(.is-key):hover .ap-ic{color:#fff}
   .ap-vcard.is-key:hover{background:var(--blue)}
-  /* 视觉锚：近黑 ink 卡（饱和大蓝块是 dashboard 语言），蓝只留给 glyph */
+  /* Visual anchor: a near-black ink card (a saturated large blue block is dashboard language), with blue reserved for the glyph */
   .ap-vcard.is-key{background:oklch(21% .015 267);color:#fff}
   .ap-vcard.is-key h3{color:#fff}
   .ap-vcard.is-key li{color:oklch(100% 0 0 / .82);border-color:oklch(100% 0 0 / .16)}
@@ -386,16 +387,17 @@
   .ap-vcard li{padding:.6rem 0;border-top:1px solid var(--ap-line);
     font-size:.95rem;color:var(--ap-muted)}
 
-  /* 两个「由模型说话」的层用同一档色块标出来：共识管正常路径，裁决管异常路径。
-     入口 / 执行 / 记录保持中性——不然人人都是重点就等于没有重点 */
+  /* The two layers where "the model speaks" are marked with the same colour block: consensus governs the normal path,
+     adjudication the exceptional one.
+     Entry / execution / record stay neutral -- otherwise everything is the focus, which is the same as nothing being the focus */
   .ap-layer.is-model .ap-card{background:oklch(96.4% .014 265)}
   .ap-layer.is-model:hover .ap-card{background:oklch(94.8% .02 265)}
   .ap-layer.is-model .ap-name{color:var(--blue)}
 
-  /* 记录是地基：整叠压在它上面，用一条横贯的线托住 */
+  /* The record is the foundation: the whole stack rests on it, held up by a line running across */
   .ap-layer:last-of-type .ap-card{border-top:1px solid oklch(80% .01 267)}
 
-  /* 入场：借用全局 reveal，逐层错开 */
+  /* Entry: reuses the global reveal, with the layers staggered */
   .ap-layer.reveal{transition-delay:calc(var(--i,0)*.12s)}
 
   @media(max-width:760px){
@@ -434,8 +436,8 @@
   .sx-head p{max-width:640px;margin:0 auto;font-size:clamp(1rem,1.1vw,1.125rem);
     line-height:1.5;letter-spacing:.01em;color:rgba(255,255,255,.6)}
 
-  /* 四行，一行对一层：左右交错，行高相等作为兜底；
-     场景跑起来后 .pinned 会把每块按相机投影钉到它那一层的高度上。 */
+  /* Four rows, one per layer: alternating left and right, with equal row heights as a fallback;
+     once the scene is running, .pinned pins each block to the height of its layer as projected by the camera. */
   .sx-grid{flex:1;position:relative;display:grid;
     grid-template-columns:1fr clamp(240px,26vw,400px) 1fr;
     grid-template-rows:repeat(4,1fr);
@@ -446,8 +448,9 @@
   .sx-block[data-layer="stl"]{grid-row:3}
   .sx-block[data-layer="rcd"]{grid-row:4}
 
-  /* 钉住时不再是 grid：网格子项一旦有确定的 grid-row，绝对定位的包含块就变成那一格，
-     50% 会按格子宽算，右栏会被压成一条。改成 block 容器，包含块就是整个文案栏。 */
+  /* Pinned, it is no longer a grid: once a grid child has a definite grid-row, the containing block for absolute
+     positioning becomes that cell, so 50% resolves against the cell's width and the right column is squeezed to a
+     sliver. Making it a block container makes the containing block the whole copy column. */
   .sx-grid.pinned{display:block}
   .sx-grid.pinned .sx-block{position:absolute;top:var(--sy,50%);transform:translateY(-50%);
     width:calc(50% - clamp(120px,11vw,180px))}
@@ -476,7 +479,7 @@
     .stack-section,.sx-hud{min-height:0}
     .sx-hud{padding-block:clamp(3rem,8vw,5rem)}
   }
-  /* 场景是纯装饰：减少动效时不加载 Three.js，只留 HUD 与静态底 */
+  /* The scene is purely decorative: under reduced motion Three.js is not loaded at all, leaving only the HUD and the static background */
   @media(prefers-reduced-motion:reduce){
     .sx-canvas{display:none}
   }
@@ -791,11 +794,12 @@
       </div>
 
       <figure class="ticket" id="pricingInstrument" aria-label="Illustrative: one order compared across five dimensions. With Atara, the model computes the collateral, the risk of default and the fee for this counterparty; the payment condition is written into the protocol. Without it: full collateral, no risk priced, a higher flat fee, and a condition left to judgement.">
-        <!-- 一张表就是整张卡：三列扁平网格。我们那列由一块跨全行的面板托底，
-             上探出表头、下探出末行。中列随对手方逐笔变化，右列永远不动——
-             那个差别就是论点。
-             费率：两侧都是示意值，页脚已标 illustrative；真实费率等访谈
-             （LANDING-SPEC 未决 #6）。 -->
+        <!-- One table is the whole card: a flat three-column grid. Our column is backed by a panel spanning the full
+             height, reaching above into the header and below into the last row. The middle column changes with each
+             counterparty, the right column never moves --
+             that difference is the argument.
+             Fees: both sides are illustrative values and the footer says so; real fees await the interviews
+             (LANDING-SPEC open item #6). -->
         <div class="cmp">
           <span class="cmp-panel" aria-hidden="true"></span>
 
@@ -921,8 +925,8 @@
             
               <!-- the model reading it: hairline network, weight where it matters -->
               <text class="pfp-cap" x="408" y="118" text-anchor="middle">AI MODEL</text>
-              <!-- 参考对标稿：一个脉冲节点，而不是三层细线。同样的意思，
-                   在 657px 宽下读得出来；细线网络在这个尺寸只剩一团灰。 -->
+              <!-- Following the reference: one pulsing node rather than three layers of fine lines. The same meaning,
+                   and legible at 657px wide; a fine-line network at this size is just a grey smudge. -->
               <g class="pfp-node">
                 <circle class="pfp-pulse" cx="408" cy="220" r="20" fill="#1505eb" opacity=".16"/>
                 <circle cx="408" cy="220" r="28" fill="none" stroke="#cfd4de" stroke-width="1" stroke-dasharray="3 5"/>
@@ -976,7 +980,7 @@
                 @media(prefers-reduced-motion:reduce){.pfj-t1,.pfj-t2,.pfj-t3{animation:none;opacity:1}}
               </style>
             
-              <!-- 左栏：框按内容定尺寸，与右侧三张卡的整体中线对齐（y=254），不再拉高去凑上下边 -->
+              <!-- Left column: the frame sizes to its content and aligns to the overall centre line of the three cards on the right (y=254), rather than being stretched to meet the top and bottom edges -->
               <text class="pfj-cap" x="60" y="112">WHAT THE CONTRACT SAYS</text>
               <rect class="pfj-box" x="60" y="178" width="256" height="152" rx="12"/>
               <text class="pfj-clause" x="86" y="222">&#8220;pay on</text>
@@ -1100,9 +1104,10 @@
     </div>
   </section>
 
-  <!-- 方案 A：精简主图 + 交互展开（2026-08-24，按 Ellie 的四层架构图）。
-       口径处理：「跨链互通」写成 Reputation portability——
-       资金不过桥是主卖点，不能被自己的价值卡打架；图里的中文全部英文化（整页无汉字）。 -->
+  <!-- Scheme A: a simplified main diagram plus interactive expansion (2026-08-24, from Ellie's four-layer architecture diagram).
+       Wording decision: "cross-chain interoperability" is written as Reputation portability --
+       funds not crossing a bridge is the main selling point and must not be contradicted by our own value card; all
+       Chinese in the diagram has been put into English (no Chinese characters anywhere on the page). -->
   <section class="ap-section" id="arch" aria-labelledby="arch-h">
     <div class="wrap">
       <header class="ap-head">
@@ -1176,9 +1181,10 @@
             </div>
           </div>
 
-          <!-- 裁决：条件有争议时的终审，也是唯一能把已执行的结算回滚掉的一层。
-               位置在执行之下、记录之上——记录是地基（只被写入不被改写），
-               「能回滚」这件事用向上的箭头表达，不用位置表达 -->
+          <!-- Adjudication: the final say when a condition is disputed, and the only layer that can roll back a
+               settlement that has already executed.
+               Positioned below execution and above record -- the record is the foundation (written to, never rewritten),
+               and "can roll back" is expressed with an upward arrow rather than with position -->
           <div class="ap-layer reveal is-model" id="ap-l4" style="--i:3">
             <div class="ap-tag">
               <span class="ap-tic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M3 7h1a17 17 0 0 0 8-2a17 17 0 0 0 8 2h1"/><path d="M5 8l3 8a5 5 0 0 1-6 0Z"/><path d="M5 8V7"/><path d="M19 8l3 8a5 5 0 0 1-6 0Z"/><path d="M19 8V7"/><path d="M7 21h10"/></svg></span>
@@ -1256,9 +1262,9 @@
         <p>Four layers route, judge, execute and record one trade.<br>Each answers to evidence, not to us.</p>
       </header>
 
-      <!-- 四块按层序排，左右交错；每块用 data-layer 与场景里对应那一层对齐 -->
-      <!-- 四块对应实际架构的四个组件；data-layer 是场景里那一层的几何体，
-           顺序 chn→adj→stl→rcd 就是自上而下的 入口 → 判断 → 执行 → 沉淀 -->
+      <!-- Four blocks in layer order, alternating left and right; each uses data-layer to align with its layer in the scene -->
+      <!-- The four blocks correspond to the four components of the real architecture; data-layer is that layer's
+           geometry in the scene, and the order chn -> adj -> stl -> rcd is entry -> judgement -> execution -> settlement, top to bottom -->
       <div class="sx-grid" id="sxRows">
         <div class="sx-block sx-left" data-layer="chn">
           <h2 class="sx-title">Routing</h2>
@@ -1472,14 +1478,14 @@
   'use strict';
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const instrument = document.getElementById('pricingInstrument');
-  /* 每一行现在是三个平级的格子，按 data-out 分组一起淡入 */
+  /* Each row is now three sibling cells, fading in together grouped by data-out */
   const rows = [0,1,2,3].map(i => [...document.querySelectorAll('.out[data-out="'+i+'"]')]);
   const setIn = (i,on) => rows[i].forEach(n => n.classList.toggle('is-in',on));
   const el = id => document.getElementById(id);
   const collVal = el('collVal'), riskValue = el('riskValue'), feeRate = el('feeRate');
 
-  /* 对方一侧固定 0.30%（Ellie 2026-08-20 给的量级）；我们随风险浮动，始终低于它。
-     两侧都是示意值，页脚已标 illustrative。真实费率等访谈（LANDING-SPEC 未决 #6）。 */
+  /* Their side is fixed at 0.30% (the order of magnitude Ellie gave on 2026-08-20); ours floats with risk and is always below it.
+     Both sides are illustrative values and the footer says so. Real fees await the interviews (LANDING-SPEC open item #6). */
   const BOOK = [
     { risk:1.8, collateral:.08, fee:.0014 },
     { risk:.6,  collateral:.05, fee:.0010 },
@@ -1490,7 +1496,7 @@
   let alive = true;
   let timers = [];
 
-  const pct1 = v => v.toFixed(1);      /* % 号是独立元素，不进滚动的文本 */
+  const pct1 = v => v.toFixed(1);      /* the % sign is its own element and does not join the rolling text */
   const pct2 = v => v.toFixed(2);
   const later = (ms,fn) => timers.push(setTimeout(fn,ms));
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
@@ -1511,13 +1517,13 @@
       else node.textContent = format(to);
     };
     requestAnimationFrame(frame);
-    /* rAF 不在隐藏标签页里跑，滚动会停在半路，屏幕上就留下一个错的价格。
-       到点无条件写终值——定时器照跑，rAF 不一定。 */
+    /* rAF does not run in a hidden tab, so the roll would stop halfway and leave a wrong price on screen.
+       Write the final value unconditionally when the time is up -- the timer keeps running, rAF may not. */
     later(duration + 60,() => { if(my === run) node.textContent = format(to); });
   }
 
-  /* 只有第一轮清空并逐行入场。之后换对手方不再清卡——整张卡每 4.6 秒闪一次
-     既吵，也把「他们那列从不变」这个论点一起抹掉了。后续只有三个数字在动。 */
+  /* Only the first round clears and brings the rows in one by one. After that, switching counterparty no longer clears
+     the card -- flashing the whole card every 4.6 seconds is both noisy and erases the very argument that their column never changes. Afterwards only three numbers move. */
   let first = true;
 
   /* the reduced-motion path: everything answered at once */
@@ -1540,11 +1546,11 @@
       [collVal,riskValue,feeRate].forEach(n => n.textContent = DOTS);
     }
     instrument.classList.add('is-computing');
-    /* 风险档位：<2% 低 / 2–3.5% 中 / ≥3.5% 高。高档转红，读作信用差、风险大。 */
+    /* Risk tiers: <2% low / 2-3.5% medium / >=3.5% high. The high tier turns red, reading as poor credit and high risk. */
     instrument.classList.remove('risk-lo','risk-mid','risk-hi');
     instrument.classList.add(c.risk >= 3.5 ? 'risk-hi' : c.risk >= 2 ? 'risk-mid' : 'risk-lo');
 
-    /* 风险在第一行：它是模型算出来的那个数，后面两行都由它推出来 */
+    /* Risk goes on the first row: it is the number the model computed, and the two rows below are derived from it */
     later(t0,() => { setIn(0,true); roll(riskValue,c.risk,900,pct1); });
     later(t0 + step,() => { setIn(1,true); roll(feeRate,c.fee*100,800,pct2); });
     later(t0 + step*2,() => { setIn(2,true); roll(collVal,c.collateral*100,900,pct1); });
@@ -1561,21 +1567,21 @@
 
   if(reduced){alive=false;showStill(BOOK[0]);}
   else cycle();
-  /* ── #stack：Three.js 轴测场景（参考对标稿的中间效果）。
-     四组对应四层：裁决 = 二十面体核心 + 三块单据 + 节点 + 粒子场；
-     结算 = 双层立方框 + 四个状态八面体 + 转换路径 + 中心核；
-     多链 = 四道同心环；记录 = 圆柱账本 + 内核；中轴一根脊柱贯穿。
-     只在滚近时才加载 CDN，减少动效时完全不加载。 ── */
+  /* -- #stack: a Three.js isometric scene (following the mid-section effect in the reference).
+     Four groups for the four layers: adjudication = an icosahedral core + three document plates + nodes + a particle field;
+     settlement = a double-walled cube frame + four state octahedra + transition paths + a central core;
+     multi-chain = four concentric rings; record = a cylindrical ledger + an inner core; one spine runs through the central axis.
+     The CDN is only loaded on scrolling near it, and not loaded at all under reduced motion. -- */
 
 
 
   (() => {
     const host = document.getElementById('sxCanvas');
     const sect = document.getElementById('stack');
-    if(!host || !sect || sect.hidden) return;   // 模块隐藏时不拉 three
+    if(!host || !sect || sect.hidden) return;   // do not fetch three while the module is hidden
 
 
-    // 单列布局下四块文案会压在光柱上，读不了；窄屏索性不拉 three（同时省掉这段下载）
+    // In a single-column layout the four copy blocks sit on top of the light column and cannot be read; on narrow screens three is simply not fetched (which also saves the download)
     if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
     if(innerWidth <= 900) return;
 
@@ -1607,7 +1613,7 @@
       const wire=new T.LineBasicMaterial({color:0x5ba4e5,transparent:true,opacity:.4,blending:T.AdditiveBlending});
       const stack=new T.Group(); stack.position.y=-.5;
 
-      // 裁决
+      // Adjudication
       const adj=new T.Group(); adj.scale.setScalar(.55);
       const core=new T.LineSegments(new T.WireframeGeometry(new T.IcosahedronGeometry(.5,1)),
         new T.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.9}));
@@ -1628,9 +1634,9 @@
       const field=new T.Points(fG,new T.PointsMaterial({color:0xffffff,size:.025,transparent:true,opacity:.4}));
       adj.add(field); stack.add(adj);
 
-      // 结算
-      // 结算层：只有四枚自转的白块（四个状态）。原本外面套了一个线框立方体、
-      // 内部还有状态间的对角线和一枚四面体核，全部删了——线太多，读起来是个笼子。
+      // Settlement
+      // Settlement layer: only four self-rotating white blocks (the four states). It used to be wrapped in a wireframe
+      // cube with diagonals between the states and a tetrahedral core inside, all of which were removed -- too many lines, and it read as a cage.
       const stl=new T.Group(); stl.scale.setScalar(.55);
       const sG=new T.OctahedronGeometry(.2,0);
       const sM=new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.7});
@@ -1638,7 +1644,7 @@
         const m=new T.Mesh(sG,sM); m.position.set(...pp); m.userData={rot:.015+i*.003}; stl.add(m); });
       stack.add(stl);
 
-      // 多链
+      // Multi-chain
       const chn=new T.Group(); chn.scale.setScalar(.55);
       for(let i=0;i<4;i++){ const m=new T.LineSegments(
           new T.WireframeGeometry(new T.TorusGeometry(1.5+i*.2,.02,16,64)), wire);
@@ -1646,17 +1652,17 @@
         m.userData={rot:(Math.random()-.5)*.02}; chn.add(m); }
       stack.add(chn);
 
-      // 记录
-      // 32×8 的网格加上叠加混合，泛光下会糊成一坨亮块，压到 28×3，
-      // 三圈横向分隔线正好读成账目行；中间那根实心圆柱去掉，它只是在中轴上又加一层光。
+      // Record
+      // A 32x8 grid with additive blending smears into one bright blob under bloom, so it was reduced to 28x3, where
+      // the three horizontal divider rings read exactly as ledger rows; the solid cylinder in the middle was removed, as it only added another layer of light on the central axis.
       const rcd=new T.Group(); rcd.scale.setScalar(.55);
       rcd.add(new T.LineSegments(new T.WireframeGeometry(new T.CylinderGeometry(1.8,1.6,1,28,3)),
         new T.LineBasicMaterial({color:0x5ba4e5,transparent:true,opacity:.3,blending:T.AdditiveBlending})));
       stack.add(rcd);
 
-      // 中轴：原来是 8 段线框圆柱——渲出来就是一根白棒，两端硬切断。
-      // 换成一张不随整叠旋转的着色器面片：锐核 + 柔晕的径向衰减、两端平滑淡出、
-      // 经过四层处各有一道提亮。不跑脉冲，只有极慢的呼吸。
+      // Central axis: this used to be an 8-segment wireframe cylinder -- rendered, it was a white stick with both ends cut off flat.
+      // Replaced by a shader plane that does not rotate with the stack: a radial falloff of sharp core plus soft halo,
+      // fading smoothly at both ends, with a brightening where it passes each of the four layers. No pulsing, only a very slow breath.
       const spineMat=new T.ShaderMaterial({
         transparent:true, depthWrite:false, blending:T.AdditiveBlending,
         uniforms:{ uNodes:{value:new T.Vector4(.85,.62,.38,.15)}, uBreath:{value:0},
@@ -1669,8 +1675,8 @@
           float node(float y,float c){ float d=(y-c)/.026; return exp(-d*d); }
           void main(){
             float x=abs(vUv.x-.5)*2.;
-            float core=pow(max(0.,1.-x),22.);          // 锐利的核
-            float halo=pow(max(0.,1.-x),2.6)*.085;      // 柔和的外晕
+            float core=pow(max(0.,1.-x),22.);          // the sharp core
+            float halo=pow(max(0.,1.-x),2.6)*.085;      // the soft outer halo
             float ends=smoothstep(0.,.10,vUv.y)*smoothstep(0.,.10,1.-vUv.y);
             float n=node(vUv.y,uNodes.x)*uFocus.x+node(vUv.y,uNodes.y)*uFocus.y
                    +node(vUv.y,uNodes.z)*uFocus.z+node(vUv.y,uNodes.w)*uFocus.w;
@@ -1679,7 +1685,7 @@
             gl_FragColor=vec4(vec3(1.),a);
           }`});
       const spine=new T.Mesh(new T.PlaneGeometry(.46,9.4,1,1), spineMat);
-      scene.add(spine);          // 不入 stack：导管固定，物件绕着它转
+      scene.add(spine);          // not added to stack: the conduit stays fixed while the objects turn around it
       scene.add(stack);
 
       const composer=new T.EffectComposer(renderer);
@@ -1688,7 +1694,7 @@
       bloom.strength=1.2; bloom.radius=.5; bloom.threshold=.1;
       composer.addPass(bloom);
 
-      // 记下每个材质的基准不透明度：焦点与入场都是在这个基准上做乘法
+      // Record each material's baseline opacity: focus and entry both multiply against this baseline
       const ORDER0=['chn','adj','stl','rcd'];
       const groups={adj:adj, stl:stl, chn:chn, rcd:rcd};
       ORDER0.forEach(k=>groups[k].traverse(o=>{
@@ -1696,8 +1702,9 @@
           o.material.userData.base=o.material.opacity;
       }));
 
-      // 四块文案定版面，三维去对齐它——反过来（把文字往画面上凑）会被容器高度卡住。
-      // 四行等分文案栏的高度；每次都据此反算层间距和整叠的位置。
+      // The four copy blocks set the layout and the 3D aligns to them -- the other way round (fitting the text to the
+      // render) gets stuck on the container height.
+      // The four rows divide the copy column's height evenly, and the layer spacing and the stack's position are solved back from that each time.
       const rows=document.getElementById('sxRows');
       const ORDER=['chn','adj','stl','rcd'];
       const layers={adj:adj, stl:stl, chn:chn, rcd:rcd};
@@ -1712,32 +1719,32 @@
         const pad=Math.min(90, H*.12);
         const span=Math.max(120, H-2*pad);
 
-        // 文案：四行等分
+        // Copy: four rows, evenly divided
         const blocks=ORDER.map(k=>rows.querySelector('.sx-block[data-layer="'+k+'"]'));
         blocks.forEach((el,i)=>{ if(el) el.style.setProperty('--sy',(pad+i*span/3).toFixed(1)+'px'); });
         [0,1,2,3].forEach(i=>{ rowsY[i]=gridTop+pad+i*span/3; });
         rows.classList.add('pinned');
 
-        // 三维：反解出层间距 S 与整叠中心 baseY，使四层正好落在那四行上
+        // 3D: solve back for the layer spacing S and the stack centre baseY so the four layers land exactly on those four rows
         const visH=2*Math.tan(FOV/2)*camera.position.z;
         const S=span*visH/(3*ch);
         baseY=camera.position.y+visH*(.5-(gridTop+H/2)/ch);
         ORDER.forEach((k,i)=>{ layers[k].position.y=(1.5-i)*S; });
 
-        // 导管：长度盖住四层再各留一段，四个提亮点按层的实际位置换算成 UV
+        // Conduit: long enough to cover the four layers with a margin at each end, with the four brightening points converted from the layers' actual positions into UV
         const half=1.5*S+1.05;
         spine.scale.set(1, 2*half/9.4, 1);
         spine.position.set(0, baseY, 0);
         const nv=spineMat.uniforms.uNodes.value;
         [0,1,2,3].forEach(i=>{ nv.setComponent(i, ((1.5-i)*S+half)/(2*half)); });
-        stack.position.y=baseY;      // 整叠不再上下浮动，位置一次定死
+        stack.position.y=baseY;      // the stack no longer bobs vertically; its position is fixed once
       };
 
-      // ── 指针：只取偏航与焦点，不动相机 ──
-      // pin() 的投影公式建立在「相机不动、层在 z=0」上；动相机或让整叠俯仰
-      // 都会让四层与文案错位。所以视差只走 rotation.y（不改 y），焦点只改亮度与体量。
-      let pxN=0, pyN=-1;               // 归一化指针位置，pyN<0 表示指针不在这一屏
-      const rowsY=[0,0,0,0];           // 四层在 section 内的像素高度，pin() 里更新
+      // -- Pointer: yaw and focus only, the camera does not move --
+      // pin()'s projection formula assumes the camera is still and the layers are at z=0; moving the camera or pitching
+      // the stack would put the four layers out of line with the copy. So parallax only drives rotation.y (y is unchanged), and focus only changes brightness and volume.
+      let pxN=0, pyN=-1;               // normalised pointer position; pyN<0 means the pointer is not on this screen
+      const rowsY=[0,0,0,0];           // the four layers' pixel heights within the section, updated in pin()
       sect.addEventListener('pointermove', e=>{
         const r=sect.getBoundingClientRect();
         pxN=((e.clientX-r.left)/r.width-.5)*2;
@@ -1754,15 +1761,15 @@
         raf=0; if(!live) return;
         t+=.005;
 
-        // 入场：一次性，四层错开落位（ease-out cubic）
+        // Entry: one-off, with the four layers landing staggered (ease-out cubic)
         if(enter.on && enter.v<1){
           enter.v=Math.min(1,(performance.now()-enter.t0)/1500);
         }
         const ez=x=>1-Math.pow(1-Math.max(0,Math.min(1,x)),3);
         spineMat.uniforms.uEnter.value=ez(enter.v*1.15);
 
-        // 焦点：指针落在哪一行，那一层保持满亮，其余退到 48%。
-        // 中性态（指针不在这一屏）四层一律满亮——没有鼠标时这一屏必须是对的。
+        // Focus: whichever row the pointer is on keeps that layer at full brightness and drops the rest to 48%.
+        // In the neutral state (pointer not on this screen) all four stay at full brightness -- with no mouse, this screen still has to be right.
         if(pyN<0){ focT.fill(1); }
         else {
           let best=0, bd=1e9;
@@ -1770,24 +1777,24 @@
           for(let i=0;i<4;i++) focT[i]=(i===best)?1:.48;
         }
 
-        // 偏航：阻尼弹簧，不是 lerp——lerp 是橡皮筋感，弹簧才有重量
+        // Yaw: a damped spring rather than a lerp -- a lerp feels like a rubber band, and only a spring has weight
         yawV=(yawV+((pxN*.09)-yaw)*.055)*.82; yaw+=yawV;
-        // 自主漂移：三个不可约周期叠加，肉眼抓不到循环
+        // Autonomous drift: three incommensurable periods superimposed, so the eye cannot catch the loop
         stack.rotation.y=yaw+Math.sin(t*.37)*.045+Math.sin(t*.113)*.028;
 
         const fv=spineMat.uniforms.uFocus.value;
         ORDER0.forEach((k,i)=>{
           foc[i]+=(focT[i]-foc[i])*.07;
           const f=foc[i], g=groups[k];
-          const e=ez((enter.v*1.15)-i*.11);                 // 错开 110ms 落位
+          const e=ez((enter.v*1.15)-i*.11);                 // land staggered by 110ms
           g.traverse(o=>{ if(o.material && o.material.userData.base!==undefined)
             o.material.opacity=o.material.userData.base*f*e; });
           g.scale.setScalar(.55*(.955+.045*f)*(.94+.06*e));
-          g.position.z=(1-e)*-1.6;                          // 从远处落到位
-          fv.setComponent(i, f);                            // 导管上那一处也跟着退
+          g.position.z=(1-e)*-1.6;                          // arrives into place from a distance
+          fv.setComponent(i, f);                            // that point on the conduit dims along with it
         });
 
-        // 各层自转：恒速换成漂移，整体放慢
+        // Per-layer rotation: constant speed replaced by drift, and slowed down overall
         adj.rotation.y+=.0042*(.7+.3*Math.sin(t*.29));
         core.rotation.x+=.0062; core.rotation.y+=.0091*(.75+.25*Math.sin(t*.41));
         adj.children.forEach(c=>{
@@ -1809,13 +1816,13 @@
       };
       const go=()=>{ if(!raf&&live) raf=requestAnimationFrame(tick); };
       const stop=()=>{ if(raf){ cancelAnimationFrame(raf); raf=0; } };
-      // 离开视口就停，别在后台烧 GPU
+      // Stop on leaving the viewport; do not burn GPU in the background
       new IntersectionObserver(e=>{ live=e[0].isIntersecting;
         if(live && !enter.on){ enter.on=true; enter.t0=performance.now(); }
         live?go():stop(); },{threshold:.01}).observe(sect);
       document.addEventListener('visibilitychange',()=>{ document.hidden?stop():go(); });
-      // 钉住会让文案栏塌掉、section 变矮，渲染尺寸必须跟着走，
-      // 否则 canvas 还按旧高度画、被 CSS 压扁，四层就对不上文案了。
+      // Pinning collapses the copy column and shortens the section, so the render size has to follow,
+      // or the canvas still draws at the old height, gets squashed by the CSS, and the four layers no longer line up with the copy.
       const resize=()=>{ const n=size(); if(!n.w||!n.h) return;
         camera.aspect=n.w/n.h; camera.updateProjectionMatrix();
         renderer.setSize(n.w,n.h); composer.setSize(n.w,n.h); pin(); };
@@ -1839,8 +1846,8 @@
     else if(instrument.getBoundingClientRect().bottom>0){alive=true;cycle();}
   });
 
-  /* Advaita 的研究机构 collaborator。原来那批是科研生态项目（BIO、ResearchHub、
-     Open Targets 一类），摆在一个结算产品页脚上对不上号，数量也压过了它该有的分量 */
+  /* Advaita's research-institution collaborators. The previous set were research-ecosystem projects (BIO, ResearchHub,
+     Open Targets and the like), which did not belong in the footer of a settlement product and outweighed the prominence they deserved */
   const logos=['mit','harvard','princeton','columbia','berkeley','yale','nus','ethz','stanford'];
   const logoTrack=document.getElementById('logoTrack');
   logoTrack.innerHTML=logos.concat(logos).map(name=>`<img src="assets/logos/adv-${name}.png" alt="" loading="lazy" decoding="async">`).join('');
