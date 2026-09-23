@@ -601,7 +601,7 @@ export default function MakerOffer({
           const prep = await ep.prepareOffer(body, identity)
           const hash = await tx.lockListing({
             escrow: prep.escrow, token: prep.token,
-            offerKey: prep.offer_key, amountWei: prep.amount_wei,
+            offerKey: prep.offer_key, amountWei: prep.amount_wei, asset: body.asset,
           })
           extra = { offer_id: prep.offer_id, lock_tx: hash }
           /* Record it at the very moment the coins enter the contract, before creating the listing. The window

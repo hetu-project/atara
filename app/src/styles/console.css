@@ -294,6 +294,7 @@ main.lout{--lw:68px}
 /* On narrow screens let the middle column survive first -- the conversation matters more than watching the machine work */
 @media (max-width:1440px){main{--rw:minmax(0,1.08fr)}}
 @media (max-width:1240px){main{--rw:360px}}
+
 /* The panel keeps its own width and slides out to the right when the column width goes to zero, clipped by main --
    cleaner than compressing the content.
    visibility is the fallback: column-width animation is unsupported in some browsers, but once collapsed it must genuinely be invisible and unclickable */
@@ -719,7 +720,7 @@ main.lout .nav .c.dot{position:absolute;top:7px;right:13px;
 .mks.on{background:var(--paper);color:var(--ink);box-shadow:var(--sh-btn)}
 .mkempty{grid-column:1/-1;padding:40px 16px;text-align:center;font-size:13px;color:var(--faint)}
 /* Your own listings live on the account page: the shelf keeps only the "Your listing" marker and delist, while management is in Profile */
-.mylist{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-content:start}
+.mylist{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:12px;align-content:start}
 .lsempty{display:flex;flex-direction:column;align-items:center;gap:14px;padding:34px 16px 30px;text-align:center}
 .lsempty p{font-size:13px;line-height:1.7;color:var(--faint);max-width:44ch;margin:0}
 .mkmt{grid-column:1/-1;display:flex;align-items:center;gap:6px;margin:0 0 2px;
@@ -759,7 +760,7 @@ main.lout .nav .c.dot{position:absolute;top:7px;right:13px;
 .fempty{padding:24px;text-align:center;font-size:13px;color:var(--faint)}
 .mkf{color:var(--mute);border:1px solid var(--hairline);background:var(--canvas)}
 .mkf.on{background:var(--ink);border-color:var(--ink);color:var(--on-inverse)}
-#pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-content:start}
+#pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:12px;align-content:start}
 /* Listing card: the unit price is the subject (price comparison comes first), the trust row sits above it, and limits and release time are both present */
 .od{display:flex;flex-direction:column;gap:10px;width:100%;text-align:left;
     padding:16px;background:var(--paper);border-radius:var(--r-card);box-shadow:var(--ring);
@@ -966,7 +967,11 @@ main.lout .nav .c.dot{position:absolute;top:7px;right:13px;
 .aalloc i{display:block;height:100%}
 .aalloc .aa-av{background:var(--blue)}
 .aalloc .aa-es{background:var(--warn)}
-.asplit .al{display:inline-flex;align-items:center;gap:6px}
+/* flex, not inline-flex: .acct .al / .pmod .al set display:block plus a bottom margin so the label sits on its
+   own line above the figure. Overriding that to inline-flex for the dot's sake also put the label back on the
+   figure's line, with nothing between them -- "In your wallet$1,987,901". Block-level flex aligns the dot just
+   the same and gives the line break back. */
+.asplit .al{display:flex;align-items:center;gap:6px}
 .asplit .al::before{content:'';width:6px;height:6px;border-radius:999px;background:var(--blue)}
 .asplit>div:last-child .al::before{background:var(--warn)}
 /* The "cannot be read" state. It holds the place at the same size as the amount, so the figure does not shift lines
@@ -1152,7 +1157,7 @@ main.lout .nav .c.dot{position:absolute;top:7px;right:13px;
 /* Both Payments tabs share one card: an enlarged version of the right column's rocard */
 .pbar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 .pbar .btn{margin-left:auto}
-.pgrid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
+.pgrid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));
   gap:var(--sp-3);align-content:start}
 .pcard{display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-width:0;
   padding:20px 22px 16px;text-align:left;border:0;cursor:pointer;
@@ -1780,6 +1785,22 @@ a.dspx{color:#d0574d}
 .tha em{font-style:normal;color:var(--faint);flex:1;min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tha .thv{flex:none;font-size:11px;font-weight:600;color:var(--faint-2)}
+/* Completes the .think block above for React's use. Everything from .think down to here came across with the
+   stylesheet from console.html and had never been rendered by a component -- these three rules are what was
+   missing to mount it inside the conversation's existing disclosures (Thinking, AssessCard) rather than as a
+   second card of its own. */
+.thpan{display:flex;flex-direction:column}
+/* The block already carries the carrier's own side padding, so the inherited 12px gutters would double up. */
+.thpan .thagx,.thpan .thagents{margin-inline:0}
+/* A pass with a note is not an objection -- warn colour, but the row keeps its normal weight. */
+.tha.note .tk{color:var(--warn)}
+.tha.note em{color:var(--mute)}
+/* The verdict reads as a short piece of analysis rather than a chat line: article leading, not bubble leading. */
+.thverdt{margin:2px 0 4px;font-size:13px;line-height:1.65;color:var(--mute)}
+.thverdt b{color:var(--ink);font-weight:600}
+.thverdt ul{margin:10px 0;padding-left:18px;display:flex;flex-direction:column;gap:7px}
+.thverdt li::marker{color:var(--faint)}
+.thverdt .bnote,.thverdt .bnote b{color:var(--warn)}
 .tha .thv.ok{color:var(--green)}
 .tha .thv.warn{color:var(--warn)}
 .tha.cons{margin-top:6px;padding-top:8px;border-top:1px dashed var(--hairline)}
@@ -1944,6 +1965,25 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .pwin:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-wash)}
 .pwin[hidden]{display:none}
 .pwin.shake{animation:pwshake .34s cubic-bezier(.36,.07,.19,.97)}
+/* -- Reveal toggle (PwField) --
+   The only reveal control these fields used to have was the browser's: Edge draws ::-ms-reveal inside the
+   field and nobody else draws anything, so the affordance existed on one browser, was absent on every phone,
+   came and went with the field's contents, and could not be themed -- a light glyph sitting on a dark field.
+   Hidden here, drawn by the component instead. ::-ms-clear goes with it: the same chrome, same problem. */
+.pwin::-ms-reveal,.pwin::-ms-clear{display:none}
+.pwfield{position:relative;display:flex}
+/* Room for the button, so a long password does not run underneath it. */
+.pwfield .pwin{padding-right:44px}
+.pwfield.shake{animation:pwshake .34s cubic-bezier(.36,.07,.19,.97)}
+/* 44px square against a 44px field: a full-size touch target without a mobile-only rule, and it lands
+   inside the field's own border rather than beside it. */
+.pweye{position:absolute;top:0;right:0;width:44px;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  border:0;background:none;padding:0;cursor:pointer;color:var(--faint-2);
+  border-radius:0 12px 12px 0;
+  transition:color var(--dur-fast) var(--ease)}
+.pweye:hover{color:var(--ink)}
+.pweye:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
 @keyframes pwshake{10%,90%{transform:translateX(-1.5px)}30%,70%{transform:translateX(3px)}50%{transform:translateX(-3px)}}
 .pwerr{font-size:11.5px;color:var(--warn);min-height:15px;padding:5px 2px 0;text-align:left}
 .pwerr:empty{min-height:0;padding:0}
@@ -2045,6 +2085,12 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .psrows{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:20px;
   padding-top:16px;border-top:1px solid var(--hairline)}
 .pslab{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+/* ConfirmSheet borrows the allowance card's key/value row markup, but the rules for it are
+   scoped under .ccb -- inside the sheet there is no such ancestor, so the pair rendered as one
+   run-on sentence ("You pay¥73.40 CNY"). Same two columns, sheet colours. */
+.psrows .ccbrow{display:flex;gap:10px;align-self:stretch;font-size:12.5px;line-height:1.55}
+.psrows .ccbk{flex:none;width:86px;color:var(--faint)}
+.psrows .ccbrow b{font-weight:600;color:var(--ink);min-width:0}
 /* -- Payment source = a card that moves -- */
 .pscard{perspective:820px;padding:2px 0 4px}
 .pscd{--rx:0deg;--ry:0deg;--mx:50%;--my:0%;
@@ -2261,6 +2307,20 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .damt{display:block;font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--ink);
   line-height:1.2;font-variant-numeric:tabular-nums}
 .dsub{display:block;margin-top:4px;font-size:13px;color:var(--mute)}
+/* -- Spinner (Loading.tsx) --
+   The duration is set inline by the component, so only the curve and the direction live here.
+   easeInOut matches the source's EASE_IN_OUT; the turn itself is linear, because a spinner that
+   eases each revolution reads as stuttering rather than turning. */
+.spin{display:inline-block;vertical-align:-2px;animation:spin 1s linear infinite;transform-origin:50% 50%}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* The source's own reduced-motion fallback: hold still and breathe. Declared after .spin, since a
+   media query adds no specificity and only its position decides which animation wins. */
+@media (prefers-reduced-motion:reduce){
+  .spin{animation:spinhold 1.4s cubic-bezier(.42,0,.58,1) infinite}
+}
+@keyframes spinhold{0%,100%{opacity:1}50%{opacity:.4}}
+/* Beside a line of text rather than above it: the gap is the word space it stands in for. */
+.dsub .spin{margin-right:7px}
 /* No grey backgrounds and no nested cards -- grouping comes from alignment and hairlines */
 .dpay{display:flex;flex-direction:column;font-size:13px}
 .dpay>div{display:flex;align-items:baseline;gap:16px;padding:9px 0;border-bottom:1px solid var(--hairline)}
@@ -2336,6 +2396,31 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
 .dfoot .backbtn~.dnote{margin-right:auto;margin-left:0}
 .dnote{font-size:12px;color:var(--faint);line-height:1.5}
 .dnote b{color:var(--mute);font-weight:600}
+/* -- Wallet transaction failure (TxLine) --
+   These say something happened outside the page -- a declined signature, the wrong network, an empty
+   balance -- and the answer is usually elsewhere too. As a recoloured .dnote they sat under the button
+   at 12px looking like the validation message of a field that is not there. Given a surface of their
+   own they read as "this needs your attention somewhere else", which is what they are. */
+.txerr{display:flex;gap:8px;align-items:flex-start;margin-top:10px;
+  padding:10px 12px;border-radius:10px;
+  background:var(--warn-wash);border:1px solid color-mix(in oklab,var(--warn) 30%,transparent);
+  font-size:12.5px;line-height:1.55;color:var(--warn)}
+/* The mark carries the tone on its own, so the text can stay at reading weight instead of shouting. */
+.txerri{flex:none;width:16px;height:16px;margin-top:1px;border-radius:999px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--warn);color:var(--paper);font-size:11px;font-weight:700;line-height:1}
+/* Progress while an allowance is being written. The wallet step and the chain
+   step each take long enough that a button reading "Signing…" looks hung; this
+   names the step, says how long it usually takes, and counts the seconds. */
+.wprog{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;margin:4px 0 8px;
+  border-radius:10px;background:var(--cream);box-shadow:inset 0 0 0 1px var(--hairline)}
+.wprogspin{flex:none;width:14px;height:14px;margin-top:2px;border-radius:999px;
+  border:1.5px solid var(--line-strong);border-top-color:var(--mute);animation:spin .7s linear infinite}
+.wprogt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.wprogt b{font-size:12.5px;color:var(--ink);font-weight:600}
+.wprogt span{font-size:12px;color:var(--faint);line-height:1.5}
+.wprogt em{font-style:normal;color:var(--mute)}
+@media (prefers-reduced-motion:reduce){.wprogspin{animation:none}}
 .dact{margin-left:auto;flex:none;padding:12px 20px;background:var(--blue);color:#fff;font-weight:500;font-size:13px;border-radius:999px;transition:background var(--dur-fast) var(--ease)}
 .dact:hover{background:var(--blue-deep)}
 .mkopts{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
@@ -2372,7 +2457,8 @@ input.inv{border-color:var(--neg)!important;box-shadow:0 0 0 1px var(--neg)!impo
    it from either side of the seam. */
 .rgrip{position:absolute;left:-4px;top:0;bottom:0;width:9px;z-index:12;
   cursor:col-resize;
-  /* This rule is omitted on touch screens, where a press would be read as a scroll gesture and it would not drag */
+  /* This is what makes a touch-drag work: without it the browser claims the gesture for scrolling and the grip
+     never moves. (The comment here used to say the opposite -- that the rule was omitted on touch.) */
   touch-action:none}
 .rgrip::after{content:'';position:absolute;left:3px;top:0;bottom:0;width:3px;
   background:var(--accent);opacity:0;
@@ -2698,7 +2784,7 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
 /* Orders lay out as a row of small cards with the amount centred as the subject: scanning a row of cards = scanning
    "how much out, how much in". A minus is yours to pay, a plus is coming in. State and person recede to the lines above and below. */
 #ro-list{padding:var(--sp-2) var(--sp-4) var(--sp-4);background:none;
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(186px,1fr));
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(min(186px,100%),1fr));
   /* Row height does not take the container's remaining height: with only one row of cards left, stretch would pull a card to the full module height */
   align-content:start;gap:var(--sp-2)}
 .rocard{display:flex;flex-direction:column;align-items:flex-start;gap:7px;
@@ -2973,7 +3059,7 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
   font-size:var(--rt-meta);color:var(--faint-2);line-height:1.4}
 .agsrc .num{font-weight:600;color:var(--ink)}
 /* Readings table: names left, readings right, laid in two columns -- five or six of them take only three rows of height */
-.agcks{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+.agcks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr));
   gap:0 var(--sp-6)}
 /* In a two-column grid the row order alternates left and right, so drawing lines with a sibling selector would make the two columns' top rows differ in weight -- every row carries one */
 .agck{position:relative;display:flex;align-items:baseline;gap:0 var(--sp-2);padding:5px 0;
@@ -3002,7 +3088,7 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
 @media (prefers-reduced-motion:reduce){.agmeter b{animation:none}}
 .agwork>.afsec{margin:0 0 var(--sp-3)}
 .agwork>.afev{display:grid;margin:var(--sp-4) 0 0;padding:0;background:none;box-shadow:none;
-  gap:0 var(--sp-4);grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:0 var(--sp-4);grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));
   align-content:start}
 .agwork .afsx.wide{grid-column:1/-1}
 .agwork .asby{padding:var(--sp-6) 0;text-align:center}
@@ -4050,7 +4136,9 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
  * The animation reuses agshimmer: this project already has one shimmer, and adding a second at a different tempo
  * means two things on one screen competing. inline-block + currentColor let it follow the type size of whatever row
  * it is in, so its width and height do not have to be tuned per position. */
-.sk{display:inline-block;vertical-align:-.12em;height:1em;min-width:2em;
+.sk{display:inline-block;vertical-align:-.12em;height:1em;min-width:2em;max-width:100%;
+  /* max-width because callers size these in em against the text they stand in for (Account.tsx asks for 6.5em
+     inside a 46px serif figure = 299px). Without the cap a placeholder is wider than its own column. */
   border-radius:var(--r-chip);background:linear-gradient(90deg,
     var(--card) 35%,var(--line-strong) 50%,var(--card) 65%);
   background-size:200% 100%;animation:agshimmer 1.4s linear infinite}
@@ -4109,8 +4197,14 @@ main.rdrag{transition:none;cursor:col-resize;user-select:none}
    extra above -- while .msg itself already has a 4px gap, making the AI side's bubble-to-time 8px against our own 4px.
    Two different rhythms on the two sides of one stream reads as "this timestamp has fallen down". */
 .msg.them .mact{margin-top:-4px}
-.mactb{opacity:0;transition:opacity var(--dur-fast) var(--ease)}
-.msg:hover .mactb,.mact:focus-within .mactb{opacity:1}
+/* Hide-until-hover only where a hover actually exists. On touch there is none, so the button has to stay visible:
+   .mactb is also the retry control on a failed send (Home.tsx), and hiding it there leaves no recovery path at all.
+   Inside the query it takes the same three-part guard as .asfade -- opacity alone leaves an invisible but still
+   hit-testable target sitting next to every message. */
+@media (hover:hover){
+  .mactb{opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--dur-fast) var(--ease)}
+  .msg:hover .mactb,.mact:focus-within .mactb{opacity:1;visibility:visible;pointer-events:auto}
+}
 .mactb{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 7px;
   border:0;border-radius:var(--r-chip);background:none;color:var(--faint);
   font:inherit;font-size:11.5px;font-weight:500;cursor:pointer;
@@ -4458,3 +4552,214 @@ body:has(.rshow:not([hidden])) .tsts{top:54px}
 /* The "optional" marker. Very light: it is a reassurance, not a label that has to be read first. */
 .sfopt{margin-left:7px;font-style:normal;font-size:11px;font-weight:400;
   color:var(--faint-2);letter-spacing:.01em}
+
+/* ==========================================================================================================
+   Phone layer -- last on purpose.
+
+   Everything above is written desktop-first with plain class and id selectors, and a media query carries no
+   extra specificity. An override declared next to the rule it overrides therefore loses to any later base rule
+   for the same property: the first draft of this block sat up beside the grid definitions and #mid{padding},
+   .ledr, .dpay dt, .ccard, .alead, .acin, .saytools, .mcard and the three menus were all silently beaten by
+   their own base rules further down the file. It measured as working only because the layout happened not to
+   overflow anyway.
+
+   Keeping the layer at the end means a rule here wins by position, the way the rest of the file already
+   resolves its conflicts. Anything added below this line is desktop-only again.
+   ========================================================================================================== */
+.mbar,.mscrim{display:none}
+/* == Phone width: three columns become one, plus a drawer ==================================
+   The breakpoint is mirrored in hooks/useMedia.ts (MOBILE) -- the CSS collapses the grid, the JS decides whether
+   the right column is rendered at all, and the two have to agree.
+
+   Everything below is additive and scoped to this query: above it, not one declaration here applies, so the
+   desktop three-column desk is untouched.
+
+   The left column leaves the grid entirely (position:fixed) instead of becoming a zero-width track. A track can
+   only ever push the middle column around; taken out of flow, the middle column gets the full width and the
+   sidebar can slide over it. */
+@media (max-width:760px){
+  /* One track, and a row for the bar. --lw/--rw stop being consulted, so the desktop rules that write them
+     (main.lout, the 1440/1240 queries, PanelGrip's inline --rw) all become inert without needing to be unset. */
+  main,main.rout,main.rfold{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  /* The grid no longer animates its columns here; the drawer animates its own transform instead. */
+  main{transition:none}
+
+  /* -- Top bar -- */
+  .mbar{display:flex;align-items:center;gap:4px;padding:0 6px;height:52px;flex:none;
+    background:var(--paper);border-bottom:1px solid var(--hairline)}
+  .mbarb{display:inline-flex;align-items:center;justify-content:center;
+    width:44px;height:44px;flex:none;border-radius:var(--r-control);color:var(--ink)}
+  .mbarb:active{background:var(--card)}
+  .mbart{font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--ink);
+    min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* -- Drawer --
+     min() so it still fits a 320px screen with a strip of the page left showing, which is what tells you the
+     thing is dismissible. */
+  #left{position:fixed;inset:0 auto 0 0;z-index:90;width:min(288px,86vw);
+    transform:translateX(-100%);transition:transform var(--dur-panel) var(--ease)}
+  main.drawer #left{transform:none;box-shadow:12px 0 40px rgb(0 0 0/.18)}
+  /* The 68px rail is a desktop affordance and has no meaning here, so App withholds the `lout` class at this
+     width entirely -- see the note there. What is left to do is drop both fold buttons: the collapse one would
+     apply a state that no longer exists, and the expand one is replaced by the bar's hamburger. */
+  .lfold,.lfoldx{display:none}
+
+  .mscrim{display:block;position:fixed;inset:0;z-index:89;background:rgb(0 0 0/.34);
+    opacity:0;visibility:hidden;pointer-events:none;
+    transition:opacity var(--dur-panel) var(--ease),visibility 0s linear var(--dur-panel)}
+  main.drawer .mscrim{opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s}
+
+  /* -- Middle column --
+     32px of side padding is a quarter of a 320px screen. The view's own max-width:960px and the 820px caps on
+     #log/#say already centre the content on desktop and simply stop applying here. */
+  #mid{padding:12px 16px 16px}
+  .view{max-width:none}
+
+  /* -- Ledger (Payments, closed tab) --
+     Six fixed tracks add up to 612px before content, so the table cannot reflow -- it can only be clipped. Each
+     row becomes a small card instead: three lines of two columns, the right column right-aligned. The cells keep
+     their existing classes and are placed by name, so the JSX is untouched.
+       counterparty   amount
+       date           outcome
+       reference      evidence */
+  .ledr{grid-template-columns:minmax(0,1fr) auto;
+    grid-template-areas:"who amt" "date out" "ref ev";
+    gap:3px 12px;padding:14px 16px}
+  /* A column header means nothing once each row is its own card. */
+  .ledh{display:none}
+  .ledw{grid-area:who;font-weight:600;color:var(--ink)}
+  .leda{grid-area:amt;text-align:right}
+  .ledd{grid-area:date}
+  .leds{grid-area:out;justify-self:end}
+  .ledt{grid-area:ref}
+  .lede{grid-area:ev;justify-self:end}
+
+  /* -- Order detail key/value rows --
+     A 122px label column leaves 130px for the value at 320px. Stacked, the value gets the full width; the label
+     keeps its colour so the pairing still reads. */
+  .dpay>div{flex-direction:column;align-items:stretch;gap:2px}
+  .dpay dt{width:auto}
+  /* dd is a flex row, and .dmono plays two roles in it: the value itself (the account number, the
+     reference -- always the first child) and a trailing detail beside a value (the bank's name, "bound
+     to this order"). Only the trailing kind is moved to its own line -- side by side in 248px both it and
+     the value it follows wrap mid-phrase. The wrap also lets the copy button drop below a long number
+     rather than squeezing it. */
+  .dpay dd{flex-wrap:wrap}
+  .dpay dd>.dmono:not(:first-child){flex-basis:100%;margin-left:0}
+
+  /* -- File picker hint --
+     .fptx em is truncated on purpose: once a file is chosen it holds the filename, and a photo taken on a
+     phone carries forty characters of it. Before anything is chosen the same slot holds the line saying what
+     may be uploaded, and at 320px the row leaves it 138px of the 195px it needs -- so the instruction is
+     what gets cut. Only the un-chosen state is allowed to wrap; .ok keeps the truncation it was written for. */
+  .fpbtn:not(.ok) .fptx em{white-space:normal;overflow:visible;text-overflow:clip}
+
+  /* -- Contact rows --
+     Four items on one line need 384px; a 390px screen offers the row 322px, and squeezing the name column does
+     not close a 62px gap -- so the row wraps. Which items wrap is the whole question. Left to itself the name
+     column absorbs the shortfall (it is the only flex:1) down to 177px, the handle under the name breaks over
+     two lines and only the button drops, leaving it stranded on a line of its own: 108px per contact.
+     Instead the name column is given a basis that exactly fills the line beside the avatar, so who this is
+     occupies the first line and what we have with them -- the settled count and the action -- shares the
+     second. 52px = the 38px avatar plus the 14px column gap.
+     Only rows that carry an action are re-laid-out: an invited contact is avatar, name and "Invite sent",
+     which already fits on one line and should stay there. */
+  .ctrow{flex-wrap:wrap;row-gap:6px}
+  .ctrow:has(.ctacts) .ctn{flex:1 1 calc(100% - 52px)}
+  /* The second line starts where the name does, so the avatar column stays an identity gutter rather than
+     having a stray count slide under it. */
+  .ctrow:has(.ctacts) .ctled{margin-left:52px}
+  /* An invited contact carries no action, only "Invite sent", and that fits beside the name at 390px -- so it
+     is left on one line and given a basis it gives up only where the line really cannot hold it (at 320px,
+     where otherwise the name column falls to 116px and the address breaks in half). */
+  .ctrow:not(:has(.ctacts)) .ctn{flex:1 1 150px}
+
+  /* -- Profile identity header --
+     .pid wraps already, but .pidmain is the only item that can give (flex:1), so instead of pushing .pstat onto
+     a line of its own it collapses to 125px -- and .pmeta neither wraps nor shrinks, so the email runs 108px
+     past its own parent and lands on top of "Individual KYC verified". Giving .pidmain a basis that fills the
+     line beside the avatar makes .pstat wrap instead, and it then starts where the name does. .pmeta is allowed
+     to wrap as well: 286px holds the address, the copy button and this address, but not every one. */
+  .pid{align-items:flex-start}
+  .pidmain{flex:1 1 calc(100% - 72px)}
+  .pmeta{flex-wrap:wrap}
+  .pstat{margin-left:72px;text-align:left;align-items:flex-start}
+
+  /* -- Wallet actions --
+     Three equal columns leave each button 98px at 390px and 75px at 320px, while "Fiat accounts" needs 100px
+     of label; the .btn's overflow:hidden then cuts the word rather than letting it show. The two transfer
+     actions pair naturally, so they keep a row and the third -- a different kind of thing, where the fiat leg
+     is paid -- takes the full width below. */
+  .aacts{grid-template-columns:1fr 1fr}
+  .aacts .aact-bank{grid-column:1/-1}
+  .ctacts{margin-left:auto}
+
+  /* -- Message bubbles --
+     74% keeps a bubble from filling a 700px column, where one sentence across the whole width stops reading as
+     chat. A phone column has no such width to give away: at 390px it leaves the bubble 233px, and their side
+     spends 32px of that on the avatar and gap, so the text runs in 207px while 93px of the column stays empty.
+     At 320px the text is down to 155px. 90% keeps the gutter that says "this is a bubble, not the page" and
+     hands the rest back -- the AI's answers here are paragraphs and lists, not one-liners. */
+  .msg{max-width:90%}
+
+  /* -- Allowance card (Account) --
+     290px wide inside a 288px column. Scaled by the container instead, keeping the 290:198 proportion so the card
+     face and its flip stay square to each other.
+     The width is pinned on .ccsway rather than only on .ccard: .ccsway is the flex item and sizes shrink-to-fit,
+     so a percentage on the card alone resolves against a parent that is itself sizing from the card -- which
+     collapses to zero for a card whose faces are absolutely positioned. */
+  .cdeck{align-self:stretch}
+  .ccsway{width:100%;max-width:290px}
+  .ccard{width:100%;height:auto;aspect-ratio:290/198}
+
+  /* -- Composer --
+     .alead 118px + .acin 200px sit on one line inside .aline, which is 318px before the reserved 34px. The
+     minimums go; the row already wraps. */
+  .alead{min-width:0}
+  .acin{width:100%;min-width:0}
+  .acdate{width:auto;min-width:0;flex:1}
+  /* The tool row is flex with flex:none children, so the condition pill pushes the send key off the end. */
+  .saytools{flex-wrap:wrap}
+
+  /* -- Dialogs --
+     dvh rather than vh: a mobile address bar changes vh mid-scroll, so a card sized in vh is cut off exactly when
+     the bar is showing. #confirm and #danger had no height cap at all -- the checkout's 50px figure and its
+     266x176 card overflow a short viewport with nothing to scroll. */
+  .mcard{max-height:calc(100dvh - 32px)}
+  #modal,#confirm,#danger,#lock,.pwmask{padding:16px}
+  .paysheet,.dgcard,.pwsheet{max-height:calc(100dvh - 32px);overflow-y:auto}
+  /* The sheet's key/value rows: an 86px key column leaves ~150px for the value at 320px, so every one of
+     them wraps to three lines. Stacked, the value gets the full width and each pair still reads as a pair. */
+  .psrows .ccbrow{flex-direction:column;gap:2px}
+  .psrows .ccbk{width:auto}
+
+  /* -- Evidence pack rows (order detail, terminal state) --
+     Every child is flex:none -- dot, label, tx link, timestamp -- so nothing can give and the absolute timestamp
+     (a full date and time, ~121px, white-space:nowrap) is pushed straight past the right edge. Allowed to wrap:
+     the time keeps its margin-left:auto and so right-aligns on the line below, which is where a timestamp reads
+     fine anyway. The label gains the ability to shrink so a long one wraps rather than pushing. */
+  .evrow{flex-wrap:wrap}
+  .evrow span{flex:1 1 auto;min-width:0}
+
+  /* -- Touch targets --
+     The small controls are 22-28px, below the 44px a finger can reliably hit. Rather than resizing them -- which
+     would move the layout around them -- each gets an invisible 44px hit area centred on it. The control keeps
+     its drawn size; only what counts as a press grows.
+     Not applied to controls that are already large, and not to anything inside the right column, which is not
+     rendered at this width. */
+  .mactb,.tstc,.ascx,.thkc{position:relative}
+  .mactb::after,.tstc::after,.ascx::after,.thkc::after{
+    content:'';position:absolute;top:50%;left:50%;width:44px;height:44px;
+    transform:translate(-50%,-50%)}
+  /* Buttons that carry text are wide enough already; only their height falls short. */
+  .btn-sm{min-height:36px}
+
+  /* -- Floating menus --
+     All absolutely positioned with no off-screen correction, so a 232px menu opened near the right edge hangs
+     past it. Pinned to the viewport's gutters instead. */
+  .ddmenu,.umenu,.amenu{max-width:calc(100vw - 24px)}
+}
+
+@media (max-width:760px) and (prefers-reduced-motion:reduce){
+  #left,.mscrim{transition:none}
+}

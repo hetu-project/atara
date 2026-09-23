@@ -22,6 +22,25 @@ export { WalletTxError, isWalletTxError } from '../api/walletError'
 
 const short = (a: string) => (a.length > 10 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a)
 
+/**
+ * What to say when the wallet is short of a token.
+ *
+ * The previous wording was `0xA50f…dB5C holds 0 of 0xC0e8…C4B7 — this needs 10`, which puts two
+ * shortened hex strings side by side while they are not the same kind of thing at all: the first is
+ * the person's own account, the second a token contract. Read quickly it says "send from A to B".
+ *
+ * The contract address is dropped. The asset's symbol answers "which token" for anyone who is not
+ * auditing the contract, and the card already carries it; whoever does want the address has the
+ * escrow strip and the explorer. What is added is the part that was missing entirely -- what to do
+ * next. The native-coin check further down already worked this way ("Use Max to leave room for the
+ * fee"); this brings the three token checks in line with it.
+ */
+const shortOf = (p: {
+  asset: string; account: string; have: string; need: string; what: string
+}) =>
+  `Not enough ${p.asset} in this wallet. ${short(p.account)} holds ${p.have} ${p.asset}, `
+  + `and ${p.what} needs ${p.need}. Add ${p.asset} to that wallet, then try again.`
+
 const ERC20 = [
   { name: 'decimals', type: 'function', stateMutability: 'view',
     inputs: [], outputs: [{ type: 'uint8' }] },
@@ -193,7 +212,7 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
    * unlimited allowance means this token can be drained from the wallet in one go.
    */
   const lockListing = useCallback(async (p: {
-    escrow: string; token: string; offerKey: string; amountWei: string
+    escrow: string; token: string; offerKey: string; amountWei: string; asset: string
   }): Promise<string> => {
     try {
       const { account, pub, wallet, chain } = await connect()
@@ -205,15 +224,15 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
         address: token, abi: ERC20, functionName: 'balanceOf', args: [account],
       })
       if (bal < amount) {
-        /* Report the address, the token contract and both numbers together. Saying only "insufficient balance"
-           leaves someone staring at the balance of one of possibly several tokens in the same wallet all called
-           USDT, never able to work out why it is not enough. */
+        /* Both numbers, not just "insufficient balance": a wallet can hold several tokens all called
+           USDT, and without the figures there is no way to work out which one is short. */
         const dec = await pub.readContract({
           address: token, abi: ERC20, functionName: 'decimals',
         }).catch(() => 18)
         const fmt = (v: bigint) => (Number(v) / 10 ** Number(dec)).toLocaleString()
-        throw new Error(
-          `${short(account)} holds ${fmt(bal)} of ${short(token)} — this needs ${fmt(amount)}`)
+        throw new Error(shortOf({
+          asset: p.asset, account, have: fmt(bal), need: fmt(amount), what: 'this listing',
+        }))
       }
 
       const allowed = await pub.readContract({
@@ -282,7 +301,7 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
    * records the intent and the hash that follows.
    */
   const transferToken = useCallback(async (p: {
-    token: string; to: string; amountWei: string
+    token: string; to: string; amountWei: string; asset: string
   }): Promise<string> => {
     try {
       const { account, pub, wallet, chain } = await connect({ needEscrow: false })
@@ -298,8 +317,9 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
           address: token, abi: ERC20, functionName: 'decimals',
         }).catch(() => 18)
         const fmt = (v: bigint) => (Number(v) / 10 ** Number(dec)).toLocaleString()
-        throw new Error(
-          `${short(account)} holds ${fmt(bal)} of ${short(token)} — this needs ${fmt(amount)}`)
+        throw new Error(shortOf({
+          asset: p.asset, account, have: fmt(bal), need: fmt(amount), what: 'this transfer',
+        }))
       }
 
       setStep({ k: 'wallet', msg: 'Sign in your wallet to send' })
@@ -395,6 +415,7 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
    */
   const deposit = useCallback(async (p: {
     escrow: string; token: string; orderKey: string; amountWei: string; beneficiary: string
+    asset: string
   }): Promise<string> => {
     try {
       const { account, pub, wallet, chain } = await connect()
@@ -409,8 +430,9 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
           address: token, abi: ERC20, functionName: 'decimals',
         }).catch(() => 18)
         const fmt = (v: bigint) => (Number(v) / 10 ** Number(dec)).toLocaleString()
-        throw new Error(
-          `${short(account)} holds ${fmt(bal)} of ${short(token)} — this order needs ${fmt(amount)}`)
+        throw new Error(shortOf({
+          asset: p.asset, account, have: fmt(bal), need: fmt(amount), what: 'this order',
+        }))
       }
       const allowed = await pub.readContract({
         address: token, abi: ERC20, functionName: 'allowance', args: [account, escrow],
@@ -455,9 +477,46 @@ export function useWalletTx(info: ChainRow | null, expected?: string) {
     }
   }, [connect])
 
+  /**
+   * What this account holds of a token, without sending or signing anything.
+   *
+   * Deliberately **not** through connect(): that one may ask the wallet to switch network, or to add
+   * one it has never seen, and both are prompts. A prompt must never come from a card merely being
+   * rendered. Everything needed here is known without touching the wallet -- the chain's own RPC URL
+   * and the address this account signs from -- so the read goes straight over HTTP.
+   *
+   * It therefore also answers while an external wallet is disconnected, which is the point: a card can
+   * say "this wallet holds none" before asking anyone to connect anything.
+   *
+   * null means **not answered** -- no chain, no address yet, or the read failed. Callers must treat it
+   * as unknown and never as zero: showing "you have 0" because an RPC timed out is worse than saying
+   * nothing, because it sends people off to top up a wallet that was funded all along.
+   */
+  const tokenBalance = useCallback(async (token: string): Promise<bigint | null> => {
+    if (!info?.rpc_url || !expected || !token) return null
+    try {
+      const pub = createPublicClient({ transport: http(info.rpc_url) })
+      return await pub.readContract({
+        address: token as Address, abi: ERC20, functionName: 'balanceOf',
+        args: [expected as Address],
+      })
+    } catch {
+      return null
+    }
+  }, [info, expected])
+
+  /* Whether the wallet this account signs from is connected in this browser
+     right now. An external wallet (MetaMask and the like) has to be connected
+     again after a reload or a lock, and until it is, every send below fails
+     with "that wallet is not connected". Cards check this first and offer a
+     connect button instead of a send button that cannot work. */
+  const connected = !!expected
+    && wallets.some(w => w.address.toLowerCase() === expected.toLowerCase())
+
   return {
     step, setStep, lockListing, unlockListing, deposit, approveSpending, transferToken, transferNative,
-    signMessage,
+    signMessage, tokenBalance,
     ready: wallets.length > 0,
+    connected,
   }
 }

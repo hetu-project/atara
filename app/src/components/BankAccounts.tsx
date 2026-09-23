@@ -59,8 +59,8 @@ function BankBox({
     const away = (e: MouseEvent) => {
       if (box.current && !box.current.contains(e.target as Node)) setOpen(false)
     }
-    addEventListener('mousedown', away)
-    return () => removeEventListener('mousedown', away)
+    addEventListener('pointerdown', away)
+    return () => removeEventListener('pointerdown', away)
   }, [])
 
   const q = value.trim().toLowerCase()
@@ -79,14 +79,14 @@ function BankBox({
       <div className="cblist" role="listbox" hidden={!open || !hits.length}>
         {hits.map(x => (
           <button type="button" className="cbrow" key={x.n} role="option"
-            onMouseDown={e => { e.preventDefault(); onPick(x.n, x); setOpen(false) }}>
+            onPointerDown={e => { e.preventDefault(); onPick(x.n, x); setOpen(false) }}>
             <span className="cbn">{x.n}</span>
             <span className="cbc">{CTRY[x.c] ?? x.c}</span>
           </button>
         ))}
         {q && !exact && (
           <button type="button" className="cbrow cbfree"
-            onMouseDown={e => { e.preventDefault(); setOpen(false) }}>
+            onPointerDown={e => { e.preventDefault(); setOpen(false) }}>
             <span className="cbn">Use “{value.trim()}”</span>
             <span className="cbc">Not listed</span>
           </button>

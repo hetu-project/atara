@@ -8,6 +8,7 @@ import { IPanel } from './icons'
 import { Constellation, Ring } from './Ring'
 import { RISK_AGENTS, agentGlyph } from './agents'
 import AgentProfile from './AgentProfile'
+import { fromRun, themeLines } from './assess'
 import PanelGrip from './PanelGrip'
 import { useAssessment } from '../hooks/useAssessment'
 import type { Run } from '../hooks/useAssessment'
@@ -397,22 +398,17 @@ function Assessment({ onFold }: { onFold: () => void }) {
  *
  * A name that cannot be found simply omits that row; nothing else is substituted for it.
  */
-/* Members use the seven names the backend currently sends (= the seven in the standby roster in the UI). The
-   previous version used the set from before the backend renamed them (Counterparty history / Source of funds...),
-   and after the rename not one of them matched, so all four rows came out empty -- leaving this passage with an
-   opening and a conclusion and nothing in between. The names live in two places and have to change in both. */
-const THEMES: [string, string[]][] = [
-  ['Counterparty', ['Identity', 'Behavior']],
-  ['Funds', ['Provenance', 'Graph']],
-  ['Compliance', ['Sanctions']],
-  ['Market', ['Pricing']],
-]
+/* The theme map moved to assess.ts. It used to be declared here and again in AssessCard, and the comment that
+   stood here warned that "the names live in two places and have to change in both" -- which is exactly what went
+   wrong: this copy was updated after the backend's rename and the other was not. One copy now, and it compares
+   names with the ` Agent` suffix stripped rather than exactly, so the next rename degrades to a missing line
+   instead of an empty panel. */
 
 function Verdict({ run }: { run: Run }) {
   const notes = run.votes.filter(v => v.v !== 'pass')
   const ok = run.votes.filter(v => v.v === 'pass').length
   const pass = ok >= run.threshold
-  const noteOf = (n: string) => run.votes.find(v => v.n === n)?.note?.replace(/\.$/, '')
+  const themes = themeLines(fromRun(run))
 
   return (
     <div className="arverd">
@@ -421,10 +417,7 @@ function Verdict({ run }: { run: Run }) {
       </b>{' '}
       Higher is safer. {run.total} agents scored this counterparty independently:
       <ul>
-        {THEMES.map(([t, names]) => {
-          const body = names.map(noteOf).filter(Boolean).join('; ')
-          return body ? <li key={t}><b>{t}</b> — {body}.</li> : null
-        })}
+        {themes.map(t => <li key={t.label}><b>{t.label}</b> — {t.body}.</li>)}
         {notes.map(v => (
           <li className="bnote" key={v.n}>
             <b>⚠ {v.n.replace(/ Agent$/, '')} — note</b>: {v.note}

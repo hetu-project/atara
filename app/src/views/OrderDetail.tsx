@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as ep from '../api/endpoints'
 import { LIVE_CHANGED } from '../api/events'
 import ConfirmSheet from '../components/ConfirmSheet'
@@ -6,9 +6,12 @@ import DisputeForm from '../components/DisputeForm'
 import FilePick from '../components/FilePick'
 import DocView, { DOC_META } from '../components/DocView'
 import Avatar from '../components/Avatar'
+import { Spinner } from '../components/Loading'
 import { useAction, useApi } from '../hooks/useApi'
 import { useMe } from '../hooks/useMe'
 import { useWalletTx } from '../hooks/useWalletTx'
+import { useConnectWallet } from '@privy-io/react-auth'
+import TxLine from '../components/TxLine'
 import CopyButton from '../components/CopyButton'
 import { Row } from '../components/prim'
 import type { ChainInfo, Order, Wallet } from '../api/types'
@@ -68,6 +71,28 @@ const leftText = (s: number) => {
  *   conversation stream (.deal hangs directly under #log) rather than on a separate page -- "he says he shipped"
  *   and "this order is still waiting on proof" only line up when placed together.
  */
+/* A deposit that has been sent but that the backend has not seen yet.
+   ================================================================
+   Between the wallet confirming the transaction and the backend reading it off the chain there is
+   the better part of a minute: six confirmations, then an indexer that sweeps every ten seconds.
+   wtx.step knows about it for as long as this tab stays put -- and a reload throws that away, which
+   put the card back to "Deposit from wallet" with no memory of the money already sent. The contract
+   refuses the second deposit (positions[orderId] already exists), so nothing can be paid twice, but
+   the person is out a gas fee and reads a revert as their money having gone wrong.
+
+   So the hash is written down, the same way MakerOffer writes down a lock that has no listing yet.
+   Cleared the moment the order carries the backend's own record of it. */
+const sentKey = (orderId: string) => `atara.deposit-sent.${orderId}`
+const readSent = (orderId: string): string => {
+  try { return localStorage.getItem(sentKey(orderId)) || '' } catch { return '' }
+}
+const writeSent = (orderId: string, hash: string) => {
+  try { localStorage.setItem(sentKey(orderId), hash) } catch { /* private window */ }
+}
+const clearSent = (orderId: string) => {
+  try { localStorage.removeItem(sentKey(orderId)) } catch { /* private window */ }
+}
+
 export default function OrderDetail({
   id, onBack, bare, identity, order, onChanged,
   chains: chainsIn, myWallet: walletIn,
@@ -175,6 +200,66 @@ export default function OrderDetail({
   const myWallet = walletIn !== undefined ? walletIn : ownWallet.data
   const chainRow = (chains?.chains ?? []).find(c => c.code === (o?.escrow?.network || o?.otc?.network)) ?? null
   const wtx = useWalletTx(chainRow, myWallet?.address)
+  /* Privy's connect modal, for an external wallet that is signed in but not
+     connected in this browser (a reload, a locked extension). Without it the
+     only way back was to sign out and in again. */
+  const { connectWallet } = useConnectWallet()
+
+  /* Does this wallet hold what the deposit is about to ask of it?
+     ==========================================================
+     The send path checks this too, and it has to -- a balance read a minute ago says nothing about a
+     balance now. But checking only there means the card offers a button that cannot possibly work, the
+     person presses it, and the answer comes back as a failure. Nothing failed; the money was never
+     there. So the same question is asked while the card renders, and the button says what it can do.
+
+     The read goes through tokenBalance, which never touches the wallet: no connect, no network switch,
+     no prompt from a card that is merely on screen. It therefore answers for a disconnected external
+     wallet as well, which is the useful case -- "this wallet is empty" is worth knowing before being
+     asked to connect anything.
+
+     These escrow fields are set only for a coin-selling taker who still owes the deposit, so an empty
+     token is also the signal that this whole question does not apply. */
+  const fundToken = o?.escrow?.order_key && !o.escrow.tx_hash ? (o.escrow.token ?? '') : ''
+  const fundWei = o?.escrow?.amount_wei ?? ''
+  const [held, setHeld] = useState<bigint | null>(null)
+  const [recheck, setRecheck] = useState(0)
+  /* useWalletTx hands back fresh closures on every render, so naming one in the dependency list below
+     would re-run the effect on every render for ever. Keep the latest in a ref -- the same device
+     useApi uses, for the same reason. */
+  const balRef = useRef(wtx.tokenBalance)
+  balRef.current = wtx.tokenBalance
+
+  /* The locally remembered deposit, and its one job: surviving a reload during the window above. */
+  const [sentHash, setSentHash] = useState('')
+  useEffect(() => { setSentHash(readSent(id)) }, [id])
+  useEffect(() => {
+    /* The backend has caught up -- the order carries the deposit now, so the local note is spent.
+       o.id === id is not redundant: moving between two cards updates the id prop a render before
+       the new order arrives, so for that one render the *previous* order's tx_hash is being read
+       against the *new* order's id. Without the check, opening an unfunded order straight after a
+       funded one deleted the unfunded one's record -- the very note that is supposed to survive. */
+    if (o?.id === id && o.escrow?.tx_hash) { clearSent(id); setSentHash('') }
+  }, [o?.id, o?.escrow?.tx_hash, id])
+  useEffect(() => {
+    setHeld(null)
+    if (!fundToken || !fundWei) return
+    let alive = true
+    void balRef.current(fundToken).then(b => { if (alive) setHeld(b) })
+    return () => { alive = false }
+  }, [fundToken, fundWei, recheck])
+  /* Coming back to this tab is exactly the moment someone has topped the wallet up somewhere else --
+     a wallet app, an exchange, a faucet. Asking again then is what makes the card recover by itself
+     instead of needing a reload. */
+  useEffect(() => {
+    if (!fundToken) return
+    const again = () => { if (document.visibilityState === 'visible') setRecheck(n => n + 1) }
+    document.addEventListener('visibilitychange', again)
+    addEventListener('focus', again)
+    return () => {
+      document.removeEventListener('visibilitychange', again)
+      removeEventListener('focus', again)
+    }
+  }, [fundToken])
 
   const wrap = (node: React.ReactNode) =>
     bare ? <>{node}</> : <Shell onBack={onBack}>{node}</Shell>
@@ -197,10 +282,12 @@ export default function OrderDetail({
     if (!e?.order_key || !e.token || !e.amount_wei || !e.beneficiary) {
       throw new Error('Funding details are not on the order yet — reload and try again')
     }
-    await wtx.deposit({
+    const hash = await wtx.deposit({
       escrow: e.contract, token: e.token, orderKey: e.order_key,
-      amountWei: e.amount_wei, beneficiary: e.beneficiary,
+      amountWei: e.amount_wei, beneficiary: e.beneficiary, asset: o.amount.asset,
     })
+    writeSent(id, hash)
+    setSentHash(hash)
   }
   /* Buying: a plain commitment, the maker's coins are already escrowed.
      Selling on a real chain: commit with via=external, then deposit from the
@@ -212,15 +299,37 @@ export default function OrderDetail({
     const fresh = await ep.accept(o, 'external')
     const e = fresh.escrow
     if (!e?.order_key || !e.token || !e.amount_wei || !e.beneficiary) return // the s1 card offers the deposit
-    await wtx.deposit({
+    const hash = await wtx.deposit({
       escrow: e.contract, token: e.token, orderKey: e.order_key,
-      amountWei: e.amount_wei, beneficiary: e.beneficiary,
+      amountWei: e.amount_wei, beneficiary: e.beneficiary, asset: o.amount.asset,
     })
+    writeSent(id, hash)
+    setSentHash(hash)
   }
   /* your_side, not side: `side` is the taker's direction and is the same string
      for both parties, so the maker used to read the whole card from the taker's
      seat — "their coins were returned" about his own coins. */
   const sell = (o.otc?.your_side ?? o.otc?.side) === 'sell'
+  /* null means the balance was never answered -- no chain row, no address yet, or the RPC did not
+     reply. Only a number genuinely below the requirement counts as short: reading "unknown" as zero
+     would block the button and send someone off to top up a wallet that was funded all along. */
+  const shortBy = held !== null && fundWei && held < BigInt(fundWei)
+    ? { have: held, need: BigInt(fundWei) }
+    : null
+  /* Decimals come from the chain catalogue, keyed by the asset -- the same place the token address
+     itself comes from. 18 is the fallback, never a hardcoded assumption about a particular token. */
+  /* The deposit is on its way but the order does not carry it yet.
+     Two sources, because neither covers the other: wtx.step is this tab's live view of the wallet and
+     dies with a reload, while sentHash survives one but says nothing about progress. Either is enough
+     to know the button must not be offered again. */
+  const depositSent = !o.escrow?.tx_hash
+    && (wtx.step.k === 'mining' || wtx.step.k === 'done' || !!sentHash)
+  /* Whichever hash we have: the live one while the tab stayed open, the written-down one after a
+     reload. Same transaction either way. */
+  const sentTx = sentHash || ('hash' in wtx.step ? wtx.step.hash : '')
+  const tokDec = chainRow?.tokens?.[o.amount.asset]?.decimals ?? 18
+  const inCoin = (v: bigint) =>
+    (Number(v) / 10 ** tokDec).toLocaleString(undefined, { maximumFractionDigits: 6 })
   const coin = `${Number(o.amount.amount).toLocaleString()} ${o.amount.asset}`
   const ccy = o.otc?.fiat_code ?? 'CNY'
   const fiat = money(Number(o.otc?.fiat_amount ?? 0), ccy)
@@ -341,6 +450,10 @@ export default function OrderDetail({
                   <button className="btn btn-primary" disabled={pending}
                     onClick={() => setAsk(true)}>Confirm</button>
                 </div>
+                {/* Confirming a sell on a real chain goes straight into the
+                    wallet deposit; its progress and its failures belong here,
+                    not only in the console. */}
+                <TxLine step={wtx.step} explorer={chainRow?.explorer ?? ''} />
               </>
             ) : step === 's1' && sell && yours && o.escrow?.funding_via === 'external'
                 && o.escrow.order_key && !o.escrow.tx_hash ? (
@@ -349,6 +462,37 @@ export default function OrderDetail({
                  sits at s1 until the contract sees the coins, so the way to
                  send them stays on the card. */
               <>
+                {/* Sent, and now waiting on the chain and on this side reading it.
+                    Until this existed the card went on saying "Deposit 10 USDT" with a live button for
+                    the whole minute after the wallet had already confirmed — so the one moment the
+                    person most wants to be told something was the moment the screen said nothing had
+                    happened. The wait itself is not shortenable: six confirmations is the safety
+                    margin, and the ten-second indexer is a cost decision. Saying so is. */}
+                {depositSent ? (
+                  <>
+                    <div className="dhead">
+                      <b className="damt num">Deposit sent</b>
+                      <span className="dsub">
+                        <Spinner label="Waiting for the chain" />
+                        waiting for the chain to confirm it
+                      </span>
+                    </div>
+                    <p className="dmech">
+                      Your {coin} has left the wallet. It counts as escrowed once the chain has
+                      {o.escrow?.required ? ` ${o.escrow.required}` : ' enough'} confirmations and this
+                      side has read them — usually under a minute. There is nothing more to do, and
+                      this card moves on by itself; no need to reload it.
+                    </p>
+                    {sentTx && chainRow?.explorer && (
+                      <p className="dnote">
+                        Sent from this browser ·{' '}
+                        <a className="lnk" href={`${chainRow.explorer}/tx/${sentTx}`}
+                          target="_blank" rel="noopener">view transaction</a>
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
                 <div className="dhead">
                   <b className="damt num">Deposit {coin}</b>
                   <span className="dsub">from your wallet into the escrow contract</span>
@@ -357,10 +501,55 @@ export default function OrderDetail({
                   Your wallet is the payer and {o.counterparty_name ?? 'the buyer'} is the payee on the
                   contract — that cannot change afterwards. Detection is automatic once the deposit confirms.
                 </p>
+                {/* Three states, three buttons. The wallet's own errors are
+                    WalletTxError and the action banner keeps quiet about them
+                    by design (see useAction) -- so this card has to show the
+                    progress line itself, or a declined signature, a wallet on
+                    the wrong chain or a wallet that is not connected all look
+                    like a button that does nothing. That is how it looked for
+                    external-wallet accounts. */}
+                {/* The shortfall is checked before connecting, not after: connecting an empty wallet
+                    achieves nothing, and the button should never promise what the balance rules out. */}
                 <div className="dfoot">
-                  <button className="btn btn-primary" disabled={pending}
-                    onClick={() => void act(fundFromWallet)}>Deposit from wallet</button>
+                  {!myWallet?.address ? (
+                    <button className="btn btn-primary" disabled>Loading your wallet…</button>
+                  ) : shortBy ? (
+                    <button className="btn btn-primary" disabled>
+                      Add {o.amount.asset} to continue
+                    </button>
+                  ) : walletKind === 'ext' && !wtx.connected ? (
+                    <button className="btn btn-primary" disabled={pending}
+                      onClick={() => connectWallet()}>Connect your wallet</button>
+                  ) : (
+                    <button className="btn btn-primary" disabled={pending}
+                      onClick={() => void act(fundFromWallet)}>Deposit from wallet</button>
+                  )}
                 </div>
+                {shortBy && myWallet?.address && (
+                  <p className="dnote">
+                    <b>{myWallet.address.slice(0, 6)}…{myWallet.address.slice(-4)} holds{' '}
+                      {inCoin(shortBy.have)} {o.amount.asset}</b>, and this order needs{' '}
+                    {inCoin(shortBy.need)}. Send {o.amount.asset} to that address
+                    on {chainRow?.name ?? o.escrow?.network ?? 'this network'}; this card looks again
+                    when you come back to the tab.
+                  </p>
+                )}
+                {!shortBy && myWallet?.address && walletKind === 'ext' && !wtx.connected && (
+                  <p className="dnote">
+                    This account signs from {myWallet.address.slice(0, 6)}…{myWallet.address.slice(-4)},
+                    which is not connected in this browser right now. Connect it to send the deposit.
+                  </p>
+                )}
+                  </>
+                )}
+                {/* Once the card itself is the waiting message, TxLine would say it a second time --
+                    and say it differently: its "Confirmed on chain" means the transaction was mined,
+                    while the card is waiting on the confirmations after that, so the two read as a
+                    contradiction. The link moved into the body above; TxLine goes back to covering
+                    only what the card does not narrate. */}
+                {(!depositSent || wtx.step.k === 'error') && (
+                  <TxLine step={wtx.step} explorer={chainRow?.explorer ?? ''} />
+                )}
               </>
             ) : step === 's3' && o.phase === 'pay' ? (
               <>

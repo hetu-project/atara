@@ -40,11 +40,11 @@ export default function PickMenu({
       if (!ref.current?.contains(e.target as Node) && e.target !== anchor) onClose()
     }
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    const t = setTimeout(() => addEventListener('mousedown', away), 0)
+    const t = setTimeout(() => addEventListener('pointerdown', away), 0)
     addEventListener('keydown', key)
     return () => {
       clearTimeout(t)
-      removeEventListener('mousedown', away)
+      removeEventListener('pointerdown', away)
       removeEventListener('keydown', key)
     }
   }, [anchor, onClose])

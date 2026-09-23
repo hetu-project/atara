@@ -96,8 +96,8 @@ function AccountMenu({
     const away = (e: MouseEvent) => {
       if (box.current && !box.current.contains(e.target as Node)) setOpen(false)
     }
-    addEventListener('mousedown', away)
-    return () => removeEventListener('mousedown', away)
+    addEventListener('pointerdown', away)
+    return () => removeEventListener('pointerdown', away)
   }, [open])
 
   const rows = list ?? []

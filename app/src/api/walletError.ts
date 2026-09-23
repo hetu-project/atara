@@ -23,6 +23,14 @@ export function readable(e: unknown): string {
   if (/insufficient funds/i.test(raw)) {
     return 'Not enough native coin in this wallet to pay gas'
   }
+  /* AtaraEscrow reverts with OrderExists when a position already exists under this order id, which
+     in practice means one thing: the deposit went through already and this is a second attempt. The
+     coins are safe -- the revert is what makes them safe -- but the raw text reaching the card was
+     "execution reverted", which reads as though something had gone wrong with the money. */
+  if (/OrderExists/i.test(raw)) {
+    return 'That deposit is already in the escrow contract — this one was refused on chain, '
+      + 'which is what stops it being paid twice. Nothing further is needed.'
+  }
   return raw.split('\n')[0]!.slice(0, 200)
 }
 

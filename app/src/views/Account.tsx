@@ -164,7 +164,12 @@ export default function Account({ identity }: { identity: string }) {
                   <CopyButton text={addr} label="Copy address" done="Address copied"
                     className="pcopy" />
                 ) : null}
-                {me?.email ? <>·<span title="Notification email — codes and notices, not a login">{me.email}</span></> : null}
+                {/* The separator lives inside the span rather than beside it: .pmeta is a flex row and a bare
+                    text node is its own flex item, so on a narrow screen the email wraps to the next line and
+                    leaves the dot stranded at the end of the one above. */}
+                {me?.email ? (
+                  <span title="Notification email — codes and notices, not a login">· {me.email}</span>
+                ) : null}
               </div>
             </div>
             <div className="pstat">

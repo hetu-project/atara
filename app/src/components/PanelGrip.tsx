@@ -17,8 +17,12 @@ const MIN = 420
 const MAX = 1040
 /* Lower bound for the middle column. Dragging stops at this line: the conversation matters more than watching the machine work, and the right column must not squeeze it away. */
 const MID_MIN = 420
-/* Below 1240 the column widths are fixed in the stylesheet (media query), and dragging is disabled there. */
-const MIN_WIDTH = 1240
+/* At 1240 and below the column widths are fixed by the stylesheet, so dragging is disabled.
+   1241 rather than 1240 because the comparisons below are `<`, and the CSS boundary
+   (`@media (max-width:1240px)`) is inclusive. Off by that one pixel, at exactly 1240 the grip was already hidden
+   while this still wrote an inline --rw onto main -- and an inline custom property outranks a media query, so the
+   column stayed at a width dragged out for a wider screen with no control left to change it. */
+const MIN_WIDTH = 1241
 /* How far each keypress moves. Too small and it takes dozens of presses, too large and it cannot be aimed. */
 const STEP = 16
 const KEY = 'atara-rw'

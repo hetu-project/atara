@@ -2,8 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { createPortal } from 'react-dom'
 import { parseUnits } from 'viem'
 import * as ep from '../api/endpoints'
-import { isWalletTxError, useWalletTx, type TxStep } from '../hooks/useWalletTx'
+import { isWalletTxError, useWalletTx } from '../hooks/useWalletTx'
 import { useApi } from '../hooks/useApi'
+import TxLine from './TxLine'
 import CoinMark from './CoinMark'
 import CopyButton from './CopyButton'
 import { BankAccountsPanel } from './BankAccounts'
@@ -382,7 +383,9 @@ export function SendModal({
       try {
         hash = isNative
           ? await wtx.transferNative({ to: v, amountWei: wei.toString() })
-          : await wtx.transferToken({ token: tok!.address, to: v, amountWei: wei.toString() })
+          : await wtx.transferToken({
+            token: tok!.address, to: v, amountWei: wei.toString(), asset: pick!.asset,
+          })
       } catch (e) {
         /* Declined in the wallet, or it failed before a hash existed. The
            record was written first, so close it — otherwise it sits under
@@ -598,26 +601,6 @@ function SentReceipt({
   )
 }
 
-/** How far the wallet side has got. It needs a signature, then it waits for a block; without saying so people assume it has hung. */
-function TxLine({ step, explorer }: { step: TxStep; explorer: string }) {
-  if (step.k === 'idle') return null
-  if (step.k === 'error') {
-    return <p className="dnote" style={{ color: 'var(--warn)' }}>{step.msg}</p>
-  }
-  const hash = 'hash' in step ? step.hash : ''
-  return (
-    <p className="dnote">
-      {step.k === 'wallet' && <>{step.msg} …</>}
-      {step.k === 'mining' && <>{step.msg} — waiting for the transaction to confirm</>}
-      {step.k === 'done' && <>Confirmed on chain</>}
-      {hash && explorer ? (
-        <> · <a className="lnk" href={`${explorer}/tx/${hash}`} target="_blank"
-          rel="noopener">view transaction</a></>
-      ) : null}
-    </p>
-  )
-}
-
 // -- Allowances ---------------------------------------------------------
 
 export function AllowanceModal({
@@ -655,6 +638,21 @@ export function AllowanceModal({
      did run and did block, but nobody could tell which box to fix. */
   const [bad, setBad] = useState<{ id: string; msg: string } | null>(null)
   const [busy, setBusy] = useState(false)
+  /* Where the save has got to. Issuing an allowance is not one signature: an
+     external wallet first approves the spending contract in its own window,
+     and then the backend writes the policy on chain with two transactions,
+     each waiting for a block -- twenty to forty seconds on BSC testnet. A
+     button that only said "Signing…" for all of that read as a hang. */
+  type Phase = 'idle' | 'wallet' | 'chain'
+  const [phase, setPhase] = useState<Phase>('idle')
+  const started = useRef(0)
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (phase === 'idle') return
+    const iv = setInterval(() => setTick(t => t + 1), 1000)
+    return () => clearInterval(iv)
+  }, [phase])
+  const elapsed = phase === 'idle' ? 0 : Math.max(0, Math.round((Date.now() - started.current) / 1000))
   const { toast } = useToast()
 
   const coins = (cat ?? []).map(a => a.code)
@@ -682,6 +680,7 @@ export function AllowanceModal({
       return
     }
     setBusy(true)
+    started.current = Date.now()
     try {
       /* External wallet: an allowance is, on chain, an approve to the spender contract and must be signed by the
          user's wallet. This button used to say "Approve in wallet" while it merely POSTed to the backend, which
@@ -693,10 +692,12 @@ export function AllowanceModal({
            is not the integer typed in. The approval on chain would differ from
            the cap on screen by a few hundred wei — small, but wrong. */
         const wei = parseUnits(f.window_cap, tok.decimals).toString()
+        setPhase('wallet')
         await wtx.approveSpending({
           spending: chain.spending, token: tok.address, amountWei: wei,
         })
       }
+      setPhase('chain')
       await ep.saveAllowance({
         spender: f.spender.trim(), kind: 'agent',
         asset: useCoin, network: useNet,
@@ -714,7 +715,7 @@ export function AllowanceModal({
       if (!isWalletTxError(e)) {
         setBad({ id: '', msg: e instanceof Error ? e.message : 'Could not sign' })
       }
-    } finally { setBusy(false) }
+    } finally { setBusy(false); setPhase('idle') }
   }
 
   const live = edit?.status === 'live'
@@ -768,9 +769,26 @@ export function AllowanceModal({
 
       <TxLine step={wtx.step} explorer={chain?.explorer ?? ''} />
 
+      {phase !== 'idle' && (
+        <div className="wprog" role="status" aria-live="polite">
+          <span className="wprogspin" aria-hidden />
+          <div className="wprogt">
+            <b>{phase === 'wallet' ? 'Waiting for your wallet' : 'Writing the allowance on chain'}</b>
+            <span>
+              {phase === 'wallet'
+                ? 'Approve the spending contract in the wallet window that just opened. Nothing is saved until you do.'
+                : (walletKind === 'ext' ? '' : 'After your signature, ')
+                  + 'two transactions go out one after the other: an approve, then the grant. Each waits for a block, '
+                  + 'so this usually takes 20–40 seconds on BSC testnet. Keep this window open.'}
+              {' '}<em className="num">{elapsed}s</em>
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="dfoot">
         {edit && onRevoke && (
-          <button className="btn btn-danger backbtn" onClick={onRevoke}>
+          <button className="btn btn-danger backbtn" disabled={busy} onClick={onRevoke}>
             {me ? (live ? 'Disable' : 'Enable') : (live ? 'Revoke' : 'Re-issue')}
           </button>
         )}
@@ -779,8 +797,12 @@ export function AllowanceModal({
         </span>
         <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
           {/* Where it is signed depends on the wallet type: an external wallet approves the spender contract, while
-              a self-custody wallet signs the account policy with a passkey. Getting it wrong teaches the user to look for a dialog that does not exist. */}
-          {busy ? 'Signing…' : walletKind === 'ext' ? 'Approve in wallet' : 'Sign with passkey'}
+              a self-custody wallet signs the account policy with a passkey. Getting it wrong teaches the user to look for a dialog that does not exist.
+              While busy the label names the step, not a generic "signing" -- the chain step is the long one and is not a signature at all. */}
+          {phase === 'wallet' ? 'Waiting for your wallet…'
+            : phase === 'chain' ? 'Writing on chain…'
+            : busy ? 'Working…'
+            : walletKind === 'ext' ? 'Approve in wallet' : 'Sign with passkey'}
         </button>
       </div>
     </Sheet>
