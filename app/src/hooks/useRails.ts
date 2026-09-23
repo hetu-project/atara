@@ -4,16 +4,17 @@ import { useApi } from './useApi'
 import type { RailGroup } from '../api/types'
 
 /**
- * 法币收款渠道目录。
+ * Catalog of fiat payout rails.
  *
- * **这张表归后端**（/catalog/rails），前端不留副本。理由跟合约地址那条
- * 一样：写死在前端的目录会跟后端的能力漂开，而且要等到很晚才发现。
+ * **This table belongs to the backend** (/catalog/rails); the frontend keeps no copy.
+ * Same reasoning as contract addresses: a catalog hardcoded in the frontend drifts away
+ * from what the backend can actually do, and the drift surfaces very late.
  *
- * 漂开那一版的症状：菜单里有 SGD / AED / EUR 三档，后端只结算 CNY / HKD /
- * USD。只勾了 SGD 渠道的商户，准入照样审过，然后永远撮合不到任何一单——
- * 他没收到任何报错，只是没有生意。
+ * Symptoms of the version that drifted: the menu offered SGD / AED / EUR while the backend
+ * only settled CNY / HKD / USD. A merchant who ticked only the SGD rail still passed
+ * onboarding review, then never matched a single order -- no error, just no business.
  *
- * 后端只发能结算的那些，所以这种配置在界面上根本构造不出来。
+ * The backend only sends rails it can settle, so that configuration is not even constructible in the UI.
  */
 export function useRails(): RailGroup[] {
   const { data } = useApi(() => ep.rails(), [])

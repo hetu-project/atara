@@ -1,6 +1,7 @@
-/* 七个 agent 的名单与档案，逐字取自 console.html。
-   分数、结论、证据都在这里——右栏的 roster、共识环、agent 档案共用它。
-   这是数据不是代码：改文案就改这里，别在组件里另写一份。 */
+/* The roster and profiles of the seven agents, taken verbatim from console.html.
+   Scores, verdicts and evidence all live here -- the right column's roster, the consensus
+   ring and the agent profiles all share it.
+   This is data, not code: change the copy here, do not write a second copy inside a component. */
 /* eslint-disable */
 // @ts-nocheck
 const RISK_AGENTS=[
@@ -135,23 +136,23 @@ function agentGlyph(i){
     d+=(k?'L':'M')+(14+r*Math.cos(a)).toFixed(1)+' '+(14+r*Math.sin(a)).toFixed(1)}
     return d+'Z'};
   const G=[
-   /* Identity —— 蓝圆脸：最基础的一张脸，身份就是「你是谁」 */
+   /* Identity -- blue round face: the most basic face there is, identity being "who you are" */
    {c:'#5B7CFA', body:`<circle cx="14" cy="14" r="11.6"/>`},
-   /* Provenance —— 绿 blob：链上流过来的一摊，形状不规则 */
+   /* Provenance -- green blob: a puddle flowing off-chain, irregular in shape */
    {c:'#3E9B6C', body:`<path d="M14 2.9c4.6-.5 9.3 2.2 10.4 6.6 1 4.1-.4 8.7-3.4 11.5-3 2.8-8 3.7-11.9 2-3.8-1.7-6.3-5.8-5.9-10C3.6 8.7 6.6 4.8 10.3 3.5c1.2-.4 2.5-.5 3.7-.6Z"/>`},
-   /* Graph —— 蓝四叶：四个节点抱成一团 */
+   /* Graph -- blue four-leaf: four nodes clustered together */
    {c:'#4F86E8', body:`<circle cx="9.2" cy="9.2" r="6.4"/><circle cx="18.8" cy="9.2" r="6.4"/>
      <circle cx="9.2" cy="18.8" r="6.4"/><circle cx="18.8" cy="18.8" r="6.4"/>
      <rect x="8" y="8" width="12" height="12"/>`},
-   /* Sanctions —— 橙圆角三角：路边的警示牌 */
+   /* Sanctions -- orange rounded triangle: a roadside warning sign */
    {c:'#E8833A', body:`<path d="M12 3.6c1-1.6 3-1.6 4 0l8.6 15.4c1 1.7-.2 3.9-2 3.9H5.4c-1.8 0-3-2.2-2-3.9Z"/>`, ey:16.5},
-   /* Behavior —— 粉花：五瓣，性格外放 */
+   /* Behavior -- pink flower: five petals, an outgoing personality */
    {c:'#E993B9', body:`<circle cx="14" cy="6.6" r="5"/><circle cx="21" cy="11.7" r="5"/>
      <circle cx="18.3" cy="19.9" r="5"/><circle cx="9.7" cy="19.9" r="5"/>
      <circle cx="7" cy="11.7" r="5"/><circle cx="14" cy="13.5" r="6.2"/>`},
-   /* Pricing —— 黄太阳：十二芒星，市场的光 */
+   /* Pricing -- yellow sun: a twelve-pointed star, the light of the market */
    {c:'#EFBE3F', body:`<path d="${star(12,12.3,8.9)}"/>`},
-   /* Velocity —— 白幽灵：速度与异动，飘的 */
+   /* Velocity -- white ghost: speed and anomaly, drifting */
    {c:'#E8E5DF', body:`<path d="M5.4 13.2C5.4 7.9 9.2 4 14 4s8.6 3.9 8.6 9.2v8.2c0 1.1-1.2 1.7-2 1l-1.5-1.3-2 1.8c-.6.5-1.5.5-2.1 0L14 22l-1 .9c-.6.5-1.5.5-2.1 0l-2-1.8-1.5 1.3c-.8.7-2 .1-2-1Z"/>`, ec:'#4a4a52'},
   ][i%7];
   const ey=G.ey||13.4, ec=G.ec||'#1e2026';

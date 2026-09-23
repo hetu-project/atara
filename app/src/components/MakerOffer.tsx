@@ -17,15 +17,15 @@ import type { DepositStatus, Offer, PreparedOffer, StrandedLock as ApiStrandedLo
 import type { TxStep } from '../hooks/useWalletTx'
 
 /**
- * 一条挂单：一笔量、一个价。
+ * One listing: an amount and a price.
  *
- * 跟身份核验、交易条款同一种载体——一张挂在 Atara AI 对话里的卡片。好处不只
- * 是一致：挂完之后这张卡留在对话里，就是这笔挂单的记录。
+ * The same vehicle as identity verification and trading terms -- a card inside the Atara AI conversation. The
+ * benefit is not only consistency: once posted, the card stays in the conversation as the record of that listing.
  *
- * 可选项不是写死的，是交易条款圈出来的那一份再和目录取交集。参照那边
- * 也做交集（`d.nets.filter(n => NETS_OF[coin].includes(n))`），只是它那份
- * 目录是静态数组，我们这份来自后端——后端只结算 USDT / USDC，条款里勾了
- * BTC 也挂不出来，这里就不该把它摆出来让人点完再被接口打回。
+ * The options are not hardcoded; they are what the trading terms bounded, intersected with the catalog. The
+ * reference intersects too (`d.nets.filter(n => NETS_OF[coin].includes(n))`), only its catalog is a static array
+ * while ours comes from the backend -- the backend only settles USDT / USDC, so BTC ticked in the terms cannot be
+ * listed anyway, and it should not be put here for someone to click and then be rejected by the endpoint.
  */
 
 const FIAT_SYM: Record<string, string> = {
@@ -33,7 +33,7 @@ const FIAT_SYM: Record<string, string> = {
 }
 const num = (v: string) => Number(String(v).replace(/[,，\s]/g, ''))
 
-/** 要发给后端的那份挂单。确认框拿着它，确认之后原样发出去。 */
+/** The listing to be sent to the backend. The confirmation dialog holds it and sends it unchanged on confirm. */
 type OfferBody = {
   side: 'sell' | 'buy'; asset: string; fiat: string
   unit_price: string; qty: string; min_lot: string
@@ -41,19 +41,20 @@ type OfferBody = {
 }
 
 /*
-一笔已经锁进合约、却还没建成挂单的币。
+Coins already locked into the contract for which no listing was ever created.
 
-卖单在真链上是三步：要号 → 钱包锁币 → 建挂单。中间那一步是一笔链上交易，
-撤不回来；第三步还会失败（网络断了、响应丢了、令牌刚好过期）。失败时这两个
-号只活在 send() 的局部变量里，跟着这次点击一起没了——币在合约里，界面上只有
-一句「Could not post」，再点一次就是重新要号、重新锁一份，而第一份永远留在
-那儿，连下架都够不着（下架要先按 id 查到挂单行）。
+On a real chain a sell listing is three steps: request an id -> lock coins in the wallet -> create the listing. The
+middle one is an on-chain transaction and cannot be recalled; the third can still fail (network dropped, response
+lost, token just expired). On failure these two ids live only in send()'s local variables and vanish with that
+click -- the coins are in the contract, the UI says only "Could not post", and clicking again requests a new id and
+locks a second set, while the first stays there forever, out of reach even of delisting (which has to look up the
+listing row by id first).
 
-所以锁一成功就先把号写下来，写在 localStorage 而不是 state：这一步的失败面
-包含「把页面关了」。建单成功再抹掉。
+So the id is written down the moment the lock succeeds, into localStorage rather than state: this step's failure
+modes include "closed the page". It is erased once the listing is created.
 
-写不进去（隐私模式、关了站点数据）不该让挂单流程挂掉——那时退回原来的行为，
-本次会话里 state 仍然记得，重试照样能用。
+A failed write (private mode, site data disabled) must not break the listing flow -- it falls back to the original
+behaviour, where state still remembers within this session and retrying still works.
 */
 type StrandedLock = Recoverable & { at: number }
 
@@ -70,45 +71,47 @@ function readStranded(uid: string): StrandedLock | null {
 }
 function writeStranded(uid: string, v: StrandedLock) {
   if (!uid) return
-  try { localStorage.setItem(lockKey(uid), JSON.stringify(v)) } catch { /* 见上 */ }
+  try { localStorage.setItem(lockKey(uid), JSON.stringify(v)) } catch { /* see above */ }
 }
 function clearStranded(uid: string) {
   if (!uid) return
-  try { localStorage.removeItem(lockKey(uid)) } catch { /* 见上 */ }
+  try { localStorage.removeItem(lockKey(uid)) } catch { /* see above */ }
 }
 
-/* 这笔锁仓能不能拿来挂这一单。
+/* Whether this lock can be used to post this listing.
 
-   比的是锁本身覆盖的东西——哪条链上的哪个币、多少量。价和起订量不在其中：
-   它们不影响链上锁了什么，改了价再用同一笔锁仓挂出来是对的。 */
+   What is compared is what the lock itself covers -- which token on which chain, and how much. Price and minimum
+   lot are not part of it: they do not affect what was locked on chain, and posting with a changed price against the
+   same lock is correct. */
 const sameLock = (r: Recoverable, b: OfferBody) =>
   r.body.asset === b.asset && r.body.qty === b.qty && r.body.network === b.network
 
 /*
-一笔能被挂出去的残留锁仓，两个来源合成的同一种东西。
+A stranded lock that can be posted, one kind of thing assembled from two sources.
 
-服务端那一份（/offers/stranded）是权威的：它从 deposits 行加链上锁仓算出来，
-换台设备、清过站点数据之后仍然找得到——这正是 localStorage 那一份做不到的。
-本地那一份胜在快，而且带着锁币那笔交易的哈希，服务端没存过它。
+The server-side copy (/offers/stranded) is authoritative: it is computed from deposit rows plus the on-chain lock,
+and is still findable on another device or after site data has been cleared -- precisely what the localStorage copy
+cannot do.
+The local copy wins on speed, and carries the hash of the locking transaction, which the server never stored.
 
-所以两边都要，按号合并，本地的盖在上面（多带一个哈希，没坏处）。
+So both are used, merged by id, with the local one on top (it carries one extra hash, which does no harm).
 */
 type Recoverable = {
   offer_id: string
   lock_tx: string
   body: OfferBody
-  /* delisted：这个号下面有一张**已经下架**的挂单，而合约里的币还锁着——
-     后台强制下架（它签不了解锁）、或旧版下架在余量为零时跳过了解锁。这一类
-     的出口不是「挂出去」（号被那张挂单占着，会撞 OFFER_EXISTS），而是「解锁」：
-     把下架流程再走一遍，钱包会被要求签那笔解锁交易。 */
+  /* delisted: this id has an **already delisted** listing under it while the coins are still locked in the
+     contract -- an admin override (which cannot sign the unlock), or an older delisting that skipped the unlock when
+     the remainder was zero. The way out for this kind is not "post it" (the id is taken by that listing and would
+     hit OFFER_EXISTS) but "unlock": run the delisting flow again, and the wallet will be asked to sign the unlock transaction. */
   delisted?: boolean
-  /** 合约里此刻还锁着多少。只有服务端那一份知道；已下架那一类按它显示。 */
+  /** How much is still locked in the contract right now. Only the server copy knows; the delisted kind is displayed from it. */
   available?: string
 }
 
 const fromServer = (l: ApiStrandedLock): Recoverable => ({
   offer_id: l.offer_id,
-  lock_tx: '', // 服务端没存这个；重发用不到它，它只进链上流水
+  lock_tx: '', // The server never stored this; reposting does not need it, and it only feeds the on-chain trail
   body: {
     side: 'sell', asset: l.form.asset, fiat: l.form.fiat,
     unit_price: l.form.unit_price, qty: l.form.qty, min_lot: l.form.min_lot,
@@ -118,8 +121,8 @@ const fromServer = (l: ApiStrandedLock): Recoverable => ({
   available: l.available,
 })
 
-/* 合并两边，本地那一份优先。done 是这一次会话里已经挂出去的那些——服务端列表
-   要等下一次取回来才不含它们，中间这段时间不该还在屏幕上催。 */
+/* Merge both sides, with the local copy taking precedence. done holds the ones already posted within this session --
+   the server list will not exclude them until the next fetch, and in the meantime they should not still be nagging on screen. */
 function mergeRecoverable(
   local: Recoverable | null, server: ApiStrandedLock[] | null, done: string[],
 ): Recoverable[] {
@@ -168,14 +171,16 @@ function checkedText(at: number): string {
     hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
 }
 
-/* 点完「我转好了」之后那一句，连同它的语气。
+/* What is said after clicking "I have transferred it", and in what tone.
 
-   语气按**含义**定，不是一律标红。「还没到」绝大多数时候只是钱还没转出去、或者
-   交易还没落块——把它涂红，人会以为操作失败了，而什么都没失败。真正该跳出来的
-   是「收到了但不够」：那一条要他再动一次手，不说清楚他会一直等一件不会发生的事。
+   The tone follows the **meaning** rather than colouring everything red. "Not arrived" most of the time simply means
+   the money has not been sent yet, or the transaction has not landed in a block -- painted red, people assume the
+   operation failed when nothing has. What genuinely needs to stand out is "arrived but not enough": that one needs
+   another action from them, and without saying so they will wait forever for something that will not happen.
 
-   说的是链上此刻的事实，不是一句好听的话。少转的原因通常很具体（填了挂单量、
-   忘了手续费、交易所扣了提币费），把差额说出来，他立刻知道该补多少。 */
+   It states the on-chain fact of the moment, not something reassuring. The reason for a shortfall is usually very
+   specific (they entered the listing amount, forgot the fee, the exchange deducted a withdrawal fee), and stating
+   the difference tells them immediately how much to top up. */
 /* alert: nothing has arrived and the person has to act — the one state in
    this list where waiting is not the right move, so it is the one in red. */
 type Wait = { tone: 'idle' | 'alert' | 'warn' | 'ok'; text: string }
@@ -183,9 +188,10 @@ type Wait = { tone: 'idle' | 'alert' | 'warn' | 'ok'; text: string }
 function waitLine(d: DepositStatus | null): Wait {
   if (!d) return { tone: 'idle', text: 'Checking the contract…' }
   if (d.status === 'swept') {
-    /* 分开说。币进托管是链上那一步，挂单上架是它之后的一步，而后者失败过——
-       凭前者宣布后者，人会去 Listings 里找一笔并不存在的挂单，然后以为是
-       界面坏了。这时候真正出事的是后端，而这句话把它盖住了。 */
+    /* Say them separately. Coins entering escrow is the on-chain step, and the listing going live is a step after
+       it that has failed before -- announcing the latter on the strength of the former sends people to Listings to
+       look for a listing that is not there, and they conclude the UI is broken. What has really gone wrong then is
+       the backend, and this sentence would have covered it up. */
     return d.listed
       ? { tone: 'ok', text: 'The coins are in escrow and your listing is up.' }
       : { tone: 'warn', text: 'The coins are in escrow. Posting the listing is taking '
@@ -219,8 +225,9 @@ export default function MakerOffer({
   const { data: cat } = useApi(() => ep.assets(), [])
   const { data: fiatCorridors } = useApi(() => ep.fiats(), [])
   const { data: w } = useApi(() => ep.wallet(identity), [identity])
-  /* 接了链就走真交易：币由做市方自己的钱包锁进托管合约。
-     没接链（mock）时没有任何一条链是 deployed，走原来那条后端记账的路。 */
+  /* With a chain connected, go through a real transaction: the coins are locked into the escrow contract by the
+     maker's own wallet.
+     With no chain (mock) no chain is deployed, so take the original backend-bookkeeping path. */
   const { data: chains } = useApi(() => ep.chainInfo(), [])
 
   const [side, setSide] = useState('')
@@ -230,20 +237,20 @@ export default function MakerOffer({
   const [px, setPx] = useState('')
   const [qty, setQty] = useState('')
   const [min, setMin] = useState('')
-  /* 出错的行，外加它这一次为什么错。一行可能有两种错法（没填 / 填过头），
-     只挂一句固定文案的话，空着不填会被告知「不能超过挂单总额」——
-     那句话在说另一件事，人会盯着那个数字反复改。参照就是这么写的，
-     照抄过来的第一天就有人被它挡住。 */
+  /* Which row is wrong, plus why it is wrong this time. One row can be wrong in two ways (not filled / filled too
+     high), and hanging a single fixed sentence on it means leaving it blank reports "cannot exceed the listing
+     total" -- which is about something else, and people stare at that number editing it over and over. That is what
+     the reference does, and on the first day it was copied over somebody was blocked by it. */
   const [bad, setBad] = useState<{ id: string; msg?: string }>({ id: '' })
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
-  /* 待确认的那一单。非空就是确认框开着——它装的就是要发出去的那份 body，
-     确认之后原样发，中间不再重算一遍（重算意味着人确认的和发出去的可能不是
-     同一个东西）。 */
+  /* The listing awaiting confirmation. Non-empty means the confirmation dialog is open -- it holds exactly the body
+     to be sent, which is sent unchanged on confirm with no recomputation in between (recomputing means what was
+     confirmed and what is sent may not be the same thing). */
   const [confirm, setConfirm] = useState<OfferBody | null>(null)
 
-  /* 条款圈的范围 ∩ 目录发的范围。条款没填过就退回目录全集——
-     这条路走不到，但空数组会把整张卡渲染成一片空白，那比多写一行糟。 */
+  /* The range bounded by the terms, intersected with the range the catalog sends. With terms never filled in, fall
+     back to the whole catalog -- unreachable in practice, but an empty array would render the whole card blank, which is worse than one extra line. */
   const codes = (cat ?? []).map(a => a.code)
   const sides = terms?.dir.length ? terms.dir : ['Sell crypto', 'Buy crypto']
   const coins = (terms?.coins ?? codes).filter(c => codes.includes(c))
@@ -252,16 +259,17 @@ export default function MakerOffer({
   const catNets = cat?.find(a => a.code === curCoin)?.networks ?? []
   const nets = (terms?.nets ?? catNets).filter(n => catNets.includes(n))
   const curNet = nets.includes(net) ? net : (nets[0] ?? '')
-  /* 选中的网络就是要发交易的那条链。以前这里跟链是断开的：挂单写着 ETH，
-     币却锁在后端连的那条链上，前端只好去问「你连的是哪条」——四条链因此
-     只能有一条。现在网络自己说清楚是哪条链。 */
+  /* The selected network is the chain the transaction goes out on. This used to be disconnected from the chain:
+     the listing said ETH while the coins were locked on whatever chain the backend was connected to, so the frontend
+     had to ask "which one are you on" -- which is why there could only ever be one of the four chains. Now the
+     network states which chain it is for itself. */
   const chain = (chains?.chains ?? []).find(c => c.code === curNet) ?? null
-  /* 传地址：Privy 手里往往不止一个钱包（开了托管钱包之后每人都多一个空的），
-     按下标取会拿到空钱包，余额查出来是 0。 */
+  /* Pass the address: Privy often holds more than one wallet (everyone gained an empty one once the custodial
+     wallet was enabled), and taking one by index gets the empty one, reading a balance of 0. */
   const tx = useWalletTx(chain, w?.address)
   const onChain = chains?.impl === 'evm'
-  /* 钱包类型决定确认那一下签在哪儿：外部钱包弹它自己的窗口，Atara 钱包走
-     passkey。用户可以在确认框里改——有人两边都有，挂单时想用哪边是他的事。 */
+  /* The wallet type decides where the confirmation is signed: an external wallet pops its own window, an Atara
+     wallet goes through a passkey. The user can change it in the confirmation dialog -- some people have both, and which to use when listing is their call. */
   const { toast } = useToast()
   const { data: me } = useApi(() => ep.me(identity), [identity])
   const [via, setVia] = useState<'atara' | 'ext' | null>(null)
@@ -283,17 +291,17 @@ export default function MakerOffer({
     inventory is not in a hot wallet. Requiring a signature would mean moving the
     treasury to sign for one listing.
   */
-  /* 外部入金的地址和该转的数，来自 /offers/prepare。
-     只取一次：每调一次就发一个新挂单号、落一行新的待入金，来回切换那两个
-     chip 会留下一串没人会用的记录。 */
+  /* The external deposit address and the amount to send, from /offers/prepare.
+     Fetched once only: each call issues a new listing id and writes a new awaiting-deposit row, so toggling back and
+     forth between those two chips leaves a trail of records nobody will ever use. */
   const [dep, setDep] = useState<PreparedOffer | null>(null)
   const [depErr, setDepErr] = useState('')
   const [sent, setSent] = useState(false)
-  /* 点完「我转好了」之后的真实进度。
+  /* The real progress after clicking "I have transferred it".
 
-     没有它，那颗按钮就是句空话：点不点、转没转，屏幕上看到的都一样。而这一步
-     的不确定性恰恰最高——金额填错、链选错、交易所扣了提币费，都会让钱到不了或
-     者不够，而人会一直等一件永远不会发生的事。 */
+     Without it that button is an empty gesture: clicked or not, transferred or not, the screen looks the same. And
+     this is the step with the highest uncertainty -- a wrong amount, a wrong chain, an exchange's withdrawal fee will
+     all leave the money short or absent, while the person waits forever for something that will never happen. */
   const [got, setGot] = useState<DepositStatus | null>(null)
   /* Sheet dismissed while a deposit is still on its way.
 
@@ -304,57 +312,56 @@ export default function MakerOffer({
      the deposit state stays, the poll keeps running, and a strip on the form
      leads back here. */
   const [hidden, setHidden] = useState(false)
-  /* 已经锁了币、还没挂出去的那些。
+  /* The ones where coins are locked but nothing was posted.
 
-     两个来源：localStorage 那一份是这台浏览器自己记的，快，且带着锁币交易的
-     哈希；服务端那一份从 deposits 行加链上锁仓算出来，换台设备、清过站点数据
-     之后只剩它。合并使用，见 mergeRecoverable。 */
+     Two sources: the localStorage copy is what this browser recorded itself -- fast, and carrying the locking
+     transaction's hash; the server copy is computed from deposit rows plus the on-chain lock, and after switching
+     device or clearing site data it is all that remains. Used merged; see mergeRecoverable. */
   const uid = me?.id ?? ''
   const [stranded, setStranded] = useState<StrandedLock | null>(null)
   useEffect(() => { setStranded(readStranded(uid)) }, [uid])
   const { data: serverStranded, reload: reloadStranded } =
     useApi(() => ep.strandedLocks(identity), [identity])
-  /* 后端每半分钟去链上认一次那些无主的锁仓（见 ConfirmListingLocks），认出来
-     就发一条事件。那一下浏览器没有任何理由知道，所以在这儿听着——否则这张卡
-     要一直停在「还没确认」，而后端早就确认完了。
+  /* Every half minute the backend goes to the chain to claim those ownerless locks (see ConfirmListingLocks) and
+     emits an event when it does. The browser has no way of knowing that happened, so it is listened for here --
+     otherwise this card would sit on "not yet confirmed" while the backend confirmed it long ago.
 
-     挂单建出来时也会走这条：那时列表回空，提示自己消失。 */
+     The same path fires when the listing is created: the list then comes back empty and the notice disappears by itself. */
   useEffect(() => {
     addEventListener(LIVE_CHANGED, reloadStranded)
     return () => removeEventListener(LIVE_CHANGED, reloadStranded)
   }, [reloadStranded])
-  /* 这一次会话里已经挂出去的号。服务端列表要等下一次取回来才不含它们。 */
+  /* Ids already posted within this session. The server list will not exclude them until the next fetch. */
   const [done, setDone] = useState<string[]>([])
   const recoverable = mergeRecoverable(stranded, serverStranded, done)
   const sell = curSide === 'Sell crypto'
   const pending = sent && !!dep
-  /* 放在取地址那段之前：下面那个 effect 读它，而 effect 必须排在组件里所有
-     提前返回的上面（见那里的注释）。 */
+  /* Placed before the address-fetching section: the effect below reads it, and that effect has to sit above every
+     early return in the component (see the note there). */
   const walletKind = via ?? (me?.wallet_kind === 'ext' ? 'ext' : 'atara')
   /* The external-deposit route: a sell listing funded from a wallet we never
      touch. Most of the sheet below branches on it. */
   const ext = sell && walletKind === 'ext'
 
-  /* 这一段必须待在组件里所有提前返回的**上面**。
+  /* This section has to stay **above** every early return in this component.
 
-     下面有一处「条款和本版支持的币对不上就整块返回 Nothing listable」——
-     它一生效，后面的 hook 就不会被调用，而 React 只要发现这一次比上一次少跑了
-     hook 就会当场抛 "Rendered fewer hooks than expected"，整个控制台起不来。
-     这个错误是 eslint-plugin-react-hooks 抓出来的，肉眼和正则都没找到。 */
-  /* 要一个入金地址。
+     Below there is a "if the terms and this version's supported coins do not intersect, return the whole block as
+     Nothing listable" -- and once that fires, the hooks after it are never called, and the moment React sees fewer
+     hooks run than last time it throws "Rendered fewer hooks than expected" on the spot, taking the whole console down.
+     This error was caught by eslint-plugin-react-hooks; neither the eye nor a regex found it. */
+  /* Request a deposit address.
 
-     这一步就把挂单号发出去了，并且在后端落一行「等这笔钱」——所以只做一次。
-     反复切换那两个 chip 会留下一串永远等不到钱的记录，而每一行都会被 watcher
-     每隔几秒读一次链。 */
-  /* 面板一露出来就去取，而不是等谁点那个 chip。
+     This step already issues the listing id and writes a "waiting on this money" row on the backend -- so it is done
+     once only. Toggling back and forth between those two chips leaves a trail of records that will never see their
+     money, each of which the watcher reads off the chain every few seconds. */
+  /* Fetch as soon as the panel becomes visible, rather than waiting for someone to click that chip.
 
-     外部钱包登录的账户 walletKind 默认就是 'ext'（见上面那行 via ?? …），
-     所以弹窗一开面板就在那儿了，而点击从来没发生过——它会永远停在
-     「Getting an address…」，要切到 Atara 再切回来才动。绑在「可见」上，
-     两条进入路径就都覆盖了。 */
+     An account signed in with an external wallet has walletKind 'ext' by default (see the via ?? ... line above), so
+     the panel is already there when the dialog opens and the click never happens -- it would sit on "Getting an
+     address..." forever, only moving after switching to Atara and back. Bound to "visible", both entry paths are covered. */
   useEffect(() => {
     if (confirm && sell && walletKind === 'ext') void askAddress()
-    // askAddress 自己有幂等判断，不进依赖，否则每次渲染都会重新跑一遍
+    // askAddress has its own idempotence check and is left out of the deps, or it would rerun on every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirm, sell, walletKind])
 
@@ -368,15 +375,15 @@ export default function MakerOffer({
      way, and this loop is the only thing that turns its arrival into a receipt. */
   const [checking, setChecking] = useState(false)
   const [checkedAt, setCheckedAt] = useState(0)
-  /* 手动再查一次。轮询那条路自己会跑，这颗按钮是给「它还在动吗」这个疑问的——
-     等待的时候，一个按得动的按钮比一个转圈的图标让人踏实。 */
+  /* Check once more by hand. The polling path runs on its own; this button exists for the question "is it still
+     working?" -- while waiting, a button that responds is more reassuring than a spinner. */
   const recheck = async () => {
     if (!dep?.offer_id || checking) return
     setChecking(true)
     try {
       setGot(await ep.depositStatus(dep.offer_id, identity))
       setCheckedAt(Date.now())
-    } catch { /* 读不到就保持上一次的样子 */ } finally { setChecking(false) }
+    } catch { /* on a failed read, keep the previous state */ } finally { setChecking(false) }
   }
 
   useEffect(() => {
@@ -389,20 +396,20 @@ export default function MakerOffer({
         setGot(d)
         setCheckedAt(Date.now())
         if (!d.listed) return
-        /* 挂单出来了，就走和签名那条路一模一样的收尾：一句 toast，然后把
-           卡片换成回执。
+        /* Once the listing is out, finish exactly as the signing path does: one toast, then swap the card for an
+           acknowledgement.
 
-           挂单成了就是成了，不该因为币是转进来的就长得不一样。原来是在卡片
-           里把中间那行灰字换成一句「你的挂单上去了」——而大标题还是「33 USDT」、
-           底下还在喊「POSTING LOCKS FUNDS INTO ESCROW」，整张卡片看起来仍然停在
-           「你即将要做」。没人会把那一行认成成功。 */
+           A posted listing is a posted listing, and should not look different because the coins were transferred in.
+           This used to replace the grey middle line inside the card with "your listing is up" -- while the headline
+           still said "33 USDT" and the bottom still shouted "POSTING LOCKS FUNDS INTO ESCROW", so the whole card
+           still looked like "what you are about to do". Nobody would read that one line as success. */
         alive = false
         const o = await ep.offer(dep.offer_id)
         toast(`Listed · ${Number(o.qty).toLocaleString()} ${o.asset} locked in escrow`,
           { kind: 'ok' })
         resetSheet()
         onPosted(o, sym)
-      } catch { /* 读不到就保持上一次的样子，别把已经显示的进度抹掉 */ }
+      } catch { /* on a failed read, keep the previous state rather than wiping out progress already shown */ }
     }
     void look()
     const t = setInterval(() => void look(), 3000)
@@ -424,9 +431,9 @@ export default function MakerOffer({
     }
   }
 
-  /* 能结算哪些法币，由配置里选过的收款账户决定——你没有那个国家的收款
-     账户，就不该对外说你收那种钱。这句话以前只是个愿望：渠道是从银行目录
-     里挑的名字，跟账户簿毫无关系。现在渠道就是账户，它才真的成立。 */
+  /* Which fiat can be settled is decided by the receiving accounts selected in the configuration -- without an
+     account in that country, you should not tell the world you accept that money. This used to be an aspiration:
+     rails were names picked from the bank catalog with no relation to the address book. Now a rail is an account, so it actually holds. */
   const tradableFiat = (fiatCorridors ?? []).flatMap(c => c.assets.map(a => a.code))
   const fromRails = [...new Set((accts ?? [])
     .filter(a => (terms?.rails ?? []).includes(a.id)).map(a => a.currency))]
@@ -441,18 +448,19 @@ export default function MakerOffer({
   const avail = num(w?.assets.find(a => a.asset === curCoin && a.network === curNet)?.on_chain
     ?? w?.assets.find(a => a.asset === curCoin && !a.network)?.on_chain ?? '0')
 
-  /* 参考价。这一版只结算美元稳定币，所以「币的美元价」恒为 1，
-     指数就是法币指数本身——真接上行情源时这里换成报价。 */
+  /* Reference price. This version only settles US dollar stablecoins, so "the coin's dollar price" is always 1 and
+     the index is the fiat index itself -- swap this for a quote once a real market feed is connected. */
   const idx = FX_IDX[curFiat] ?? 1
   const spread = terms?.pricing === 'Float' ? (parseFloat(String(terms.spread)) || 0) : 0
   const quote = +(idx * (1 + spread / 100)).toFixed(2)
 
-  /* 预填要真的写进 state。渲染时写 value={px || quote} 看着一样，但那样
-     框子就清不掉了：删空 → px 变成 ''  → 立刻又渲染回建议价，下一个键
-     反而接在 7.34 后面变成 7.345。
-     换了币或法币，计价基准变了，旧价作废按新指数重填——参照也是这么做的。
-     最小成交额只填一次：条款里那行「Per-trade limits (CNY)」问的就是这个数，
-     让人再抄一遍没道理，而空着的后果就是提交时被一句报错挡住。 */
+  /* The prefill has to be written into state for real. Rendering value={px || quote} looks the same, but then the
+     box can never be cleared: delete it all -> px becomes '' -> it immediately renders the suggested price back, and
+     the next keystroke lands after 7.34 making it 7.345.
+     Change the coin or the fiat and the pricing basis changes, so the old price is void and is refilled from the new
+     index -- which is what the reference does too.
+     The minimum trade size is filled once only: that "Per-trade limits (CNY)" row in the terms asks for this very
+     number, there is no sense in making people copy it again, and leaving it blank means being blocked by an error at submission. */
   const basis = `${curCoin}|${curFiat}`
   const seeded = useRef('')
   useEffect(() => {
@@ -505,9 +513,10 @@ export default function MakerOffer({
        on `dep`), so the amount on screen and the amount the watcher expects
        could disagree. One pending deposit at a time. */
     if (pending) { setHidden(false); return }
-    /* 校验过了先停一下让人看清楚：这一下之后币就进合约了，不可撤销。
-       参照在这里也插了一道（requireVerify），而且卖单和买单的措辞不同——
-       卖单锁的是钱，买单只是一句承诺。 */
+    /* Pause once after validation passes so the person can see it clearly: after this the coins enter the contract
+       irreversibly.
+       The reference inserts a step here too (requireVerify), with different wording for sell and buy -- a sell
+       listing locks money while a buy listing is only a commitment. */
     setConfirm({
       side: (sell ? 'sell' : 'buy') as 'sell' | 'buy', asset: curCoin, fiat: curFiat,
       unit_price: String(p), qty: String(q), min_lot: String(m),
@@ -542,16 +551,16 @@ export default function MakerOffer({
 
   const send = async (body: OfferBody) => {
     setBusy(true)
-    /* 卖单在真链上是三步，顺序不能换：
-         ① 要号——lockListing 的 offerId 是合约主键，不先有号就没法锁
-         ② 钱包签 approve + lockListing，币真的进合约
-         ③ 拿着号来建挂单，后端去链上核对锁了什么
-       买单不锁币（法币腿走银行），一步就够。
+    /* On a real chain a sell listing is three steps, and the order cannot change:
+         (1) request an id -- lockListing's offerId is the contract's primary key, and without an id there is nothing to lock against
+         (2) the wallet signs approve + lockListing, and the coins really enter the contract
+         (3) create the listing with that id, and the backend checks against the chain what was locked
+       A buy listing locks nothing (the fiat leg goes through banks) and needs only one step.
 
-       ② 之后 ③ 之前失败过，就不能从 ① 重来：那会是第二个号、第二笔锁币。
-       所以②一成功先把号写下来（见 StrandedLock），③失败时它留在那儿，重试
-       从③接着走。extra 声明在 try 外面，好让 catch 也读得到——出错时「币进
-       没进合约」决定了那句话该怎么说。 */
+       A failure after (2) and before (3) must not restart from (1): that would be a second id and a second lock.
+       So the id is written down the moment (2) succeeds (see StrandedLock), it stays there when (3) fails, and the
+       retry picks up from (3). extra is declared outside the try so catch can read it too -- when something fails,
+       "did the coins enter the contract" decides how the sentence has to be worded. */
     let extra: { offer_id?: string; lock_tx?: string } = {}
     try {
       /* A buy listing locks nothing, so there is no transaction — but posting
@@ -580,11 +589,11 @@ export default function MakerOffer({
       if (sell) confirmation = await ep.confirmOffer(body.asset, body.qty, identity)
 
       if (onChain && sell && chain?.deployed) {
-        /* 这笔币已经锁过一次了（上一次建单没成），就拿着它的号去建单——
-           重新 prepare 会拿到一个新号，钱包会再锁一份，而第一份没人认领。
+        /* These coins have already been locked once (the previous create failed), so create the listing with their
+           id -- preparing again would get a new id and the wallet would lock a second set, leaving the first unclaimed.
 
-           在合并后的那份里找，不是只看本地：上一次锁币发生在另一台设备上时，
-           本地什么都不记得，而服务端记得。 */
+           Looked up in the merged copy, not the local one alone: when the previous lock happened on another device,
+           the local copy remembers nothing while the server does. */
         const held = recoverable.find(r => sameLock(r, body)) ?? null
         if (held) {
           extra = { offer_id: held.offer_id, lock_tx: held.lock_tx }
@@ -595,8 +604,8 @@ export default function MakerOffer({
             offerKey: prep.offer_key, amountWei: prep.amount_wei,
           })
           extra = { offer_id: prep.offer_id, lock_tx: hash }
-          /* 币进合约的那一刻就记下来，在建单之前。这两行之间是唯一一段
-             「钱已经动了而没有任何地方记着」的窗口，把它压到最短。 */
+          /* Record it at the very moment the coins enter the contract, before creating the listing. The window
+             between these two lines is the only stretch where money has moved with nothing recording it, so keep it as short as possible. */
           const mark: StrandedLock = {
             offer_id: prep.offer_id, lock_tx: hash, body, at: Date.now(),
           }
@@ -617,7 +626,7 @@ export default function MakerOffer({
         const again = await ep.confirmOffer(body.asset, body.qty, identity)
         o = await ep.createOffer({ ...body, ...extra }, identity, again)
       }
-      /* 挂单建出来了，这笔锁仓有人认领了，两边的痕迹都可以抹掉。 */
+      /* The listing was created, this lock has been claimed, and the traces on both sides can be erased. */
       clearStranded(uid)
       setStranded(null)
       if (extra.offer_id) setDone(d => [...d, extra.offer_id as string])
@@ -638,23 +647,24 @@ export default function MakerOffer({
         { kind: 'ok' })
       onPosted(o, sym)
     } catch (e) {
-      // 钱包那一侧的错已经在交易进度那里显示过了，别再重复一遍。
-      // 判断靠错误类型而不是 tx.step —— 闭包里那个 step 是这次点击开始时的旧值。
+      // Errors from the wallet side have already been shown on the transaction progress line; do not repeat them.
+      // Decided by error type rather than tx.step -- the step inside that closure is the stale value from when this click started.
       if (!isWalletTxError(e)) {
-        /* 币已经进合约了就要说出来。一句光秃秃的「Could not post」会让人以为
-           这一下什么都没发生——而钱包里确实少了那笔钱，下一个动作多半是再点
-           一次。下面那条提示会接着说该怎么办。 */
+        /* If the coins have entered the contract, say so. A bare "Could not post" makes people think nothing at all
+           happened -- while their wallet really is missing that money, and their next move is most likely to click
+           again. The notice below goes on to say what to do. */
         const msg = e instanceof Error ? e.message : 'Could not post'
         setErr(extra.lock_tx ? `${msg} — your coins are locked in escrow, not lost.` : msg)
       }
     } finally { setBusy(false) }
   }
 
-  /* 把已经锁好的那笔币重新挂出去。
+  /* Repost coins that are already locked.
 
-     不再 prepare、不再锁币：号和交易都是现成的，缺的只是建单这一步。后端按
-     offer_id 认同一笔重试，所以这颗按钮按几次都只会有一张挂单——上一次真的
-     建成而只是响应丢了的话，它会把那一张原样还回来。 */
+     No prepare and no locking: the id and the transaction both exist, and the only missing step is creating the
+     listing. The backend deduplicates retries by offer_id, so however many times this button is pressed there will
+     only ever be one listing -- and if the previous attempt really did succeed and only lost its response, it hands
+     that one back unchanged. */
   const repost = async (rec: Recoverable) => {
     if (busy) return
     setBusy(true)
@@ -672,12 +682,12 @@ export default function MakerOffer({
       toast(`Listed · ${Number(o.qty).toLocaleString()} ${o.asset} locked in escrow`, { kind: 'ok' })
       onPosted(o, FIAT_SYM[rec.body.fiat] ?? '')
     } catch (e) {
-      /* 这个号已经被一张挂单占着了。
+      /* This id is already taken by a listing.
 
-         合约对同一个号是加仓（`_lockListing` 走 total += amount），所以这笔币
-         就在那张挂单的锁仓里——要拿回去下架它，而不是在这儿一直重试。会走到
-         这儿的是一份过期的本机记录：在另一台设备上，同一个号被改了价挂了出去，
-         而这台浏览器还记着旧的那份。留着它只会是一条永远点不动的提示。 */
+         The contract treats the same id as a top-up (`_lockListing` does total += amount), so these coins are inside
+         that listing's lock -- getting them back means delisting it, not retrying here. What leads here is a stale
+         local record: on another device the same id was reposted at a different price, while this browser still
+         remembers the old one. Keeping it would only leave a notice that can never be acted on. */
       if (e instanceof ApiError && e.code === 'OFFER_EXISTS') {
         if (stranded?.offer_id === rec.offer_id) {
           clearStranded(uid)
@@ -693,11 +703,12 @@ export default function MakerOffer({
     } finally { setBusy(false) }
   }
 
-  /* 解锁一笔「挂单已下架、币却还锁在合约里」的锁仓。
+  /* Unlock a "listing delisted but coins still locked in the contract" lock.
 
-     走的就是下架那条两步流程：后端先说「该你签了」（UNLOCK_REQUIRED），钱包
-     签完再回来销账。第二步没成也不要紧——链上已经解开了，后端每三十秒会自己
-     对一次链把账补上；这时候说「解锁失败」是假话。 */
+     It goes through the same two-step delisting flow: the backend first says "your turn to sign" (UNLOCK_REQUIRED),
+     and the wallet comes back to settle up after signing. A failed second step does not matter either -- the chain
+     is already unlocked, and every thirty seconds the backend reconciles against the chain and squares the books;
+     saying "unlock failed" at that point would be untrue. */
   const unlock = async (rec: Recoverable) => {
     if (busy) return
     setBusy(true)
@@ -736,7 +747,7 @@ export default function MakerOffer({
     </div>
   )
   const cls = (id: string) => 'sf' + (bad.id === id ? ' bad' : '')
-  /** 这一行现在该说什么：出错了就说这一次错在哪，没出错就是它的常驻提示。 */
+  /** What this row should say right now: what went wrong this time if something did, otherwise its standing notice. */
   const errMsg = (id: string, dflt: string) => (bad.id === id && bad.msg) || dflt
 
   return (
@@ -752,7 +763,7 @@ export default function MakerOffer({
           {chips(sides, curSide, setSide)}</div>
 
         <div className="sf"><span className="sfl">Asset</span>
-          {/* 换了计价基准旧价就作废，清掉让它按新指数重新预填 */}
+          {/* A changed pricing basis voids the old price, so clear it and let it refill from the new index */}
           {chips(coins, curCoin, setCoin)}
           {sell && (
             <span className="ad num" style={{ fontSize: 11.5, color: 'var(--faint)' }}>
@@ -803,23 +814,24 @@ export default function MakerOffer({
         {err ? <p className="dnote" style={{ color: 'var(--warn)' }}>{err}</p> : null}
         <TxNote step={tx.step} explorer={chain?.explorer ?? ''} />
 
-        {/* 币在合约里、挂单没建成的那些。
+        {/* Coins in the contract with no listing created.
 
-            它说的是一件已经发生的事实（币锁进去了），和一个还没做完的动作
-            （挂出去），所以它不是错误提示，而是一条待办——错误提示会跟着下
-            一次点击消失，这一条不会，它只在挂单真的建出来之后才消失。
+            It states a fact that has already happened (the coins were locked) and an action not yet finished
+            (posting them), so it is not an error message but a to-do -- an error message disappears with the next
+            click, this one does not, and it only disappears once the listing is really created.
 
-            没有「知道了」那种按钮：关掉它并不会把币还回来，而这一条是这笔币
-            在界面上唯一的入口。挂出去之后不想要，走下架，那时合约才会退币。
+            No "got it" button: dismissing it does not give the coins back, and this is the only entry point those
+            coins have in the UI. Not wanting them after posting means delisting, and only then does the contract
+            refund.
 
-            **上架这一下必须由人来点。** 后端认得出这笔锁仓，也存得下当初那份
-            表单，技术上完全可以自己把它挂出去——但他锁币时同意的是「按那个价
-            挂那么多」，而那可能是两小时前的价。币在合约里跑不掉（合约认的
-            maker 就是他，下架退回他自己的地址），所以这里没有替他做决定的
-            必要。后端只负责让他知道。
+            **Posting has to be clicked by a person.** The backend recognises this lock and stores the original form,
+            so technically it could post it by itself -- but what they agreed to when locking was "list that much at
+            that price", and that may have been two hours ago. The coins cannot go anywhere inside the contract (the
+            maker it recognises is them, and delisting refunds to their own address), so there is no need to decide
+            for them here. The backend's job is only to let them know.
 
-            列表而不是单条：来源有两个（本机记的、服务端算的），而服务端那边
-            完全可能有不止一笔——比如在另一台设备上断在半路的那些。 */}
+            A list rather than a single entry: there are two sources (locally recorded, server-computed), and the
+            server may well have more than one -- those broken off halfway on another device, for instance. */}
         {recoverable.map(rec => rec.delisted ? (
           /* The mirror image: a listing already taken down whose coins the
              contract still holds. The way out is the unlock, not a repost --
@@ -1062,9 +1074,9 @@ export default function MakerOffer({
               )}
             </>
           ) : null}
-          /* 转完之后不再警告。那一句是对「你即将锁一笔钱」发的，而钱已经出去了——
-             对一个做完的决定继续发警告，只会让人以为还有什么没完成。这时候
-             屏幕上唯一要说的就是进度那一行。 */
+          /* No warning once the transfer is done. That sentence was issued about "you are about to lock money", and
+             the money has already gone -- continuing to warn about a decision already made only makes people think
+             something is still unfinished. The only thing to say on screen at this point is the progress line. */
           /* The external deposit carries its own notice above, and after the
              coins are sent a warning about "posting" would describe a decision
              already made. Every other route keeps the shared ⚠ line. */
@@ -1075,26 +1087,27 @@ export default function MakerOffer({
                 how: 'They stay there until someone fills the listing, or you unlist.' }
             : { why: 'Posting a public listing',
                 how: 'Nothing is locked — a buy listing is a commitment to pay, not an escrow.' }}
-          /* 外部入金那一档不走 send()。
+          /* The external deposit tier does not go through send().
 
-             send() 会去签一笔 lockListing——而这一档的全部意义就是不需要签名。
-             这里点下去只是「我转好了」：钱到没到由 watcher 说了算，他点不点
-             其实都一样，所以这一下不发任何请求，只把卡片切到等待态。
+             send() would sign a lockListing -- and the whole point of this tier is that no signature is needed.
+             Clicking here only means "I have transferred it": whether the money arrived is the watcher's call, and it
+             makes no difference whether they click at all, so this click sends no request and only switches the card
+             into its waiting state.
 
-             挂单是钱到之后由后端建的，不是这里建的。 */
+             The listing is created by the backend once the money arrives, not here. */
           onConfirm={() => {
             if (sell && walletKind === 'ext') {
-              /* 转完之后唯一还剩的动作就是走开。挂单会自己上架，人留在这儿
-                 也看不到更多东西——所以按钮变成关闭，而不是一颗按不动的灰键。 */
+              /* Once transferred, the only remaining action is to walk away. The listing goes up by itself and
+                 staying here shows nothing more -- so the button becomes close, rather than a dead grey key. */
               if (sent) { closeSheet(); return }
               setSent(true)
               return
             }
             void send(confirm)
           }}
-          /* 这一档任何时候都不能落回默认文案。默认是「Sign in your wallet」——
-             而这条路的全部意义就是不需要签名，在它上面说这句话，等于告诉人
-             他刚才做的事不算数。 */
+          /* This tier must never fall back to the default copy under any circumstances. The default is "Sign in your
+             wallet" -- and the whole point of this path is that no signature is needed, so saying that here tells the
+             person that what they just did does not count. */
           plain={sell && walletKind === 'ext'
             ? (sent ? 'Close' : "I've sent it")
             : undefined}
@@ -1111,10 +1124,10 @@ export default function MakerOffer({
 }
 
 /**
- * 钱包那一侧走到哪一步了。
+ * How far the wallet side has got.
  *
- * 要签两次，中间还要等区块——不说清楚的话，第二次弹窗看着像失败重试，
- * 而等待期间界面一动不动，人会以为卡死了去点第二次。
+ * There are two signatures, with a wait for a block in between -- without saying so, the second dialog looks like a
+ * failed retry, and while waiting the UI sits still and people assume it has hung and click a second time.
  */
 function TxNote({ step, explorer }: { step: TxStep; explorer: string }) {
   if (step.k === 'idle') return null
@@ -1135,7 +1148,7 @@ function TxNote({ step, explorer }: { step: TxStep; explorer: string }) {
   )
 }
 
-/** 挂完那张卡：留在对话里就是这笔挂单的记录。 */
+/** The card after posting: left in the conversation, it is the record of that listing. */
 export function OfferPosted({ o, sym, onGo }: { o: Offer; sym: string; onGo: () => void }) {
   const sell = o.side === 'sell'
   return (

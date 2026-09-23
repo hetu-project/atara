@@ -3,8 +3,8 @@ import { RISK_AGENTS } from './agents'
 import { consensusNet, consensusRing } from './rings'
 
 /**
- * 共识环。空闲态就是一圈灰刻度——「还没开始」和「0 分」看起来必须不一样，
- * 所以空闲时不给起跑延时，环只画不扫。
+ * The consensus ring. Its idle state is a ring of grey ticks -- "not started yet" and "score 0"
+ * must not look the same, so idle gets no start delay and the ring is drawn without sweeping.
  *
  * The canvas animates to the final score by itself, so it is built once per
  * run rather than per frame. It does have to be rebuilt when the score
@@ -37,37 +37,41 @@ export function Ring({
 }
 
 /**
- * 星座。七个 agent 在轨道上慢转，不表态——「候命」看得见，
- * 比七个灰胶囊有说服力。
+ * Constellation. Seven agents turning slowly in orbit, taking no position -- "standing by" made
+ * visible, which reads better than seven grey pills.
  */
 export function Constellation({ live = false, done = false }: { live?: boolean; done?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const c = ref.current
-    const box = c?.parentElement?.parentElement   // #rs-table，星盘按这个格子定高
+    const box = c?.parentElement?.parentElement   // #rs-table; the chart sizes its height to this cell
     if (!c || !box) return
     let built = 0
-    /* 高度量实际格子：写死一个数在矮格子里会被 overflow:hidden 把底下那排球裁掉。
-       挂载那一拍格子高度还是 0，量早了整张图会缩成一条——所以等布局稳定，
-       并且跟着尺寸变化重建。canvas 自带的 _refit 只管宽，改高必须整张重画。 */
+    /* Measure the real cell: a hardcoded number gets the bottom row of dots clipped by
+       overflow:hidden inside a short cell. On the mount tick the cell height is still 0, and
+       measuring too early collapses the whole chart into a line -- so wait for layout to settle
+       and rebuild on resize. The canvas's own _refit only handles width; a height change requires
+       a full redraw. */
     const build = () => {
       const h = Math.max(150, Math.min(300, (box.clientHeight || 244) - 8))
       if (Math.abs(h - built) < 4) return
       built = h
-      /* idle=true 的那一版只画点不画线（参照里 `if(!idle) edges.forEach(...)`）。
-         跑过之后要画成网：那些连线说的是「这七个不是各判各的，他们互相对过」，
-         而这正是「共识」这个词在这块面板上的全部含义。原来写死传 true，
-         于是无论跑没跑，星盘永远是一盘散点。
-      
-         跑完了就定格在终帧，不重放：那段动画有十几秒，而窗口一变宽这张图就要
-         重建——每次重建都从头演一遍，人会以为又评了一次。 */
+      /* The idle=true variant draws dots only, no edges (`if(!idle) edges.forEach(...)` in the
+         reference). Once a run has happened it must be drawn as a web: those edges say "these seven
+         did not each judge alone, they compared notes", and that is the entire meaning of the word
+         "consensus" on this panel. The original hardcoded true, so the chart was a scatter of
+         loose dots whether or not anything had run.
+
+         After a run it freezes on the final frame and does not replay: the animation runs for a
+         dozen-odd seconds, and the chart rebuilds whenever the window widens -- replaying from the
+         start each time would read as another assessment having been run. */
       const FROZEN = 99_000
       consensusNet(c, RISK_AGENTS, 0, 1050, done ? FROZEN : null, !live, h)
     }
     const ro = new ResizeObserver(build)
     ro.observe(box)
     return () => ro.disconnect()
-    // live 变了要整张重画：连线是在 build 里一次性决定的
+    // A change in live requires a full redraw: edges are decided once inside build
   }, [live, done])
   return (
     <div className="rtnetw">

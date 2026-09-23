@@ -1,10 +1,13 @@
-/* 做市准入的表单定义，逐字取自 console.html。
+/* Form definitions for maker onboarding, taken verbatim from console.html.
  *
- * 标记规则——[抄] = 参考文档截图里能直接看到的字段，逐字照搬；
- *            [补] = 文档只给了步骤名没展开字段，按该步骤的通行做法补。
+ * Marker convention -- [copied] = a field directly visible in the reference document screenshots, copied
+ *                     verbatim;
+ *                     [added] = the document named the step but did not expand its fields, so these follow
+ *                     common practice for that step.
  *
- * KYC/KYB 是**账户级**流程，挂单配置是**能力级**配置——两件事，
- * 所以是两段提交、两次审核，不能揉成一个「成为卖家」。
+ * KYC/KYB is an **account-level** process while listing configuration is **capability-level** -- two
+ * different things, hence two submissions and two reviews, and they cannot be merged into one
+ * "become a seller".
  */
 /* eslint-disable */
 // @ts-nocheck
@@ -23,8 +26,9 @@ const F=(k,l,type,extra)=>Object.assign({k,l,type:type||'text'},extra||{});
    row the server holds, which it already insists on at submit. */
 const KYC_IND=[
  {t:'Account type', lead:'Individuals and companies follow different paths.', fields:[]},
- /* 核验放在最前：证件上那些字段（姓名、生日、证件号、有效期）应当是**读出来的**，
-    不是手打的。原来这一步叫「ID check」摆在第九步，是三个上传框——那不是核验，那是收图。 */
+ /* Verification comes first: the fields on the document (name, date of birth, document number, expiry)
+    should be **read off it**, not typed in. This step used to be called "ID check", sat ninth, and was
+    three upload boxes -- that is not verification, that is collecting images. */
  {t:'Identity verification', lead:'A live check against your government ID.',
   fields:[F('idcheck','Identity verification','idcheck')]},
 ];
@@ -46,43 +50,46 @@ export const IDENTITY_FIELDS: Field[] = [
 
 const KYC_CORP=[
  {t:'Account type', lead:'Individuals and companies follow different paths.', fields:[]},
- /* 先传文件再填字段，跟个人那条同一个思路：证件上有的东西应当是**读出来的**，
-    不是手打的。/kyb 的入参就是这张注册文件——它 OCR 出公司信息、去官方注册处
-    核对、过制裁名单，再告诉我们该验哪几个负责人。
-    没接上之前它也不白传：人工审核现在面对的是一堆没人验过的手填字段。 */
+ /* Upload the file before filling in fields, the same idea as the individual path: what is on the document
+    should be **read off it**, not typed in. /kyb takes exactly this registration document as input -- it
+    OCRs the company details, checks them against the official registry, runs sanctions screening, and tells
+    us which officers need verifying.
+    Until that is wired up the upload is still not wasted: what manual review faces today is a pile of
+    hand-typed fields nobody has verified. */
  {t:'Registration document', lead:'Your certificate of incorporation or business registration.',
   fields:[F('bizdoc','Registration document','upload',
             {hint:'Certificate of incorporation, business registration, or articles of association'})]},
- {t:'Basic profile', lead:'Read from your document — check it and fill in the rest.',              /* 本步全部字段 [抄] */
+ {t:'Basic profile', lead:'Read from your document — check it and fill in the rest.',              /* every field in this step [copied] */
   fields:[F('company','Company name'), F('regno','Registration no.'),
           F('estdate','Incorporated','date',{opt:true}),
           F('regcountry','Country of registration','country'),
           F('street','Street','text',{opt:true}), F('city','City','text',{opt:true}),
           F('province','State','text',{opt:true}), F('zip','Postcode','text',{opt:true})]},
- {t:'Operations', lead:'Actual business and turnover.', /* 步骤名 [抄]，字段 [补] */
+ {t:'Operations', lead:'Actual business and turnover.', /* step name [copied], fields [added] */
   fields:[F('bizindustry','Industry'), F('bizscope','Business','text',{opt:true}),
           F('turnover','Annual turnover','pick',{opts:['Under 5M','5M–50M','50M–500M','Over 500M']}),
           F('headcount','Headcount','pick',{opts:['1–10','11–50','51–200','200+'],opt:true})]},
- {t:'Source of wealth', lead:'Where company funds come from.', /* 步骤名 [抄]，字段 [补] */
+ {t:'Source of wealth', lead:'Where company funds come from.', /* step name [copied], fields [added] */
   fields:[F('csow','Source of funds','multi',{opts:['Operations','Shareholders','Financing','Investments','Other']}),
           F('mainrev','Main revenue','text',{opt:true})]},
- {t:'Compliance', lead:'Sanctions, high-risk countries, internal AML.', /* 步骤名 [抄]，字段 [补] */
+ {t:'Compliance', lead:'Sanctions, high-risk countries, internal AML.', /* step name [copied], fields [added] */
   fields:[F('sanction','Subject to sanctions','pick',{opts:['No','Yes']}),
-          /* 「jurisdictions」被读成「行业」不止模型一个——一家 OTC 商家很容易
-             觉得自己该答 Yes。写明是国家/地区。后端 rules.go 那条 Says 说的是
-             同一件事，判断逻辑不看这个标签。 */
+          /* It is not only models that read "jurisdictions" as "industries" -- an OTC merchant can easily
+             think they should answer Yes. So it says countries/regions explicitly. The Says clause in the
+             backend's rules.go means the same thing, and the decision logic does not look at this label. */
           F('highrisk','Operates in FATF high-risk or monitored countries','pick',{opts:['No','Yes']}),
           F('amlpolicy','Internal AML policy','pick',{opts:['Yes','No'],opt:true})]},
- /* 企业主体也要验一个自然人：签字、操作账户的是他。受益人最终必须落到
-    自然人身上，这一步就是那个落点。 */
+ /* A corporate entity still has to verify a natural person: they are the one who signs and operates the
+    account. Beneficial ownership must ultimately land on a natural person, and this step is that landing point. */
  {t:'Identity verification', lead:'The person who signs for the company.',
   fields:[F('idcheck','Identity verification','idcheck')]},
- {t:'Authorised representative', lead:'Read from the document above — fill in the rest.', /* 步骤名 [抄]，字段 [补] */
+ {t:'Authorised representative', lead:'Read from the document above — fill in the rest.', /* step name [copied], fields [added] */
   fields:[F('repname','Name'), F('reptitle','Title','text',{opt:true}),
           F('repid','ID number'), F('repphone','Phone','text',{opt:true})]},
- /* 董事和受益人都是**一组人**，不是一个人。原来各自三四个单字段，
-    结构上就只填得下一个——一家有五个董事的公司在这张表上无法如实申报。 */
- {t:'Directors', lead:'All directors.', /* 步骤名 [抄]，字段 [补] */
+ /* Directors and beneficial owners are both **groups of people**, not one person. They each used to be
+    three or four single fields, which structurally only fit one -- a company with five directors could not
+    declare truthfully on this form. */
+ {t:'Directors', lead:'All directors.', /* step name [copied], fields [added] */
   fields:[F('dirs','Directors','list',{row:[
             F('name','Name'),
             F('nat','Nationality','pick',{opts:['China','Hong Kong','Singapore','Other']}),
@@ -93,7 +100,7 @@ const KYC_CORP=[
             F('share','Ownership (%)'),
             F('nat','Nationality','pick',{opts:['China','Hong Kong','Singapore','Other']}),
             F('id','ID number')]})]},
- {t:'Signature', lead:'Signing confirms the declarations above.', /* 步骤名 [抄]，字段 [补] */
+ {t:'Signature', lead:'Signing confirms the declarations above.', /* step name [copied], fields [added] */
   fields:[F('csign','Signature','sign')]},
  {t:'Review & submit', lead:'Review and submit. Usually cleared within one business day.', fields:[]},
 ];
@@ -103,38 +110,42 @@ const LISTING_STEPS=[
  {t:'Confirm', lead:'Once approved you can post listings — buying, selling, or both.'},
 ];
 
-/* idcheck 不是一个输入框：它是把人交给 DocuPass 托管流程的那一步，
-   填没填由后端的核验状态说了算，不看这张表单里有没有值。 */
+/* idcheck is not an input: it is the step that hands the person over to DocuPass's hosted flow, and whether
+   it is done is decided by the backend's verification status, not by whether this form holds a value. */
 export type FieldType = 'text' | 'date' | 'pick' | 'multi' | 'sign' | 'idcheck'
-  | 'country'  // 可搜索的国家/地区。值是两位 ISO 代码。
-  | 'upload'   // 一份文件。值是后端给的 file_ref。
-  | 'list'     // 一组重复的行，行的形状由 field.row 定义。
+  | 'country'  // Searchable country/region. The value is a two-letter ISO code.
+  | 'upload'   // One file. The value is the file_ref given by the backend.
+  | 'list'     // A group of repeating rows, whose shape is defined by field.row.
 
 /**
- * 证件上读得出来的字段 → 我们表单里的 key。核验过之后这些不该再手打。
+ * Fields readable off an identity document -> keys in our form. After verification these should not be typed again.
  *
- * 选项类（nationality / gender / idtype）也在里面，但只有读出来的值正好是
- * 我们给的选项之一时才预填——DocuPass 认得的国家和证件类型比我们这张表
- * 列的多得多。读出来一个「Bermuda」硬塞进只有五项的列表里，要么显示成一个
- * 选不中的值，要么被悄悄改成「Other」。对不上就留给人自己选。
+ * The option-typed ones (nationality / gender / idtype) are included too, but they are only prefilled when the
+ * value read out happens to be one of the options we offer -- DocuPass recognises far more countries and
+ * document types than this table lists. Forcing a "Bermuda" read from a document into a five-item list either
+ * displays a value that cannot be selected, or silently rewrites it to "Other". When it does not match, leave
+ * it for the person to pick.
  */
 /**
- * 注册文件上读得出来的字段 → 企业表里的 key。核过之后这些不该再手打。
+ * Fields readable off a registration document -> keys in the corporate form. After verification these should
+ * not be typed again.
  *
- * 跟 VERIFIED_FIELDS 同一个道理,只是主体从人换成了公司。选项类
- * （regcountry）同样只在读出来的值正好是我们给的选项之一时才预填——
- * /kyb 认得的辖区比我们这张表列的多得多,读出来一个「GB」硬塞进只有
- * 五项的列表里,要么显示成一个选不中的值,要么被悄悄改成「Other」。
+ * Same reasoning as VERIFIED_FIELDS, only the subject changes from a person to a company. The option-typed one
+ * (regcountry) is likewise only prefilled when the value read out happens to be one of the options we offer --
+ * /kyb recognises far more jurisdictions than this table lists, and forcing a "GB" read from a document into a
+ * five-item list either displays a value that cannot be selected, or silently rewrites it to "Other".
  */
 export const VERIFIED_BIZ: Record<string, keyof import('../api/types').KybBusiness> = {
   company: 'legal_name', regno: 'reg_number', estdate: 'incorporated',
   street: 'address', city: 'city', zip: 'postcode',
-  /* 注册国也读出来。原来漏了它:地址被锁成文件上那一个,国家却留给人从
-     一个五项的列表里挑——挑不出 GB,只能选个对不上的,然后被审核抓住
-     「城市在伦敦而注册国写着香港」。矛盾是表单造的,不是申请人造的。
+  /* The country of incorporation is read out too. It used to be missed: the address was locked to the one on
+     the document while the country was left for the person to pick from a five-item list -- GB was not
+     pickable, so they had to choose something that did not match, and then got caught in review for "the city
+     is London while the country of incorporation says Hong Kong". The form manufactured the contradiction,
+     not the applicant.
 
-     存的是 ISO 代码,而 /kyb 回的 countryIso2 正好就是它——中间不需要
-     任何翻译,也就没有译错的余地。 */
+     What is stored is the ISO code, and the countryIso2 that /kyb returns is exactly that -- no translation in
+     between, and therefore no room for a translation error. */
   regcountry: 'country',
 }
 
@@ -146,17 +157,17 @@ export const VERIFIED_FIELDS: Record<string, keyof import('../api/types').KycIde
 }
 export interface Field {
   k: string; l: string; type: FieldType; opts?: string[]
-  /** upload：没选文件时那行说明该传什么。 */
+  /** upload: the line explaining what to upload when no file is picked. */
   hint?: string
-  /** list：一行长什么样。行里的 key 是行内局部的，不跟外面的表单撞。 */
+  /** list: what one row looks like. Keys inside a row are local to the row and do not collide with the outer form. */
   row?: Field[]
   /**
-   * 留空也能过。
+   * Can be left blank and still pass.
    *
-   * 必填清单的**权威在后端**（makerreview 的 needIndividual / needCorporate），
-   * 这里只是把同一件事说给人听。原来前端把每一项都当必填，比后端严——
-   * 于是「省」这种在香港、新加坡、开曼根本不存在的东西也被逼着填，
-   * 填了又被审核指出跟城市重复。
+   * **The authority on what is required is the backend** (makerreview's needIndividual / needCorporate); this
+   * only says the same thing to the person. The frontend used to treat every item as required, stricter than
+   * the backend -- so something like "province", which does not exist at all in Hong Kong, Singapore or the
+   * Cayman Islands, had to be filled in, and once filled was flagged in review as duplicating the city.
    */
   opt?: boolean
 }
@@ -179,10 +190,11 @@ export const FIELD_LABELS: Record<string, string> = Object.fromEntries(
 
 export { KYC_IND, KYC_CORP, LISTING_STEPS }
 
-/* 法币渠道那张表已经搬到后端（/catalog/rails），前端从 useRails 取。
-   搬走的理由：写死在这里的那一版列了 SGD / AED / EUR 三档，而后端只结算
-   CNY / HKD / USD——只勾了 SGD 渠道的商户配置照样审过，然后永远撮合不到
-   任何一单，而他收不到任何报错。目录归后端，这一整类漂移才不会再发生。 */
+/* The fiat rails table has moved to the backend (/catalog/rails); the frontend takes it from useRails.
+   Why it moved: the version hardcoded here listed SGD / AED / EUR while the backend only settled
+   CNY / HKD / USD -- a merchant configured with only the SGD rail still passed review, then never matched a
+   single order, and received no error at all. With the catalog owned by the backend, this whole class of
+   drift cannot happen again. */
 
-/** 参考指数（demo 静态）：法币 / USD。定价那一行用它算出「你报多少」。 */
+/** Reference index (static demo): fiat / USD. The pricing row uses it to work out what you are quoting. */
 export const FX_IDX: Record<string, number> = { CNY: 7.28, HKD: 7.80, SGD: 1.34, AED: 3.67, EUR: 0.86 }

@@ -1,17 +1,19 @@
 /**
- * Dither 加载动画：4×4 的格子按有序抖动的顺序此起彼伏地亮。
+ * Dither loading animation: a 4x4 grid lighting up in ordered-dither order, in waves.
  *
- * 移植自 beui.dev 的 Loader（docs/loading.md 里的 `dither` 变体）。原版用
- * motion/react + Tailwind，这里改成纯 CSS——整个动画只动 opacity，为它引一个
- * 动画库不划算，而且 CSS 动画跑在合成线程上，主线程正忙着接流式文本时也不会卡。
+ * Ported from beui.dev's Loader (the `dither` variant in docs/loading.md). The original uses
+ * motion/react + Tailwind; this is plain CSS -- the whole animation only moves opacity, so pulling
+ * in an animation library for it is not worth it, and CSS animations run on the compositor thread,
+ * so they do not stutter while the main thread is busy receiving streamed text.
  */
 
 /**
- * 4×4 Bayer 有序抖动矩阵，逐行展开。
+ * 4x4 Bayer ordered-dither matrix, unrolled row by row.
  *
- * 它决定每一格的相位。这串数不是随便排的：Bayer 矩阵让相邻格子的值尽量拉开，
- * 所以亮起来是散点式的，不会像从左到右扫过去那样有明显的方向感——
- * 换成 0..15 顺序排就变成一道扫描线了，那是另一种动画。
+ * It decides each cell's phase. These numbers are not in an arbitrary order: a Bayer matrix keeps
+ * neighbouring cells' values as far apart as possible, so cells light up in a scattered way with no
+ * obvious direction, unlike a left-to-right sweep -- replace it with 0..15 in order and it becomes
+ * a scanline, which is a different animation.
  */
 const BAYER_4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
 
@@ -20,9 +22,9 @@ export default function Dither({
   speed = 1.1,
   label = 'Atara AI is replying',
 }: {
-  /** 整块的边长（px）。格子和间隙都按它算。 */
+  /** Side length of the whole block (px). Cells and gaps are derived from it. */
   size?: number
-  /** 一个完整呼吸周期的秒数。 */
+  /** Seconds in one complete breathing cycle. */
   speed?: number
   label?: string
 }) {
@@ -36,10 +38,11 @@ export default function Dither({
         <i key={i} style={{
           width: cell, height: cell,
           animationDuration: `${speed}s`,
-          /* 负延迟：动画从「已经跑了一段」的位置起步，所以第一帧就是稳态。
-             用正延迟的话，相位靠后的格子要等将近一整个周期才第一次亮——
-             而这个加载态经常只出现一两秒，那些格子从头到尾是暗的，
-             看起来像是坏了几块。 */
+          /* Negative delay: the animation starts from a point where it has "already been running",
+             so the first frame is already the steady state. With a positive delay, cells late in the
+             phase order wait nearly a full cycle before lighting up for the first time -- and this
+             loading state often lasts only a second or two, so those cells stay dark throughout and
+             it looks like a few of them are broken. */
           animationDelay: `${-(order / BAYER_4.length) * speed}s`,
         }} />
       ))}

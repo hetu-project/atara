@@ -3,21 +3,21 @@ import { clearShared } from './share'
 import { WalletTxError, signatureDeclined } from './walletError'
 
 /**
- * 后端地址。
+ * Backend address.
  *
- * 默认 '/api/v1' 是相对路径——**只在前后端同源时成立**：dev 靠 Vite 代理，
- * 生产靠反向代理把 /api 转给后端。
+ * The default '/api/v1' is a relative path -- **valid only when front and back ends are same-origin**: dev
+ * relies on the Vite proxy, production on a reverse proxy forwarding /api to the backend.
  *
- * 前后端不同源时（比如前端在 Vercel、后端在别处）必须在构建时给出完整地址：
+ * When they are not same-origin (frontend on Vercel, backend elsewhere, say) a full address must be given at build time:
  *
  *     VITE_API_BASE=https://api.example.com/api/v1 npm run build
  *
- * 那种部署方式要靠后端 CORS 放行前端的域名（ATARA_CORS_ORIGINS）。
- * 相对路径不需要 CORS，是更省事也更安全的那条路——优先用反向代理。
+ * That deployment relies on the backend's CORS allowing the frontend's domain (ATARA_CORS_ORIGINS).
+ * A relative path needs no CORS and is both the simpler and the safer path -- prefer the reverse proxy.
  */
 export const BASE = import.meta.env.VITE_API_BASE ?? '/api/v1'
 
-/** 抛出的错误保留后端的 code / field / remedy，调用方按 code 分支。 */
+/** Thrown errors preserve the backend's code / field / remedy; callers branch on the code. */
 export class ApiError extends Error {
   readonly code: string
   readonly field?: string
@@ -35,18 +35,19 @@ export class ApiError extends Error {
 }
 
 /**
- * 当前身份的**演示用**句柄。
-
- * 真正的身份是 Privy 的 bearer token，后端只认它。这个句柄只在两种情况下
- * 有意义：本地开发把后端开成 ATARA_DEV_AUTH=1 时，X-Atara-User 头直接注入
- * 身份；以及演示时开两个窗口各带一个 ?as= 同时盯住一笔交易的两侧。
+ * The **demo** handle for the current identity.
  *
- * 所以它只在 dev 构建里发出去（见 DEV_HEADERS）。生产构建一个字节都不带：
- * 后端反正不认，带着只会让下一个接手的人以为它还有效。
+ * The real identity is Privy's bearer token, which is all the backend recognises. This handle only matters in
+ * two cases: local development with the backend started as ATARA_DEV_AUTH=1, where the X-Atara-User header
+ * injects the identity directly; and demos where two windows each carry a ?as= to watch both sides of one
+ * trade at once.
+ *
+ * So it is only sent in dev builds (see DEV_HEADERS). Production builds carry not a byte of it: the backend
+ * would not honour it anyway, and carrying it would make the next person to pick this up think it still works.
  */
 let identity = readIdentity()
 
-/** dev 构建才附带的头。生产构建返回空对象。 */
+/** Headers attached only in dev builds. Returns an empty object in production builds. */
 export function devHeaders(as?: string): Record<string, string> {
   return import.meta.env.DEV ? { 'X-Atara-User': as ?? identity } : {}
 }
@@ -68,29 +69,31 @@ export function setIdentity(handle: string): void {
   try {
     localStorage.setItem('atara-identity', handle)
   } catch {
-    /* 隐身窗口或禁用站点数据：内存里生效就够了 */
+    /* Private window or site data disabled: taking effect in memory is enough */
   }
 }
 
 /**
- * 身份失效时的事件名。
+ * Event name for an invalidated identity.
  *
- * 后端重建过库、或者账户被删掉之后，本机存的身份就指向一个不存在的人。
- * 那时每一个轮询都会拿到 401——不处理的话界面会一秒一次地重试到天荒地老，
- * 而屏幕上什么都不说。所以这里把它变成一次可响应的事件：清掉身份、弹登录门。
+ * After the backend rebuilds its database, or the account is deleted, the identity stored locally points at
+ * someone who does not exist. Every poll then gets a 401 -- unhandled, the UI retries once a second until the
+ * end of time while saying nothing on screen. So this turns it into one actionable event: clear the identity
+ * and open the sign-in door.
  */
 export const IDENTITY_GONE = 'atara:identity-gone'
 
 /**
- * 自己的账户摘要变了——改名，或者额度增删。
+ * Own account summary changed -- a rename, or an allowance added or removed.
  *
- * 这些数同时出现在好几个地方——左下角的账户位、账户页、菜单里的抬头。
- * 它们各自拉一份 /me 和 /allowances，改完只有发起的那一处会重取，别处要等
- * 下次挂载才更新：左下角会一直显示改名前的样子（新账户那就是一串地址），
- * 额度加了五条那里还写着「0 allowances」——看着像什么都没生效。
+ * These numbers appear in several places at once -- the account cell at the bottom left, the account page, the
+ * heading inside the menu. Each fetches its own /me and /allowances, and after a change only the place that
+ * initiated it refetches while the others wait for their next mount: the bottom left keeps showing the
+ * pre-rename value (for a new account, a string of address), and after adding five allowances it still says
+ * "0 allowances" -- as if nothing had taken effect.
  *
- * 广播一次，谁显示谁自己去重取。轮询也能盖住这件事，但改名是用户刚做完
- * 的动作，隔几秒才变跟没变一样让人怀疑。
+ * Broadcast once, and whoever displays it refetches for themselves. Polling would also cover this, but a
+ * rename is an action the user has just performed, and a change arriving seconds later is as unconvincing as no change.
  */
 export const PROFILE_CHANGED = 'atara:profile-changed'
 
@@ -109,8 +112,8 @@ export const PROFILE_CHANGED = 'atara:profile-changed'
 export const AUTH_CHANGED = 'atara:auth-changed'
 
 /**
- * 一条要给人看的全局提示。这一层是纯函数，够不着 React 的 toast；
- * 发一个事件，LiveToasts 收到后弹到右上角。
+ * A global notice meant for the user. This layer is pure functions and cannot reach React's toast;
+ * it fires an event, and LiveToasts pops it at the top right on receipt.
  */
 export const NOTICE_EVENT = 'atara:notice'
 export interface Notice { text: string; kind: 'ok' | 'err' | 'info' }
@@ -134,16 +137,16 @@ export function clearIdentity(): void {
     localStorage.removeItem('atara-identity')
     sessionStorage.removeItem('atara-signed')
   } catch {
-    /* 同上 */
+    /* As above */
   }
 }
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'DELETE'
   body?: unknown
-  /** 确认令牌，放进 X-Atara-Confirmation 头。 */
+  /** Confirmation token, placed in the X-Atara-Confirmation header. */
   confirmation?: string
-  /** 覆盖本次请求的身份，用于代对手方操作（演示两侧）。 */
+  /** Overrides the identity for this request, for acting on the counterparty's behalf (two-sided demos). */
   as?: string
   signal?: AbortSignal
 }
@@ -207,8 +210,8 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
       code: 'HTTP_' + res.status,
       message: `Request failed (${res.status})`,
     })
-    /* 身份不存在了：这是重试也好不了的错，重试只会把它变成一场 401 风暴。
-       清掉身份并广播一次，由 App 退回未登录态。 */
+    /* The identity no longer exists: an error no retry can fix, and retrying only turns it into a 401 storm.
+       Clear the identity and broadcast once, letting App fall back to the signed-out state. */
     if (err.code === 'UNKNOWN_ACTOR') {
       clearIdentity()
       dispatchEvent(new CustomEvent(IDENTITY_GONE))
@@ -216,8 +219,8 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     throw err
   }
 
-  // 后端有一类响应把违规装在 200 的 body 里（撮合的 violation），
-  // 那不是 HTTP 错误，交给调用方自己判断，这里不拦。
+  // One class of backend response carries a violation inside a 200 body (matching violations),
+  // which is not an HTTP error; that is left for the caller to judge and is not intercepted here.
   return parsed as T
 }
 
@@ -258,14 +261,16 @@ export function confirmMessage(scope: string, parts: string[], grade: Grade, iss
 }
 
 /**
- * 换一枚确认令牌。
+ * Exchange for a confirmation token.
  *
- * 令牌绑定 (scope + parts) 的摘要：换了金额或对手方，旧令牌就不认了。
- * 120 秒、一次性。所以**不要缓存复用**——每次动钱前重新签发。
+ * The token is bound to a digest of (scope + parts): change the amount or the counterparty and the old token is
+ * no longer recognised. 120 seconds, single use. So **do not cache and reuse it** -- reissue before every
+ * movement of money.
  *
- * 签名档要先让钱包签一段写明这次操作的文字（界面上叫「用 Passkey 签名」，
- * 手势是同一个）。后端拿签名恢复出地址、和账户上的地址比对，对不上不发令牌。
- * 承诺档不签：它只表示「我接受这些条款」，一个活着的会话就够。
+ * The signature tier requires the wallet to sign a piece of text spelling out this operation first (the UI calls
+ * it "sign with passkey"; the gesture is the same). The backend recovers the address from the signature and
+ * compares it against the account's address, issuing no token if they do not match.
+ * The commitment tier is not signed: it only means "I accept these terms", and a live session is enough.
  */
 export async function assert(
   scope: string,
@@ -303,10 +308,10 @@ export async function assert(
 }
 
 /**
- * 需要确认的操作，一步完成：先换令牌，再带着它调用。
+ * An operation requiring confirmation, done in one step: exchange for a token, then call with it.
  *
- * 把这两步封在一起是因为分开写太容易出错——摘要的 parts 必须和目标操作
- * 完全对应，写在两个地方就会漂移。
+ * These two steps are wrapped together because writing them apart is too easy to get wrong -- the digest's parts
+ * have to correspond exactly to the target operation, and written in two places they drift.
  */
 export async function withConfirmation<T>(
   scope: string,

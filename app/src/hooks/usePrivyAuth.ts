@@ -5,24 +5,26 @@ import * as ep from '../api/endpoints'
 import { authChanged, getIdentity, setMessageSigner, setTokenSource } from '../api/client'
 
 /**
- * Privy 与后端账户之间的那一座桥。
+ * The bridge between Privy and backend accounts.
  *
- * Privy 只负责证明「这个地址是他的」。开户是后端的事——所以 Privy 一登上，
- * 就拿它给的地址去 /auth/connect 换我们自己的账户，再把身份落座。
+ * Privy only proves "this address is theirs". Opening an account is the backend's job -- so the moment
+ * Privy signs in, we take the address it gives and exchange it at /auth/connect for our own account,
+ * then seat the identity.
  *
- * 两种钱包要分开报给后端，因为 wallet_kind 决定额度怎么签发：
- *   外部钱包（MetaMask / Phantom / OKX / 扫码）→ ext，额度走 approve
- *   Privy 托管钱包（Google / Twitter 进来的人）→ 按登录方式报，wallet_kind 是 atara
+ * The two wallet kinds are reported to the backend separately, because wallet_kind decides how
+ * allowances are issued:
+ *   External wallet (MetaMask / Phantom / OKX / QR) -> ext, allowances go through approve
+ *   Privy custodial wallet (people arriving via Google / Twitter) -> reported by sign-in method, wallet_kind is atara
  */
 export function usePrivyAuth(signed: boolean, signIn: (address: string) => void) {
   const { ready, authenticated, user, login, logout, getAccessToken } = usePrivy()
-  /* 记住这一轮已经拿哪个地址换过账户了。不记的话，后端一旦报错，
-     effect 会随每次 render 重试，变成一场自己打自己的请求风暴。 */
+  /* Remember which address has already been exchanged for an account this round. Without it, one backend
+     error makes the effect retry on every render, turning into a self-inflicted request storm. */
   const tried = useRef('')
-  /* 正在退出。Privy 的 logout 是异步的，在它完成之前 authenticated 仍然是
-     true，而我们这边的 signed 已经是 false 了——下面那个 effect 看到的正是
-     「Privy 登着、本地没登」，于是立刻又把人登回来。表现就是第一次点退出
-     没反应，第二次才退得掉。 */
+  /* Signing out. Privy's logout is async, and until it completes authenticated is still true while our
+     own signed is already false -- what the effect below then sees is "Privy signed in, local signed out",
+     so it immediately signs the person back in. The symptom is that the first click on sign out does
+     nothing and only the second one works. */
   const signingOut = useRef(false)
 
   /* Hand the API client a way to read the current access token. It cannot use
@@ -94,8 +96,8 @@ export function usePrivyAuth(signed: boolean, signIn: (address: string) => void)
     const stamp = key + '|' + (w?.address ?? '')
     if (tried.current === stamp) return
 
-    /* 登录方式如实上报，不要拿 google 顶替 twitter——login_method 是要
-       写进账户表的，糊弄一下，以后查「这个人当初怎么进来的」就查不出来了。 */
+    /* Report the sign-in method faithfully, do not substitute google for twitter -- login_method is written
+       into the account table, and fudging it makes "how did this person originally come in" unanswerable later. */
     const method = w && w.walletClientType !== 'privy' ? 'wallet'
       : user?.google ? 'google'
       : user?.twitter ? 'twitter'
@@ -125,12 +127,12 @@ export function usePrivyAuth(signed: boolean, signIn: (address: string) => void)
     }).catch(() => { tried.current = '' })
   }, [ready, authenticated, user, signed, signIn])
 
-  /* 登出要两边一起清：只清我们这边，Privy 的会话还在，
-     下次点登录会直接静默登回来，看着像退不出去。
+  /* Signing out has to clear both sides: clear only ours and Privy's session survives, so the next click on
+     sign in silently signs back in and it looks like sign out is broken.
      
-     去重键要等 Privy 真的退完再清。提前清掉的话，上面那个 effect 在
-     「Privy 还登着、本地已登出」的空档里就没有任何东西拦得住它，会当场
-     把人登回来——第一次点退出没反应就是这么来的。 */
+     The dedupe key must not be cleared until Privy has actually finished signing out. Cleared early, nothing
+     stops the effect above during the window where "Privy is still signed in, local is signed out", and it
+     signs the person straight back in -- which is where "the first click on sign out does nothing" came from. */
   const signOutAll = (localSignOut: () => void) => {
     signingOut.current = true
     localSignOut()

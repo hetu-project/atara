@@ -23,7 +23,7 @@ const flag = (c: string) => {
 const relText = (s: number) =>
   s < 60 ? `${s}s` : `${Math.floor(s / 60)}m${s % 60 ? ` ${s % 60}s` : ''}`
 
-/** 资质件六项。缺件也公开——让买家自己给缺口定价，而不是平台替他隐藏。 */
+/** The six qualification documents. Missing ones are published too -- let buyers price the gap themselves rather than having the platform hide it for them. */
 const DOCS: [string, string, string][] = [
   ['kyc', 'KYC', 'Identity verified by the platform'],
   ['pof', 'PoF', 'Proof of funds — will share on request'],
@@ -34,18 +34,19 @@ const DOCS: [string, string, string][] = [
 ]
 
 /**
- * Discover · 交易池。
+ * Discover - the trading pool.
  *
- * 「购买」看的是对方挂的卖单，「出售」看的是对方挂的买单——方向要反过来配。
- * 卡上那几样都不是装饰：信任分是选谁交易的第一判断，履约数据是分数的来源
- * （不能只给分不给依据），最小单决定这条单跟我有没有关系。
+ * "Buy" looks at other people's sell listings and "Sell" at their buy listings -- the direction has to be
+ * inverted when matching. Nothing on the card is decorative: the trust score is the first judgement in
+ * choosing who to trade with, the settlement history is where that score comes from (a score without its
+ * basis is not enough), and the minimum lot decides whether this listing is relevant to me at all.
  */
 export default function Pool({ identity, onNeedSignIn }: { identity: string; onNeedSignIn?: () => void }) {
   const [side, setSide] = useState<'buy' | 'sell'>('buy')
   const [coin, setCoin] = useState('All')
   const [fiat, setFiat] = useState('')
-  /* 法币筛选走弹窗。原来是点一下换下一个币种——币多起来要点七八下才轮到，
-     而且中途根本不知道后面还有什么。 */
+  /* Fiat filtering goes through a dialog. It used to cycle to the next currency on each click -- with more
+     currencies that means seven or eight clicks to reach one, with no idea along the way what else is coming. */
   const [picking, setPicking] = useState(false)
 
   /* 15s, like every other list that changes on its own. This one was the
@@ -66,8 +67,9 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
   const mineIds = new Set((mine ?? []).map(o => o.id))
 
   const all = data ?? []
-  /* 筛选项来自目录，不是从当前挂单反推——池子空的时候筛选条不该跟着消失，
-     那会让人以为「这个币种没有了」，而不是「这个方向暂时没人挂单」。 */
+  /* Filter options come from the catalog, not inferred from the current listings -- the filter bar should not
+     disappear when the pool is empty, which would suggest "this currency is gone" rather than "nobody is
+     listing in this direction right now". */
   const coins = ['All', ...(assets ?? []).map(a => a.code)]
   const list = all
     .filter(o => coin === 'All' || o.asset === coin)
@@ -84,13 +86,13 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
     <div className="view on" id="v-market">
       <div className="vhead"><h2>Discover</h2></div>
       <div className="vbody" id="mkbody">
-        {/* 这一版只有 OTC 一个纵向。一个选项的 tab 行不是导航，是噪音——
-            所以这一行只留做市入口。要加纵向时再把 tab 加回来。 */}
+        {/* This version has only one vertical, OTC. A tab row with one option is not navigation, it is noise --
+            so this row keeps only the maker entry point. Bring the tabs back when a vertical is added. */}
         <div className="mkbar" style={{ justifyContent: 'flex-end' }}>
           <MakerCta />
         </div>
         <div className="mkbar">
-          {/* 方向在最前，因为买家和卖家看的是两批完全不同的挂单 */}
+          {/* Direction comes first, because buyers and sellers are looking at two completely different sets of listings */}
           <div className="mkside" role="tablist" aria-label="Side">
             {(['buy', 'sell'] as const).map(s => (
               <button key={s} className={'mks' + (side === s ? ' on' : '')} role="tab"
@@ -112,8 +114,8 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
 
         {picking && (
           <FiatPicker groups={fiatGroups ?? []} on={fiat}
-            /* 只列池子里真有人接的币种：列一个没人挂单的币，选完是空池，
-               看的人会以为筛坏了。 */
+            /* Only list currencies someone in the pool will actually take: list one nobody is listing in and the
+               result is an empty pool, which reads as a broken filter. */
             avail={new Set(all.map(o => o.fiat))}
             onPick={c => { setFiat(c); setPicking(false) }}
             onClose={() => setPicking(false)} />
@@ -134,16 +136,17 @@ export default function Pool({ identity, onNeedSignIn }: { identity: string; onN
 }
 
 /**
- * 做市准入入口。按钮文案跟着申请状态走——
- * 「审核中」写成「Become a maker」会让人以为没提交成功，再点一次又提交一遍。
+ * Maker onboarding entry point. The button copy follows the application state --
+ * writing "Become a maker" while it is under review makes people think the submission failed and submit again.
  */
 function MakerCta() {
-  /* 用门那一份，不自己再拉一遍：放行是后端隔几秒改的，只有门那份在轮询。
-     自己拉的那份没人再问它，通过之后按钮会一直停在「Under review…」。 */
+  /* Use the door's copy rather than fetching again: approval is a backend state change a few seconds later, and
+     only the door's copy is polling. A separately fetched copy has nobody asking about it, so after approval the
+     button would sit on "Under review..." indefinitely. */
   const { app, ...kyc } = useKycGate()
-  /* 被打回的那一段，球在用户手里。这一格原来会落进「审核中」——打回之后
-     `*_done` 不再清零，不单独认它的话，等着他去改的东西会显示成
-     「我们还在审」，而那正是这次要消灭的那种误导。 */
+  /* The rejected case, where the ball is in the user's court. This cell used to fall into "under review" -- after
+     a rejection the `*_done` flags are not cleared, so without recognising it separately, things waiting on them
+     to fix show up as "we are still reviewing", which is exactly the kind of misleading this change set out to remove. */
   const revise = !!app?.reject_reason && !app?.approved
   const label = app?.approved ? 'Post a listing →'
     : revise ? 'Changes requested →'
@@ -212,9 +215,10 @@ function OfferCard({
 
   const unlist = async () => {
     setUnlisting(true)
-    /* 下架要把币取回钱包，而合约只认当初锁币的那个地址——后端去调必然
-       revert。所以先让后端说「该你签了」（UNLOCK_REQUIRED），签完再来一次，
-       那一次后端只核验「链上确实解开了」。 */
+    /* Delisting returns the coins to the wallet, and the contract only recognises the address that locked them --
+       so a backend-initiated call necessarily reverts. Hence the backend first says "your turn to sign"
+       (UNLOCK_REQUIRED), and after signing it comes back once more, that time only verifying "it really was
+       unlocked on chain". */
     try {
       await ep.delistOffer(o.id, identity)
     } catch (e) {
@@ -256,9 +260,9 @@ function OfferCard({
 
   /* The card tap: gates first, then the sheet. Placing happens in `take`. */
   const open = () => {
-    /* 先问身份再切视图：否则用户先被甩进一个空页面，登录门才追上来 */
+    /* Ask for identity before switching views: otherwise the user is dropped onto an empty page and the sign-in door catches up afterwards */
     if (onNeedSignIn) { onNeedSignIn(); return }
-    /* 再过身份门。法币腿点对点走银行，付款方必须可识别——买家也要验。 */
+    /* Then the identity door. The fiat leg goes peer to peer through banks, so the payer has to be identifiable -- buyers verify too. */
     if (!mine && kyc.require()) return
     if (mine) { setAskUnlist(true); return }
     /* Empty, with what is available in the placeholder — the shape the
@@ -282,29 +286,32 @@ function OfferCard({
 
   const take = async (amount: string) => {
     setTaking(true)
-    /* 从大厅点一笔单，落点是**这个人的会话**，不是一张独立的工单页。
-    
-       参照的 showOrder() 就是这么走的：ensureThread(o.peer) → restoreSession
-       → 评估在对话里当着面跑 → 工单卡追加进同一条流。原来这里跳 view:'order'，
-       于是评估、成交、后续的每一句话被劈成三个互不相通的地方——而「我跟这个人
-       做了什么」本来就是一件事。会话是那件事唯一完整的记录。
-    
-       对手方的 id 只有工单回来才知道（Offer.maker 里没有 user id），所以是
-       先下单、再进会话，而不是先进会话等它长出来。 */
+    /* Clicking an order in the hall lands in **that person's conversation**, not on a standalone ticket page.
+
+       The reference's showOrder() works exactly this way: ensureThread(o.peer) -> restoreSession -> the
+       assessment runs in the open inside the conversation -> the ticket card is appended to the same stream.
+       This used to navigate to view:'order', which split the assessment, the settlement and every subsequent
+       word into three places that could not see each other -- when "what I did with this person" is one thing.
+       The conversation is the only complete record of it.
+
+       The counterparty's id is only known once the ticket comes back (Offer.maker carries no user id), so the
+       order is placed first and the conversation entered second, rather than entering a conversation and
+       waiting for it to grow one. */
     try {
-      /* 按币的数量下单：法币金额是换算出来的，整条挂单那一档会因为四舍五入
-         比可成交量多出几分，然后被后端拒掉。 */
+      /* Order by coin quantity: the fiat amount is a conversion, and a whole-listing order would exceed the
+         available volume by a few cents through rounding and then be rejected by the backend. */
       const ord = await ep.take(o.id, {
         amount, amount_kind: 'coin', network: o.networks[0] ?? o.network,
       })
       setAskTake(false)
-      /* 先下单再起跑，而且回放的是**这一单存下来的**那一份评估。
-      
-         反过来（先按挂单评一次再下单）会出现两组分：后端按种子算分，挂单号
-         和工单号是两个种子。而下单之后两处同时在屏幕上——右栏在跑，会话里
-         那张卡已经在流里了——同一单显示两组数，人只能当它是乱编的。
-      
-         不 await：逐票落下来是给人看的过程，进会话不该等它。 */
+      /* Place the order first, then start, and replay **the copy stored against this order**.
+
+         The other way round (assessing against the listing first, then ordering) produces two sets of scores:
+         the backend scores from a seed, and the listing id and the ticket id are two different seeds. And after
+         ordering both are on screen at once -- the right column is running while the card is already in the
+         conversation stream -- so one order showing two sets of numbers can only read as made up.
+
+         Not awaited: votes landing one by one is a process for people to watch, and entering the conversation should not wait for it. */
       void start(o.id, m.name, ord.id)
       go({ view: 'thread', peer: ord.counterparty_id ?? '' })
     } catch (e) {
@@ -406,7 +413,7 @@ function OfferCard({
           still occupies the same corner as a scored card. Painting a 0 there
           would put someone we know nothing about in the warning band, which
           keeps a new maker from ever getting a first trade — and without a
-          first trade there is never a record. See docs/信任分.md §4.
+          first trade there is never a record. See the trust-score design note §4.
         */}
         <span className={('od-ai ' + scoreBand(rated)).trimEnd()}
           style={{ ['--p' as string]: rated ?? 0 }}
@@ -424,7 +431,7 @@ function OfferCard({
         </span>
       </div>
 
-      {/* 分数的来源，不能只给分不给依据 */}
+      {/* Where the score comes from; a score without its basis is not enough */}
       <div className="od-trust">
         {!scored ? <span>New merchant — history builds as trades settle</span> : (
           <>
@@ -472,8 +479,8 @@ function OfferCard({
 
 
 /**
- * 结算币种选择器。结构逐处对齐参照的 openFiatPicker：
- * 搜索框 + Any currency + 按走廊分组的币种卡。
+ * Settlement currency picker. The structure mirrors the reference's openFiatPicker point for point:
+ * search box + Any currency + currency cards grouped by corridor.
  */
 function FiatPicker({
   groups, on, avail, onPick, onClose,

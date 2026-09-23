@@ -1,8 +1,9 @@
-// 后端 JSON 的类型。字段名逐一对齐 atara-pay 的 internal/api/dto.go 与各 handler，
-// 不是猜的。契约本身是从旧 console.html 的写死数据反推的，所以这一层写成强类型——
-// 字段名对不上是这次联调最大的风险，编译期挡住比运行时 undefined 好得多。
+// Types for the backend's JSON. Field names are aligned one by one against atara-pay's
+// internal/api/dto.go and each handler -- not guessed. The contract itself was reverse-engineered from the
+// hardcoded data in the old console.html, so this layer is written strongly typed: a mismatched field name is
+// the single biggest risk in this integration, and catching it at compile time beats an undefined at runtime.
 
-/** 统一错误信封。对接方按 code 分支，不要匹配 message。 */
+/** The unified error envelope. Integrators branch on code and must not match on message. */
 export interface ApiErrorBody {
   code: string
   field?: string
@@ -15,7 +16,7 @@ export interface ApiErrorBody {
   }
 }
 
-/** 金额一律是十进制字符串主单位，绝不用 number——float 会静默改尾数。 */
+/** Amounts are always decimal strings in major units, never a number -- float silently alters the last digits. */
 export interface Amount {
   amount: string
   asset: string
@@ -38,7 +39,7 @@ export interface User {
 
 export interface WalletAsset {
   asset: string
-  /** 这笔余额实际所在的链，不是「这个币支持哪些链」。 */
+  /** The chain this balance is actually on, not "which chains this coin supports". */
   network: string
   on_chain: string
   in_escrow: string
@@ -51,7 +52,7 @@ export interface WalletAsset {
 export interface Wallet {
   address: string
   wallet_kind: 'atara' | 'ext'
-  /** 恒为 self——平台不持有资金。 */
+  /** Always self -- the platform does not hold funds. */
   custody: string
   on_chain_usd: string
   in_escrow_usd: string
@@ -111,7 +112,7 @@ export interface Maker {
   disputes: number
   fill_rate: string
   median_release_secs: number
-  /** 资质件缺项也照发——缺件也公开，让买家自己给缺口定价。 */
+  /** Published even with qualification documents missing -- the gaps are public too, so buyers can price them themselves. */
   docs: Record<string, boolean>
 }
 
@@ -124,22 +125,22 @@ export interface Offer {
   fiat: string
   unit_price: string
   qty: string
-  /** 币单位。 */
+  /** Coin unit. */
   remaining_qty: string
-  /** 法币单位。 */
+  /** Fiat unit. */
   fiat_ceiling: string
-  /** 法币单位——与 remaining_qty 不是同一个单位，不可混比。 */
+  /** Fiat unit -- not the same unit as remaining_qty, and the two must not be compared. */
   min_lot: string
   status: 'active' | 'filled' | 'delisted'
-  /** 下架的来源：做市方自己 / 后台强制 / 对账器发现链上已关。只在 delisted 时有值。 */
+  /** Where the delisting came from: the maker themselves / an admin override / the reconciler finding it already closed on chain. Only set when delisted. */
   delist_reason?: 'maker' | 'admin' | 'chain' | ''
   maker: Maker
   created_at: string
 }
 
-/** 前端 OSTATE 的五个阶段。后端按当前调用者的视角算好，直接渲染。 */
+/** The five phases of the frontend's OSTATE. The backend computes them from the current caller's perspective; render directly. */
 export type Phase = 'pay' | 'verify' | 'wait' | 'lock' | 'rel'
-/** 这一步该谁动手。 */
+/** Whose turn it is to act. */
 export type Actor = 'you' | 'them' | 'auto'
 
 export type OrderState =
@@ -153,7 +154,7 @@ export interface RailStop {
   key: string
   label: string
   state: 'done' | 'now' | 'next'
-  /** 后端标签是 waiting_on，不是 who。 */
+  /** The backend's label is waiting_on, not who. */
   waiting_on?: string
 }
 
@@ -166,7 +167,7 @@ export interface Escrow {
   confirmations: number
   required: number
   needs_funding: boolean
-  /** 卖币的 taker 要从自己钱包 deposit 时用的参数，只在待入金时有值。见后端 app.FundingPlan。 */
+  /** Parameters a coin-selling taker needs when depositing from their own wallet; only set while awaiting funding. See the backend's app.FundingPlan. */
   order_key?: string
   token?: string
   amount_wei?: string
@@ -175,10 +176,10 @@ export interface Escrow {
 
 export interface OtcLeg {
   offer_id: string
-  /** taker 视角：buy 表示 taker 买币、出法币。两方看到的是同一个值。 */
+  /** The taker's perspective: buy means the taker buys coins and pays fiat. Both parties see the same value. */
   side: 'buy' | 'sell'
-  /** 看这一单的人自己的方向。做市方与 side 相反——界面上所有
-      「你付 / 你收」的文案都要跟这个走，不要跟 side。 */
+  /** The direction of whoever is looking at this order. The maker's is the opposite of side -- every piece of
+      "you pay / you receive" copy in the UI has to follow this, not side. */
   your_side?: 'buy' | 'sell'
   funding_via?: string
   unit_price: string
@@ -186,18 +187,18 @@ export interface OtcLeg {
   fiat_amount: string
   network: string
   receipt_ref?: string
-  /** 打开那份回执的链接：后端签过、有时效。ref 只是文件名，单独拿着打不开。 */
+  /** Link that opens the receipt: signed by the backend and time-limited. ref is only a filename and cannot be opened on its own. */
   receipt_url?: string
-  /** 这笔付款的每一页,按提交顺序。上面那两个字段只指最后一张,留着是给
-      只显示一张的旧界面用的——要核验付款的那一方必须看到全部。 */
+  /** Every page of this payment, in submission order. The two fields above point at the last page only, and are
+      kept for older UIs that show just one -- whoever has to verify the payment must see all of them. */
   receipts?: ReceiptPage[]
 }
 
-/** 一笔付款凭证里的一页。 */
+/** One page of a payment proof. */
 export interface ReceiptPage {
   ref: string
   url?: string
-  /** 核过没有。分两轮交上来的一组不会整体看着像没人看过。 */
+/** Whether it has been checked. A set submitted in two rounds does not end up looking wholesale unreviewed. */
   verified: boolean
 }
 
@@ -217,7 +218,7 @@ export interface Order {
   kind: 'otc_take' | 'conditional_transfer'
   state: OrderState
   terminal?: Terminal
-  /** 终态、条件支付、局外人查询时为 null。 */
+  /** null in terminal states, for conditional payments, and for queries by an outsider. */
   phase: Phase | null
   actor: Actor | null
   amount: Amount
@@ -227,31 +228,31 @@ export interface Order {
   card_id?: string
   state_deadline?: string
   seconds_left: number
-  /* 该往哪儿转钱。只有欠这笔款的那一方、且只在还没转的时候，后端才发这一段；
-     其余任何人拿到的都是 undefined。没有它就是「拿不到收款信息」——
-     可能是对方没登记账户，也可能是这台后端没配加密密钥。 */
+  /* Where the money should go. The backend only sends this section to the party who owes the payment, and only
+     while it is still unpaid; anyone else gets undefined. Its absence means "payout details unavailable" --
+     which may be the counterparty not having registered an account, or this backend having no encryption key configured. */
   payout?: Payout
   escrow?: Escrow
   rail: RailStop[]
   otc?: OtcLeg
   events?: OrderEvent[]
   /**
-   * 下单那一刻算出来的风控评分（60–99），存在工单上，之后不重算。
-   * 不重算是有意的：评分是对下单当时的判断，跟着后来的事变就不是判断了。
+   * The risk score computed at the moment the order was placed (60-99), stored on the ticket and never recomputed.
+   * Not recomputing is deliberate: the score is a judgement about the moment of ordering, and moving with later events it would stop being one.
    */
-  /** 这一单是不是我发起的（OTC 里就是「我是吃单方」）。撮合那一站还没有
-      phase 和 actor，这是唯一能区分两方的字段——确认只属于其中一方。 */
+  /** Whether I initiated this order (in OTC terms, "I am the taker"). At the matching stage there is no phase or
+      actor yet, and this is the only field distinguishing the two sides -- confirmation belongs to one of them only. */
   yours?: boolean
-  /** 下单那一刻对手方的信任分快照。跟 Discover 上那个环是同一个来源,
-      同一个商户在两处看到的必然是同一个数。null = 那时还没有记录。 */
+  /** Snapshot of the counterparty's trust score at the moment of ordering. Same source as the ring on Discover,
+      so the same merchant necessarily shows the same number in both places. null = there was no record at the time. */
   trust_score: number | null
-  /** 对手方的成绩单与资质件。跟工单一起发，两个数才来自同一时刻。 */
+  /** The counterparty's scorecard and qualification documents. Sent with the ticket, so both numbers come from the same moment. */
   peer_profile?: PeerProfile
-  /** 这一单的手续费，下单那一刻定死的。 */
+  /** This order's fee, fixed at the moment of ordering. */
   fee?: { amount: string; currency: string; bps: number }
-  /** 下单前那次风控评估的快照。没跑过就没有。 */
+  /** Snapshot of the pre-order risk assessment. Absent if it never ran. */
   assessment?: OrderAssessment
-  /** 终态才有：这单最后靠什么收的口。 */
+  /** Only in terminal states: what finally closed this order out. */
   evidence?: Evidence
   created_at: string
 }
@@ -279,19 +280,19 @@ export interface OrderAssessment {
   threshold: number
   summary: string
   votes: { agent: string; verdict: 'pass' | 'flag'; note: string; score?: number }[]
-  /** 读了多少来源、多少记录。由评估器报，前端不编。 */
+  /** How many sources and how many records were read. Reported by the assessor; the frontend does not invent it. */
   sources: number
   records: number
-  /** 这次评估真正花了多少毫秒。不到一秒就不印秒数——不编一个好看的数。 */
+  /** How many milliseconds this assessment really took. Under a second, no seconds figure is printed -- no inventing a nice-looking number. */
   took_ms?: number
 }
 
 export interface Evidence {
   outcome: 'completed' | 'cancelled' | 'expired' | 'disputed'
   receipt_ref?: string
-  /** 同 OTC.receipt_url——最后一页，给只读一个的旧客户端。 */
+  /** Same as OTC.receipt_url -- the last page, for older clients that read only one. */
   receipt_url?: string
-  /** 每一页。结算记录要装的是放款当时真正依据的那些东西。 */
+  /** Every page. A settlement record has to hold what the release was actually based on at the time. */
   receipts?: ReceiptPage[]
   settled_at?: string
   /**
@@ -321,7 +322,7 @@ export interface Evidence {
   }
   chain?: {
     kind: string; amount?: string; tx_hash?: string
-    /** 区块浏览器上这笔交易的地址。mock 链上没有，那时就不给链接。 */
+    /** This transaction's address on a block explorer. Absent on the mock chain, in which case no link is given. */
     explorer?: string
     memo?: string; at: string
   }[]
@@ -335,7 +336,7 @@ export interface Task {
   at: string
 }
 
-/** 确认令牌的两个档位。承诺档不能冒充签名档，反向可以。 */
+/** The two tiers of confirmation token. A commitment token cannot pass as a signature token; the reverse is allowed. */
 export type Grade = 'signature' | 'commit'
 
 export interface Confirmation {
@@ -389,21 +390,22 @@ export interface MatchResult {
   violation?: ApiErrorBody
 }
 
-/** money.Asset。注意 USDRate 在后端标了 json:"-"，不出参——前端拿不到汇率。 */
-/** 一条链，以及我们在上面部署了没有。来自 GET /catalog/chain。 */
+/** money.Asset. Note that USDRate is tagged json:"-" on the backend and is not emitted -- the frontend cannot get the rate. */
+/** One chain, plus whether we have deployed on it. From GET /catalog/chain. */
 export interface ChainRow {
-  /** 网络码。挂单、订单里写的就是它。 */
+  /** Network code. This is what listings and orders carry. */
   code: string
   name: string
-  /** EIP-155 链号。钱包切链认的是它，不是名字。 */
+  /** EIP-155 chain number. What a wallet uses to switch chains, not the name. */
   chain_id: number
   testnet: boolean
   explorer: string
-  /** 这条链上付 gas 用的币。钱包添加链时要用。 */
+  /** The coin gas is paid in on this chain. Needed when adding the chain to a wallet. */
   native: string
   /**
-   * 有没有托管合约。「支持这条链」和「这条链上能挂卖单」不是一回事——
-   * 没部署就锁不了币，界面要照实说，不能让人填完了才在签名时被拒。
+   * Whether an escrow contract exists. "Supports this chain" and "can host a sell listing on this chain" are not
+   * the same thing -- with nothing deployed, coins cannot be locked, and the UI has to say so truthfully rather
+   * than letting someone fill in a whole form only to be rejected at signing.
    */
   deployed: boolean
   escrow: string
@@ -414,48 +416,50 @@ export interface ChainRow {
 }
 
 export interface ChainInfo {
-  /** mock 时没有任何一条链是 deployed —— 这一版不发交易。 */
+  /** Under mock, no chain is deployed -- this version sends no transactions. */
   impl: 'mock' | 'evm'
   chains: ChainRow[]
 }
 
-/** /offers/prepare 的回执：去锁币要用的全部参数。 */
+/** The response from /offers/prepare: every parameter needed to go and lock coins. */
 export interface PreparedOffer {
   offer_id: string
-  /** 合约里的 bytes32。哈希规则在后端一处，前端原样带走。 */
+  /** The contract's bytes32. The hashing rule lives in one place on the backend; the frontend carries it through unchanged. */
   offer_key: string
   escrow: string
   token: string
   decimals: number
-  /** 已按代币精度换算好——前端不自己乘 10^n，算错就是 10^12 倍的差。 */
+  /** Already converted to the token's decimals -- the frontend does not multiply by 10^n itself, where an error means being off by a factor of 10^12. */
   amount_wei: string
   chain_id: number
   network: string
 
-  /* 外部入金那一档。空表示这台服务器没开这个功能（没配工厂）。
-     deposit_total 才是**要让人转的数**——它等于挂单量加手续费，比 amount_wei
-     大一点。拿 amount_wei 去显示的话，人转的会比该转的少，扫不动。 */
+  /* The external deposit tier. Empty means this server does not have the feature enabled (no factory configured).
+     deposit_total is **the figure to ask the person to transfer** -- it equals the listing amount plus the fee
+     and is slightly larger than amount_wei. Displaying amount_wei instead means they transfer less than they
+     should, and it never gets swept. */
   deposit_addr?: string
   deposit_total?: string
   deposit_fee?: string
-  /** Unix 秒。过了这个点这份配置不再自动上架，钱只能取回。 */
+  /** Unix seconds. Past this point the configuration no longer lists automatically and the money can only be withdrawn. */
   deposit_expiry?: number
 }
 
 /*
-一笔币在合约里、挂单却没建出来的锁仓。见后端 app.StrandedLock。
+A lock where coins are in the contract but no listing was ever created. See the backend's app.StrandedLock.
 
-挂卖单是三步——要号 → 钱包锁币 → 建挂单——中间那一步不可撤销，第三步还会
-失败。失败之后这个号在浏览器里只活在 localStorage，换台设备就没了；服务端这
-一份是它在任何设备上都找得回来的保证。
+Posting a sell listing takes three steps -- request an id -> lock coins in the wallet -> create the listing --
+and the middle one is irreversible while the third can still fail. After a failure that id lives only in the
+browser's localStorage and is gone on another device; this server-side copy is what guarantees it can be found
+again from any device.
 */
 export interface StrandedLock {
   offer_id: string
   asset: string
   qty: string
-  /** 此刻合约里还能挂出去的量。 */
+  /** How much can still be listed from the contract right now. */
   available: string
-  /** 当初填的那份挂单，原样重发。已经带上 offer_id。 */
+  /** The listing as originally filled in, resent unchanged. Already carries offer_id. */
   form: {
     side: 'buy' | 'sell'
     asset: string
@@ -468,21 +472,21 @@ export interface StrandedLock {
     offer_id?: string
   }
   at: string
-  /** 挂单已下架、币却还锁在合约里。出口是解锁，不是重发——见后端 StrandedLock.Delisted。 */
+  /** The listing is delisted while the coins are still locked in the contract. The way out is unlocking, not reposting -- see the backend's StrandedLock.Delisted. */
   delisted?: boolean
 }
 
-/** 一笔外部入金此刻怎么样了。见后端 app.DepositStatus。 */
+/** The current state of one external deposit. See the backend's app.DepositStatus. */
 export interface DepositStatus {
   status: 'waiting' | 'swept' | 'expired'
   address: string
-  /** 挂单量。要转的是它加手续费，不是它本身。 */
+  /** The listing amount. What has to be transferred is this plus the fee, not this on its own. */
   need: string
-  /** 此刻链上真有的。收到一部分时它介于 0 和 need 之间。 */
+  /** What is really on chain right now. On partial receipt it sits between 0 and need. */
   received: string
   sweep_tx?: string
-  /** 挂单是不是真的上架了。和「已扫进托管」是两件事——扫币在链上，建挂单在
-      它之后，后者失败过。 */
+  /** Whether the listing really went live. A different thing from "swept into escrow" -- the sweep is on chain and
+      creating the listing comes after it, and the latter has failed before. */
   listed: boolean
   expires_at: number
 }
@@ -497,18 +501,18 @@ export interface CatalogAsset {
   corridor?: string
 }
 
-// ── 支配权（额度）──
+// -- Spending authority (allowances) --
 
 /**
- * 额度是签进链上的支配权，不是平台的额度表——平台只记着链上签发了什么。
- * 可撤销、有周期窗口、有单笔上限、可限定收款方。
+ * An allowance is spending authority signed onto the chain, not a platform allowance table -- the platform only
+ * records what was issued on chain. Revocable, with a period window, a per-transaction cap, and an optional restricted payee.
  */
 export interface Allowance {
   id: string
   spender: string
   kind: 'person' | 'agent'
   asset: string
-  /** 这份授权在哪条链上。空是旧数据（那时只有一条链）。 */
+  /** Which chain this authorisation is on. Empty is legacy data (when there was only one chain). */
   network: string
   per_payment: string
   window_cap: string
@@ -523,13 +527,13 @@ export interface Allowance {
   note?: string
 }
 
-// ── 收款方与提现 ──
+// -- Payees and withdrawals --
 
 /**
- * 一笔单的收款信息,发给该付款的那一方。
+ * Payout details for one order, sent to the party who owes the payment.
  *
- * 跟 BankAccount 不是一个东西:那个是「我自己的账户簿」,号码永远是掩码;
- * 这个是「你要把钱打到这里」,号码是完整的——掩码转不了账。
+ * Not the same thing as BankAccount: that one is "my own address book" and its number is always masked;
+ * this one is "send the money here" and its number is complete -- a masked number cannot be transferred to.
  */
 export interface Payout {
   holder: string
@@ -539,7 +543,7 @@ export interface Payout {
   region: string
 }
 
-/** 法币收款账户。account_no 恒为掩码——全量号码从不落库。 */
+/** Fiat receiving account. account_no is always masked -- the full number is never persisted. */
 export interface BankAccount {
   id: string
   holder: string
@@ -577,28 +581,28 @@ export interface Withdrawal {
   payee_address: string
 }
 
-// ── Discover 与做市准入 ──
+// -- Discover and maker onboarding --
 
 export interface Market {
   key: string
   name: string
   live: boolean
   desc?: string
-  /** [维度, 说明] 的二元组。 */
+  /** A [dimension, description] pair. */
   map?: [string, string][]
 }
 
 /**
- * 做市申请。四个状态位驱动前端那颗按钮的三种文案：
- * approved → 「挂单」；listing_done 未审 → 「审核中」；其余 → 「成为做市方」。
+ * Maker application. Four status flags drive the three variants of the frontend's button:
+ * approved -> "post a listing"; listing_done but unreviewed -> "under review"; otherwise -> "become a maker".
  */
-/** 证件上读出来、可以摆在界面上的那几项。证件号已经在后端打过码。 */
+/** The fields readable off an identity document that can be shown in the UI. The document number has already been masked by the backend. */
 export interface KycIdentity {
   first_name?: string
   last_name?: string
   full_name?: string
   doc_type?: string
-  /** 已打码，只剩末四位。全号留在后端——见后端 kyc.maskDoc。 */
+  /** Masked, leaving only the last four. The full number stays on the backend -- see the backend's kyc.maskDoc. */
   doc_number?: string
   dob?: string
   issued?: string
@@ -608,7 +612,7 @@ export interface KycIdentity {
   country?: string
 }
 
-/** 一条没通过的检查。severity 与 decision 由 ID Analyzer 的配置档算出来。 */
+/** One failed check. severity and decision are computed from ID Analyzer's configuration profile. */
 export interface KycWarning {
   code: string
   description: string
@@ -617,7 +621,7 @@ export interface KycWarning {
   decision?: string
 }
 
-/** 从注册文件上读出来的公司信息。跟 KycIdentity 对称。 */
+/** Company details read off a registration document. Symmetric with KycIdentity. */
 export interface KybBusiness {
   legal_name?: string
   reg_number?: string
@@ -636,51 +640,51 @@ export interface KybBusiness {
   directors?: string[]
 }
 
-/** 一次企业核验的结论。 */
+/** The conclusion of one corporate verification. */
 export interface KybResult {
   status: 'accept' | 'review' | 'reject'
-  /** 这个结论对应的那份文件。手上这份跟它一样，就不用再问一次。 */
+  /** The document this conclusion corresponds to. If the one in hand matches it, there is no need to ask again. */
   file_ref?: string
   business: KybBusiness
   warnings?: { code: string; description: string; severity: string; decision: string }[]
-  /** 这次没有核验任何东西（读的是本地 fixture）。界面必须说出来。 */
+  /** Nothing was actually verified this time (a local fixture was read). The UI has to say so. */
   simulated: boolean
 }
 
-/** 一条法币收款渠道。由后端目录发,不在前端写死——见 useRails 的说明。 */
+/** One fiat payout rail. Served from the backend catalog and not hardcoded in the frontend -- see the note on useRails. */
 export interface Rail { name: string; fiat: string }
 export interface RailGroup { group: string; fiat: string; rails: Rail[] }
 
 export interface KycStatus {
-  /** none 从没开过 · pending 开了还没结论 · accept/review/reject 是结论 */
+  /** none never opened - pending opened without a conclusion - accept/review/reject are conclusions */
   state: 'none' | 'pending' | 'accept' | 'review' | 'reject'
   reference?: string
   identity?: KycIdentity
   warnings?: KycWarning[]
-  /** 我们自己的批注，跟 warnings 分开——那些是核验服务的原话。
-      目前只有一种：这张证件已经在别的账号名下，所以结论被降到了 review。 */
+  /** Our own annotations, kept apart from warnings -- those are the verification service's own words.
+      There is currently only one: this document is already under another account, so the conclusion was downgraded to review. */
   note?: string
   kyc_ok: boolean
   concluded_at?: string
-  /** 这台机器配没配 ID Analyzer。没配时要照实说，不能摆一颗按不动的按钮。 */
+  /** Whether this machine has ID Analyzer configured. When it does not, say so truthfully rather than showing a button that does nothing. */
   configured: boolean
   /**
-   * 这一步是模拟的（后端 ATARA_KYC=false）。
+   * This step is simulated (the backend's ATARA_KYC=false).
    *
-   * 必须在界面上显式说出来：一个「已通过」的绿勾背后是真核验还是本地开关，
-   * 看的人有权知道——藏起来的话，谁截个图就能拿去当作「我们验过了」。
+   * It has to be stated explicitly in the UI: whether a green "passed" tick is backed by real verification or by a
+   * local switch is something the viewer has a right to know -- hidden, anyone could screenshot it and present it as "we verified this".
    */
   simulated?: boolean
 }
 
-/** 开一次核验会话拿到的东西。API key 不在里面，也永远不会在里面。 */
+/** What comes back from opening a verification session. The API key is not in it and never will be. */
 export interface KycSession {
   reference: string
   url: string
   qr_code?: string
 }
 
-/** 预审的一条指摘。fields 是表单字段 key，一定非空——指不到字段的意见后端已经丢掉了。 */
+/** One pre-review objection. fields holds form field keys and is always non-empty -- opinions that point at no field have already been dropped by the backend. */
 export interface ReviewIssue {
   fields: string[]
   says: string
@@ -696,24 +700,24 @@ export interface MakerApp {
   listing_done: boolean
   approved: boolean
   form: string
-  /** 半路存下的那份,还没提交。表单重开时恢复它,提交后后端会清掉。 */
+  /** The copy saved partway through, not yet submitted. Restored when the form reopens; the backend clears it after submission. */
   draft?: Record<string, unknown>
-  /** 最近一次企业核验的结论。企业那条路第 3 步拿它预填并锁住。 */
+  /** The most recent corporate verification conclusion. Step 3 of the corporate path uses it to prefill and lock fields. */
   kyb?: KybResult
-  /** 这份草稿属于哪一段。两段表单字段完全不同,恢复错了比不恢复更糟。 */
+  /** Which section this draft belongs to. The two sections' fields are entirely different, and restoring the wrong one is worse than not restoring. */
   draft_phase?: 'kyc' | 'listing'
-  /** 上次填到第几步。丢掉它的话,内容记住了却还要从头点八页。 */
+  /** Which step they had reached. Losing it means the content is remembered but eight pages still have to be clicked through from the start. */
   draft_step?: number
   reject_reason?: string
   /**
-   * 最近一次预审逐项的问题。每条都指到表单字段的 key——界面据此把话
-   * 标在出问题的那一项上，而不是让人对着一段摘要自己回表里翻。
+   * The most recent pre-review's per-item problems. Each points at a form field key -- the UI uses that to mark
+   * the message on the offending item rather than leaving people to work back through the form from a summary.
    */
   review_issues?: ReviewIssue[]
   /** Who made the last call: 'rule' | 'ai' | 'human'. Shown as attribution. */
   review_source?: 'rule' | 'ai' | 'human'
   review_model?: string
-  /** 已经申诉过了。非空表示这一份在等人看，界面上不该再给第二颗申诉按钮。 */
+  /** An appeal has already been filed. Non-empty means this one is awaiting a human, and the UI should not offer a second appeal button. */
   appeal_note?: string
   appealed_at?: string
   submitted_at?: string
@@ -723,9 +727,9 @@ export interface MakerApp {
   display_name?: string
 }
 
-// ── 联系人与会话 ──
+// -- Contacts and conversations --
 
-/** /accounts/search 的一行。它不是联系人——还没有任何关系，只是「这个人存在」。 */
+/** One row from /accounts/search. It is not a contact -- there is no relationship yet, only "this person exists". */
 export interface Account {
   id: string
   address: string
@@ -740,7 +744,7 @@ export interface Account {
    * refused. They used to share the value 0, which left the UI guessing.
    */
   trust_score: number | null
-  /** 我跟这个人现在的关系。空=还没有，pending=等他点头，accepted=已经是联系人。 */
+  /** My current relationship with this person. Empty = none yet, pending = awaiting their nod, accepted = already a contact. */
   relation?: '' | 'pending' | 'accepted'
 }
 
@@ -752,11 +756,11 @@ export interface Contact {
   /** Supplier / Client / Colleague / Friend / My agent */
   label: string
   nickname?: string
-  /** pending 表示还等着对方点头。pending 的人不能被指定为收款方。 */
+  /** pending means still awaiting the other side's nod. A pending person cannot be named as a payee. */
   status?: 'pending' | 'accepted'
   deals: number
   fill_rate: string
-  /** 往来净额，正数=对方欠我。 */
+  /** Net balance between us; positive = they owe me. */
   net: string
   since: string
 }
@@ -764,28 +768,28 @@ export interface Contact {
 export interface Message {
   id: string
   peer_id: string
-  /* 后端发的是 'them' 不是 'peer'（见 store.PostBothTx：副本那条写的就是 them）。
-     这里原本写的 'peer'，谁按它分支就永远不命中，而 TS 一句话都不会说——
-     现有的 Thread.tsx 是靠「不是 me 就当对方」躲过去的。 */
+  /* The backend sends 'them', not 'peer' (see store.PostBothTx: the copy row is written as them).
+     This used to say 'peer', so anyone branching on it would never match while TS said nothing at all --
+     the existing Thread.tsx got away with it by treating "not me" as the other side. */
   author: 'me' | 'them' | 'system'
   kind: 'chat' | 'system' | 'order' | 'assessment'
   body: string
   order_id?: string
-  /** AI 回答之前想了多久（毫秒）。只有它自己的回答上有。 */
+  /** How long the AI thought before answering (milliseconds). Present only on its own answers. */
   thought_ms?: number
   payload?: Record<string, string>
   created_at: string
 }
 
 export interface Thread {
-  /** 后端回的是完整的 User，不是名字字符串。 */
+  /** The backend returns a full User, not a name string. */
   peer: User
   messages: Message[]
   orders: Order[]
   merchant?: Maker
 }
 
-// ── 条件支付 ──
+// -- Conditional payments --
 
 export interface ConditionAtom {
   atom_type: 'approve' | 'evidence' | 'data' | 'time'
@@ -807,9 +811,9 @@ export interface ConditionCatalog {
   fallback: { default_days: number; note: string }
 }
 
-/** 左栏会话行。后端 /threads 返回的汇总。 */
+/** A conversation row in the left column. The summary returned by the backend's /threads. */
 export interface ThreadSummary {
-  /** 对方说了、我还没看的条数。只数对方的话，系统播报不算。 */
+  /** How many the other side has said that I have not read. Only their messages count; system announcements do not. */
   unread?: number
   peer_id: string
   peer_name: string
@@ -818,16 +822,16 @@ export interface ThreadSummary {
   count: number
 }
 
-/** 一个 agent 的票。verdict 只有 pass / flag 两值；note 是它给的理由。 */
+/** One agent's vote. verdict has only two values, pass / flag; note is the reason it gave. */
 export interface AgentVote {
   agent: string
   verdict: 'pass' | 'flag'
   note: string
-  /** 这个 agent 单独给的分。后端按工单号算，同一单稳定、不同单散开。 */
+  /** The score this agent gave on its own. The backend computes it from the ticket id -- stable within an order, spread across different ones. */
   score?: number
 }
 
-/** 对手方评估。threshold 是放行门槛——passed 不到它就是拦下转人工。 */
+/** Counterparty assessment. threshold is the release bar -- passed falling short of it means being held for human review. */
 export interface Assessment {
   score: number
   passed: number

@@ -10,16 +10,16 @@ import { scoreText } from '../api/types'
 import { Failed, Pending } from '../components/Loading'
 
 /**
- * 联系人 = 可以付款的人。
+ * Contacts = people you can pay.
  *
- * 三段，对应三个不同的问题：
- *   名册            我认识谁 —— 双方都点过头的
- *   等对方点头      我请求了谁 —— 加了，但对方还没确认，不能付
- *   等我点头        谁在请求我 —— 参照把这个放在左栏收件箱里；我们没有那一栏，
- *                   而请求总得有地方能接受，否则它永远停在 pending
+ * Three sections, answering three different questions:
+ *   Roster            who I know -- both sides have nodded
+ *   Awaiting them     who I asked -- added, but not yet confirmed by them, so not payable
+ *   Awaiting me       who is asking me -- the reference puts this in a left-column inbox; we have no
+ *                     such column, and a request has to be acceptable somewhere or it stays pending forever
  *
- * 单向加不成关系：加完是 pending，对方确认才是 accepted。不这么做的话
- * 「加了就能付」，而对方从头到尾没说过一句话。
+ * A one-sided add does not make a relationship: adding leaves it pending, and only their confirmation
+ * makes it accepted. Without that, "added means payable" while the other side never said a word.
  */
 export default function Contacts({ identity }: { identity: string }) {
   const { data, error, reload } = useApi(() => ep.contacts(identity), [identity])
@@ -69,8 +69,8 @@ export default function Contacts({ identity }: { identity: string }) {
             onDone={() => { setAdding(false); reload() }} />
         )}
 
-        {/* 请求排在最上面：它是唯一一件等着我做的事，
-            压在名册下面的话，人得先滚过一屏才看得到。 */}
+        {/* Requests come first: they are the only thing waiting on me, and buried under the roster
+            people would have to scroll a screen to find them. */}
         {inbox.length > 0 && (
           <>
             <div className="lsec">They want to connect</div>
@@ -142,11 +142,12 @@ export default function Contacts({ identity }: { identity: string }) {
 }
 
 /**
- * 加联系人。两个 tab，边打边搜。
+ * Add a contact. Two tabs, search as you type.
  *
- * 搜索走后端 /accounts/search：名字模糊、地址精确。前端不从公开挂单里
- * 推——那只覆盖「此刻正在挂单的人」，一个真实存在但没挂单的账户会永远
- * 搜不到，而用户看到的是「查无此人」。谁存在是后端说了算。
+ * Search goes through the backend's /accounts/search: fuzzy on names, exact on addresses. The frontend
+ * does not infer it from public listings -- that only covers "people with a listing right now", so a
+ * genuinely existing account with no listing could never be found, and what the user sees is "no such
+ * person". Who exists is the backend's call.
  */
 function AddContact({
   identity, onClose, onDone,
@@ -201,8 +202,8 @@ function AddContact({
   const [busy, setBusy] = useState(false)
   const raw = q.trim()
 
-  /* 边打边搜，250ms 收敛一次。每敲一个字发一次请求的话，回来的顺序不保证，
-     后发的短查询会盖掉先发的长查询——列表就跟输入框对不上了。 */
+  /* Search as you type, debounced at 250ms. One request per keystroke gives no ordering guarantee, and
+     a later short query can overwrite an earlier long one -- leaving the list out of sync with the input. */
   useEffect(() => {
     if (!raw) { setHits(null); return }
     let live = true
@@ -214,8 +215,9 @@ function AddContact({
     return () => { live = false; clearTimeout(t) }
   }, [raw, identity])
 
-  /* 「过去成交过的人」就是我成交过的对手方——从我自己的工单里来。
-     从公开挂单里推的话，这一栏说的是「正在挂单的人」，跟标题不是一回事。 */
+  /* "People I have traded with before" means counterparties I have settled with -- taken from my own
+     tickets. Inferred from public listings, this column would mean "people with a listing", which is
+     not what the heading says. */
   const { data: mine } = useApi(() => ep.orders(identity), [identity])
   const past = Object.values(
     (mine ?? []).reduce<Record<string, { id: string; name: string; n: number }>>((a, o) => {
@@ -307,8 +309,9 @@ function AddContact({
                   ) : hits === null ? (
                     <p className="acnote">Searching…</p>
                   ) : hits.length ? hits.map(a => {
-                    /* 已经有关系的人照样列出来，但不给「添加」——按下去
-                       只会拿到一个后端的报错，而错的是这个按钮不该在。 */
+                    /* People already in a relationship are still listed, but without an Add button --
+                       pressing it would only produce a backend error, and the error is that the button
+                       should not be there. */
                     const rel = a.relation
                     return (
                       <button className="acrow" key={a.id} disabled={busy || !!rel}
@@ -327,8 +330,8 @@ function AddContact({
                       </button>
                     )
                   }) : (
-                    /* 地址是精确匹配，差一个字符就是查无此人——说清楚是哪一种，
-                       比一句「没找到」有用：一个是打错了，一个是这人不在。 */
+                    /* Addresses match exactly, so one wrong character means no such person -- saying which
+                       of the two it is beats "not found": one is a typo, the other is a person who is not here. */
                     <p className="acnote">
                       {looksAddr && raw.length < 42
                         ? 'Keep typing — an address has to be complete to match.'
@@ -374,11 +377,11 @@ function AddContact({
 const shortAddr = (a: string) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '')
 
 /**
- * 副行：关系标签 · 地址。
+ * Sub-row: relationship label - address.
  *
- * 标签可能是空的——接受请求的那一方从没说过对方是什么人，我们也不该替他
- * 编一个。空的时候连分隔点一起省掉，否则那行会以「· 0x24cd…」开头，
- * 看着像前面丢了一个字。
+ * The label may be empty -- the side that accepted a request never said who the other person is, and we
+ * should not invent one for them. When empty, the separator dot is dropped along with it, otherwise the
+ * line starts with "- 0x24cd..." and looks like a character went missing.
  */
 const sub = (label: string, addr: string) =>
   [label, shortAddr(addr)].filter(Boolean).join(' · ')

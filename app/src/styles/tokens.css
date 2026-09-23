@@ -1,10 +1,10 @@
-/* 设计变量原样取自 console.html（147-206 与 208-253 行）。
-   不重新调色——新 app 必须看起来是同一个产品。 */
+/* Design variables taken verbatim from console.html (lines 147-206 and 208-253).
+   No recolouring -- the new app has to look like the same product. */
 :root{
-  /* ── 与主题无关 ── */
+  /* -- Theme-independent -- */
   --r-chip: 6px; --r-control: 8px; --r-card: 10px; --r-panel: 16px;
-  /* 间距刻度：同组紧、跨组松。之前账户页用的是 26/20/15/13/9/7/5 这类随手值，
-     没有刻度就没有节奏——新写的间距一律从这里取 */
+  /* Spacing scale: tight within a group, loose across groups. The account page used to use ad hoc values like
+     26/20/15/13/9/7/5, and without a scale there is no rhythm -- new spacing is always taken from here */
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:40px;
   --dur-instant: 80ms; --dur-fast: 140ms; --dur-normal: 220ms;
   --ease: cubic-bezier(.23,1,.32,1);
@@ -12,11 +12,11 @@
   --focus-w: 2px; --focus-o: 2px;
   --sans:'Inter',-apple-system,'PingFang SC',system-ui,sans-serif;
   --serif:'Newsreader',Georgia,'Songti SC',serif;
-  /* 余额锚点卡：两个主题都用深色卡面，卡内文字色因此不随主题变 */
-  /* 余额卡：浅色下不再用深色锚点——重心由字号级差承担，深色主题仍是深卡（见 dark 块） */
+  /* Balance anchor card: both themes use a dark card face, so text colours inside it do not follow the theme */
+  /* Balance card: light mode no longer uses a dark anchor -- the visual weight is carried by the type scale, while dark mode keeps a dark card (see the dark block) */
   --bal-text:var(--ink); --bal-sub:var(--mute); --bal-dim:#72757c; --bal-line:var(--cream);
 
-  /* ── 浅色（默认） ── */
+  /* -- Light (default) -- */
   --bg:         #f5f5f5;
   --paper:      #ffffff;
   --canvas:     #fafafa;
@@ -28,11 +28,11 @@
 
   --ink:        #1f2124;
   --mute:       #62656b;
-  --faint:      #72757c;   /* 白底 4.61 — 与 --placeholder 同档 */
+  --faint:      #72757c;   /* 4.61 on white -- same band as --placeholder */
   --faint-2:    #b4b7bc;
-  --on-inverse: #ffffff;   /* 反转底（--ink 实底）上的文字 */
+  --on-inverse: #ffffff;   /* Text on an inverted background (solid --ink) */
 
-  /* 浅底：填充蓝与强调蓝同源——浅底上不需要提亮，需要够深才可读 */
+  /* Light background: fill blue and accent blue share a source -- on a light background nothing needs lightening, it needs to be dark enough to read */
   --blue:       oklch(43% .29 266);
   --blue-deep:  oklch(31% .24 268);
   --accent:     oklch(43% .29 266);
@@ -46,9 +46,9 @@
 
   --focus-c:      var(--accent);
   --focus-ring-a: oklch(43% .29 266 / .12);
-  --placeholder:#72757c;   /* 占位符专用：白底上 4.6:1，过 AA */
-  --surface:    #ffffff;   /* 面板之上的卡面。浅色与 paper 同，深色亮一档 */
-  --glare:#0b0d12;         /* 光泽色：白底上没有比白更亮的，只能用暗晕 */
+  --placeholder:#72757c;   /* Placeholders specifically: 4.6:1 on white, passes AA */
+  --surface:    #ffffff;   /* Card face above a panel. Same as paper in light, one step lighter in dark */
+  --glare:#0b0d12;         /* Glare colour: nothing is brighter than white on white, so a dark halo is the only option */
 
   --ring:      0 0 0 1px var(--hairline);
   --sh-btn:    0 0 0 1px var(--line-strong), 0 1px 2px #1018280d;
@@ -56,22 +56,24 @@
   --sh-raised: 0 0 0 1px var(--hairline), 0 2px 10px #0000000b;
   --sh-overlay:0 0 0 1px var(--hairline), 0 8px 28px #0000001a;
 
-  /* 浅色下锚点卡是实底深卡（浅底上发光会显脏） */
+  /* In light mode the anchor card is a solid dark card (a glow on a light background looks dirty) */
   --bal-bg:   var(--paper);
   --bal-ring: var(--lift-lo);
 }
 
 :root[data-theme="dark"]{
-  /* 三层底：页面 / 面板 / 卡面。层级靠明度而非边框拉开。
-     两处修正：① 地板不落纯黑——#0a0a0a 在 OLED 上读作"洞"，抬到 #101114；
-     ② 全套带一点冷偏（色相 ~265，与品牌蓝同族），零色相中性灰在大面积深底上发闷。
-     卡面对地板的明度差从 8 提到 15，卡片自己就浮得出来，不必靠边框。 */
+  /* Three layers of background: page / panel / card face. The hierarchy is pulled apart by lightness rather than borders.
+     Two corrections: (1) the floor does not bottom out at pure black -- #0a0a0a reads as a "hole" on OLED, so it is
+     raised to #101114;
+     (2) the whole set carries a slight cool cast (hue ~265, the same family as the brand blue), since a zero-hue
+     neutral grey looks flat over large dark areas.
+     The card face's lightness gap over the floor goes from 8 to 15, so cards lift off by themselves without needing borders. */
   --bg:         #101114;
   --paper:      #1b1c21;
   --canvas:     #15161a;
   --card:       #26272d;
   --cream:      #2e2f36;
-  /* 边框用半透明白——在任何底色上都自然，实色灰会在深底上发闷 */
+  /* Borders use translucent white -- natural over any background colour, where a solid grey looks flat on dark */
   --hairline:   rgba(255,255,255,.07);
   --hairline-2: rgba(255,255,255,.045);
   --line-strong:rgba(255,255,255,.14);
@@ -82,7 +84,7 @@
   --faint-2:    #52525b;
   --on-inverse: #101114;
 
-  /* 深底：填充蓝保持深度让白字可读，强调蓝提亮供文字/图标使用 */
+  /* Dark background: fill blue keeps its depth so white text stays readable, accent blue is lightened for text and icons */
   --blue:       #2563eb;
   --blue-deep:  #1d4ed8;
   --accent:     #60a5fa;
@@ -93,7 +95,7 @@
   --neg:        oklch(66% .19 25);
 
   --focus-ring-a: rgba(96,165,250,.22);
-  --placeholder:#8a8d94;   /* 深底上 4.97:1 */
+  --placeholder:#8a8d94;   /* 4.97:1 on a dark background */
   --surface:    #202128;
   --glare:#ffffff;
 
@@ -102,7 +104,7 @@
   --sh-raised: 0 0 0 1px var(--line-strong), 0 2px 10px #00000038;
   --sh-overlay:0 0 0 1px var(--line-strong), 0 8px 28px #00000057;
 
-  /* 深色下锚点卡是全站唯一光源 */
+  /* In dark mode the anchor card is the only light source on the site */
   --bal-text:#f4f4f5; --bal-sub:#a1a1aa; --bal-dim:#8a8a93; --bal-line:rgba(255,255,255,.10);
   --bal-bg:   linear-gradient(180deg,#1c1c1c,#141414);
   --bal-ring: 0 0 0 1px oklch(48% .27 266 / .5), 0 0 24px oklch(48% .27 266 / .18);

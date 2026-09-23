@@ -10,7 +10,7 @@ import { Failed, Pending } from '../components/Loading'
 type Live = 'all' | 'you' | 'wait' | 'disp'
 type Done = 'all' | 'Released' | 'Refunded'
 
-/* 状态文案与右栏 Order status 同一套口径——两处写两遍就会各说各的 */
+/* Status wording matches the right column's Order status -- writing it twice in two places makes them diverge */
 function label(o: Order): string {
   if (o.terminal === 'disputed') return 'In dispute — reviewing evidence'
   switch (o.phase) {
@@ -27,10 +27,10 @@ const toneOf = (o: Order) =>
   o.terminal === 'disputed' ? 'disp' : (o.actor === 'you' || o.state === 'match') ? 'you' : 'them'
 
 /**
- * Payments = Order status 的全景。
+ * Payments = the panoramic view of Order status.
  *
- * 一页两个 tab：进行中 / 已结束。同一种卡片语言——右栏那张放大一号；
- * 争议是进行中的二级状态，不是另一段流程。
+ * One page, two tabs: in progress / finished. The same card language -- the right column's
+ * card, one size up; a dispute is a sub-state of in progress, not a separate flow.
  */
 export default function Payments({ identity }: { identity: string }) {
   const [tab, setTab] = useState<'live' | 'fin'>('live')
@@ -123,7 +123,7 @@ export default function Payments({ identity }: { identity: string }) {
               </div>
               <button className="btn btn-ghost btn-sm">Export</button>
             </div>
-            {/* 结束的单子是台账：一张表，一笔一行，每列各司其职 */}
+            {/* Finished orders are a ledger: one table, one row per order, each column doing one job */}
             {data === null ? (
               error ? <Failed error={error} onRetry={reload} /> : <Pending rows={4} card />
             ) : dlist.length ? (
@@ -169,8 +169,9 @@ function LiveCard({ o }: { o: Order }) {
   const who = o.counterparty_name ?? ''
   const act = tone === 'you' ? 'Open' : tone === 'disp' ? 'See the case' : ''
 
-  /* 托管三步：钱进合约 → 条件成立 → 放款。
-     争议把第三步换成复核，不是新增一段流程——争议就发生在放款判定这一步上。 */
+  /* Escrow in three steps: funds into the contract -> conditions met -> release.
+     A dispute swaps the third step for review rather than adding a new flow -- the dispute
+     happens exactly at that release decision. */
   const at = tone === 'disp' ? 2 : 1
   const open = (x: Order) => (x.counterparty_id
     ? go({ view: 'thread', peer: x.counterparty_id })
@@ -183,9 +184,10 @@ function LiveCard({ o }: { o: Order }) {
 
   return (
     <div className={`pcard ${tone}`} role="button" tabIndex={0}
-      /* 点一笔单进这一单的会话，不是另开一个工单页。会话里有这一单完整的
-         记录——当时那七票、工单卡、后来说过的每一句话——另开一页只看得到卡，
-         看不到它是怎么来的。还没撮合上的单没有对手方，也就没有会话可进。 */
+      /* Clicking an order opens that order's conversation, not a separate ticket page. The
+         conversation holds the complete record -- the seven votes at the time, the ticket card,
+         every word said since -- while a separate page would show only the card, not how it got
+         there. Unmatched orders have no counterparty and therefore no conversation to open. */
       onClick={() => open(o)}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(o) } }}>
       <span className="roc-st"><i />{label(o)}<time>{ago(o.created_at)}</time></span>
@@ -193,7 +195,7 @@ function LiveCard({ o }: { o: Order }) {
         ? <b className={`roc-big num ${dir}`}>{dir === 'out' ? '−' : '+'}${amt.toLocaleString()}</b>
         : <b className="roc-big none">—</b>}
       <span className="pcard-t">{o.ref} · {o.amount.asset}</span>
-      {/* 点和标签必须是 .ptrack 的直接子元素——套一层 span 就把间距规则打散了 */}
+      {/* The dot and the label must be direct children of .ptrack -- wrapping them in a span breaks the spacing rules */}
       <span className="ptrack">
         {steps.map(([lb, ix]) => (
           <Fragment key={lb}>

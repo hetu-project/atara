@@ -16,11 +16,11 @@ import type { Message, Order } from '../api/types'
 import { Failed, Pending } from '../components/Loading'
 
 /**
- * 一个对手方一条线程。
+ * One thread per counterparty.
  *
- * 聊天、订单卡、系统播报共用同一条流——消息归人，状态归事，
- * 但它们出现在同一个地方。分成两个页面看的话，「他说发货了」和
- * 「这单还等着凭证」就永远对不上号。
+ * Chat, order cards and system announcements share one stream -- messages belong to the person, states
+ * belong to the events, but they appear in the same place. Split across two pages, "he says he shipped"
+ * and "this order is still waiting on proof" would never line up.
  */
 export default function Thread({ identity, peer }: { identity: string; peer: string }) {
   /* 15s, not 3s: the live stream is what makes a new message appear now, and
@@ -39,9 +39,10 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
   }, [reload])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
-  /* 在这个人的会话里直接下单。参照的 composer 和会话本来就是同一个视图，
-     所以这一排在对话里一直都在；我们拆成了两个视图，拆的时候把它落下了。
-     而「正在跟这个人说话」恰恰是最该能直接下单的地方。 */
+  /* Place an order directly inside this person's conversation. In the reference the composer and the
+     conversation were always the same view, so this row was always present in the conversation; we split
+     it into two views and dropped it in the process. And "currently talking to this person" is exactly
+     where placing an order should be most direct. */
   const [act, setAct] = useState<Act | null>(null)
   /* Order failures go to the corner toast, not a grey line above the composer.
 
@@ -64,7 +65,7 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
   const { data: chains } = useApi(() => ep.chainInfo(), [])
   const { data: myWallet } = useApi(() => ep.wallet(identity), [identity])
 
-  /* 对手方预填成「正在说话的这个人」——在他的会话里下单，不该再选一次。 */
+  /* The counterparty is prefilled as "the person being talked to" -- placing an order in their conversation should not require picking them again. */
   const mk = (k: ActKind): Act => ({
     k, amt: k === 'buy' ? 5000 : 3000, coin: 'USDT', fiat: 'CNY', peer: name, conds: [],
   })
@@ -74,11 +75,11 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
   const m = data?.merchant
   const orders = data?.orders ?? []
 
-  /* 消息和工单卡按时间穿插在同一条流里。
+  /* Messages and ticket cards interleave chronologically in one stream.
   
-     参照就是这么做的：工单卡（.deal）直接挂在 #log 下面，不是另开一页。
-     分开的话，「他说钱打了」和「这单还等着凭证」永远对不上号——而这两件事
-     本来就是同一件事的两面。 */
+     The reference does it this way: the ticket card (.deal) hangs directly under #log, not on a separate
+     page. Split apart, "he says the money is sent" and "this order is still waiting on proof" never line
+     up -- and those two are two sides of the same thing. */
   const stream: ({ t: number } & ({ msg: Message } | { order: Order }))[] = [
     ...msgs.map(x => ({ t: Date.parse(x.created_at), msg: x })),
     ...orders.map(o => ({ t: Date.parse(o.created_at), order: o })),
@@ -86,8 +87,8 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
 
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }) }, [msgs.length])
 
-  /* 对手方是写死的——你就在跟他说话。Home 那边要先撮合出一个人来，
-     这里不用，也不该让人再选一次。 */
+  /* The counterparty is fixed -- you are talking to them. Home has to match someone first; here that is
+     unnecessary, and the user should not be asked to pick again. */
   const order = async (a: Act) => {
     if (kyc.require()) return
     setBusy(true)
@@ -102,7 +103,7 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
       const ord = await ep.take(pick.offer_id, {
         amount: pick.coin_amount, amount_kind: 'coin', network: '',
       })
-      // 右栏回放这一单存下来的那份评估——见 useAssessment.start 的说明
+      // The right column replays the assessment stored with this order -- see the note on useAssessment.start
       void start(pick.offer_id, pick.name, ord.id)
       setAct(null); reload()
     } catch (e) {
@@ -131,8 +132,9 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
         <Avatar name={name} cls="thav" />
         <span className="thwho">
           <b>{name}</b>
-          {/* 参照这一行是对手方的成绩单：多少笔、多少分。「N orders together」
-              说的是我跟他做过几单，那是另一个数，而且它已经在下面的流里了。 */}
+          {/* In the reference this row is the counterparty's scorecard: how many trades, what score.
+              "N orders together" is how many trades I have done with them, which is a different number,
+              and it is already in the stream below. */}
           <span>
             {m ? `${m.deals} trades · ${scoreText(m.trust_score)}` : 'No trades yet'}
           </span>
@@ -143,10 +145,10 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
         <div className="tfeed">
           {stream.map(x => ('msg' in x
             ? <Bubble key={x.msg.id} m={x.msg} peer={name} />
-            /* 工单卡不套页面外壳，直接进流。onBack 在这儿没有意义——
-               卡就在会话里，没有「返回」这回事。
-               风控卡排在工单卡前面：评估是在下单那一刻跑的，先有判断
-               才有这一单，顺序反了就成了「先成交再审」。 */
+            /* The ticket card gets no page shell, it goes straight into the stream. onBack is meaningless
+               here -- the card is in the conversation, there is no "back".
+               The risk card sits before the ticket card: the assessment ran at the moment the order was
+               placed, so the judgement precedes the order; reversed, it would read as "settle first, review after". */
             : (
               <Fragment key={x.order.id}>
                 {x.order.assessment && <AssessCard a={x.order.assessment} peer={name} />}
@@ -201,7 +203,7 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
 }
 
 function Bubble({ m, peer }: { m: Message; peer: string }) {
-  /* 系统播报不是谁说的话，居中不带气泡；订单卡点得开。 */
+  /* A system announcement is nobody's utterance: centred, no bubble; order cards stay clickable. */
   if (m.kind === 'system' || m.kind === 'order') {
     const body = (
       <span className="bub">{m.body}</span>
@@ -217,9 +219,9 @@ function Bubble({ m, peer }: { m: Message; peer: string }) {
   }
   const at = new Date(m.created_at)
     .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-  /* 对方的话带头像，自己的不带——参照就是这么分的，而且这么分是对的：
-     一条流里只有一个「对方」，我自己是谁不需要每句话提醒一次。
-     .mrow 把头像和气泡按底对齐；少了它，头像会跟着多行气泡拉长。 */
+  /* Their messages carry an avatar, mine do not -- that is how the reference splits it, and the split is
+     right: a stream has only one "other side", and who I am does not need repeating on every line.
+     .mrow aligns avatar and bubble to the bottom; without it the avatar stretches with a multi-line bubble. */
   if (m.author === 'me') {
     return (
       <div className="msg me">

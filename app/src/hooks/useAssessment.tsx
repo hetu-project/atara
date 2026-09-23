@@ -5,7 +5,7 @@ import { RISK_AGENTS } from '../components/agents'
 export type StepState = 'wait' | 'run' | 'done'
 export interface RunStep { k: string; n: string; st: StepState; line?: string }
 
-/** 一票。verdict 三档：pass / note（放行但记一笔）/ flag（真反对）。 */
+/** One vote. verdict has three levels: pass / note (allowed but noted) / flag (a real objection). */
 export interface Vote { n: string; v: 'pass' | 'note' | 'flag'; note: string; sc?: number }
 
 export interface Run {
@@ -21,12 +21,12 @@ export interface Run {
   flagged: boolean
 }
 
-/* 四步是固定的，空态就该先摆出来——用户能提前知道会经历什么。 */
+/* The four steps are fixed, so the empty state should lay them out up front -- the user gets to know in advance what is coming. */
 const STEPS: [string, string][] = [
   ['read', 'Read the order'], ['pull', 'Collected evidence'],
   ['check', 'Agent checks'], ['cons', 'Consensus'],
 ]
-/** 每票之间的间隔。七个一起转圈没有信息量，票本来就是一个一个落的。 */
+/** The gap between votes. Seven spinners at once carry no information; votes land one at a time by nature. */
 const STEP_MS = 620
 
 interface Ctx {
@@ -50,14 +50,17 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
   const reset = useCallback(() => { clear(); setRun(null); setRunning(false) }, [])
 
   /**
-   * 起跑一次评估。
+   * Kicks off an assessment.
    *
-   * orderId 给了就回放**那一单存下来的**那一份，不再另算一次。这一点很重要：
-   * 后端按种子算分，挂单接口用的是挂单号、工单快照用的是工单号——两次算出来
-   * 的是两组数。而下单之后两处会同时出现在屏幕上（右栏在跑，会话里那张卡已经
-   * 在流里了），同一单显示两组分，人只能当它是乱编的。
+   * When orderId is given, replay **the copy stored against that order** rather than computing another
+   * one. This matters: the backend scores from a seed, and the listing endpoint uses the listing id
+   * while the ticket snapshot uses the ticket id -- two computations, two sets of numbers. And after
+   * placing an order both appear on screen at the same time (the right column is running while the
+   * card is already in the conversation stream), so one order showing two sets of scores can only
+   * read as made up.
    *
-   * 没有 orderId 的场合是「还没下单，先看一眼这个对手方」，那时按挂单号算。
+   * The case with no orderId is "no order placed yet, just a look at this counterparty", which scores
+   * off the listing id.
    */
   const start = useCallback(async (offerId: string, subject: string, orderId?: string) => {
     clear()
@@ -80,21 +83,22 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
         a = await ep.assessment(offerId)
       }
     } catch {
-      // 取不到票就别演一段假的：说清楚拿不到，比编一组分数诚实
+      // If votes cannot be fetched, do not act one out: saying plainly that they are unavailable is more honest than inventing scores
       setRun(r => r && { ...r, done: true, summary: 'Could not reach the assessment service' })
       setRunning(false)
       return
     }
 
-    /* 终值一拿到就定下来：环要用它起跑，自己把指针走到位。
-       逐票只驱动 roster 和步骤条——那两处才需要「一张一张」的节奏。 */
+    /* The final value is fixed as soon as it arrives: the ring needs it to start, and walks its own
+       pointer into place. The per-vote drip only drives the roster and the step bar -- those are the
+       two places that need the "one at a time" rhythm. */
     setRun(r => r && { ...r, score: a.score, threshold: a.threshold, total: a.total })
 
     const votes: Vote[] = (a.votes ?? []).map(v => ({
       n: v.agent,
       v: v.verdict === 'pass' ? 'pass' : /note/i.test(v.note) ? 'note' : 'flag',
       note: v.note,
-      // 每个 agent 自己那个分，由后端按工单号算——同一单稳定，不同单散开。
+      // Each agent's own score, computed by the backend from the ticket id -- stable within an order, spread across different ones.
       sc: v.score,
     }))
 
@@ -102,7 +106,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       setRun(r => {
         if (!r) return r
         const steps = r.steps.map(s => (s.k === k ? { ...s, st, line } : s))
-        /* 一步开跑，它前面的都算结了——省得每处都手写一遍前置状态 */
+        /* Once a step starts, everything before it counts as finished -- saves writing out the prerequisite states by hand in every place */
         const at = steps.findIndex(s => s.k === k)
         for (let i = 0; i < at; i++) {
           const prev = steps[i]
@@ -115,7 +119,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     at(320, () => step('pull', 'done', `${votes.length} sources`))
     at(420, () => step('check', 'run'))
 
-    // 票一张一张落。分数跟着已落的票走，最后一票落定才是终值。
+    // Votes land one at a time. The score follows the votes that have landed; only the last one makes it final.
     votes.forEach((v, i) => {
       at(600 + i * STEP_MS, () => {
         setRun(r => r && { ...r, votes: [...r.votes, v] })
@@ -128,8 +132,9 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       step('check', 'done', a.summary)
       step('cons', 'run')
     })
-    /* start 在动画跑完才 resolve：调用方要等结论出来再开工单页。
-       评估没跑完就把人甩进工单页，那张卡就成了既成事实。 */
+    /* start resolves only once the animation has finished: the caller has to wait for the conclusion
+       before opening the ticket page. Dropping someone into the ticket page mid-assessment turns that
+       card into a fait accompli. */
     await new Promise<void>(resolve => {
       at(end + 520, () => {
         step('cons', 'done', a.summary)

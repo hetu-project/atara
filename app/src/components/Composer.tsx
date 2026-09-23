@@ -5,7 +5,7 @@ import VoiceBar from './VoiceBar'
 import { IFlytekStreamer, VoiceError, type VoiceFailure } from '../services/iflytek'
 import type { ActKind } from './ActionBar'
 
-/** 语音起不来的几种原因，各自能做的事不同——所以不共用一句话。 */
+/** The handful of reasons voice can fail to start, each with a different remedy -- so they do not share one sentence. */
 const VOICE_MSG: Record<VoiceFailure, string> = {
   insecure: 'Voice needs a secure page — open this over HTTPS or on localhost',
   unsupported: 'This browser cannot record audio — try Chrome',
@@ -15,7 +15,7 @@ const VOICE_MSG: Record<VoiceFailure, string> = {
   network: 'Lost connection to the voice service',
 }
 
-/** 把说的接在打的后面。已经有空白结尾就不再补一个，不然会越接越松。 */
+/** Append what was said to what was typed. Does not add another space if one is already there, or the gap keeps growing. */
 const join = (had: string, said: string) => {
   if (!had) return said
   if (!said) return had
@@ -23,13 +23,14 @@ const join = (had: string, said: string) => {
 }
 
 /**
- * Home 与 Thread 共用的输入条。
+ * The input bar shared by Home and Thread.
  *
- * 壳是同一套：Buy / Sell、输入框、语音、发送。附件不画——参照里它会走
- * 文档识别演示，这边没有对应实现，留一个点了没反应的按钮不如不给。
+ * The shell is the same: Buy / Sell, input box, voice, send. Attachments are not drawn -- in the
+ * reference they lead to a document-recognition demo we have no implementation for, and a button
+ * that does nothing when clicked is worse than no button.
  *
- * 两页发出去的事不同（解析下单 / 问 AI vs 发消息 / 跟这个人下单），
- * 由 onSubmit 和 panel 交给调用方。
+ * What the two pages send differs (parse an order / ask the AI vs. send a message / trade with this
+ * person), which onSubmit and panel hand back to the caller.
  */
 export default function Composer({
   identity,
@@ -53,7 +54,7 @@ export default function Composer({
   onChange: (q: string) => void
   placeholder: string
   ariaLabel: string
-  /** 当前开着的是买还是卖；没有动作面板时为 null。 */
+  /** Whether the open panel is buy or sell; null when no action panel is open. */
   actOn: ActKind | null
   onToggle: (k: ActKind) => void
   panel?: ReactNode
@@ -61,21 +62,24 @@ export default function Composer({
   onSubmit: () => void
   sendTitle?: string
   sendLabel?: string
-  /** 正在生成回答：发送键换成停止。只有 Home 会用。 */
+  /** An answer is being generated: the send key becomes stop. Only Home uses this. */
   streaming?: boolean
   onStop?: () => void
   onVoiceError?: (msg: string) => void
 }) {
-  /* 输入框跟着内容长高。1 行起，到 156px（6 行）转滚动——那个上限在 CSS 里。
+  /* The input box grows with its content. Starts at 1 row and switches to scrolling at 156px
+   * (6 rows) -- that ceiling lives in the CSS.
    *
-   * 先归 auto 再读 scrollHeight：不归的话盒子只会变高不会变矮，因为
-   * scrollHeight 永远不小于当前高度，删字之后下面留着一片空白。
+   * Reset to auto before reading scrollHeight: without the reset the box only ever grows, never
+   * shrinks, because scrollHeight is never less than the current height, leaving a band of empty
+   * space below after deleting text.
    *
-   * useLayoutEffect 而不是 useEffect：浏览器绘制之前就把高度写好，否则每敲
-   * 一个字都会先画出旧高度再跳一下。
+   * useLayoutEffect rather than useEffect: the height is written before the browser paints,
+   * otherwise every keystroke paints the old height first and then jumps.
    *
-   * #say 上那个 smooth 类是配套的：CSS 里给它的是一条 .15s 的平直曲线，而
-   * 默认那条是开合用的弹簧——每敲一个字弹一下，正是参照里特意避开的。 */
+   * The smooth class on #say goes with this: the CSS gives it a flat .15s curve, whereas the
+   * default one is the spring used for opening and closing -- a bounce per keystroke, which is
+   * exactly what the reference took care to avoid. */
   const box = useRef<HTMLTextAreaElement>(null)
   const [fast, setFast] = useState(false)
   useLayoutEffect(() => {
@@ -85,16 +89,16 @@ export default function Composer({
     el.style.height = el.scrollHeight + 'px'
     setFast(true)
   }, [text])
-  /* 面板开合换回弹簧。两种改高度混用同一条曲线是不行的：用弹簧，每敲一个字
-     盒子都要弹一下；用平直曲线，面板开出来就是硬邦邦地推上去。所以按「这次
-     变高是谁引起的」来切。 */
+  /* Panel open/close switches back to the spring. The two kinds of height change cannot share one
+     curve: with the spring the box bounces on every keystroke; with the flat curve the panel opens
+     by shoving upwards. So switch on "what caused this height change". */
   useLayoutEffect(() => { setFast(false) }, [actOn])
 
   const [mic, setMic] = useState(false)
   const voice = useRef<IFlytekStreamer | null>(null)
   const before = useRef('')
   const dropped = useRef(false)
-  /* 转写回调要读到最新的 onChange，不能把第一次 render 的那份封进 streamer。 */
+  /* The transcription callback has to see the latest onChange; the one from the first render must not be closed over in streamer. */
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
   const onVoiceErrorRef = useRef(onVoiceError)

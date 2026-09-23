@@ -4,8 +4,9 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import PrivyRoot from './components/PrivyRoot'
 import Boundary from './components/Boundary'
-/* 整张样式表搬自 console.html：它大量使用 #left / #mid / #right 这类 id 选择器，
-   所以组件必须输出同样的结构，样式才认得出来。 */
+/* The whole stylesheet is lifted from console.html: it leans heavily on id
+   selectors like #left / #mid / #right, so components must emit the same
+   structure for the styles to match. */
 import './styles/console.css'
 
 createRoot(document.getElementById('root')!).render(

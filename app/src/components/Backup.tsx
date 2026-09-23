@@ -2,26 +2,27 @@ import { useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 
 /**
- * 备份恢复短语。
+ * Recovery phrase backup.
  *
- * 第一步是模板里那张方形告警卡（.msq）：说清楚这十二个词意味着什么。
- * 第二步交给 Privy 的 exportWallet —— 它在**独立域名的 iframe** 里显示这个
- * 内嵌钱包真正的助记词，我们的代码碰不到，也不该碰。
+ * Step one is the square warning card from the template (.msq): spell out what these twelve words mean.
+ * Step two hands off to Privy's exportWallet -- it shows this embedded wallet's real mnemonic inside
+ * an **iframe on a separate domain**, which our code cannot touch and should not.
  *
- * ── 为什么不是我们自己画那个十二格 ──
+ * -- Why we do not draw those twelve cells ourselves --
  *
- * 要在自己的界面里印出助记词，就得先拿到它。而 Privy 的 SDK 根本不暴露
- * （类型定义里没有 mnemonic / seedPhrase 这类东西），跨域 iframe 正是为了
- * 让应用永远读不到。
+ * Printing a mnemonic in our own UI would require having it first. Privy's SDK simply does not
+ * expose it (nothing like mnemonic / seedPhrase exists in the type definitions), and the
+ * cross-origin iframe exists precisely so that the application can never read it.
  *
- * 也不能「从私钥反推」：BIP-39 是单向的——
- *   助记词 --PBKDF2(HMAC-SHA512, 2048 轮)--> 种子 --BIP-32--> 私钥 --> 地址
- * PBKDF2 那一步就是为了不可逆而设计的。拿私钥反推助记词，等于要求把哈希
- * 反算回原文。
+ * Nor can it be "derived back from the private key": BIP-39 is one-way --
+ *   mnemonic --PBKDF2(HMAC-SHA512, 2048 rounds)--> seed --BIP-32--> private key --> address
+ * That PBKDF2 step is designed to be irreversible. Deriving a mnemonic from a private key amounts
+ * to asking for a hash to be inverted.
  *
- * 所以只有两种可能：要么显示 Privy 的真窗口（这里选的），要么自己生成钱包、
- * 自己扛密钥。中间那条「画一个十二格、填十二个编出来的词」是最坏的一种：
- * 用户会把它抄在纸上当成资产的控制权。
+ * So there are only two possibilities: show Privy's real window (what is chosen here), or generate
+ * the wallet ourselves and carry the keys ourselves. The middle road -- drawing twelve cells and
+ * filling them with twelve invented words -- is the worst of all: users will copy it onto paper and
+ * treat it as control of their assets.
  */
 export default function Backup({
   backedUp, onClose, onDone,
@@ -30,15 +31,15 @@ export default function Backup({
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
-  /* 只有 Privy 自己发的内嵌钱包导得出来。外部钱包（MetaMask 之类）的密钥
-     从来不在这条链路上，Privy 也导不了它。 */
+  /* Only embedded wallets issued by Privy itself can be exported. The keys of external wallets
+     (MetaMask and friends) were never on this path, and Privy cannot export them either. */
   const w = user?.wallet
   const embedded = w?.walletClientType === 'privy' ? w.address : ''
 
   const reveal = async () => {
     setBusy(true); setErr('')
     try {
-      // promise 在用户关掉 Privy 那个窗口之后 resolve
+      // The promise resolves after the user closes Privy's window
       await exportWallet({ address: embedded })
       onDone()
     } catch (e) {
@@ -74,8 +75,8 @@ export default function Backup({
                 Anyone who reads them can spend your funds, so write them down offline and
                 never type them into a website.
               </p>
-              {/* 先说会跳出别人家的窗口。不说的话那一跳会被当成钓鱼——
-                  而这恰恰是最不该被当成钓鱼的一步。 */}
+              {/* Say up front that someone else's window is about to appear. Without that, the jump
+                  reads as phishing -- and this is exactly the step that must not. */}
               <p className="acnote">
                 They open in Privy’s own window, on a separate domain. Atara never sees
                 them — the phrase does not pass through this console at any point.
@@ -89,7 +90,7 @@ export default function Backup({
             </>
           ) : (
             <>
-              {/* 没有内嵌钱包的账户：没有可导出的东西，照实说。 */}
+              {/* Accounts with no embedded wallet: there is nothing to export, so say so plainly. */}
               <p className="acnote">
                 This account has no phrase to show. Its address came from an external
                 wallet or was derived from your login, so the key that controls it was

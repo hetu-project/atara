@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useAssessment } from '../hooks/useAssessment'
 
 /**
- * 中栏那条评估痕迹。
+ * The assessment trace in the middle column.
  *
- * 与右栏的分工：这里是对话流里的一瞥（现在在做什么），右栏是留档（每一步的证据）。
- * 跑着的时候标题 shimmer、当前行转 spinner；跑完标题换成「Assessed in 14s」，
- * 收起来但还能再展开——结论出来之后过程仍然可查。
+ * Division of labour with the right column: this is a glance inside the conversation
+ * flow (what is happening now), the right column is the record (evidence for each step).
+ * While running, the title shimmers and the current row spins; once done the title
+ * becomes "Assessed in 14s" and collapses but can be reopened -- the process stays
+ * inspectable after the conclusion lands.
  */
 export default function Thinking() {
   const { run, running } = useAssessment()
@@ -24,8 +26,8 @@ export default function Thinking() {
 
   if (!run) return null
 
-  /* 进行中和完成用两套措辞——「Reading the sources · reading sources…」
-     这种把状态词和结论拼在一起，读起来是同一句话说两遍。 */
+  /* Running and finished use two different phrasings -- "Reading the sources - reading
+     sources..." glues the status word to the conclusion and reads as the same sentence twice. */
   const rows = run.steps
     .filter(s => s.st !== 'wait')
     .map(s => ({

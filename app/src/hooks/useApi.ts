@@ -69,7 +69,7 @@ export function useApi<T>(
      off it, which is what makes "next request" mean "after this one came back"
      rather than "every N milliseconds no matter what". */
   const [settled, setSettled] = useState(0)
-  // fn 每次渲染都是新的闭包，放进 deps 会无限循环——用 ref 存最新的那个。
+  // fn is a fresh closure on every render, so putting it in deps loops forever -- keep the latest one in a ref.
   const fnRef = useRef(fn)
   fnRef.current = fn
   /* Consecutive failures, for the backoff. A ref, not state: changing it must
@@ -148,7 +148,7 @@ export function useApi<T>(
   return { data, error, loading, reload }
 }
 
-/** 手动触发的动作：给出 pending 与 error，避免每个按钮各写一遍。 */
+/** A manually triggered action: exposes pending and error so every button does not reimplement them. */
 export function useAction() {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<ApiError | null>(null)

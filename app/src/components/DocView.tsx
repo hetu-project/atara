@@ -1,13 +1,14 @@
 /**
- * 一份资质件是什么、谁出的、里面有什么。
+ * What a qualification document is, who issued it, and what is in it.
  *
- * 参照里「已提供」的那几个是真链接，点开是一张生成的文件页。我们这边没有那份
- * 文件——后端的 docs 只是一组布尔值，说的是「交没交」，不是文件本身。所以这里
- * 摊开的是这份材料的**说明**：它是什么、由谁出具、覆盖哪些内容，再说清这一家
- * 交没交。
+ * In the reference the "provided" ones are real links that open a generated document page. We do
+ * not have that document -- the backend's docs are just a set of booleans saying "submitted or
+ * not", not the file itself. So what unfolds here is the **description** of the material: what it
+ * is, who issues it, what it covers, plus whether this counterparty has submitted it.
  *
- * 不照着参照生成一张带假条目的文件页：那页上的每一行都会被当成这家对手方的
- * 真实资料读，而它们是编的。说明是真的，文件没有就是没有。
+ * We deliberately do not generate a document page with fabricated entries the way the reference
+ * does: every line on that page would be read as real data about this counterparty, and it would
+ * be made up. The description is real; a document we do not have is simply not there.
  */
 export const DOC_META: Record<string, { n: string; by: string; what: string }> = {
   kyc: { n: 'Identity verification', by: 'Platform KYC provider',
@@ -50,8 +51,9 @@ export default function DocView({
               </dd></div>
           </dl>
           {has ? (
-            /* 交了不等于我们能把它给你看：这些是身份证件和银行流水，谁能看
-               是另一回事。说清楚它在档案里，而不是假装这里点开就能读。 */
+            /* Submitted does not mean we can show it to you: these are identity documents and bank
+               statements, and who may see them is a separate question. Say plainly that it is on
+               file rather than pretending it opens here. */
             <p className="rnote">
               Held on file and checked when the counterparty was verified. The document
               itself is not exposed in the console.

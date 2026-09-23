@@ -2,38 +2,39 @@ import { BASE, ApiError, devHeaders, readAuthToken } from './client'
 import type { ApiErrorBody } from './types'
 
 /**
- * Atara AI 对话台：发一句话，回答一段一段地到。
+ * The Atara AI desk: send a sentence, get the answer back in pieces.
  *
- * 为什么不用 EventSource：它只能发 GET，也带不了自定义头，而我们要 POST
- * 一句话、还要带 X-Atara-User。所以用 fetch 拿 ReadableStream 自己解 SSE——
- * 协议本身很简单，`event:` 一行、`data:` 一行、空行分段。
+ * Why not EventSource: it can only issue GET and cannot carry custom headers, whereas we need to
+ * POST a sentence and send X-Atara-User. So we take the ReadableStream from fetch and parse SSE
+ * ourselves -- the protocol is simple enough: an `event:` line, a `data:` line, blank line between records.
  */
 
-/* 对话台的账号 id。后端 store.DeskID 是同一个值——它是外键指向的真实用户，
-   不是一个前端自己编的特例标记。 */
+/* Account id of the desk. The backend's store.DeskID is the same value -- it is a real user that
+   foreign keys point at, not a special-case marker invented by the frontend. */
 export const DESK_ID = 'user-desk'
 
 export interface DeskInfo {
   peer_id: string
   name: string
   subtitle: string
-  /** 这台服务器配了模型没有。没配时它照样收消息，但回的是固定话术。 */
+  /** Whether this server has a model configured. Without one it still accepts messages, but replies with fixed copy. */
   configured: boolean
 }
 
 export interface DeskHandlers {
-  /** 回答的下一段。 */
+  /** The next chunk of the answer. */
   onDelta: (text: string) => void
-  /** 整段存完了。thought_ms 是后端量的「第一个字之前等了多久」，
-      和落库的是同一个数——所以刷新前后显示一致。 */
+  /** The whole answer has been stored. thought_ms is what the backend measured as "how long before
+      the first character", the same number that was persisted -- so it reads the same before and after a refresh. */
   onDone?: (m: { id: string; body: string; created_at: string; thought_ms?: number }) => void
 }
 
 /**
- * 出错的形状和别处一致：带 code，调用方按 code 分支。
+ * The error shape matches everywhere else: it carries a code, and callers branch on the code.
  *
- * 注意这里的错误有两个来源，而**它们的 HTTP 状态码都是 200**：连接建立之后
- * 头已经发出去了，后端只能把出错当成一个事件推下来。所以不要看状态码。
+ * Note that errors here have two sources and **both arrive with HTTP status 200**: once the
+ * connection is established the headers have already gone out, so the backend can only push a
+ * failure down as an event. Do not look at the status code.
  */
 export class DeskError extends Error {
   readonly code: string
@@ -62,10 +63,11 @@ async function deskHeaders(as?: string): Promise<Record<string, string>> {
 }
 
 /**
- * 发一句话，边收边回调。
+ * Send a sentence and call back as chunks arrive.
  *
- * signal 传进来就能中途取消（用户切走了、或者又发了一句）。取消时后端会
- * 停止向模型要字——每一段都在花钱，没人看的字不该继续生成。
+ * Pass a signal to cancel midway (the user navigated away, or sent another line). On cancel the
+ * backend stops asking the model for tokens -- every chunk costs money, and tokens nobody will
+ * read should not keep being generated.
  */
 export async function deskSend(
   body: string,
@@ -80,12 +82,12 @@ export async function deskSend(
     signal,
   })
 
-  /* 连接都没建起来（400/500）时后端回的是常规的错误信封，不是流。 */
+  /* When the connection never got established (400/500) the backend returns the regular error envelope, not a stream. */
   if (!res.ok || !res.body) {
     let err: ApiErrorBody | undefined
     try {
       err = ((await res.json()) as { error?: ApiErrorBody }).error
-    } catch { /* 不是 JSON 就用状态码兜底 */ }
+    } catch { /* not JSON, fall back to the status code */ }
     if (err) throw new ApiError(res.status, err)
     throw new DeskError('DESK_UNREACHABLE', `The desk did not answer (${res.status})`)
   }
@@ -94,16 +96,17 @@ export async function deskSend(
   const dec = new TextDecoder()
   let buf = ''
 
-  /* try/finally 是必须的：dispatch 遇到 error 事件会抛，不收掉读取器的话
-     这条连接会一直挂着，后端那边也就一直以为有人在听。 */
+  /* The try/finally is required: dispatch throws on an error event, and without releasing the reader
+     this connection stays open, leaving the backend believing someone is still listening. */
   try {
     for (;;) {
       const { done, value } = await reader.read()
       if (done) break
       buf += dec.decode(value, { stream: true })
 
-      /* 按空行切段。**只处理完整的段**——网络会把一个事件切成两个 chunk，
-         不留着尾巴的话，JSON 会从中间断开，解析失败，那一段字就丢了。 */
+      /* Split on blank lines. **Only complete records are processed** -- the network will split one
+         event across two chunks, and without keeping the tail the JSON breaks mid-way, parsing
+         fails, and that chunk of text is lost. */
       let sep: number
       while ((sep = buf.indexOf('\n\n')) !== -1) {
         const raw = buf.slice(0, sep)

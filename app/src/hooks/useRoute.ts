@@ -1,23 +1,23 @@
 import { useEffect, useState } from 'react'
 
-/* 视图与左栏导航一一对应（见 console.html 的 #left）。
-   home 是默认态：新建一单，不是某个列表。 */
+/* Views map one to one onto the left-hand nav (see console.html's #left).
+   home is the default state: start a new order, not some list. */
 export type Route =
   | { view: 'home' }
   | { view: 'discover' }
   | { view: 'contacts' }
   | { view: 'payments' }
   | { view: 'account' }
-  /* 设置是账户页的另一种模式，不是另一页——参照的 openAcct('settings') 就是
-     切同一个视图的 ACCT_MODE。给它一条自己的路由是为了能直接链过去、
-     刷新之后还停在这儿。 */
+  /* Settings is another mode of the account page, not another page -- the reference's
+     openAcct('settings') just switches ACCT_MODE on the same view. It gets its own route so it
+     can be linked to directly and survives a refresh. */
   | { view: 'settings' }
   | { view: 'order'; id: string }
   | { view: 'thread'; peer: string }
 
 /**
- * 哈希路由。刷新不丢页、浏览器后退可用、工单可深链分享。
- * 不引 react-router——只有四条路径，一个 hashchange 监听就够了。
+ * Hash routing. Survives a refresh, the browser back button works, tickets can be deep-linked and shared.
+ * No react-router -- there are only four paths, and one hashchange listener is enough.
  */
 export function useRoute() {
   const [route, setRoute] = useState<Route>(parse)
@@ -45,28 +45,31 @@ function parse(): Route {
 }
 
 /**
- * 「开一张新台面」的信号。
+ * Signal for "open a fresh desk".
  *
- * 光靠 go({view:'home'}) 不够：人本来就在首页时点 New order，路由没变化，
- * Home 不会重挂，上一单留下的评估和撮合卡片就一直挂在那儿。
- * 所以侧栏那一下除了切路由，还要明确地喊一声「重新开始」。
+ * go({view:'home'}) alone is not enough: when someone is already on the home page and clicks New
+ * order, the route does not change, Home does not remount, and the assessment and matching cards
+ * left over from the previous order stay on screen. So that sidebar click has to shout "start
+ * over" explicitly on top of switching routes.
  */
 export const NEW_ORDER = 'atara:new-order'
 
 /**
- * 「把 Atara AI 那条对话打开」的信号。
+ * Signal for "open the Atara AI conversation".
  *
- * 和 NEW_ORDER 是一对：两个入口都落在 #/home，路由分不开它们，只能各喊各的。
- * New order 收起已有的对话开一张新台面，Chats 里的 Atara AI 把它展开回来——
- * 收起的只是屏幕，服务端那份历史一直都在。
+ * A pair with NEW_ORDER: both entry points land on #/home, the route cannot tell them apart, so
+ * each has to shout for itself. New order collapses the existing conversation and opens a fresh
+ * desk, while Atara AI under Chats expands it back -- only the screen was collapsed, the
+ * server-side history was there all along.
  */
 export const OPEN_DESK = 'atara:open-desk'
 
-/* 进首页时要不要展开那条对话。
+/* Whether to expand that conversation on entering the home page.
  *
- * 放模块变量而不是 React state：两个入口都要在 Home 还**没挂载**的时候
- * 就表态——从别的视图点 New order，事件发出去那一刻首页还不存在，监听器
- * 收不到。事件只解决「人已经在首页」那一半，这个变量解决另一半。 */
+ * A module variable rather than React state: both entry points have to state their intent while
+ * Home is **not yet mounted** -- clicking New order from another view fires the event at a moment
+ * when the home page does not exist and no listener can receive it. The event solves the "already
+ * on the home page" half; this variable solves the other half. */
 let deskOpen = false
 export const setDeskOpen = (v: boolean): void => { deskOpen = v }
 export const isDeskOpen = (): boolean => deskOpen

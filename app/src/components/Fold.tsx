@@ -1,14 +1,16 @@
 import { useState } from 'react'
 
 /**
- * 可过渡的折叠块。
+ * A collapsible block that can animate.
  *
- * 替掉原生 `<details>`：那个是瞬间弹开的，没有高度过渡——一段 25 个字段的
- * 提交内容「啪」地展开，下面的东西全部瞬移，读的人要重新找位置。
+ * Replaces native `<details>`: that one snaps open with no height transition -- a
+ * 25-field submission body pops open and everything below teleports, forcing the
+ * reader to find their place again.
  *
- * 用 grid-template-rows 从 0fr 到 1fr 撑开，而不是 max-height 猜一个值：
- * max-height 要么猜小了裁掉内容，要么猜大了让收起动画前半段是空走的。
- * 这个写法对任意高度都准，代价是多一层包裹元素。
+ * Expands via grid-template-rows from 0fr to 1fr rather than guessing a max-height:
+ * guess too small and content is clipped, guess too large and the first half of the
+ * collapse animation runs on empty. This works for any height, at the cost of one
+ * extra wrapper element.
  */
 export default function Fold({
   summary,
@@ -29,8 +31,8 @@ export default function Fold({
         <span className="foldmk" aria-hidden />
         {summary}
       </button>
-      {/* 两层是必须的：外层动 grid-template-rows，内层 overflow:hidden 把
-          超出的部分裁掉。合成一层的话内容会在收起过程中溢出来。 */}
+      {/* Both layers are required: the outer one animates grid-template-rows, the inner
+          one clips the overflow. Merged into one, content spills out while collapsing. */}
       <div className="foldwrap">
         <div className="foldin">{children}</div>
       </div>

@@ -1,15 +1,18 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react'
 
 /**
- * 全局操作反馈。
+ * Global action feedback.
  *
- * 这个项目原来**没有**它：`console.css` 里躺着一整段 `#ftoast` 的样式，
- * 但整个 src 里没有一处 JSX 引用——当初照参照抄样式时漏掉了实现那一半。
- * 后果是复制地址、保存账户、撤销额度这些动作全都悄无声息，
- * 而失败只能塞进某个视图自己的一行灰字里，那行字经常在屏幕外。
+ * This project originally did **not** have it: `console.css` carried a whole block of `#ftoast`
+ * styles, but nowhere in src was there a single JSX reference -- copying the reference's styles
+ * had skipped the implementation half.
  *
- * 刻意做得小：一个 provider、一个 hook、没有队列优先级、没有位置配置。
- * 需要更多的时候再加，现在加了也没人用。
+ * The consequence was that copying an address, saving an account and revoking an allowance all
+ * happened in silence, while failures could only be squeezed into some view's own line of grey
+ * text, often off screen.
+ *
+ * Deliberately small: one provider, one hook, no queue priorities, no position configuration.
+ * Add more when it is needed; adding it now would leave it unused.
  */
 
 export type ToastKind = 'ok' | 'err' | 'info'
@@ -33,26 +36,26 @@ interface Ctx {
 
 const ToastCtx = createContext<Ctx>({ toast: () => {} })
 
-/** 在任何组件里 `const { toast } = useToast()`。 */
+/** In any component: `const { toast } = useToast()`. */
 export const useToast = () => useContext(ToastCtx)
 
-/* 同时最多留三条。再多就开始互相遮挡，而第四条到来时人根本还没读完第一条。 */
+/* At most three at a time. Beyond that they start covering each other, and by the time the fourth arrives nobody has finished reading the first. */
 const MAX = 3
-/* 出场动画的时长，和 CSS 里 .tst 的 transition 对齐。 */
+/* Duration of the entry animation, kept in sync with .tst's transition in the CSS. */
 const LEAVE_MS = 220
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [list, setList] = useState<Toast[]>([])
   const seq = useRef(0)
-  /* 每条各自的定时器。存起来是为了「鼠标停在上面就别消失」——
-     人正要去点那颗「重试」，它在手指落下前消失是最气人的一种交互。 */
+  /* One timer per toast. They are kept so that "hovering stops it disappearing" works -- having it
+     vanish just as the finger comes down on that Retry button is the most infuriating kind of interaction. */
   const timers = useRef(new Map<number, number>())
 
   const drop = useCallback((id: number) => {
     const t = timers.current.get(id)
     if (t) { clearTimeout(t); timers.current.delete(id) }
-    /* 先标记 leaving 让它淡出，再真的移除。直接删的话它是瞬间消失的，
-       而人眼会把「突然不见」读成「我点错了什么」。 */
+    /* Mark as leaving to fade it out first, then actually remove it. Removing it directly makes it
+       vanish instantly, and the eye reads "suddenly gone" as "did I click something wrong?". */
     setList(l => l.map(x => (x.id === id ? { ...x, leaving: true } : x)))
     setTimeout(() => setList(l => l.filter(x => x.id !== id)), LEAVE_MS)
   }, [])
@@ -65,8 +68,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const toast = useCallback<Ctx['toast']>((text, opts) => {
     const kind = opts?.kind ?? 'ok'
-    /* 报错停久一点：成功只是确认一件已经发生的事，扫一眼就够；
-       失败要读懂、可能还要决定下一步。带按钮的更久，不然按钮没用。 */
+    /* Errors linger longer: a success only confirms something that already happened and a glance is
+       enough; a failure has to be read and possibly acted on. Ones with a button last longer still,
+       or the button is useless. */
     const ms = opts?.ms ?? (opts?.action ? 8000 : kind === 'err' ? 5000 : 2600)
     const id = ++seq.current
     setList(l => [...l.slice(-(MAX - 1)), { id, kind, text, action: opts?.action }])
@@ -76,9 +80,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastCtx.Provider value={{ toast }}>
       {children}
-      {/* aria-live=polite：读屏会念出来，但不会打断用户正在读的内容。
-          报错那条也用 polite 而不是 assertive——这些不是紧急警报，
-          assertive 会粗暴地打断当前朗读。 */}
+      {/* aria-live=polite: a screen reader will announce it without interrupting what the user is
+          currently reading. Errors use polite rather than assertive too -- these are not emergency
+          alerts, and assertive would rudely cut off the current announcement. */}
       <div className="tsts" role="status" aria-live="polite">
         {list.map(t => (
           <div key={t.id} className={'tst tst-' + t.kind + (t.leaving ? ' out' : '')}

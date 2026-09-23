@@ -3,15 +3,17 @@ import * as ep from '../api/endpoints'
 import { useToast } from './Toast'
 
 /**
- * 选一个文件并上传，带进度、预览和重传。
+ * Pick a file and upload it, with progress, preview and re-upload.
  *
- * 替掉项目里三处裸的 `<input type="file">`（付款回执、异议证据、准入材料）。
- * 那三处的共同毛病：点完按钮到成功之间界面完全不动——传一张几 MB 的照片
- * 要好几秒，那几秒里人不知道是在传、还是点漏了。其中准入那处的 catch
- * 甚至是空的，传失败了界面上一个字都不说。
+ * Replaces three bare `<input type="file">` in this project (payment receipt, dispute evidence,
+ * onboarding documents). Their shared problem: nothing in the UI moves between clicking the button
+ * and success -- uploading a photo of a few MB takes several seconds, and during those seconds the
+ * user cannot tell whether it is uploading or whether the click missed. The onboarding one even had
+ * an empty catch, so a failed upload said nothing at all.
  *
- * 上传本身是「选完就传」，不等提交表单：等提交再传的话，人填完点保存，
- * 又得盯着一个不知道多久的等待；而且那时才发现文件太大，已经填完一整页了。
+ * The upload itself is "upload on pick", not on form submit: uploading at submit time means the user
+ * fills everything in, hits save, and then has to watch an open-ended wait; and a file that turns out
+ * to be too large is only discovered after a whole page has been filled in.
  */
 
 type State =
@@ -70,23 +72,23 @@ export default function FilePick({
   variant = 'field',
   disabled = false,
 }: {
-  /** 上传成功后拿到的 file_ref。 */
+  /** The file_ref obtained after a successful upload. */
   onDone: (ref: string, meta: { name: string; url?: string }) => void
-  /** 已经传过的那一份（回填用）。给了就直接显示成已附。 */
+  /** An already-uploaded file (for prefill). If given, it renders straight away as attached. */
   value?: string
   label?: string
-  /** 没选文件时那行小字，说明该传什么。 */
+  /** The small line shown when nothing is picked, explaining what to upload. */
   hint?: string
   accept?: string
   identity?: string
   className?: string
   /**
-   * 'field'：表单里的虚线框（准入材料、异议证据）。
-   * 'button'：页脚的一颗主按钮（付款回执）——那一处是个一次性动作，
-   *   不是一个要一直显示着的字段，摆一个虚线框会把页脚整行撑开。
+   * 'field': the dashed box inside a form (onboarding documents, dispute evidence).
+   * 'button': a primary button in the footer (payment receipt) -- that one is a one-off action,
+   *   not a field that has to stay visible, and a dashed box there would stretch the whole footer row.
    */
   variant?: 'field' | 'button'
-  /** button 形态下禁用（比如外面正在提交别的东西）。 */
+  /** Disabled in button form (for instance while something else is being submitted outside). */
   disabled?: boolean
 }) {
   const [st, setSt] = useState<State>(value ? { s: 'ok', name: short(value), ref: value } : { s: 'idle' })
@@ -95,8 +97,8 @@ export default function FilePick({
   const last = useRef<File | null>(null)
   const { toast } = useToast()
 
-  /* 离开时掐掉还在传的那个。不掐的话它会传完、然后在一个已经不存在的
-     组件上调 setState，而那份文件根本没人要了。 */
+  /* Abort any in-flight upload on unmount. Without that it finishes and then calls setState on a
+     component that no longer exists, for a file nobody wants any more. */
   useEffect(() => () => job.current?.abort(), [])
 
   const send = (f: File) => {
@@ -109,8 +111,9 @@ export default function FilePick({
       toast(why, { kind: 'err' })
       return
     }
-    /* 先在本地拦大小。后端那边是 io.LimitReader 静默截断——超了不报错，
-       而是存下一个被砍掉一半的文件。等到审核员打不开才发现就太晚了。 */
+    /* Check the size locally first. The backend uses io.LimitReader, which truncates silently -- it
+       does not error on oversize, it stores a file cut in half. Discovering that when a reviewer
+       cannot open it is far too late. */
     if (f.size > ep.MAX_UPLOAD) {
       const why = `That file is ${mb(f.size)}, over the ${mb(ep.MAX_UPLOAD)} limit`
       setSt({ s: 'bad', name: f.name, why })
@@ -131,7 +134,7 @@ export default function FilePick({
     }).catch((e: unknown) => {
       job.current = null
       const msg = e instanceof Error ? e.message : 'Upload failed'
-      /* 自己取消的不算失败：退回未选状态，不留一条红字。 */
+      /* A cancellation by the user is not a failure: fall back to the unpicked state, no red text. */
       if (msg === 'Upload cancelled') { setSt({ s: 'idle' }); return }
       setSt({ s: 'bad', name: f.name, why: msg })
       toast(msg, { kind: 'err', action: { label: 'Retry', onClick: () => send(f) } })
@@ -142,15 +145,15 @@ export default function FilePick({
     <input type="file" hidden ref={pick} accept={accept}
       onChange={e => {
         const f = e.target.files?.[0]
-        /* 值要清掉：不清的话连着选同一个文件不会触发 change，
-           上传失败后想重选同一份就点不动了。 */
+        /* The value has to be cleared: without it, picking the same file twice in a row fires no
+           change event, so re-picking the same file after a failed upload does nothing. */
         e.target.value = ''
         if (f) send(f)
       }} />
   )
 
-  /* 按钮形态：进度画在按钮自己身上（--pct 驱动一层底色），页脚那一行
-     容不下一条独立的进度条。传的时候点它就是取消。 */
+  /* Button form: progress is drawn on the button itself (a background layer driven by --pct); that
+     footer row has no space for a separate progress bar. Clicking it while uploading cancels. */
   if (variant === 'button') {
     const up = st.s === 'up'
     return (
@@ -200,15 +203,15 @@ export default function FilePick({
         </span>
       </button>
 
-      {/* 进度条只在传的时候占位。常驻一条空槽会让静止的表单看起来像在等什么。 */}
+      {/* The progress bar only takes space while uploading. A permanently empty track makes a form at rest look like it is waiting for something. */}
       {st.s === 'up' && (
         <div className="fpbar" role="progressbar" aria-valuenow={st.pct} aria-valuemin={0} aria-valuemax={100}>
           <i style={{ width: st.pct + '%' }} />
         </div>
       )}
 
-      {/* 传上去的东西要能点开看。显示一句「已上传」等于让人相信一份他看不到的
-          文件——这条在别处（证据包）已经是既定做法，这里保持一致。 */}
+      {/* What was uploaded has to be openable. Showing "uploaded" alone asks people to trust a file they
+          cannot see -- this is already established practice elsewhere (the evidence bundle), and is kept consistent here. */}
       {st.s === 'ok' && st.url && (
         <a className="fplink" href={st.url} target="_blank" rel="noopener">View file</a>
       )}
@@ -217,5 +220,5 @@ export default function FilePick({
 }
 
 const mb = (n: number) => (n / 1024 / 1024).toFixed(n > 10 * 1024 * 1024 ? 0 : 1) + ' MB'
-/** 回填时只有 ref，没有原始文件名——取末段当名字，好过显示一长串 uuid。 */
+/** On prefill there is only a ref, no original filename -- use the last segment as the name, which beats showing a long uuid. */
 const short = (ref: string) => ref.split('/').pop() ?? ref

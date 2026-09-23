@@ -7,14 +7,15 @@ import type { BankAccount } from '../api/types'
 import { BankAccountsModal } from './WalletModals'
 
 /**
- * 挂单配置的表单，逐处对着参照的 paintMaker() 里 phase==='listing' 那一支写。
+ * The listing configuration form, written line by line against the phase==='listing' branch of the
+ * reference's paintMaker().
  *
- * 这一段不走 KYC 那套「一个字段定义驱动一行」的通用渲染：限额是一行两个框、
- * 定价的输入随着选中的模式换意思、渠道是个分组多选菜单——用通用渲染写出来
- * 就不是这张表单了。
+ * This section does not use the KYC-style generic "one field definition drives one row" rendering:
+ * limits are two boxes on one line, the pricing input changes meaning with the selected mode, and
+ * rails are a grouped multi-select menu -- rendered generically it would not be this form.
  *
- * 这些条款是能力级的：它圈定以后每一次挂单的可选范围，所以在这儿定一次，
- * 不是每次挂单重填。
+ * These terms are capability-level: they bound what every future listing may be, so they are set once
+ * here rather than refilled for each listing.
  */
 
 export interface Listing {
@@ -37,7 +38,7 @@ export const blankListing = (): Listing => ({
 
 const num = (v: string) => Number(String(v).replace(/[,，\s]/g, ''))
 
-/** 校验规则逐条取自参照的 sellerValid()。返回出错那一行的 id，全对返回空。 */
+/** Validation rules taken one by one from the reference's sellerValid(). Returns the id of the offending row, or empty when everything passes. */
 export function badListingField(d: Listing, step: number): string {
   if (step === 0) {
     if (!d.dir.length) return 'sf-dir'
@@ -190,9 +191,9 @@ export function ListingStep({
   step: number
   /** Whose accounts the rails picker lists. */
   identity: string
-  /** 出错那一行的 id。参照靠给 .sf 加 .bad 让预置的 .err 显出来。 */
+  /** Id of the offending row. The reference adds .bad to .sf to reveal the preset .err. */
   bad: string
-  /** 复核页第一行的「主体」，来自身份那一段填的东西。 */
+  /** The "entity" on the first line of the review page, coming from what was filled in the identity section. */
   kindLine: string
   onChange: (d: Listing) => void
 }) {
@@ -235,8 +236,8 @@ export function ListingStep({
   const { data: chains } = useApi(() => ep.chainInfo(), [])
   const rows = chains?.chains ?? []
   const netCodes = rows.map(c => c.code)
-  /* 哪几条链上真的能锁币，得说出来：没有托管合约的链上挂不了卖单，
-     等到签名时被拒才知道就太晚了。 */
+  /* Which chains can actually lock funds has to be stated: a chain with no escrow contract cannot
+     host a sell listing, and finding out at signing time is far too late. */
   const live = rows.filter(c => c.deployed).map(c => c.name)
   const netHint = !rows.length ? ''
     : live.length ? `Coins can only be locked on: ${live.join(' · ')}`
@@ -300,9 +301,10 @@ export function ListingStep({
         <span className="err">Min must be below max</span></div>
 
       <div className={cls('sf-nets')}><span className="sfl">Networks</span>
-        {/* 链的名单来自后端，不写死：这里写死一份、挂单表单写死另一份，
-            两处迟早不一样；而且写死的名字（TRON / POLYGON）跟实际发交易的
-            那条链根本对不上——挂单说 ETH，币锁在别的链上。 */}
+        {/* The chain list comes from the backend rather than being hardcoded: hardcoding one copy here
+            and another in the listing form guarantees they diverge eventually; and the hardcoded names
+            (TRON / POLYGON) did not match the chain the transaction was actually sent on -- the listing
+            said ETH while the funds were locked on a different chain. */}
         <Chips opts={netCodes} sel={d.nets}
           onPick={v => set({ nets: flip(d.nets, v) })} />
         <span className="ad" style={{ fontSize: 11.5, color: 'var(--faint)' }}>
@@ -344,7 +346,7 @@ export function ListingStep({
   )
 }
 
-/** 回执里那张「交易条款」表，六行，取自参照的 receiptCard。 */
+/** The "trading terms" table in the receipt, six rows, taken from the reference's receiptCard. */
 export function listingRows(
   d: Listing,
   /* The reader's own fiat accounts, so the rail ids in `d` can be named.
@@ -354,10 +356,11 @@ export function listingRows(
      currency we have not established, would not be. */
   accounts?: BankAccount[],
 ): [string, string][] {
-  /* 每一项都要兜底。这份 d 是后端 form_json 原样发回来的，而后端不校验它的
-     形状——用旧版表单交过、或者直接走 API 提交的账号，这里少哪个字段都可能。
-     少一个 `?? []` 的后果不是缺一行，是 undefined.join 把整个准入对话炸成白屏，
-     而那条对话恰恰是他查「我的申请审到哪了」的唯一入口。 */
+  /* Every item needs a fallback. This d is the backend's form_json sent back verbatim, and the backend
+     does not validate its shape -- accounts that submitted through an older form, or straight through
+     the API, may be missing any of these fields here. The cost of one missing `?? []` is not a missing
+     row but undefined.join blowing the whole onboarding conversation into a white screen -- and that
+     conversation is their only way to check "where has my application got to". */
   const list = (v: string[] | undefined) => (v?.length ? v.join(' · ') : '—')
   const picked = (accounts ?? []).filter(a => (d.rails ?? []).includes(a.id))
   const ccy = (() => {

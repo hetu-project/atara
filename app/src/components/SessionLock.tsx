@@ -3,13 +3,14 @@ import { useMe } from '../hooks/useMe'
 import { ILock } from './icons'
 
 /**
- * 会话锁。
+ * Session lock.
  *
- * 控制台上摊着余额、对手方和单据，多数人是在办公室的共用屏幕前用它，
- * 所以离开座位这件事需要一个动作，而且闲置也要自己落锁。
+ * The console lays out balances, counterparties and documents, and most people use it on a shared office
+ * screen, so leaving the desk needs an action, and idling has to lock by itself.
  *
- * 密码只做一件事：把这个界面解开。**它不批准任何东西**——转账和额度
- * 永远走钱包那一侧的签名。演示件：只存在这个浏览器标签里，从不出网。
+ * The password does exactly one thing: unlock this UI. **It approves nothing** -- transfers and allowances
+ * always go through a signature on the wallet side. A demo artefact: it only ever lives in this browser tab
+ * and never leaves the machine.
  */
 
 const PW_KEY = 'atara-pw'
@@ -18,7 +19,7 @@ const PW_KEY = 'atara-pw'
 const LOCK_KEY = 'atara-locked'
 const ACTIVE_KEY = 'atara-last-active'
 
-/** 演示开关：?lock=20 把闲置阈值压到 20 秒，好当场看它落锁。 */
+/** Demo switch: ?lock=20 drops the idle threshold to 20 seconds so the lock can be watched happening. */
 export const LOCK_IDLE = (() => {
   const q = Number(new URLSearchParams(location.search).get('lock') || 0)
   return q > 0 ? q * 1000 : 15 * 60 * 1000
@@ -28,7 +29,7 @@ export function readPw(): string {
   try { return sessionStorage.getItem(PW_KEY) || '' } catch { return '' }
 }
 function writePw(v: string) {
-  try { sessionStorage.setItem(PW_KEY, v) } catch { /* 隐身窗口 */ }
+  try { sessionStorage.setItem(PW_KEY, v) } catch { /* private window */ }
 }
 
 /**
@@ -62,7 +63,7 @@ export function useIdleLock(enabled: boolean, onIdle: () => void) {
   }, [enabled])
 }
 
-// ── 设置密码 ────────────────────────────────────────────────────────
+// -- Set password -------------------------------------------------------
 
 export function PwSetup({
   why, onClose, onDone,
@@ -86,7 +87,7 @@ export function PwSetup({
       <div className="pwsheet" role="dialog" aria-modal="true" aria-label="Session lock password">
         <h3>{had ? 'Change lock password' : 'Set a lock password'}</h3>
         {why ? <p className="pwwhy">{why}</p> : null}
-        {/* 文案逐字取自参照的 openPwSetup，不改写。 */}
+        {/* Copy taken verbatim from the reference's openPwSetup, not reworded. */}
         <p>
           It unlocks this console when the session locks — it does not approve anything.
           Transfers and allowances always go through your passkey. Demo only: it stays in
@@ -113,17 +114,18 @@ export function PwSetup({
 }
 
 /**
- * 让用户用 passkey 证明「是本人」。
+ * Have the user prove "it is me" with a passkey.
  *
- * 走的是浏览器原生的 WebAuthn，不是 Privy 的 MFA——后者是给交易用的，由
- * Privy 在需要时自己发起，没法单独调来开一扇界面上的门。
+ * This goes through the browser's native WebAuthn, not Privy's MFA -- the latter is for transactions and is
+ * initiated by Privy when it needs it, so it cannot be called on its own to open a door in the UI.
  *
- * 不带 allowCredentials：让浏览器列出本域名下所有可发现的 passkey。
- * linkPasskey() 是在我们自己的页面里跑的，所以那把钥匙就绑在这个域名上。
+ * No allowCredentials: let the browser list every discoverable passkey on this origin. linkPasskey() runs
+ * inside our own page, so that key is bound to this origin.
  *
- * 这里**没有**服务端校验，断言的结果只用来开会话锁。这个分寸是有意的：
- * 会话锁挡的是「人离开座位、屏幕开着」，不是「有人拿着 devtools」。真正
- * 动钱的那几步各自有自己的确认，不靠这扇门。
+ * There is **no** server-side verification here; the assertion result is only used to release the session
+ * lock. That proportion is deliberate: the session lock guards against "someone left the desk with the
+ * screen on", not against "someone with devtools". The steps that actually move money each have their own
+ * confirmation and do not rely on this door.
  */
 export async function assertPasskey(): Promise<void> {
   const challenge = crypto.getRandomValues(new Uint8Array(32))
@@ -133,7 +135,7 @@ export async function assertPasskey(): Promise<void> {
   if (!cred) throw new Error('Passkey check was dismissed')
 }
 
-// ── 锁屏 ────────────────────────────────────────────────────────────
+// -- Lock screen --------------------------------------------------------
 
 export function LockScreen({
   hasPasskey, onUnlock, onSignOut,
@@ -161,8 +163,8 @@ export function LockScreen({
   const [err, setErr] = useState('')
   const [shake, setShake] = useState(0)
   const [busy, setBusy] = useState(false)
-  /* 先给哪一种。passkey 更好用，但它可能在这个域名上根本不存在——
-     见下面 byPasskey 的注释——所以这是个可以退的选择，不是定局。 */
+  /* Which one to offer first. A passkey is more convenient, but it may not exist on this origin at all --
+     see the note on byPasskey below -- so this is a fallback-able choice, not a final one. */
   /* null = not decided yet, because hasPasskey is not known yet. The choice is
      made once, from the first real answer; after that the person switches it
      with the buttons below, not Privy. */
@@ -181,12 +183,12 @@ export function LockScreen({
       await assertPasskey()
       onUnlock()
     } catch (e) {
-      /* 失败就退回密码，别把人关在门外。
+      /* On failure fall back to the password; do not lock the person out.
 
-         hasPasskey 读的是 Privy 账户上登记的那一把，而 WebAuthn 的钥匙是
-         **绑在域名上**的。同一个账户换一个部署地址——本地、IP、vercel.app、
-         自己的域名——账户上还写着「有 passkey」，浏览器这边却一把都找不到。
-         那时屏幕上只剩一颗按不动的按钮和「签出」，而人什么都没做错。 */
+         hasPasskey reads the one registered on the Privy account, whereas a WebAuthn key is **bound to the
+         origin**. Move the same account to a different deployment address -- localhost, an IP, vercel.app,
+         your own domain -- and the account still says "has a passkey" while the browser can find none.
+         What is left on screen is one unresponsive button and Sign out, for someone who did nothing wrong. */
       /* The browser **deliberately** reports "the user cancelled" and "there is no
          such key here" as one and the same NotAllowedError — telling them apart
          would let a page learn whether an account is registered. So both
@@ -219,7 +221,7 @@ export function LockScreen({
         {(named || short) && (
           <em className="lkwho">{named ? `${me!.display_name} · ${short}` : short}</em>
         )}
-        {/* 标题跟着屏上真正摆着的东西走：没有密码框就别叫人输密码。 */}
+        {/* The title follows what is actually on screen: with no password field, do not tell people to enter a password. */}
         <h3>{byPw ? 'Enter your password' : 'Session locked'}</h3>
         <p>
           For your security, this session locks after {span} of inactivity.
@@ -239,7 +241,7 @@ export function LockScreen({
               onKeyDown={e => { if (e.key === 'Enter') submit() }} />
             <div className="pwerr">{err}</div>
             <button className="btn btn-primary lkok" onClick={submit}>Unlock</button>
-            {/* 有 passkey 的话留一条回去的路：刚才那次失败可能只是点错了取消 */}
+            {/* With a passkey, keep a way back: that last failure may have been nothing more than hitting cancel */}
             {hasPasskey && (
               <button className="lkalt" onClick={() => { setErr(''); setByPw(false) }}>
                 Use your passkey instead
@@ -253,8 +255,8 @@ export function LockScreen({
               onClick={() => void byPasskey()}>
               {busy ? 'Waiting for your passkey…' : 'Unlock with passkey'}
             </button>
-            {/* 这一把可能是在另一个域名上注册的，在这里找不到。没设过密码
-                就没有这条路——那时只剩签出，所以上面那句错误必须说清楚。 */}
+            {/* This key may have been registered on a different origin and cannot be found here. With no
+                password ever set there is no such path -- only Sign out remains, so the error above has to be explicit. */}
             {pw && (
               <button className="lkalt" onClick={() => { setErr(''); setByPw(true) }}>
                 Use your password instead
@@ -262,7 +264,7 @@ export function LockScreen({
             )}
           </>
         )}
-        {/* 共用屏幕的场景下，回到座位的可能不是同一个人 */}
+        {/* On a shared screen, the person coming back to the desk may not be the same one */}
         <button className="lkout" onClick={onSignOut}>Not you? Sign out</button>
       </div>
     </div>
@@ -270,12 +272,14 @@ export function LockScreen({
 }
 
 /**
- * 把「点了锁」这个意图接住。
+ * Catches the intent behind "they clicked lock".
  *
- * 锁之前必须先确认「有东西能再打开它」，否则就是把人关在门外。能打开它的
- * 有两样：账户上的 passkey，或者本机设的密码。有 passkey 就直接锁，不再
- * 多问一道密码——那把钥匙本来就比密码强，再要一个只是多一件要记的事。
- * 两样都没有才带他去设一把，设好了再替他锁上，他点那一下的意图不丢。
+ * Before locking, it has to be certain that "something can open it again", or this locks the person out.
+ * Two things can open it: a passkey on the account, or a password set on this machine. With a passkey it
+ * locks straight away without asking for a password as well -- that key is already stronger than a
+ * password, and requiring one too is just another thing to remember.
+ * Only when neither exists does it take them to set one, then lock for them afterwards, so the intent
+ * behind that click is not lost.
  */
 /** Was the console locked when this tab last rendered, or idle past the threshold? */
 function lockedOnLoad(signed: boolean): boolean {

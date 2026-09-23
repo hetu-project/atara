@@ -2,18 +2,20 @@ import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 
 /**
- * 收款二维码 —— 真的编码那串地址。
+ * Receive QR code -- it really does encode that address string.
  *
- * 参照那边是一块装饰性的码（aria-hidden，不编码任何内容），我原来照抄了。
- * 但一个扫不出来的二维码比没有二维码更糟：人会掏出手机对着它扫，扫不到就
- * 以为是自己相机的问题，反复试。而这一格的全部意义就是「不用手抄这 42 个
- * 字符」——不编码的话它只是一块看起来像二维码的噪点。
+ * The reference has a decorative code there (aria-hidden, encoding nothing) and I originally
+ * copied it. But a QR code that will not scan is worse than no QR code at all: people pull out
+ * their phone and point it at it, and when nothing happens they assume their camera is at fault
+ * and keep trying. And the entire point of this cell is "you do not have to copy 42 characters
+ * by hand" -- unencoded, it is just a patch of noise shaped like a QR code.
  *
- * 纠错等级取 M（约 15%）：这个码显示在屏幕上，不会被弄脏或折叠，不需要 H
- * 那样的冗余；而 M 比 H 少两个版本，同样的像素尺寸下格子更大、更好扫。
+ * Error correction level M (~15%): this code is shown on a screen, it will not get smudged or
+ * folded, so it does not need H's redundancy; and M is two versions smaller than H, so at the
+ * same pixel size the modules are larger and easier to scan.
  *
- * 编码是异步的，所以画不出来的时候留空而不是留一块假的图案——错误的码会
- * 把钱打到别处去，空白至少只是不方便。
+ * Encoding is async, so when it cannot be drawn we leave the space empty rather than showing a
+ * fake pattern -- a wrong code sends money somewhere else, blank is merely inconvenient.
  */
 export default function Qr({ text, size = 116 }: { text: string; size?: number }) {
   const [svg, setSvg] = useState('')
@@ -25,8 +27,9 @@ export default function Qr({ text, size = 116 }: { text: string; size?: number }
       type: 'svg',
       errorCorrectionLevel: 'M',
       margin: 1,
-      // 深色用近黑、浅色用纸白：这块码始终是白底的，跟着主题翻会扫不出来
-      // （多数扫码器认的是「深色码 + 浅色底」这个对比方向）。
+      // Near-black for dark, paper-white for light: this code always sits on a white background,
+      // and flipping it with the theme makes it unscannable (most scanners expect the
+      // "dark code on light background" contrast direction).
       color: { dark: '#14161a', light: '#ffffff' },
     })
       .then(s => { if (live) setSvg(s) })
@@ -36,7 +39,7 @@ export default function Qr({ text, size = 116 }: { text: string; size?: number }
 
   return (
     <div className="qrbox" style={{ width: size, height: size }}
-      /* 地址本身就在旁边，屏幕阅读器读那一串即可；这块图对它没有额外信息 */
+      /* The address itself is right next to it and a screen reader can read that string; this image carries no extra information for it */
       aria-hidden
       dangerouslySetInnerHTML={{ __html: svg }} />
   )

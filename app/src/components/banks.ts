@@ -1,13 +1,15 @@
-/* 银行目录，逐字取自 console.html。
+/* Bank catalog, taken verbatim from console.html.
  *
- * 这张表的职责不是「权威登记册」，而是三件事——替用户省打字、把同一家银行的
- * 写法归一（不然同一家会被记成五种拼法）、以及从选中项推出国家和币种。
- * 所以它靠搜索，不靠滚动，而且永远留着「直接用我输入的文字」这条出口：
- * 一个能拦住用户填自己真实银行的下拉框就是个 bug。
+ * This table's job is not to be an "authoritative register" but three things -- save the user typing,
+ * normalise the spelling of a given bank (otherwise the same bank gets recorded five different ways),
+ * and infer country and currency from the selection.
+ * So it works by search, not by scrolling, and it always keeps the "just use what I typed" escape hatch:
+ * a dropdown that can stop a user entering their actual bank is a bug.
  *
- * 别名那一列让「招商」「CMB」「zhaoshang」命中同一家。里面有意收了跨境 EMI
- * 和对加密友好的银行（Wise / Airwallex / Statrys / ZA / Sygnum…）——做 OTC 的
- * 账户常常开不在四大行，只列资产规模最大的那几家等于没覆盖真实用户。
+ * The alias column lets "CMB", "zhaoshang" and the Chinese name all match the same entry. Cross-border
+ * EMIs and crypto-friendly banks (Wise / Airwallex / Statrys / ZA / Sygnum and others) are deliberately
+ * included -- OTC traders' accounts are often not at the big four, and listing only the largest banks by
+ * assets amounts to not covering real users.
  */
 /* eslint-disable */
 const BANK_DIR: Record<string, string[]> ={
@@ -73,7 +75,7 @@ export const CTRY: Record<string, string> ={CN:'Chinese mainland',HK:'Hong Kong'
  AE:'United Arab Emirates',TH:'Thailand',VN:'Vietnam',MY:'Malaysia',PH:'Philippines',
  ID:'Indonesia',IN:'India',AU:'Australia'};
 
-/* 币种默认值只在这张表里有把握的地方给，其余留给用户自己选 */
+/* Currency defaults are only given where this table is confident; the rest is left for the user to pick */
 export const CTRY_CCY: Record<string, string> ={CN:'CNY',HK:'HKD',SG:'SGD',JP:'JPY',US:'USD'};
 
 export interface Bank { n: string; c: string; a: string }

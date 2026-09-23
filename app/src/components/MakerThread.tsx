@@ -11,24 +11,24 @@ import { go } from '../hooks/useRoute'
 import type { MakerApp, Offer } from '../api/types'
 
 /**
- * 准入是一轮对话，不是一张会变脸的状态卡。
+ * Onboarding is a conversation, not a status card that changes face.
  *
- * 参照把这件事说得很直白：「这是个对话产品，提交不是『表单变成状态卡』，
- * 而是一轮对话——你发出申请（可展开看提交了什么），平台回执，审核过了再回
- * 一条带下一步的消息。」所以这里往下走的每一步都往 #log 里追加一条消息，
- * 前面说过的话留着：
+ * The reference is blunt about it: "this is a conversation product; submitting is not 'the form turning into a
+ * status card' but a round of conversation -- you send an application (expandable to see what was submitted), the
+ * platform acknowledges, and once review passes it replies with a message carrying the next step." So every step
+ * onwards here appends a message to #log, and everything said before stays:
  *
- *   [卡片 九步表单] → [我：Submitted identity verification]
- *   → [平台：Received — …（可展开 25 项提交内容）]
- *   → [平台：✓ Identity verified. Next: … 「Set up trading terms →」]
- *   → [卡片 两步条款] → [我：Submitted trading terms] → …
+ *   [card: nine-step form] -> [me: Submitted identity verification]
+ *   -> [platform: Received — ... (expandable to 25 submitted items)]
+ *   -> [platform: ✓ Identity verified. Next: ... "Set up trading terms →"]
+ *   -> [card: two-step terms] -> [me: Submitted trading terms] -> ...
  *
- * 消息由后端状态推出来，不靠这个组件自己记：刷新一次页面对话还在，
- * 而参照那边刷新就全没了。放行也在后端（提交后 5 秒），所以「审核中」
- * 变成「已通过」是那边推的，这里只是照着画。
+ * The messages are derived from backend state rather than remembered by this component: refresh the page and the
+ * conversation is still there, where the reference loses everything on refresh. Release is on the backend too
+ * (5 seconds after submission), so "under review" becoming "approved" is pushed from there and this only paints it.
  */
 
-// ── 消息 ────────────────────────────────────────────────────────────
+// -- Messages -----------------------------------------------------------
 
 const Me = ({ children }: { children: React.ReactNode }) => (
   <div className="msg me"><span className="bub">{children}</span></div>
@@ -46,7 +46,7 @@ const Dots = () => (
   <span className="tdots" aria-hidden><i /><i /><i /></span>
 )
 
-/* 平台的回执也是「对方」发的：挂 Atara 的方块标识，跟人的圆头像分得开。 */
+/* The platform's acknowledgements are also "the other side" speaking: they carry Atara's square mark, distinct from a person's round avatar. */
 const Them = ({ children, typing }: { children: React.ReactNode; typing?: boolean }) => (
   <div className={'msg them' + (typing ? ' typing' : '')}>
     <span className="mrow">
@@ -56,7 +56,7 @@ const Them = ({ children, typing }: { children: React.ReactNode; typing?: boolea
   </div>
 )
 
-// ── 回执里那份「查看提交内容」 ───────────────────────────────────────
+// -- The "view submission" section inside an acknowledgement ------------
 
 type Group = [string, [string, string][]]
 
@@ -68,10 +68,11 @@ const show = (v: unknown) => {
 }
 
 /**
- * 身份材料按步骤分组展开全部字段——记录要全，不是三行摘要。
+ * Identity documents expand into every field, grouped by step -- the record has to be complete, not a three-line summary.
  *
- * 核验那一步不在里面：它不是一个填进表单的值，过没过存在 kyc_verifications 里。
- * 不滤掉的话回执上会多出一行「Identity verification —」，看着像有一项没填。
+ * The verification step is not in it: it is not a value filled into a form, and whether it passed lives in
+ * kyc_verifications. Without filtering it out, the acknowledgement gains a stray "Identity verification —" row
+ * that looks like an unfilled item.
  */
 function kycGroups(form: Record<string, unknown>): Group[] {
   const corp = form.kind === 'Corporate'
@@ -136,17 +137,17 @@ function Receipt({ groups }: { groups: Group[] }) {
   )
 }
 
-/** 后端把两段提交分开存成 {"kyc":…,"listing":…}。解不开就当没有。 */
+/** The backend stores the two submissions separately as {"kyc":...,"listing":...}. If it will not parse, treat it as absent. */
 function forms(raw: string | undefined): { kyc?: Record<string, unknown>; listing?: Listing } {
   try { return raw ? JSON.parse(raw) : {} } catch { return {} }
 }
 
 /**
- * 打回修改。
+ * Sent back for changes.
  *
- * 它不是「你被拒了」——措辞、颜色、后面跟着什么，三样都要说明这一点：
- * 说完话表单就在下面重新铺开，带着上次填的内容。终局的拒绝没有下文，
- * 打回有；两者在屏幕上长得一样，人只会理解成前者。
+ * It is not "you were rejected" -- the wording, the colour and what follows all have to make that clear: once it
+ * has been said, the form lays itself out again below with the previous answers in it. A final rejection has no
+ * sequel, a send-back does; looking identical on screen, people will only read it as the former.
  */
 function Revise({
   reason, app, identity, onDone,
@@ -156,8 +157,9 @@ function Revise({
   identity: string
   onDone: () => void
 }) {
-  /* 申诉是个**次要**出口，所以默认收着：绝大多数打回是真的有东西要改，
-     把「我觉得你判错了」和「去改」摆得一样显眼，会让人先去点那颗更省事的。 */
+  /* Appealing is a **secondary** exit, so it is collapsed by default: the vast majority of send-backs really do
+     have something to fix, and giving "I think you got it wrong" the same prominence as "go and fix it" makes
+     people reach for the easier one first. */
   const [open, setOpen] = useState(false)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
@@ -224,8 +226,8 @@ function Revise({
       </div>
 
       <span className="mkrevf">Your answers are still below — edit and send again.</span>
-      {/* 已经申诉过就不再给第二颗按钮：重复递交同一件事，只会让队列里
-          多几条一模一样的条目，而他并不会因此更快被看到。 */}
+      {/* No second button once an appeal has been filed: resubmitting the same thing only adds identical entries
+          to the queue, and does not get them seen any sooner. */}
       {appealed ? (
         <span className="mkrevf">We have your note — a person will look at this.</span>
       ) : open ? (
@@ -258,10 +260,11 @@ const clockOf = (iso: string) => {
 }
 
 /**
- * 哪一段被打回了。没有就是空。
+ * Which section was sent back. Empty when none was.
  *
- * reject_reason 只有一列，两段共用——不会有歧义，因为「交过了但没过」
- * 同一时刻只可能是其中一段：身份没过就交不了挂单配置（后端拦着）。
+ * reject_reason is a single column shared by both sections -- which is unambiguous, because "submitted but not
+ * passed" can only apply to one of them at a time: without identity approval the listing configuration cannot be
+ * submitted at all (the backend blocks it).
  */
 export function reviseAt(app: MakerApp | null): '' | 'kyc' | 'listing' {
   if (!app?.reject_reason) return ''
@@ -270,19 +273,20 @@ export function reviseAt(app: MakerApp | null): '' | 'kyc' | 'listing' {
   return ''
 }
 
-// ── 主体 ────────────────────────────────────────────────────────────
+// -- Main ---------------------------------------------------------------
 
 export default function MakerThread({
   app, identity, from, toListing, toOffer, setToListing, setToOffer, onDone,
 }: {
   app: MakerApp | null
   identity: string
-  /** 从哪儿来的：先要下单（trade）还是直接来入驻（maker）。决定通过后说什么。 */
+  /** Where this came from: wanting to place an order first (trade) or coming straight to onboard (maker). Decides what is said after approval. */
   from: 'trade' | 'maker'
-  /* 两段表单开着没有。状态在 KycProvider 手里：输入框上方那条待办和这里
-     这颗按钮点的是同一件事，各存一份就会出现「表单已经开着、待办还在催」。
-     用户点了「Set up trading terms →」才铺表单，审核通过那条消息带的是
-     下一段的入口，不是自动展开——参照也是要点一下的。 */
+  /* Whether each of the two form sections is open. The state is held by KycProvider: the to-do strip above the
+     input and this button here act on the same thing, and separate copies produce "the form is already open while
+     the to-do strip is still nagging".
+     The form only lays out once the user clicks "Set up trading terms →"; the approval message carries the entry
+     point to the next section rather than expanding automatically -- the reference requires a click too. */
   toListing: boolean
   toOffer: boolean
   setToListing: (v: boolean) => void
@@ -298,8 +302,8 @@ export default function MakerThread({
     the actual request: set when it goes out, cleared when it lands.
   */
   const [pending, setPending] = useState<'kyc' | 'listing' | null>(null)
-  /* 挂出去的单。留在对话里就是这笔挂单的记录——参照的 offerPosted 也是
-     把那张卡换成回执，而不是清掉。 */
+  /* Listings that went out. Leaving them in the conversation is the record of that listing -- the reference's
+     offerPosted also swaps that card for an acknowledgement rather than clearing it. */
   const [posted, setPosted] = useState<{ o: Offer; sym: string }[]>([])
   const bottom = useRef<HTMLDivElement>(null)
 
@@ -320,7 +324,7 @@ export default function MakerThread({
      that is depends on the rails they picked. */
   const { data: accts } = useApi(() => ep.bankAccounts(identity), [identity])
 
-  /* 新消息进来就滚到底——不滚的话通过那条消息连同它的按钮都在屏幕外面。 */
+  /* Scroll to the bottom whenever a new message arrives -- without it, the approval message and its button are both off screen. */
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [kycDone, kycOk, listDone, approved, pending, toListing, toOffer, posted.length])
@@ -338,11 +342,11 @@ export default function MakerThread({
     onDone()
   }
 
-  /* 表单卡什么时候在：还没交身份材料；被打回的那一段；身份过了、点了
-     下一段还没交；两段都过了、点了挂单。
+  /* When the form card is present: identity documents not yet submitted; the section that was sent back; identity
+     passed, the next section clicked but not yet submitted; both passed and a listing clicked.
 
-     被打回的那一段不用等人再点一次「去修改」——评语就在上面一条消息里，
-     让他对着评语改，中间再插一次点击只是多一道手续。 */
+     The section that was sent back does not wait for another click on "go and fix it" -- the comments are in the
+     message right above, so let them work against those comments; inserting another click is just extra ceremony. */
   const card: 'kyc' | 'listing' | 'offer' | null =
     revise ? revise
       /* Terms stay editable after approval. The gate used to be
@@ -378,24 +382,25 @@ export default function MakerThread({
         </>
       )}
 
-      {/* 重审期间收掉上一次的结论。
+      {/* Hide the previous verdict while re-review is in progress.
 
-          它说的是「你交的上一版有这两处要改」。人已经改完又交了一次,正等着
-          听结果,这时把旧评语摆在那儿只会让他以为改了没用——而那两条确实
-          可能已经不成立了。等新结论回来再显示,显示的就一定是当下的判断。 */}
+          It says "the last version you submitted has these two things to fix". The person has already fixed them
+          and resubmitted and is waiting to hear the result, and leaving the old comments there only makes them
+          think the fixes did nothing -- when those two points may genuinely no longer hold. Show it again once the
+          new verdict comes back, and what is shown is then certainly the current judgement. */}
       {revise === 'kyc' && pending !== 'kyc'
         ? <Revise reason={app?.reject_reason ?? ''} app={app} identity={identity} onDone={onDone} />
         : null}
 
       {kycOk && (from === 'trade' || kycDone) && (
-        /* 通过那两条话逐字取自参照：为下单来验的只说「可以交易了」，
-           直接来入驻的才带出下一段。
+        /* Both approval sentences are taken verbatim from the reference: someone verifying in order to place an
+           order is only told "you can trade now", and only someone onboarding directly gets the next section.
 
-           入驻那条还要 kycDone：证件核验通过只说明这个人是真人，不说明
-           九步材料交上来了——国籍、税务居民地、资金来源那些 DocuPass 从
-           没问过。只读 kycOk 的话，做完活体就被告知「身份已通过，下一步
-           配置交易条款」，整段自述被跳过。为下单来验的人不看这一段，
-           所以 from==='trade' 照旧。 */
+           The onboarding one also requires kycDone: a passed document check only establishes that this is a real
+           person, not that the nine steps of documentation were submitted -- nationality, tax residency and source
+           of funds are things DocuPass never asked about. Reading kycOk alone, finishing the liveness check would
+           announce "identity approved, next configure your trading terms" and skip the whole self-declaration.
+           Someone verifying to place an order does not see this section, so from==='trade' is unchanged. */
         <Them>
           {from === 'trade'
             ? '✓ Identity verified — you can trade now.'
@@ -457,20 +462,21 @@ export default function MakerThread({
       {card === 'offer' ? (
         <MakerOffer terms={f.listing} identity={identity}
           onEditTerms={() => { setToOffer(false); setToListing(true) }}
-          /* 挂完重取一次申请：挂单会动到账户状态（币锁进合约），
-             这条对话里别处显示的还是挂之前那一份。 */
+          /* Refetch the application after posting: posting a listing changes account state (coins locked into the
+             contract), and elsewhere in this conversation the pre-posting copy is still on display. */
           onPosted={(o, sym) => {
             setToOffer(false); setPosted(ps => [...ps, { o, sym }]); onDone()
           }} />
       ) : card && !app ? (
-        /* 申请还没拉回来,先什么都不铺。
+        /* Lay nothing out until the application has come back.
 
-           门控是从 app 的几个布尔推出来的,而 app 为 null 时它们全是 false
-           ——于是「还没交身份材料」这个判断在数据缺席的情况下永远成立,
-           表单会以默认状态先铺一遍:个人、第 1 步、空表。等数据到了,
-           useState 的初始化函数早就跑完了,草稿和已选的主体再也塞不回去。
+           The gating is derived from a handful of booleans on app, and when app is null they are all false
+           -- so "identity documents not yet submitted" is permanently true in the absence of data, and the form
+           lays itself out once in its default state first: individual, step 1, empty. By the time the data
+           arrives, useState's initialiser has long since run, and the draft and the chosen entity type can no
+           longer be put back in.
 
-           后端对没有申请的人也回一个对象,所以 null 只可能是「还没加载完」。 */
+           The backend returns an object even for someone with no application, so null can only mean "still loading". */
         <div className="mkempty kload">
           <Dither size={20} speed={1.1} label="Loading your application" />
           Loading your application…
@@ -479,8 +485,8 @@ export default function MakerThread({
         <MakerFlow phase={card} identity={identity}
           initial={card === 'kyc' ? f.kyc : (f.listing as unknown as Record<string, unknown>)}
           issues={app?.review_issues}
-          /* 只有同一段的草稿才恢复。两段表单字段完全不同,把身份那段的
-             内容塞进交易条款表单,比不恢复糟得多。 */
+          /* Only a draft from the same section is restored. The two forms' fields are entirely different, and
+             pushing the identity section's content into the trading terms form is far worse than not restoring. */
           draft={app?.draft_phase === card ? app.draft : undefined}
           draftStep={app?.draft_phase === card ? app.draft_step : 0}
           kyb={app?.kyb}

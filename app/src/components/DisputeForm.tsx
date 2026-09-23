@@ -3,14 +3,16 @@ import * as ep from '../api/endpoints'
 import FilePick from './FilePick'
 
 /**
- * 开一张争议案卷。两步：先说清楚会发生什么，再填表。
+ * Opens a dispute case. Two steps: explain what is about to happen, then fill the form.
  *
- * 表是表，不是一段对话——所以走模态，人留在出事的那条线程里填完。参照也是
- * 这么分的：第一屏只有一句「钱会一直锁着，我们看完回复你」和一颗按钮，
- * 第二屏才是分类、经过和凭据。
+ * A form is a form, not a conversation -- hence a modal, so the user stays in the thread
+ * where the problem happened. The reference splits it the same way: the first screen is a
+ * single line ("funds stay locked, we will get back to you once we have looked") plus one
+ * button; the second screen is the category, the account and the evidence.
  *
- * 填的东西全部发给后端存进这一单的事件流。不存的话，界面上它看起来提交成功了，
- * 而用户写的每一个字都落到了地上——那比不给这个表单更糟。
+ * Everything entered is sent to the backend and stored in this order's event stream. Without
+ * that, the UI would look like a successful submission while every word the user wrote hit
+ * the floor -- worse than not offering the form at all.
  */
 const KINDS = [
   'They say they did not receive it',
@@ -24,7 +26,7 @@ export default function DisputeForm({
   orderId, ref_, who, amount, identity, onClose, onDone,
 }: {
   orderId: string
-  /** 工单号。案卷跟着它走，用户报问题时报的就是这个号。 */
+  /** Ticket number. The case file follows it, and it is what the user quotes when reporting a problem. */
   ref_: string
   who: string
   amount: string

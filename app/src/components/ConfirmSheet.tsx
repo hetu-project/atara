@@ -3,21 +3,22 @@ import { usePrivy } from '@privy-io/react-auth'
 import { IPasskey, IWallet } from './icons'
 
 /**
- * 动钱之前的那一下确认。
+ * The confirmation just before money moves.
  *
- * 参照的 #confirm / .paysheet：标题、一个大数、一句说明、可选的额度卡，
- * 最后是那颗按钮。挂单锁币和吃单下单共用它——两件事都是「这一下之后钱就动了」，
- * 用两套界面只会让人以为它们性质不同。
+ * The reference's #confirm / .paysheet: a title, one big number, a line of explanation, an optional
+ * allowance card, and finally that button. Locking funds for a listing and taking an order share it --
+ * both are "after this, money moves", and two separate UIs would only suggest they are different in kind.
  *
- * ── 按钮为什么有三种 ──
+ * -- Why the button has three forms --
  *
- * 外部钱包（MetaMask 之类）：我们没有它的钥匙，点一下之后弹出来的是钱包自己
- * 的窗口，所以这里只说「去你的钱包里签」。
+ * External wallet (MetaMask and friends): we do not hold its keys, and what pops up after the click
+ * is the wallet's own window, so this only says "go sign in your wallet".
  *
- * Atara 钱包 + 有 passkey：passkey 就是签名的那把钥匙，说「用 passkey 确认」。
+ * Atara wallet with a passkey: the passkey is the signing key, so it says "confirm with passkey".
  *
- * Atara 钱包 + 没有 passkey：先补一把，仍在这张确认里。console.html 的
- * cok 是这一下先注册、装好了再签同一笔，不把人踢去 Settings。A demo
+ * Atara wallet without a passkey: mint one first, still inside this confirmation. console.html's
+ * cok registers first and then signs the same transaction once it is set up, rather than kicking the
+ * person out to Settings. A demo
  * seat has no Privy session and cannot mint a key — it must not be told to.
  */
 export interface ConfirmRow { k: string; v: React.ReactNode }
@@ -27,7 +28,7 @@ export default function ConfirmSheet({
   onConfirm, onClose,
 }: {
   title: string
-  /** 大数。挂单是币量，吃单是要付的法币。 */
+  /** The big number. For a listing it is the coin amount, for taking an order it is the fiat to be paid. */
   amount?: string
   unit?: string
   /** Which side the unit sits on.
@@ -43,21 +44,23 @@ export default function ConfirmSheet({
   unitPos?: 'pre' | 'post'
   lead: React.ReactNode
   rows?: ConfirmRow[]
-  /** 入金方式那一排之类，挂在说明和额度卡之间。 */
+  /** The deposit-method row and similar, slotted between the explanation and the allowance card. */
   extra?: React.ReactNode
-  /** ⚠ 那一句：这一下到底会发生什么。 */
+  /** The warning line: what is actually about to happen. */
   note?: { why: string; how: string }
   walletKind: string
   /**
-   * 这一下不动钱，只是一句承诺——那就用普通按钮，别摆 passkey。
+   * This step does not move money, it is only a commitment -- so use an ordinary button, do not put
+   * a passkey there.
    *
-   * 买方接单就是这种：对方的币早就锁在合约里了，我这边什么都没出，之后才
-   * 去银行转账。摆一个「用 passkey 签」会让人以为这一下就把钱划走了。
-   * 真正动钱的那几步（挂单锁币、卖方入金）才走签名。
+   * A buyer accepting an order is this case: the counterparty's coins were locked in the contract
+   * long ago, nothing leaves my side, and the bank transfer comes later. Showing "sign with passkey"
+   * suggests this click moves the money. Only the steps that really move money (locking funds for a
+   * listing, a seller's deposit) go through signing.
    */
   plain?: string
   busy?: boolean
-  /** 这条路还走不通。按钮置灰，而不是让它点下去走到别的地方。 */
+  /** This path is not available. Grey the button out rather than letting it be clicked through to somewhere else. */
   blocked?: boolean
   /**
    * The button no longer commits to anything — it just dismisses. Secondary
@@ -162,8 +165,8 @@ export default function ConfirmSheet({
         )}
         {note && (
           <div className="psrows">
-            {/* 先说这一下会发生什么，再说它怎么发生的。顺序反过来的话，
-                最该看见的那句（钱要进合约了）被实现细节挡在后面。 */}
+            {/* Say what this does before saying how it does it. The other order buries the sentence
+                that matters most (money is about to enter the contract) behind implementation detail. */}
             <span className="pslab" style={{ color: 'var(--warn)' }}>⚠ {note.why}</span>
             <span className="psfund">{note.how}</span>
           </div>

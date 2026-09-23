@@ -2,30 +2,31 @@ import type { ReactNode } from 'react'
 import CopyButton from './CopyButton'
 
 /**
- * 四个原语,页面里反复出现的那几种块。
+ * Four primitives, the handful of blocks that recur throughout the pages.
  *
- * 为什么要有这个文件:付款卡一张卡上就有八种各自定义的行——`.payrow`、
- * `.rcpick`、`.payproof`、`.paywarn`、`.payto`、`.dhead`、`.dfoot`、`.dpay`,
- * 每一种都有自己那几行 CSS,间距、字号、颜色各定各的。看着像拼出来的,
- * 因为确实是:每加一块就新写一段样式,从没停下来问「这个和上面那个是不是
- * 同一种东西」。
+ * Why this file exists: the payment card alone had eight separately defined row types -- `.payrow`,
+ * `.rcpick`, `.payproof`, `.paywarn`, `.payto`, `.dhead`, `.dfoot`, `.dpay` -- each with its own few
+ * lines of CSS, each defining its own spacing, size and colour. It looked assembled from scraps,
+ * because it was: every new block got a new chunk of styles, and nobody ever stopped to ask "is this
+ * the same kind of thing as the one above?".
  *
- * 边界取自 shadcn/ui 的 Item / Input Group / Alert / Empty——不是搬代码
- * （那一套要 Radix 加 Tailwind,我们两样都没有）,是**借它给每一块起的名字**。
- * 有了名字,回执页和收款行就不会再长成两个样子。
+ * The boundaries are taken from shadcn/ui's Item / Input Group / Alert / Empty -- not the code (that
+ * needs Radix plus Tailwind, and we have neither), but **the names it gives each block**. With names,
+ * the receipt page and the payout row stop growing into two different shapes.
  */
 
 /**
- * 一行东西:左边标识、中间内容、右边动作。
+ * A row of things: identifier on the left, content in the middle, action on the right.
  *
- * 列表里的一项长什么样,由这里定一次。回执页、收款账户、资产行都是它。
+ * What an item in a list looks like, defined once here. The receipt page, payout accounts and asset
+ * rows are all this.
  */
 export function Row({
   lead, title, sub, trail, className = '',
 }: {
   lead?: ReactNode
   title: ReactNode
-  /** 标题下面那行小字。没有就不占高度。 */
+  /** The small line under the title. Takes no height when absent. */
   sub?: ReactNode
   trail?: ReactNode
   className?: string
@@ -43,41 +44,41 @@ export function Row({
 }
 
 /**
- * 一组要被抄走的值。
+ * A group of values meant to be copied away.
  *
- * **不画框。** 上一版给它套了一个带内分隔线的盒子,而它本来就装在 payblk
- * 里、payblk 又装在卡片里——三层边框,里面只有三个字符串,而深色主题里
- * 这三层的底色差不到一档,于是全是灰压灰。
+ * **No box.** The previous version wrapped it in a box with internal dividers, when it already sat
+ * inside payblk, which itself sat inside a card -- three layers of border around three strings, and in
+ * the dark theme those three layers differ by less than one step of background, so it was all grey on grey.
  *
- * 层次改由留白和字号建立:标签压到 11px 大写字母、值抬到 15px,标签在
- * 值上面而不是旁边。少一层框,多一档对比。
+ * Hierarchy is built with whitespace and type size instead: labels down to 11px uppercase, values up to
+ * 15px, labels above the values rather than beside them. One layer of border fewer, one step of contrast more.
  */
 export function ValueGroup({ children }: { children: ReactNode }) {
   return <div className="uivg">{children}</div>
 }
 
 /**
- * 一个要被抄走的值:标签在上,值在下,复制键贴着值。
+ * A single value meant to be copied away: label on top, value below, copy key up against the value.
  *
- * 标签上置是因为值才是主角——并排时标签占掉一列固定宽度,把值挤到中间,
- * 而值是唯一要被读、被抄的东西。
+ * The label goes on top because the value is the subject -- side by side, the label takes a fixed column
+ * width and squeezes the value into the middle, when the value is the only thing meant to be read and copied.
  *
- * `copyText` 存在是因为**读的和抄的不总是同一个字符串**:金额读作
- * ¥14,680,抄走要是 14680——带符号带千分位的粘进银行的金额框,不是被拒
- * 就是被静默截断。
+ * `copyText` exists because **what is read and what is copied are not always the same string**: an amount
+ * reads as 14,680 yuan but must be copied as 14680 -- pasted into a bank's amount field with the symbol and
+ * separators, it is either rejected or silently truncated.
  *
- * `big` 给这一组里的主角用。一笔转账真正会抄错的是账号,它该比旁边的
- * 金额更显眼。
+ * `big` is for the subject of a group. In a transfer, the thing actually copied wrong is the account
+ * number, and it deserves more prominence than the amount beside it.
  */
 export function Value({
   label, children, copyText, copied, note, big,
 }: {
   label: string
   children: ReactNode
-  /** 真正进剪贴板的那一份。默认就是显示的内容。 */
+  /** What actually lands on the clipboard. Defaults to the displayed content. */
   copyText?: string
   copied?: string
-  /** 值后面那个小标记,比如「必填」。 */
+  /** A small marker after the value, such as "required". */
   note?: string
   big?: boolean
 }) {
@@ -95,10 +96,11 @@ export function Value({
 }
 
 /**
- * 一句要被读到的话,按分量分三档。
+ * A sentence meant to be read, in three weights.
  *
- * `warn` 那档是给「不做会怎样」用的。它原来跟普通说明一个字号,而它是
- * 整张卡最重的一句——代价要以代价的分量出现。
+ * The `warn` weight is for "what happens if you do not". It used to be the same type size as an ordinary
+ * explanation, when it is the heaviest sentence on the whole card -- a cost has to appear with the weight
+ * of a cost.
  */
 export function Note({
   kind = 'info', children,
@@ -113,10 +115,10 @@ export function Note({
 }
 
 /**
- * 该有东西而没有的地方。
+ * A place where something should be and is not.
  *
- * 留白会被读成「还在加载」,而这两件事要人做的动作正好相反:一个是等,
- * 一个是别等了、去问。所以缺了什么、接下来该干什么,都要写出来。
+ * Empty space reads as "still loading", and those two ask for opposite actions: one is wait, the other is
+ * stop waiting and go ask. So what is missing and what to do next both have to be written out.
  */
 export function Empty({ title, children }: { title: string; children?: ReactNode }) {
   return (

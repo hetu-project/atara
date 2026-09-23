@@ -14,25 +14,26 @@ export interface Act {
   amt: number
   coin: string
   fiat: string
-  peer: string          // 空 = Any，交给撮合
+  peer: string          // empty = Any, left to matching
   conds: { t: string; p: Record<string, string> }[]
-  /** 自动开出来的（打字触发）才吃 parseSrc 的虚线规则；手动开的一律实心。 */
+  /** Only auto-opened ones (triggered by typing) obey parseSrc's dashed-outline rule; manually opened ones are always solid. */
   auto?: boolean
-  /** 哪些槽是用户说到的。没说到的画虚线——「系统猜的」和「你说的」必须分得出。 */
+  /** Which slots the user actually named. Unnamed ones get a dashed outline -- "the system guessed" and "you said so" must stay distinguishable. */
   parseSrc?: Record<string, 1>
   amtKind?: 'coin' | null
 }
 
-/* 货币码前两位就是 ISO 国家码，映射到 regional indicator 码点，不引外部图片 */
+/* The first two letters of a currency code are the ISO country code; map them to regional indicator code points, no external images */
 const flag = (c: string) => {
   const cc = c === 'EUR' ? 'EU' : c.slice(0, 2)
   return String.fromCodePoint(...[...cc].map(ch => 0x1f1e6 + ch.charCodeAt(0) - 65))
 }
 /**
- * 动作行：把一句话变成可点的参数。
+ * Action bar: turns a sentence into clickable parameters.
  *
- * 与 console.html 的 #abar 同构——句子分三行（条件 / 动作 / 对手方），
- * 连接词走左列对齐。灰色虚线是系统的合理猜测，实心是你说过的。
+ * Isomorphic with console.html's #abar -- the sentence splits into three lines (condition /
+ * action / counterparty) with connectives aligned in the left column. Grey dashed means a
+ * reasonable guess by the system, solid means you said it.
  */
 export default function ActionBar({
   act, onChange, onClose, contacts,
@@ -42,9 +43,9 @@ export default function ActionBar({
   onClose: () => void
   contacts: Contact[]
 }) {
-  /* 币种与法币的可选范围来自目录，不是从池子里现有的挂单反推——
-     那样列出的是「碰巧有人挂了的」，不是「系统支持的」，
-     用户改一下币种就会发现选项自己变了。 */
+  /* The available currencies and fiat come from the catalog, not inferred from whatever listings
+     happen to be in the pool -- that would list "what someone happened to post", not "what the
+     system supports", and users would find the options changing under them as they switch currency. */
   const { data: assets } = useApi(() => ep.assets(), [])
   const { data: fiatGroups } = useApi(() => ep.fiats(), [])
   const [menu, setMenu] = useState<{ el: HTMLElement; items: PickItem[]; pick: (v: string) => void } | null>(null)
@@ -52,7 +53,7 @@ export default function ActionBar({
   const amtRef = useRef<HTMLInputElement>(null)
   const d = ACT_DEF[act.k]
 
-  /* 亲手动过 = 已确认：虚线转实心，哪怕选的还是原值 */
+  /* Touched by hand = confirmed: dashed becomes solid, even if the value picked is unchanged */
   const set = (patch: Partial<Act>, mark?: string) => {
     const next = { ...act, ...patch }
     if (mark) next.parseSrc = { ...(act.parseSrc ?? {}), [mark]: 1 }
@@ -70,8 +71,9 @@ export default function ActionBar({
   const fiatOf = (c: string) => fiats.find(f => f.code === c)
   const symOf = (c: string) => fiatOf(c)?.symbol ?? ''
 
-  /* 只列真能接这一笔的人。这一层由后端算：方向、币种、法币要对得上，
-     金额还得落在对方的最小单与可成交量之间——前端自己 filter 漏得掉后两道。 */
+  /* Only list people who can actually take this order. The backend computes this layer: direction,
+     currency and fiat have to line up, and the amount has to fall between their minimum and their
+     available volume -- a frontend filter would miss the last two. */
   const [fits, setFits] = useState<EligiblePeer[]>([])
   useEffect(() => {
     let alive = true
@@ -86,8 +88,9 @@ export default function ActionBar({
 
   return (
     <div id="abar">
-      {/* 跟陌生人交易，条件不标准化就没法双盲撮合：Buy/Sell 的放行条件由协议定死。
-          只读一行——不给编辑入口，但也不能不写，否则用户不知道钱凭什么放。 */}
+      {/* Trading with strangers is not double-blind-matchable unless the conditions are standardised:
+          the release conditions for Buy/Sell are fixed by the protocol. A read-only line -- no edit
+          affordance, but it cannot be omitted either, or the user does not know what releases the money. */}
       <div className="aline">
         <span className="aword alead">Release condition</span>
         <span className="afix">Verified bank receipt
@@ -127,7 +130,7 @@ export default function ActionBar({
         </button>
       </div>
 
-      {/* from 不是跟 buy 平级的分句主语，它是连接词——左列留空，落在胶囊列起点 */}
+      {/* from is not a clause subject on a par with buy, it is a connective -- left column stays empty and it lands at the start of the pill column */}
       <div className="aline">
         <span className="aword alead" />
         <span className="aword">{act.k === 'buy' ? 'from' : 'to'}</span>

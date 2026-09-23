@@ -14,14 +14,14 @@ import type { KybResult, ReviewIssue } from '../api/types'
 
 
 /**
- * 准入向导那张卡：九步身份材料，或两步交易条款。
+ * The onboarding wizard card: nine steps of identity documents, or two steps of trading terms.
  *
- * 只是一张表单卡——提交完发生什么（回执、审核中、通过）不在这里，那是
- * 对话里的几条消息，由 MakerThread 渲染。参照就是这么分的：
- * 「提交不是『表单变成状态卡』，而是一轮对话」。
+ * It is only a form card -- what happens after submission (acknowledgement, under review, approved) is not here
+ * but is a handful of messages in the conversation, rendered by MakerThread. The reference splits it the same way:
+ * "submitting is not 'the form turning into a status card' but a round of conversation".
  *
- * 卡上没有关闭按钮，参照也没有：它是这条对话里的一条内容，不是盖在上面的
- * 弹窗，关掉它等于把刚说过的话删了。
+ * The card has no close button, and the reference has none either: it is a piece of content inside this
+ * conversation, not a dialog laid over it, and closing it would amount to deleting what was just said.
  */
 /**
  * Index of the earliest step containing a field the review flagged.
@@ -54,25 +54,25 @@ export default function MakerFlow({
    * These terms have already been approved once and are being changed.
    *
    * Submitting is not a free edit: it drops the approval until the review
-   * clears again (PRD §卖方支线 改配置重审), and no listing can be posted in
+   * clears again (PRD, seller sub-flow, re-review on configuration change), and no listing can be posted in
    * between. Opening this form costs nothing, so the warning belongs here on
    * the last step rather than on the button that opens it.
    */
   resubmit?: boolean
-  /** 上一次预审指出来的问题。标在出问题的那几项上，不是丢一段摘要让人自己找。 */
+  /** Problems raised by the last pre-review. Marked on the offending items rather than dumped as a summary for people to hunt through. */
   issues?: ReviewIssue[]
   /**
-   * 半路存下的那份,还没提交过。
+   * The copy saved partway through, not yet submitted.
    *
-   * 优先于 initial:initial 是「上次交上去的」,草稿是「这次正在填的」。
-   * 两者都有时,正在填的那份才是他离开时的样子。
+   * Takes precedence over initial: initial is "what was submitted last time", the draft is "what is being filled
+   * in now". With both present, the one being filled in is how they left it.
    */
   draft?: Record<string, unknown>
   draftStep?: number
-  /** 最近一次企业核验的结论。刷新回来靠它,不必重核。 */
+  /** The most recent corporate verification conclusion. Coming back after a refresh relies on it, so nothing has to be re-verified. */
   kyb?: KybResult
-  /** 上次交上来的那份。被打回时表要带着原内容重开——让人对着评语改，
-      而不是从头再填一遍九步。没有上一次就是 undefined。 */
+  /** What was submitted last time. On a send-back the form reopens carrying the original content -- so they can
+      work against the comments rather than refilling nine steps from scratch. Undefined when there was no previous one. */
   initial?: Record<string, unknown>
   /**
    * Fired the moment the request goes out, before anything comes back.
@@ -82,21 +82,21 @@ export default function MakerFlow({
    * whole wait: the form just sits there with a dead button.
    */
   onPending?: (phase: 'kyc' | 'listing') => void
-  /** 提交成功。form 交回去是给回执用的——那张「查看提交内容」要照着它画。 */
+  /** Submitted successfully. form is handed back for the acknowledgement -- that "view submission" section is drawn from it. */
   onSubmitted: (phase: 'kyc' | 'listing', form: Record<string, unknown>) => void
-  /** 提交失败：请求没落地。只用来撤掉「审核中」那条待办——表单留着，错误就在
-      它下面。原来这里复用 onSubmitted，而那一路顺手把表单关了，错误随表单一起消失。 */
+  /** Submission failed: the request never landed. Only used to withdraw the "under review" to-do -- the form stays,
+      with the error below it. This used to reuse onSubmitted, which closed the form on its way past, taking the error with it. */
   onFailed?: (phase: 'kyc' | 'listing') => void
-  /** 交易条款第一步的返回。参照那颗箭头退回身份表单，我们这边身份已经交了、
-      表单不在了，所以退回对话——「先不弄」是个真实的意图，得有地方去。 */
+  /** The return from step one of the trading terms. The reference's arrow goes back to the identity form; here
+      identity has already been submitted and that form is gone, so it returns to the conversation -- "not right now" is a real intent and needs somewhere to go. */
   onBackOut?: () => void
 }) {
-  /* 初值从上次那份里拆出来。提交时 kyc 段发的是 { kind, ...form }，
-     所以 kind 要单独挑出来，剩下的才是表单字段本身。
-     惰性初始化（useState(() => …)）而不是 useEffect 回填：回填会让表先
-     空着渲染一帧再跳成有值的，九步表单那一跳很显眼。 */
-  /* 主体先看草稿,再看上次交的。草稿是「这次正在填的」,而人刚在第 1 步
-     点过的那一下就在里面——它比一份还没提交过的 initial 更接近他此刻的意图。 */
+  /* Initial values are unpacked from last time's submission. On submit the kyc section sends { kind, ...form },
+     so kind has to be picked out separately and what remains is the form's own fields.
+     Lazy initialisation (useState(() => ...)) rather than backfilling in a useEffect: backfilling renders the form
+     empty for one frame before jumping to the filled values, and on a nine-step form that jump is very visible. */
+  /* Entity type follows the draft first, then last time's submission. The draft is "what is being filled in now",
+     and the click they just made on step 1 is in it -- closer to their current intent than an initial that was never submitted. */
   const [kind, setKind] = useState<'Individual' | 'Corporate'>(() => {
     const src = (draft ?? initial) as Record<string, unknown> | undefined
     return src?.kind === 'Corporate' ? 'Corporate' : 'Individual'
@@ -111,8 +111,8 @@ export default function MakerFlow({
 
     Nothing flagged (a first submission) starts at the beginning as before.
   */
-  /* 有草稿就回到离开时那一步;被打回的那一份仍然跳到第一个出问题的地方——
-     评语指着某一步,把人放在别处读评语是没有用的。 */
+  /* With a draft, return to the step they left on; a sent-back one still jumps to the first offending item --
+     the comments point at a particular step, and putting the person somewhere else to read them is useless. */
   const [step, setStep] = useState(() => {
     const flagged = firstFlaggedStep(phase, initial, issues)
     if (flagged > 0) return flagged
@@ -131,39 +131,40 @@ export default function MakerFlow({
   })
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  /* 交出去之后就不再存草稿了。后端在提交时已经把它清掉;这里再存一次会
-     把它写回去,于是下次打开恢复的是一份跟正在审的材料不一样的东西。 */
+  /* Stop saving drafts once it has been submitted. The backend already cleared it on submission; saving again here
+     would write it back, so the next open restores something different from the documents under review. */
   const [done, setDone] = useState(false)
-  /* 企业核验的结论。初值来自申请——刷新回来不该让人再花 10 credits 核一次。
-     `kybBusy` 只在这一次会话里为真:它是「正在等上游」,不是一个要持久的状态。 */
+  /* The corporate verification conclusion. The initial value comes from the application -- coming back after a
+     refresh should not cost another 10 credits to re-verify.
+     `kybBusy` is only true within this session: it means "waiting on upstream", not a state worth persisting. */
   const [kyb, setKyb] = useState(() => initialKyb)
   const [kybBusy, setKybBusy] = useState(false)
   const kybOk = kyb?.status === 'accept'
 
-  /* 自动保存。
+  /* Autosave.
 
-     防抖 800ms:每敲一个字符打一次接口,九步表单一次填写就是几百个请求,
-     而这些请求都要加密一次、写一次库。停下来的那一刻再存,是人真的"填完
-     一项"的时刻。
+     Debounced at 800ms: one request per keystroke means several hundred requests for one pass through a nine-step
+     form, and each of those requests has to encrypt once and write to the database once. Saving at the moment
+     typing stops is the moment someone has really "finished an item".
 
-     提交之后不再存:那时草稿已经被后端清掉,再存一次等于把它又写回去,
-     下次打开恢复的就是一份跟提交内容不同的材料。
+     No saving after submission: the draft has been cleared by the backend by then, and saving again writes it back,
+     so the next open restores documents different from what was submitted.
 
-     存失败不打扰人。它是个便利功能,不是他正在做的事——为一次没存上弹一
-     条错误,只会打断填表。没配密钥时后端回 DRAFT_UNAVAILABLE,同样静默。 */
+     A failed save does not interrupt anyone. It is a convenience, not what they are doing -- popping an error for
+     one missed save only breaks up form filling. Without a key configured the backend returns DRAFT_UNAVAILABLE, which is likewise silent. */
   const sent = useRef('')
   useEffect(() => {
     if (busy || done) return
-    /* 存的是**此刻选中的**主体,不是上次交上去的那个。
+    /* What is saved is the **currently selected** entity type, not the one submitted last time.
 
-       原来这里写的是 `kind: initial?.kind` —— 人在第 1 步点了 Corporate、
-       一路填到第七步,草稿里记的却还是 undefined。刷新回来读到没有主体,
-       退回个人那条路,前面填的十几项全部对不上号。 */
+       This used to say `kind: initial?.kind` -- someone clicked Corporate on step 1, filled in through step seven,
+       and the draft still recorded undefined. Coming back after a refresh it read no entity type, fell back to the
+       individual path, and the dozen-odd items already filled in no longer lined up with anything. */
     const body = phase === 'kyc'
       ? { ...form, kind }
       : (lst as unknown as Record<string, unknown>)
     const payload = JSON.stringify(body)
-    // 没变过就不存。步数变了也算变——人翻了一页。
+    // Do not save if nothing changed. A changed step counts as a change -- they turned a page.
     const sig = String(step) + ':' + payload
     if (sig === sent.current) return
     const t = setTimeout(() => {
@@ -172,18 +173,18 @@ export default function MakerFlow({
     }, 800)
     return () => clearTimeout(t)
   }, [form, lst, step, phase, identity, busy, done, kind])
-  /* 出错的是哪一行。参照给那个 .sf 加 .bad，让它预置的 .err 显出来——
-     错误话说在出错的字段上，不是卡片底下一句泛泛的提示。 */
+  /* Which row is wrong. The reference adds .bad to that .sf to reveal its preset .err -- the error is said on the
+     offending field, not as a vague line at the bottom of the card. */
   const [bad, setBad] = useState('')
 
-  /* 预审指出来的问题，摊成「字段 → 要你做什么」。
-  
-     一条指摘可以指到好几个字段（「国籍写香港、税务居民写中国」指的是两项），
-     那两项都要标——只标第一项的话，另一项看着是好的，人改完一项再提交，
-     又被同一条打回来。
-  
-     改过的项要立刻不再标红：人已经动手了，红着不动等于说他改了也没用。
-     所以 touched 一旦包含这个 key 就不再标它。 */
+  /* Problems raised by the pre-review, flattened into "field -> what you need to do".
+
+     One objection can point at several fields ("nationality says Hong Kong while tax residency says China" points
+     at two), and both have to be marked -- marking only the first leaves the other looking fine, so they fix one,
+     resubmit, and are sent back by the same objection again.
+
+     Items that have been edited stop being marked immediately: they have already acted on it, and leaving it red
+     says their fix made no difference. So once touched contains this key, it is no longer marked. */
   const [touched, setTouched] = useState<Set<string>>(() => new Set())
   const flagged = useMemo(() => {
     const m = new Map<string, string>()
@@ -196,26 +197,28 @@ export default function MakerFlow({
     return m
   }, [issues, touched])
 
-  /* 身份核验的状态。只有 kyc 那一段要它——挂单配置跟证件无关。
-     这里不自己轮询：IdCheck 在人真的开了流程之后才让它转，没开之前
-     每几秒问一次后端是白问，而后端每次问都会去上游拉一遍（按次计费）。 */
-  /* 核验一过就把那条红字撤掉。
+  /* Identity verification status. Only the kyc section needs it -- listing configuration has nothing to do with documents.
+     No polling of its own here: IdCheck only starts it spinning once the person has actually opened the flow, and
+     before that, asking the backend every few seconds is asking for nothing, while each ask makes the backend pull
+     from upstream (billed per call). */
+  /* Clear that red line as soon as verification passes.
 
-     点 Next 时还没验完 → setBad('sf-idcheck') → 红字出现。之后核验在另一个
-     窗口里完成、状态推回来,绿框亮了,而那条红字还挂着——同一个控件上同时
-     写着「已通过」和「先去通过」。红字是那一刻的判断,判断变了它就该走。 */
+     Clicking Next before verification finishes -> setBad('sf-idcheck') -> the red line appears. Verification then
+     completes in another window, the status is pushed back, the green frame lights up, and the red line is still
+     hanging there -- the same control saying both "passed" and "go and pass this first". The red line was a
+     judgement about that moment, and when the judgement changes it should go. */
   const { data: kyc, reload: reloadKyc } =
     useApi(() => (phase === 'kyc' ? ep.kycStatus(identity) : Promise.resolve(null)), [identity, phase])
 
-  /* 证件上读出来的那几项写回表单：核验过之后这些不该再手打。
-     写进 form 而不是只在渲染时替换，是因为提交的就是 form——
-     只改显示的话，交上去的还是空的。 */
+  /* Write the fields read off the document back into the form: after verification these should not be typed again.
+     Written into form rather than just substituted at render time, because form is what gets submitted --
+     changing only the display would still submit empty values. */
   const verified = useMemo(() => {
     const id = kyc?.state === 'accept' ? kyc.identity : null
     if (!id && !(kind === 'Corporate' && kybOk)) return {}
-    /* 选项类字段要先问一句「这个值在我们的选项里吗」。DocuPass 认得的国家和
-       证件类型比这张表列的多得多——读出来一个不在列表里的值硬塞进去，
-       结果是一行选不中的值，或者被悄悄改成「Other」。 */
+    /* Option-typed fields have to be asked "is this value one of our options?" first. DocuPass recognises far more
+       countries and document types than this table lists -- forcing in a value that is not in the list yields
+       either a row showing a value that cannot be selected, or one silently rewritten to "Other". */
     const opts = new Map<string, string[] | undefined>()
     const fields = [
       ...((kind === 'Corporate' ? KYC_CORP : KYC_IND) as Step[]).flatMap(st => st.fields ?? []),
@@ -237,9 +240,9 @@ export default function MakerFlow({
       }
     }
     take(VERIFIED_FIELDS, id as unknown as Record<string, unknown>)
-    /* 企业那条同理:注册文件上读出来的公司信息也不该再手打。
-       只有核过的才算——review / reject 的那份数据本身就是存疑的,
-       拿它去锁住输入框等于把一个可疑结论变成不可改的事实。 */
+    /* The corporate path likewise: company details read off the registration document should not be typed again.
+       Only a verified one counts -- data from a review / reject conclusion is itself in doubt, and using it to lock
+       inputs turns a questionable conclusion into an unchangeable fact. */
     if (kind === 'Corporate' && kybOk) {
       take(VERIFIED_BIZ, kyb?.business as unknown as Record<string, unknown>)
     }
@@ -251,13 +254,14 @@ export default function MakerFlow({
     setForm(f => ({ ...verified, ...f, ...verified }))
   }, [verified])
 
-  /* 董事名单从核验结果带出来。
+  /* The list of directors is carried over from the verification result.
 
-     /kyb 的 directorsToVerify 是「该去验哪几个自然人」的权威答案,比让人
-     手打一遍强得多——手打的名单没人核对过,而这一步存在的理由就是核对。
+     /kyb's directorsToVerify is the authoritative answer to "which natural persons need verifying", far better than
+     having someone type it out again -- a hand-typed list has been checked by nobody, and checking is the whole
+     reason this step exists.
 
-     只在这一栏还空着时填:人已经自己加过行了,再覆盖就是把他填的东西
-     冲掉。国籍和证件号仍然要他补,文件上没有这两样。 */
+     Only filled while this column is still empty: once they have added rows themselves, overwriting wipes out what
+     they entered. Nationality and document number still have to be supplied by them; neither is on the document. */
   useEffect(() => {
     const names = kybOk ? (kyb?.business.directors ?? []) : []
     if (!names.length) return
@@ -268,16 +272,16 @@ export default function MakerFlow({
     })
   }, [kyb, kybOk])
 
-  /* 传完就核,不用人再点一次。
+  /* Verify as soon as the upload finishes, without another click.
 
-     不放在 FilePick 的 onDone 里:那一层只知道「文件传好了」,而这件事要看
-     它是不是注册文件、以及这一份有没有核过。`sentDoc` 记住核过的那一份,
-     换一份才重核——10 credits 一次,重复核同一份是白烧。
+     Not placed in FilePick's onDone: that layer only knows "the file uploaded", while this depends on whether it is
+     a registration document and whether this particular one has already been verified. `sentDoc` remembers the one
+     that was verified, and only a different one triggers another -- at 10 credits a go, re-verifying the same one burns money.
 
-     初值取自后端已有的结论,而不是空串。ref 只活在这一次挂载里:刷新一下
-     它就忘了核过什么,而草稿里的 bizdoc 还在,于是又发一次请求。实测这样
-     烧掉过 30 credits。服务端现在也会挡(按 user_id + file_ref 复用结论),
-     但那一趟往返本来就不必发——它知道的东西这里也知道得到。 */
+     The initial value comes from the backend's existing conclusion rather than an empty string. A ref only lives
+     for this mount: one refresh and it has forgotten what was verified, while the draft's bizdoc is still there,
+     so another request goes out. In testing this burned 30 credits. The server now blocks it too (reusing a
+     conclusion by user_id + file_ref), but that round trip never needed to be made -- what it knows is knowable here as well. */
   const sentDoc = useRef(initialKyb?.file_ref ?? '')
   useEffect(() => {
     if (kind !== 'Corporate') return
@@ -288,8 +292,8 @@ export default function MakerFlow({
     ep.verifyBusiness(ref, identity)
       .then(setKyb)
       .catch((e: unknown) => {
-        /* 核验失败不静默。它花了钱、花了时间,而人正等着这一步的结论——
-           什么都不说的话,他只会以为界面卡住了,然后再传一次。 */
+        /* A failed verification is not silent. It cost money and time, and the person is waiting on this step's
+           conclusion -- saying nothing only makes them think the UI has hung, and then upload again. */
         setErr(e instanceof Error ? e.message : 'Could not verify that document')
         sentDoc.current = ''
       })
@@ -308,24 +312,25 @@ export default function MakerFlow({
 
   const set = (k: string, v: string | string[]) => setForm(f => ({ ...f, [k]: v }))
 
-  /** 身份那一段：缺项、日期格式。返回出错字段的 id。 */
+  /** The identity section: missing items, date formats. Returns the id of the offending field. */
   const badKyc = (): string => {
     for (const f of cur?.fields ?? []) {
-      /* 核验那一步过没过由后端说了算。前端记一个「我点过了」再放行，
-         等于把这道门的钥匙交给了任何一个打开控制台的人。 */
+      /* Whether the verification step passed is the backend's call. Having the frontend record "I clicked it" and
+         release on that hands the key to this door to anyone who opens a console. */
       if (f.type === 'idcheck') {
         if (kyc?.state !== 'accept') return 'sf-' + f.k
         continue
       }
       const v = form[f.k]
-      /* 可选项留空就过。
+      /* Optional items pass when left blank.
 
-         前端原来把每一项都当必填,比后端严——「省」这种在香港、新加坡、
-         开曼根本不存在的东西也被逼着填,填了又被审核指出跟城市重复。
-         必填清单的权威在后端,这里跟着它走。 */
+         The frontend used to treat every item as required, stricter than the backend -- something like "province",
+         which does not exist at all in Hong Kong, Singapore or the Cayman Islands, had to be filled in, and once
+         filled was flagged in review as duplicating the city.
+         The authority on what is required is the backend, and this follows it. */
       if (f.opt && !(Array.isArray(v) ? v.length : v)) continue
-      /* 一组人:至少一行,而且每行的每一栏都要填。空行比没有行更糟——
-         它看着像申报过了,实际什么都没说。 */
+      /* A group of people: at least one row, with every column of every row filled. An empty row is worse than no
+         row -- it looks like a declaration while saying nothing. */
       if (f.type === 'list') {
         const rows = (Array.isArray(v) ? v : []) as unknown as Record<string, string>[]
         if (!rows.length) return 'sf-' + f.k
@@ -502,15 +507,16 @@ export default function MakerFlow({
               identity={identity} onChange={setLst} />
           ) : (
             <>
-              {/* 第一步选主体类型：之后两条路的字段完全不同 */}
+              {/* Step one picks the entity type: the fields on the two paths that follow are entirely different */}
               {step === 0 && (
                 <div className="sf"><span className="sfl">Account type</span>
                   <div className="sfchips">
                     {(['Individual', 'Corporate'] as const).map(k => (
                       <button key={k} type="button" className={'sfchip' + (kind === k ? ' on' : '')}
-                        /* 换主体类型清空表单：两条路的字段完全不同，留着上一条路
-                           填的东西会串到这一条路的同名字段上。但证件读出来的那几项
-                           不是「填的」——清掉它们，下一步会变回一排要手打的空框。 */
+                        /* Switching entity type clears the form: the two paths' fields are entirely different, and
+                           what was filled on the previous path would bleed into same-named fields on this one. But
+                           the items read off the document were not "filled in" -- clearing those turns the next step
+                           back into a row of empty boxes to be typed by hand. */
                         /* Clear the form outright. `verified` is memoised on the
                            kind that is *about to change*, so spreading it here put
                            the outgoing kind's verified fields — a company's, say —
@@ -523,8 +529,8 @@ export default function MakerFlow({
               )}
               {(cur?.fields ?? []).map(f => (
                 f.type === 'idcheck' ? (
-                  /* 这一步过没过不写在表单里，所以也没有 FieldRow 那个 .err 可用。
-                     不补一句的话，点 Next 是一颗死按钮：没反应、也没说为什么。 */
+                  /* Whether this step passed is not recorded in the form, so there is no FieldRow .err to use.
+                     Without adding a line, Next is a dead button: no response, and no reason given. */
                   <div key={f.k} className={'sf' + (bad === 'sf-' + f.k ? ' bad' : '')}>
                     <IdCheck identity={identity} status={kyc ?? null} onDone={reloadKyc} />
                     <span className="err">{errFor(f)}</span>
@@ -538,7 +544,7 @@ export default function MakerFlow({
                     flagged={flagged.get(f.k)}
                     onSet={v => {
                       setBad('')
-                      /* 动过的项不再标红——人已经在改了。 */
+                      /* Edited items stop being marked red -- they are already working on it. */
                       if (flagged.has(f.k)) {
                         setTouched(t => new Set(t).add(f.k))
                       }
@@ -705,7 +711,7 @@ function useHeightMorph(dep: unknown) {
   return ref
 }
 
-/* 错误话跟着控件类型走。不小写化：会把 ID / TIN 这类缩写弄坏。逐字取自参照。 */
+/* Error wording follows the control type. Not lowercased: that would mangle abbreviations like ID / TIN. Taken verbatim from the reference. */
 const VERB: Record<string, string> = {
   text: 'Enter', date: 'Enter', pick: 'Select', multi: 'Select', sign: 'Sign',
   country: 'Select', upload: 'Upload', list: 'Add at least one',
@@ -716,15 +722,15 @@ const errFor = (f: Field) =>
       : `${VERB[f.type] ?? 'Enter'} ${f.l}`
 
 /**
- * 企业核验的结论,挂在注册文件那一项下面。
+ * The corporate verification conclusion, hung under the registration document item.
  *
- * 三档说三件不同的事,不揉成一句「通过/不通过」:
- *   accept  —— 读出来了,下一步那些框会是锁住的
- *   review  —— 读出来了但有疑点,人会看
- *   reject  —— 这份文件不成立,换一份
+ * The three levels say three different things and are not merged into one "pass/fail":
+ *   accept  -- read successfully; the boxes on the next step will be locked
+ *   review  -- read, but with doubts; a human will look
+ *   reject  -- this document does not hold up; supply another
  *
- * simulated 那一行必须显眼:一台在模拟核验的机器跟一台在真核验的机器,
- * 界面上除了这句话没有任何区别。
+ * The simulated line has to be prominent: a machine running simulated verification and one running real
+ * verification are indistinguishable in the UI apart from this sentence.
  */
 function KybNote({ r, busy }: { r?: KybResult; busy: boolean }) {
   if (busy) {
@@ -768,14 +774,14 @@ function KybNote({ r, busy }: { r?: KybResult; busy: boolean }) {
 }
 
 /**
- * 可搜索的国家/地区。
+ * Searchable country/region.
  *
- * 照 BankAccounts 里 BankBox 那套做法,但**没有自由输入这条出口**——两者
- * 的区别在于表的性质:银行那张表是省打字用的,拦住用户填自己真实的银行
- * 就是个 bug;国家这张表是 ISO 3166-1 的全集,不在里面的东西也不是国家。
+ * Follows the same approach as BankBox in BankAccounts, but **without the free-text escape hatch** -- the
+ * difference lies in the nature of the table: the bank table exists to save typing, and stopping a user entering
+ * their actual bank is a bug; the country table is the full set of ISO 3166-1, and something not in it is not a country.
  *
- * 值是两位代码,显示是名字。存名字的话,「Macedonia」那种改名会让历史数据
- * 对不上号,而代码几十年不动。
+ * The value is the two-letter code and the display is the name. Storing names means a rename like "Macedonia"
+ * leaves historical data no longer lining up, whereas codes go unchanged for decades.
  */
 function CountryBox({ value, onPick }: { value: string; onPick: (v: string) => void }) {
   const [q, setQ] = useState('')
@@ -790,8 +796,8 @@ function CountryBox({ value, onPick }: { value: string; onPick: (v: string) => v
   }, [])
 
   const term = q.trim().toLowerCase()
-  /* 代码也参与匹配:知道自己要 GB 的人不该被迫拼出 United Kingdom。
-     空查询给前八个,不是给 241 个——一屏滚不完的列表等于没有列表。 */
+  /* Codes take part in matching too: someone who knows they want GB should not be forced to spell out United Kingdom.
+     An empty query gives the first eight rather than all 241 -- a list that takes more than a screen to scroll is no list at all. */
   const hits = Object.entries(COUNTRIES)
     .filter(([c, n]) => !term || n.toLowerCase().includes(term) || c.toLowerCase() === term)
     .slice(0, 8)
@@ -817,10 +823,10 @@ function CountryBox({ value, onPick }: { value: string; onPick: (v: string) => v
 }
 
 /**
- * 「可选」那个小标记。
+ * The small "optional" marker.
  *
- * 只标可选、不标必填:这张表上绝大多数是必填的,给多数项挂星号等于给
- * 整页挂星号,而人真正需要知道的是「哪几项可以放过」。
+ * Only optional is marked, never required: the vast majority of this form is required, and starring the majority
+ * is starring the whole page, when what people actually need to know is which few can be skipped.
  */
 function Opt({ f }: { f: Field }) {
   return f.opt ? <em className="sfopt">optional</em> : null
@@ -830,24 +836,24 @@ function FieldRow({
   f, v, bad, locked, flagged, identity, after, onSet,
 }: {
   f: Field; v: string | string[] | undefined; bad: boolean
-  /** upload 那一类要它来传文件。 */
+  /** The upload kind needs this to send the file. */
   identity?: string
-  /** 挂在控件下面的东西,比如核验结论。 */
+  /** Things hung under the control, such as a verification conclusion. */
   after?: React.ReactNode
-  /** 这一项是从证件上读出来的。锁住不给改——改了就不是证件上那个人了。 */
+  /** This item was read off the document. Locked against editing -- edited, it is no longer the person on the document. */
   locked?: boolean
-  /** 预审指着这一项说的话。有值就把它标出来并把话摆在下面。 */
+  /** What the pre-review said about this item. When set, mark it and place the message below. */
   flagged?: string
   onSet: (v: string | string[]) => void
 }) {
   const cls = 'sf' + (bad ? ' bad' : '') + (locked ? ' vfd' : '')
     + (flagged ? ' flagged' : '')
 
-  /* 已核验的项一律显示成一行只读的读数，不管它本来是什么控件。
-     留成可编辑的输入框，等于让人把核验出来的姓名改掉再提交——
-     那份材料就跟证件对不上了，而界面上还写着「已核验」。 */
+  /* Verified items always render as a single read-only reading, whatever control they would otherwise be.
+     Leaving them as editable inputs means letting someone change the verified name and then submit --
+     the documents no longer match the identity document while the UI still says "verified". */
   if (locked) {
-    /* 读出来的国家存的是代码,给人看的得是名字。 */
+    /* A country read off a document is stored as a code, but what people see has to be the name. */
     const shown = f.type === 'country' && typeof v === 'string'
       ? (COUNTRIES[v] ?? v) : v
     return (
@@ -887,18 +893,18 @@ function FieldRow({
       </div>
     )
   }
-  /* 签名和上传都是一条宽行（.sfup），标签在按钮里面，外面不再另起 .sfl——
-     参照就是这么做的：这两个不是「从几个选项里挑一个」，而是「做一件事」，
-     做成小芯片会跟旁边的多选芯片长得一样，读的人分不出哪个是动作。 */
-  /* 一份文件。值存的是后端给的 file_ref——文件本身在 uploads 表里,
-     带 sha256,所以事后能回答「这份材料还是当初那一份吗」。 */
-  /* 可搜索的国家。
+  /* Signature and upload are each one wide row (.sfup), with the label inside the button and no separate .sfl
+     outside -- that is what the reference does: these two are not "pick one of several options" but "do one thing",
+     and made into small chips they would look identical to the multi-select chips beside them, leaving the reader unable to tell which is an action. */
+  /* One file. The value stored is the backend's file_ref -- the file itself is in the uploads table with a sha256,
+     so "is this still the same document as the original?" can be answered after the fact. */
+  /* Searchable country.
 
-     241 个地区装不进一排 chips,而下拉到第 180 个去找「British Virgin
-     Islands」也不是选择。打字过滤是这个长度唯一能用的形态。
+     241 territories do not fit into a row of chips, and scrolling a dropdown to the 180th to find "British Virgin
+     Islands" is not a choice either. Type-to-filter is the only workable form at this length.
 
-     值存 ISO 代码、显示名字:代码是稳定的,而名字会随语言和年份变
-     (「Macedonia」改名那次让不少系统的历史数据对不上号)。 */
+     The value stores the ISO code and the display is the name: codes are stable, while names change with language
+     and with the year (the "Macedonia" rename left plenty of systems' historical data no longer lining up). */
   if (f.type === 'country') {
     return (
       <div className={cls} data-flag={flagged}>
@@ -921,15 +927,16 @@ function FieldRow({
     )
   }
 
-  /* 一组重复的行:董事、受益所有人。
+  /* A group of repeating rows: directors, beneficial owners.
 
-     原来每一组只有三四个单字段,结构上就只填得下一个人——一家有五个董事的
-     公司在那张表上无法如实申报,而「如实申报董事」正是这一步存在的理由。
+     Each group used to be three or four single fields, which structurally only fit one person -- a company with
+     five directors could not declare truthfully on that form, and "declare your directors truthfully" is the whole
+     reason this step exists.
 
-     一行里的每一栏**递归交给 FieldRow 自己渲染**,不另写一套控件。第一版
-     手搓了横排的 input 和一个 <select>,而这张表单里从来没有 select——国籍
-     一向是 chips。同一页上两种控件,人会以为那是另一种东西。递归之后,
-     这里长什么样永远等于别处长什么样。 */
+     Every column within a row is **rendered recursively by FieldRow itself**, with no second set of controls. The
+     first version hand-rolled a horizontal row of inputs and a <select>, when this form has never had a select --
+     nationality has always been chips. Two kinds of control on one page make people assume it is a different kind
+     of thing. With recursion, what it looks like here is always what it looks like everywhere else. */
   if (f.type === 'list') {
     const rows: Record<string, string>[] = Array.isArray(v)
       ? (v as unknown as Record<string, string>[]) : []
@@ -942,7 +949,7 @@ function FieldRow({
             <div className="lsrow" key={i}>
               <div className="lshd">
                 <span>{label} {i + 1}</span>
-                {/* 只有一行时也能删——删光了再加回来,比逼人留一行空的强。 */}
+                {/* Deletable even with only one row -- deleting them all and adding one back beats forcing an empty row to stay. */}
                 <button type="button" className="lsx" aria-label={`Remove ${label} ${i + 1}`}
                   onClick={() => put(rows.filter((_, j) => j !== i))}>×</button>
               </div>
@@ -973,9 +980,9 @@ function FieldRow({
       </div>
     )
   }
-  /* 日期不用原生 <input type="date">：它按浏览器语言渲染，中文系统上会显示
-     「年/月/日」，跟这套全英文界面对不上。参照用的就是普通文本框 +
-     YYYY-MM-DD 占位符，格式由这里自己校验。 */
+  /* Dates do not use a native <input type="date">: it renders in the browser's language, so on a Chinese system it
+     shows localised date parts, which does not match this all-English interface. The reference uses a plain text
+     box plus a YYYY-MM-DD placeholder, with the format validated here. */
   const isDate = f.type === 'date'
   return (
     <div className={cls} data-flag={flagged}><span className="sfl">{f.l}<Opt f={f} /></span>

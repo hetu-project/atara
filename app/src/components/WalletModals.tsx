@@ -13,11 +13,11 @@ import { useToast } from './Toast'
 import type { Allowance, Wallet, WalletAsset } from '../api/types'
 
 /**
- * 账户页那四个动作的弹窗：收款 / 提现 / 收款方 / 额度。
+ * The dialogs behind the account page's four actions: receive / withdraw / payees / allowances.
  *
- * 之前这四个按钮是空的——没有 onClick，点了什么都不发生。参照里它们各自
- * 开一个弹窗（openDeposit / openWithdraw / openPayees / openAllowanceModal），
- * 接口后端也早就有了，只是前端没接。
+ * These four buttons used to be empty -- no onClick, nothing happening on click. In the reference each opens a
+ * dialog (openDeposit / openWithdraw / openPayees / openAllowanceModal), and the backend endpoints had long
+ * existed; only the frontend was never wired up.
  */
 
 /* Network fee is an estimate in the chain's native coin, not a quote.
@@ -26,22 +26,23 @@ const FEE: Record<string, string> = {
   ETH: '~0.002 ETH', POLYGON: '~0.01 POL', ARBITRUM: '~0.0001 ETH',
   BASE: '~0.0001 ETH', BSC: '~0.0005 BNB', TRON: '~1 TRX', BTC: '~0.0001 BTC',
 }
-/* 地址格式按链走。没列的按 EVM（0x + 40 位十六进制）。 */
+/* Address format follows the chain. Anything not listed follows EVM (0x plus 40 hex characters). */
 const ADDR_RE: Record<string, RegExp> = {
   TRON: /^T[1-9A-HJ-NP-Za-km-z]{33}$/,
   BTC: /^(bc1[ac-hj-np-z02-9]{25,62}|[13][1-9A-HJ-NP-Za-km-z]{25,34})$/,
 }
 const shortAddr = (a: string) => (a.length > 16 ? `${a.slice(0, 8)}…${a.slice(-6)}` : a)
 
-/* 网络的全名。芯片上写 POLYGON 是代码，写 Polygon 才是这条链的名字。 */
+/* Full names of networks. POLYGON on a chip is a code; Polygon is the chain's name. */
 const NET_NAME: Record<string, string> = {
   BTC: 'Bitcoin', ETH: 'Ethereum', POLYGON: 'Polygon', TRON: 'TRON',
   BSC: 'BNB Chain', ARBITRUM: 'Arbitrum', BASE: 'Base', OPTIMISM: 'Optimism',
 }
-/* 兜底用的短名。正经的显示名来自后端 /catalog/chain 的 name 字段——
-   这张表只覆盖后端没发的那几个码（资产目录里还留着 TRON/BTC 之类）。
-   靠这张表当主力会漏：后端发的是 ETHEREUM，表里写的是 ETH，于是那一格
-   直接印出大写的代码；BSC-TESTNET 更是压根没有。 */
+/* Short names, used as a fallback. The proper display name comes from the name field of the backend's
+   /catalog/chain -- this table only covers the few codes the backend does not send (the asset catalog still
+   carries TRON/BTC and the like).
+   Relying on this table as the primary source leaks: the backend sends ETHEREUM while the table says ETH, so that
+   cell printed the uppercase code outright; BSC-TESTNET was not in it at all. */
 const netName = (n: string) => NET_NAME[n] ?? n
 const family = (code: string) => code.replace(/-TESTNET$/, '')
 const netLabel = (code: string, name?: string) => {
@@ -61,8 +62,8 @@ const fmtAmt = (n: string | number) => {
   const x = Number(n)
   return Number.isFinite(x) ? x.toLocaleString() : String(n)
 }
-/* 地址格式按链族走，不按币种——同一条链上所有代币共用一个地址。
-   按币种算是上一版的 bug：USDT 和 USDC 都在 Polygon 上，却给出两个地址。 */
+/* Address format follows the chain family, not the currency -- every token on a chain shares one address.
+   Deriving it from the currency was the previous version's bug: USDT and USDC are both on Polygon, yet it gave two addresses. */
 const CHAIN_OF = (n: string) => (n === 'TRON' ? 'tron' : n === 'BTC' ? 'btc' : 'evm')
 
 function Sheet({
@@ -105,11 +106,11 @@ function Chips({
 }
 
 /**
- * 两步之间的切换。对照 beui 的 Morphing Modal：硬切会让人觉得弹窗换了一张，
- * 其实只是同一次发送往前走了一步。
+ * Transition between the two steps. Compare beui's Morphing Modal: a hard cut makes it feel like a different
+ * dialog, when it is only the same send moving one step forward.
  *
- * 不用 Framer Motion（对照清单写过：到现在没有一处需要它）。左右位移是 CSS；
- * 高度要量完才知道，所以量的那一下在这里。
+ * No Framer Motion (as the comparison list noted: nothing has needed it so far). The horizontal translate is CSS;
+ * the height is only known once measured, which is what the measurement here is for.
  */
 function StepSlide({
   step, children,
@@ -167,11 +168,11 @@ function StepSlide({
   )
 }
 
-// ── 收款 ────────────────────────────────────────────────────────────
+// -- Receive ------------------------------------------------------------
 
 export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => void }) {
-  /* 资产和网络取自目录，不是持仓。收款的前提恰恰是「还没有」——
-     用持仓来填这两排，新账户就是两个空标签，弹窗看着像坏了。 */
+  /* Assets and networks come from the catalog, not from holdings. The whole premise of receiving is "not having
+     any yet" -- filling these two rows from holdings leaves a new account with two empty labels and a dialog that looks broken. */
   const { data: cat } = useApi(() => ep.assets(), [])
   const { data: chains } = useApi(() => ep.chainInfo(), [])
   const held = w?.assets ?? []
@@ -180,17 +181,17 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
   const useCoin = list.some(a => a.asset === coin) ? coin : (list[0]?.asset ?? '')
   const cur = list.find(a => a.asset === useCoin)
 
-  /* 网络这一排全部来自后端：/catalog/assets 说这个币在哪几条链上，
-     /catalog/chain 说哪几条链上真的部署了合约。两份都照发，不在前端裁。
-  
-     原来只列「已部署」的那几条，于是这里只剩一个 BSC-TESTNET——而这是**你
-     自己的地址**，主网上的 USDT 打过来一样在你钱包里（EVM 地址是同一个）。
-     把选项藏掉并不能阻止别人往这个地址打款，只会让人以为这个账户收不了主网
-     的币。该说的是另一件事：哪几条链这个控制台会去查余额。所以全列出来，
-     没索引的那几条在底下照实讲清楚。 */
+  /* The network row comes entirely from the backend: /catalog/assets says which chains this coin is on, and
+     /catalog/chain says which chains actually have contracts deployed. Both are shown as sent, with no trimming in the frontend.
+
+     It used to list only the deployed ones, leaving nothing here but BSC-TESTNET -- when this is **your own
+     address**, and USDT sent on mainnet lands in your wallet just the same (the EVM address is identical).
+     Hiding the option does not stop anyone sending to this address; it only makes people think this account
+     cannot receive mainnet coins. The thing worth saying is different: which chains this console will check
+     balances on. So list them all, and explain truthfully underneath which ones are not indexed. */
   const live = (chains?.chains ?? []).filter(c => c.deployed).map(c => c.code)
   const nets = cur?.networks ?? []
-  // 链名以后端为准，前端那张表只是兜底。
+  // Chain names follow the backend; the frontend's table is only a fallback.
   const byCode = new Map((chains?.chains ?? []).map(c => [c.code, c.name]))
   const name = (n: string) => byCode.get(n) ?? netName(n)
 
@@ -213,8 +214,8 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
         </div>
         {live.length > 0 && live.length < nets.length && (
           <span className="ad" style={{ fontSize: 11.5, color: 'var(--faint)' }}>
-            {/* 说的是「这儿看不看得到」，不是「能不能收」。地址是你自己的，
-                任何一条 EVM 链上打过来的币都在你钱包里。 */}
+            {/* This is about "whether it is visible here", not "whether it can be received". The address is your
+                own, and coins sent on any EVM chain are in your wallet. */}
             Balances are read from {live.map(name).join(' · ')} in this build.
             Coins received on another network are still yours — they just will not
             appear in this console.
@@ -223,7 +224,7 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
       </div>
 
       <div className="depaddr">
-        {/* 编码的就是右边那串地址——见 Qr 里的说明。 */}
+        {/* What is encoded is the address to the right -- see the note in Qr. */}
         <Qr text={addr} />
         <div className="depmeta">
           <span className="sfl">Your wallet address</span>
@@ -231,8 +232,8 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
             <code>{addr}</code>
             <CopyButton text={addr} label="Copy wallet address" done="Wallet address copied" />
           </div>
-          {/* 同一条链族共用一个地址。不说这句，用户会以为换个网络就要换地址，
-              于是每换一次都重新复制一遍。 */}
+          {/* One address is shared across a chain family. Without saying so, users assume a different network needs
+              a different address and re-copy it every time they switch. */}
           {CHAIN_OF(useNet) === 'evm' && (
             <span className="depsame">The same address works on every EVM network.</span>
           )}
@@ -242,8 +243,8 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
       <p className="rnote depnote">
         Your own address — funds land in your wallet, not with us.
         Receives <b>{useCoin}</b> on <b>{name(useNet)}</b> only.
-        {/* 还没有这个币种的余额行时说清楚：钱到了才会长出来，
-            否则收完款回到账户页看不到那一行，会以为丢了。 */}
+        {/* Say it plainly when there is no balance row for this coin yet: the row appears once the money arrives,
+            otherwise coming back to the account page after receiving shows no row and people think it was lost. */}
         {!held.some((h: { asset: string }) => h.asset === useCoin)
           && ` A ${useCoin} balance on ${name(useNet)} appears once the first deposit confirms.`}
         {' '}Sending another asset or another network cannot be recovered.
@@ -252,41 +253,44 @@ export function ReceiveModal({ w, onClose }: { w: Wallet | null; onClose: () => 
   )
 }
 
-// ── 法币收款账户 ────────────────────────────────────────────────────
+// -- Fiat receiving accounts --------------------------------------------
 
 /**
- * 法币收款账户 —— 对手方把钱打到哪儿。
+ * Fiat receiving accounts -- where the counterparty sends the money.
  *
- * 这一版按已部署的模板收窄成纯法币。原来这张表还带一栏「链上地址簿」，
- * 两件事摆在一个叫「Addresses」的入口后面，而它们回答的不是同一个问题：
- * 银行账户是别人怎么把钱给我（法币腿的落点，必须先登记，对手方照着打款）；
- * 链上地址是我把币转去哪儿（Send 当场输、按网络校验，从来不需要先存）。
+ * This version is narrowed to fiat only, following the deployed template. This table used to carry an "on-chain
+ * address book" column as well, putting two things behind one entry point called "Addresses" when they answer
+ * different questions: a bank account is how someone else gives me money (the fiat leg's destination, which has to
+ * be registered first so the counterparty can pay into it); an on-chain address is where I send coins (typed into
+ * Send on the spot, validated per network, and never needing to be stored first).
  *
- * 地址簿因此没有留下：Send 不读它，存一份只是多一处要维护、又会过期的副本。
- * 后端 /payees 还在，没有界面指向它了。
+ * So the address book was not kept: Send does not read it, and storing a copy is only one more thing to maintain
+ * that goes stale. The backend's /payees is still there, with no UI pointing at it.
  */
 export function BankAccountsModal({ identity, onClose }: { identity: string; onClose: () => void }) {
   return (
-    /* 这张表自己会讲清楚——顶上那句 .fnote 就是「我们从不收法币」。
-       弹窗这一层不要再补一段总结：它会挂在列表的「+ Add account」下面，
-       填表时又挂在「Add account」按钮下面，把两个视图的收尾都推远了一截。 */
+    /* This table explains itself -- the .fnote at the top already says "we never hold fiat".
+       This dialog layer should not add another summary: it would hang under the list's "+ Add account" and, while
+       the form is open, under the "Add account" button, pushing both views' endings a good way down. */
     <Sheet title="Fiat accounts" onClose={onClose}>
       <BankAccountsPanel identity={identity} />
     </Sheet>
   )
 }
 
-// ── 提现 ────────────────────────────────────────────────────────────
+// -- Withdraw -----------------------------------------------------------
 
 /**
- * 转账。两步：先选转哪种资产，再填往哪儿转。
+ * Transfer. Two steps: pick which asset to send, then fill in where to send it.
  *
- * 顺序只能这样——资产决定链，链决定地址长什么样。反过来让地址去猜链，
- * 0x 地址就得再补一排「ETH / POLYGON」让人选，那是顺序错了的症状。
+ * The order can only be this way round -- the asset determines the chain, and the chain determines what the address
+ * looks like. Reversed, the address has to guess the chain, and a 0x address then needs another row of
+ * "ETH / POLYGON" to pick from, which is the symptom of the wrong order.
  *
- * 之前那套「只能打到登记地址 + 用途 + 证明文件」是托管所的提币流程：
- * 托管所能这么要求是因为钱在它手里。我们是非托管的——既拦不住这笔转账，
- * 也没有立场问「为什么转」。安全层只留一条：转出前把地址完整摊开让人核对。
+ * The previous "registered addresses only + purpose + supporting document" scheme is a custodian's withdrawal
+ * flow: a custodian can demand that because it holds the money. We are non-custodial -- we can neither stop this
+ * transfer nor stand in a position to ask "why". One safety measure is kept: lay the address out in full for
+ * checking before sending.
  */
 export function SendModal({
   identity, assets, onClose, onDone,
@@ -311,7 +315,7 @@ export function SendModal({
   const { data: myWallet } = useApi(() => ep.wallet(identity), [identity])
   const { toast } = useToast()
 
-  /* 余额为 0 的不列：转不出去的东西摆在选择列表里，只会让人点进去才发现。 */
+  /* Zero balances are not listed: putting something unsendable in a picker only makes people click into it to find out. */
   const sendable = assets.filter(a => Number(a.on_chain) > 0)
   const net = pick?.network ?? ''
   const chain = (chains?.chains ?? []).find(c => c.code === net) ?? null
@@ -333,7 +337,7 @@ export function SendModal({
     return left > 0 ? left.toFixed(6).replace(/\.?0+$/, '') : '0'
   }
 
-  /* 每条链自己的地址格式；表里没有的按 EVM。 */
+  /* Each chain's own address format; anything not in the table follows EVM. */
   const okTo = (v: string) => (ADDR_RE[net] ?? /^0x[0-9a-fA-F]{40}$/).test(v.trim())
   let amtOk = false
   if (decimals !== undefined && pick && amount) {
@@ -472,8 +476,8 @@ export function SendModal({
               onChange={e => { setTo(e.target.value); setErr('') }} />
           </div>
 
-          {/* 地址一旦成形就把话说在这儿。链上转账没有撤回，
-              提醒必须出现在按下确认之前，不是之后。 */}
+          {/* Say it here as soon as the address takes shape. An on-chain transfer cannot be recalled, so the warning
+              has to appear before confirm is pressed, not after. */}
           {okTo(to) && (
             <div className="wnew">
               <p>Check every character against what the recipient gave you —{' '}
@@ -594,7 +598,7 @@ function SentReceipt({
   )
 }
 
-/** 钱包那一侧走到哪一步了。要签名、要等区块，不说清楚人会以为卡死了。 */
+/** How far the wallet side has got. It needs a signature, then it waits for a block; without saying so people assume it has hung. */
 function TxLine({ step, explorer }: { step: TxStep; explorer: string }) {
   if (step.k === 'idle') return null
   if (step.k === 'error') {
@@ -614,7 +618,7 @@ function TxLine({ step, explorer }: { step: TxStep; explorer: string }) {
   )
 }
 
-// ── 额度 ────────────────────────────────────────────────────────────
+// -- Allowances ---------------------------------------------------------
 
 export function AllowanceModal({
   identity, edit, asset, walletKind, onClose, onDone, onRevoke,
@@ -646,9 +650,9 @@ export function AllowanceModal({
       : !edit.expires_at ? 'Not set'
         : (Date.parse(edit.expires_at) - Date.now()) / 86_400_000 <= 60 ? '30 days' : '90 days',
   })
-  /* 出错的是哪一行。只在底下挂一句话的话，人盯着按钮以为没反应——
-     截图里那句「Per-payment cap cannot exceed the window cap」就是这样：
-     校验其实跑了、也拦下了，但没人知道该改哪个框。 */
+  /* Which row is wrong. With only one sentence hung underneath, people stare at the button assuming nothing
+     happened -- that "Per-payment cap cannot exceed the window cap" in the screenshot was exactly this: validation
+     did run and did block, but nobody could tell which box to fix. */
   const [bad, setBad] = useState<{ id: string; msg: string } | null>(null)
   const [busy, setBusy] = useState(false)
   const { toast } = useToast()
@@ -679,9 +683,9 @@ export function AllowanceModal({
     }
     setBusy(true)
     try {
-      /* 外部钱包：额度在链上就是对支出合约的一笔 approve，必须由用户的钱包
-         签。以前这颗按钮写着「Approve in wallet」却只是 POST 给后端，由后端
-         拿自己的私钥去签——批的是后端的币，用户钱包里一分没动。 */
+      /* External wallet: an allowance is, on chain, an approve to the spender contract and must be signed by the
+         user's wallet. This button used to say "Approve in wallet" while it merely POSTed to the backend, which
+         signed with its own private key -- approving the backend's coins, with nothing moved in the user's wallet. */
       const tok = chain?.tokens?.[useCoin]
       if (walletKind === 'ext' && chain?.deployed && chain.spending && tok?.address) {
         /* parseUnits, not Number × 10^decimals: at 18 decimals anything over
@@ -698,15 +702,15 @@ export function AllowanceModal({
         asset: useCoin, network: useNet,
         per_payment: f.per_payment, window_cap: f.window_cap,
         cycle: f.cycle, expires: f.expires === 'Not set' ? '' : f.expires,
-        /* 收款方范围这一排参照删掉了。接口还收这个字段，就按「不限」发过去，
-           而不是把一个界面上问不到的选择留成空值。 */
+        /* The payee-scope row was removed by the reference. The endpoint still accepts the field, so send it as
+           "unrestricted" rather than leaving a choice the UI never asks about as an empty value. */
         recipients: 'Any',
       }, edit?.id, identity)
       const name = f.spender.trim()
       toast(edit ? `Allowance updated — ${name}` : `Allowance issued to ${name}`)
       onDone()
     } catch (e) {
-      // 钱包那一侧的错已经在交易进度那里显示过了，别再重复一遍
+      // Errors from the wallet side have already been shown on the transaction progress line; do not repeat them
       if (!isWalletTxError(e)) {
         setBad({ id: '', msg: e instanceof Error ? e.message : 'Could not sign' })
       }
@@ -719,13 +723,13 @@ export function AllowanceModal({
     <Sheet title={edit ? 'Edit allowance' : 'New allowance'} onClose={onClose}>
       <div className={'sf' + (bad?.id === 'spender' ? ' bad' : '')}>
         <span className="sfl">Spender</span>
-        {/* 「Me」是自己的支出策略，改名没有意义——那不是一个可以改叫别的名字的对象 */}
+        {/* "Me" is your own spending policy, and renaming it is meaningless -- it is not an object that could be called something else */}
         <input type="text" value={f.spender} autoComplete="off" spellCheck={false} disabled={me}
           onChange={e => { setBad(null); setF({ ...f, spender: e.target.value }) }} />
         <span className="err">{bad?.id === 'spender' ? bad.msg : ''}</span></div>
 
-      {/* 额度是对某条链上某个代币合约的授权，两样都得问清楚。同一个币在
-          四条链上是四份互不相干的授权，不问的话它们会混成一份。 */}
+      {/* An allowance authorises a specific token contract on a specific chain, and both have to be asked. The same
+          coin on four chains is four unrelated authorisations, and without asking they would merge into one. */}
       <div className="sf"><span className="sfl">Asset</span>
         <Chips opts={coins} on={useCoin} onPick={c => setF({ ...f, asset: c })} /></div>
 
@@ -748,7 +752,7 @@ export function AllowanceModal({
           onChange={e => { setBad(null); setF({ ...f, per_payment: e.target.value }) }} />
         <span className="err">{bad?.id === 'per' ? bad.msg : ''}</span></div>
 
-      {/* 周期跟上限是一件事——「每周 2000」拆成两行读起来是两个独立设置 */}
+      {/* The period and the cap are one thing -- "2000 a week" split across two rows reads as two independent settings */}
       <div className={'sf' + (bad?.id === 'cap' ? ' bad' : '')}>
         <span className="sfl">Max per window ({useCoin})</span>
         <input type="text" value={f.window_cap} inputMode="numeric"
@@ -774,8 +778,8 @@ export function AllowanceModal({
           {bad && !bad.id ? bad.msg : ''}
         </span>
         <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
-          {/* 签在哪儿由钱包类型决定：外部钱包是对支出合约 approve，
-              自建钱包才是 passkey 签账户策略。写错就是在教用户找一个不存在的弹窗。 */}
+          {/* Where it is signed depends on the wallet type: an external wallet approves the spender contract, while
+              a self-custody wallet signs the account policy with a passkey. Getting it wrong teaches the user to look for a dialog that does not exist. */}
           {busy ? 'Signing…' : walletKind === 'ext' ? 'Approve in wallet' : 'Sign with passkey'}
         </button>
       </div>

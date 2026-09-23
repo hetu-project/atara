@@ -1,27 +1,28 @@
 /**
- * 科大讯飞实时语音听写（IAT）流式客户端。
+ * iFlytek real-time speech dictation (IAT) streaming client.
  *
- * 链路：后端签一枚带时效的 WSS URL → 浏览器采麦 → 16k 单声道 PCM 转 Base64
- * 逐帧推给讯飞 → 收增量文本写回输入框。音频不过我们的后端，WSS 是浏览器
- * 直连讯飞的；后端存在的唯一理由是密钥不能出站。
+ * The path: the backend signs a time-limited WSS URL -> the browser captures the mic -> 16k mono PCM is
+ * Base64-encoded and pushed frame by frame to iFlytek -> incremental text comes back into the input box. The
+ * audio never passes through our backend; the WSS connection is browser-direct to iFlytek, and the only reason
+ * the backend exists here is that the secret must not leave the server.
  *
- * 麦克风要求安全上下文：localhost 算，别的域名必须 HTTPS。
+ * The microphone requires a secure context: localhost counts, any other domain must be HTTPS.
  */
 
-/** 一次回调。text 始终是**当前完整文本**，不是增量——调用方直接覆盖即可。 */
+/** One callback. text is always the **current complete text**, not a delta -- callers can simply overwrite. */
 export interface VoiceResult {
   text: string
   isFinal: boolean
 }
 
-/** 起不来的原因分开报：这三种的处置完全不同，混成一句话没法给提示。 */
+/** Failure reasons are reported separately: these three call for completely different responses, and merged into one sentence no useful hint can be given. */
 export type VoiceFailure =
-  | 'unsupported' /* 浏览器不支持（没有 getUserMedia / AudioContext） */
-  | 'insecure' /* 非安全上下文，浏览器根本不会给麦克风 */
-  | 'denied' /* 用户拒绝了麦克风权限 */
-  | 'no-token' /* 后端没配密钥或签名接口挂了 */
-  | 'service' /* 讯飞返回了错误码 */
-  | 'network' /* WebSocket 断了 */
+  | 'unsupported' /* Browser does not support it (no getUserMedia / AudioContext) */
+  | 'insecure' /* Non-secure context; the browser will not grant the microphone at all */
+  | 'denied' /* The user denied microphone permission */
+  | 'no-token' /* The backend has no secret configured, or the signing endpoint is down */
+  | 'service' /* iFlytek returned an error code */
+  | 'network' /* The WebSocket dropped */
 
 export class VoiceError extends Error {
   readonly kind: VoiceFailure
@@ -37,11 +38,11 @@ export interface SignedUrl {
   app_id: string
 }
 
-/** 采到的每一帧都会推一次；4096 帧 @16k 约 256ms 一帧。 */
+/** Fired once per captured frame; a 4096-sample frame @16k is roughly 256ms. */
 const FRAME = 4096
 const TARGET_RATE = 16000
 
-/** 讯飞要的帧状态：0 首帧（必须带 common+business）、1 中间帧、2 尾帧。 */
+/** The frame status iFlytek expects: 0 first frame (must carry common+business), 1 intermediate, 2 final. */
 const enum Frame {
   First = 0,
   Middle = 1,
@@ -49,10 +50,10 @@ const enum Frame {
 }
 
 export interface VoiceOptions {
-  /** 讯飞的语种。中文 zh_cn，英文 en_us。 */
+  /** iFlytek's language. Chinese is zh_cn, English en_us. */
   language?: string
   accent?: string
-  /** 静音多久算说完（毫秒）。太短会把人说话中间的停顿当结束。 */
+  /** How long a silence counts as finished speaking (milliseconds). Too short and a pause mid-sentence is treated as the end. */
   vadEos?: number
 }
 
@@ -63,17 +64,17 @@ export class IFlytekStreamer {
   private node: ScriptProcessorNode | null = null
   private source: MediaStreamAudioSourceNode | null = null
   private analyser: AnalyserNode | null = null
-  /* 显式 <ArrayBuffer>：getFloatTimeDomainData 不收可能指向 SharedArrayBuffer 的视图。 */
+  /* Explicit <ArrayBuffer>: getFloatTimeDomainData does not accept views that may point at a SharedArrayBuffer. */
   private peek: Float32Array<ArrayBuffer> | null = null
 
   private frame: Frame = Frame.First
   private appId = ''
   private opts: Required<VoiceOptions>
 
-  /* 已收到的最终片段，按讯飞的 sn 顺序存。动态修正要能回头改某一段，
-     所以不能只留一个拼好的字符串。 */
+  /* Final segments received so far, stored in iFlytek's sn order. Dynamic correction has to be able to go back
+     and rewrite a segment, so a single concatenated string is not enough. */
   private segments = new Map<number, string>()
-  /* stop() 会被 onclose 再触发一次，用它挡掉重入。 */
+  /* stop() gets triggered a second time by onclose; this guards against re-entry. */
   private done = false
 
   private onResultCb?: (r: VoiceResult) => void
@@ -88,8 +89,8 @@ export class IFlytekStreamer {
     }
   }
 
-  /* 回调不在 stop() 里清空：一个实例可能被 start 两次，清了第二次就静默失败。
-     实例用完即弃，回调跟着实例一起被回收。 */
+  /* Callbacks are not cleared inside stop(): one instance may be started twice, and clearing them would make the
+     second start fail silently. Instances are single-use, and the callbacks are collected along with the instance. */
   onResult(cb: (r: VoiceResult) => void) {
     this.onResultCb = cb
   }
@@ -101,10 +102,11 @@ export class IFlytekStreamer {
   }
 
   /**
-   * 开录。getSignedUrl 每次都真去后端拿——签名是短时的，缓存复用会握手失败。
+   * Start recording. getSignedUrl really does go to the backend each time -- the signature is short-lived, and
+   * caching and reusing it fails the handshake.
    *
-   * 先要麦克风再连 WebSocket：顺序反过来的话，用户在权限弹窗上犹豫的十几秒里
-   * 连接就空着，讯飞那边会先超时断掉。
+   * Ask for the microphone before connecting the WebSocket: the other way round, the connection sits idle through
+   * the dozen-odd seconds a user hesitates over the permission prompt, and iFlytek times it out first.
    */
   async start(getSignedUrl: () => Promise<SignedUrl>): Promise<void> {
     if (!window.isSecureContext) {
@@ -122,9 +124,10 @@ export class IFlytekStreamer {
     } catch {
       throw new VoiceError('denied', 'Microphone permission was refused')
     }
-    /* 权限弹窗可能挂很久，这期间用户完全可能再点一次把它关掉。那时 stop()
-       已经跑完了，如果这里照旧往下接管线，麦克风就再也没人去关——标签页上
-       那个红点亮到关页面为止。每个 await 之后都要重新确认自己还该活着。 */
+    /* The permission prompt can hang for a long time, and during it the user may well click again to close it. By
+       then stop() has already run, and carrying on to set up the pipeline here leaves the microphone with nobody
+       to close it -- that red dot on the tab stays lit until the page is closed. After every await, reconfirm that
+       this should still be alive. */
     if (this.done) { stream.getTracks().forEach(t => t.stop()); return }
     this.stream = stream
 
@@ -138,9 +141,9 @@ export class IFlytekStreamer {
     if (this.done) { this.release(); return }
     this.appId = signed.app_id
 
-    /* sampleRate 是**请求**不是保证：Chrome 会照办，Safari 忽略它并给出硬件速率。
-       所以下面一律按 ctx.sampleRate 重采样到 16k，不假设拿到的就是 16k——
-       按 44.1k 的数据冒充 16k 发过去，讯飞收到的是一段听不懂的慢放。 */
+    /* sampleRate is a **request**, not a guarantee: Chrome honours it, Safari ignores it and gives the hardware
+       rate. So everything below resamples to 16k based on ctx.sampleRate rather than assuming 16k was granted --
+       sending 44.1k data passed off as 16k gives iFlytek an unintelligible slowed-down recording. */
     this.ctx = new AC({ sampleRate: TARGET_RATE })
     if (this.ctx.state === 'suspended') await this.ctx.resume()
     if (this.done) { this.release(); return }
@@ -159,8 +162,8 @@ export class IFlytekStreamer {
       }
       ws.onmessage = e => this.receive(e.data as string)
       ws.onerror = () => {
-        /* 握手阶段失败时 onopen 还没跑，resolve 不会发生——必须 reject，
-           否则 start() 永远挂着，界面停在「正在听」。 */
+        /* On a handshake-stage failure onopen has not run, so resolve never happens -- this must reject, or
+           start() hangs forever and the UI sits on "listening". */
         const err = new VoiceError('network', 'Lost connection to the voice service')
         reject(err)
         this.fail(err)
@@ -169,7 +172,7 @@ export class IFlytekStreamer {
     })
   }
 
-  /** 接上音频管线开始推流。 */
+  /** Attach the audio pipeline and start streaming. */
   private pump() {
     const ctx = this.ctx
     const stream = this.stream
@@ -177,23 +180,25 @@ export class IFlytekStreamer {
 
     this.source = ctx.createMediaStreamSource(stream)
 
-    /* 单独一条支路做音量表。不复用下面 ScriptProcessor 的帧是因为那边
-       4096 采样 @16k ≈ 256ms 才一帧，一秒四次的波形是抽搐不是呼吸。
-       AnalyserNode 让界面按自己的节奏（rAF）去读，两件事各走各的。 */
+    /* A separate branch drives the volume meter. It does not reuse the ScriptProcessor's frames below because
+       4096 samples @16k is one frame roughly every 256ms, and a waveform updating four times a second is a
+       twitch, not a breath.
+       An AnalyserNode lets the UI read at its own rhythm (rAF), keeping the two concerns apart. */
     this.analyser = ctx.createAnalyser()
     this.analyser.fftSize = 1024
     this.analyser.smoothingTimeConstant = 0.5
     this.peek = new Float32Array(this.analyser.fftSize)
     this.source.connect(this.analyser)
 
-    /* ScriptProcessorNode 已废弃，AudioWorklet 是正路。这里仍用它是因为
-       Worklet 要单独一个模块文件、构建产物里多一条入口，而这一版只要把
-       链路跑通。换 Worklet 时只有这一个方法要改。 */
+    /* ScriptProcessorNode is deprecated and AudioWorklet is the proper path. It is still used here because a
+       Worklet needs its own module file and an extra entry point in the build output, while this version only
+       needs the path working end to end. Switching to a Worklet touches this one method only. */
     this.node = ctx.createScriptProcessor(FRAME, 1, 1)
     this.source.connect(this.node)
-    /* 必须连到 destination，否则 Chrome 不会驱动 onaudioprocess。
-       接的是原始麦克风信号，会造成回授——所以中间不能有任何增益，
-       实际听不到（浏览器不会把 ScriptProcessor 的输出真的放出来）。 */
+    /* It has to connect to destination or Chrome will not drive onaudioprocess.
+       What is connected is the raw microphone signal, which would cause feedback -- so there must be no gain
+       anywhere in between, and in practice nothing is audible (the browser does not actually play a
+       ScriptProcessor's output). */
     this.node.connect(ctx.destination)
 
     this.node.onaudioprocess = e => {
@@ -221,9 +226,9 @@ export class IFlytekStreamer {
         domain: 'iat',
         accent: this.opts.accent,
         vad_eos: this.opts.vadEos,
-        /* 动态修正：讯飞会回头改写已经发过的片段（「我要卖」→「我要买」）。
-           开了之后必须处理 pgs/rg，见 receive()。不开的话说错一个字
-           就再也改不回来了。 */
+        /* Dynamic correction: iFlytek goes back and rewrites segments it has already sent ("I want to sell" ->
+           "I want to buy"). With it on, pgs/rg must be handled -- see receive(). With it off, one misrecognised
+           word can never be corrected. */
         dwa: 'wpgs',
       }
       this.frame = Frame.Middle
@@ -249,9 +254,9 @@ export class IFlytekStreamer {
       let piece = ''
       for (const w of r.ws) piece += w.cw.map(c => c.w).join('')
 
-      /* 动态修正：pgs=rpl 表示「把 rg 圈住的那几段换成这一段」。
-         只做追加的实现在这里会把改写前后两份都留下——这就是那种
-         「说一句话出来一句半」的现象。 */
+      /* Dynamic correction: pgs=rpl means "replace the segments enclosed by rg with this one".
+         An append-only implementation keeps both the before and after versions here -- which is the source of the
+         "say one sentence, get one and a half back" effect. */
       if (r.pgs === 'rpl' && r.rg) {
         const [from, to] = r.rg
         for (let i = from; i <= to; i++) this.segments.delete(i)
@@ -261,8 +266,8 @@ export class IFlytekStreamer {
       this.onResultCb?.({ text: this.text(), isFinal: res.data?.status === 2 })
     }
 
-    /* status=2 是讯飞说完了（VAD 判定静音够久，或我们发了尾帧）。
-       它之后不会再发任何东西，连接留着也没用。 */
+    /* status=2 means iFlytek has finished (VAD judged the silence long enough, or we sent the final frame).
+       Nothing more will be sent after it, and keeping the connection is pointless. */
     if (res.data?.status === 2) this.stop()
   }
 
@@ -274,11 +279,11 @@ export class IFlytekStreamer {
   }
 
   /**
-   * 当前音量，0–1。给波形用。
+   * Current volume, 0-1. For the waveform.
    *
-   * 取 RMS 而不是峰值：峰值被一次咳嗽就顶满，之后正常说话全贴着顶，
-   * 波形反而不动了。开三次方是为了把人声常处的 0.02–0.2 这一段拉开——
-   * 线性映射的话说话和不说话在视觉上差不了几个像素。
+   * RMS rather than peak: a peak is pinned by a single cough, after which normal speech all sits against the
+   * ceiling and the waveform stops moving. The cube root is there to spread out the 0.02-0.2 band where speech
+   * usually sits -- mapped linearly, speaking and not speaking differ by a couple of pixels.
    */
   level(): number {
     if (!this.analyser || !this.peek) return 0
@@ -291,13 +296,13 @@ export class IFlytekStreamer {
     return Math.min(1, Math.cbrt(Math.sqrt(sum / this.peek.length)) * 1.6)
   }
 
-  /** 停录。可重复调用——onclose 会再触发一次，这里挡掉。 */
+  /** Stop recording. Safe to call repeatedly -- onclose triggers it again, which is guarded here. */
   stop() {
     if (this.done) return
     this.done = true
 
-    /* 尾帧要在关麦之前发：先关麦的话 ScriptProcessor 立刻停，
-       最后那几百毫秒的音频永远送不出去，尾字会被吞。 */
+    /* The final frame has to go out before the mic is closed: close the mic first and the ScriptProcessor stops
+       immediately, the last few hundred milliseconds of audio are never sent, and the trailing words are swallowed. */
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.frame = Frame.Last
       this.ws.send(
@@ -309,8 +314,8 @@ export class IFlytekStreamer {
 
     this.release()
 
-    /* 给讯飞留时间把最后一段文字发回来再关连接。直接 close 的话
-       尾帧白发了——收不到它的回应。 */
+    /* Give iFlytek time to send the last of the text back before closing the connection. Closing outright wastes
+       the final frame -- its response never arrives. */
     const ws = this.ws
     this.ws = null
     if (ws) {
@@ -321,7 +326,7 @@ export class IFlytekStreamer {
     this.onStopCb?.()
   }
 
-  /** 放开麦克风和音频节点。麦克风不显式 stop，浏览器标签页上那个红点不会灭。 */
+  /** Release the microphone and audio nodes. Without explicitly stopping the mic, that red dot on the browser tab never goes out. */
   private release() {
     if (this.node) {
       this.node.onaudioprocess = null
@@ -345,14 +350,14 @@ export class IFlytekStreamer {
   }
 }
 
-// ── 音频转换 ──
+// -- Audio conversion --
 
 /**
- * 线性重采样到 16k。
+ * Linear resampling to 16k.
  *
- * 只在 Safari 那类忽略 sampleRate 的浏览器上真的做事——Chrome 给的就是 16k，
- * from===to 时直接原样返回。线性插值对语音听写足够：讯飞自己的识别前端
- * 会再做一次处理，这里要的是采样率对得上，不是音质。
+ * Only does real work on browsers like Safari that ignore sampleRate -- Chrome gives 16k already, and when
+ * from===to it returns the input unchanged. Linear interpolation is sufficient for dictation: iFlytek's own
+ * recognition front end processes it again, and what matters here is that the sample rate lines up, not audio quality.
  */
 function resample(input: Float32Array, from: number, to: number): Float32Array {
   if (from === to) return input
@@ -368,7 +373,7 @@ function resample(input: Float32Array, from: number, to: number): Float32Array {
   return out
 }
 
-/** Float32 [-1,1] → 16 位小端 PCM。正负满量程不对称，分开缩放不然会削顶。 */
+/** Float32 [-1,1] -> 16-bit little-endian PCM. Positive and negative full scale are asymmetric, so they are scaled separately to avoid clipping. */
 function toPcm16(f: Float32Array): Int16Array {
   const out = new Int16Array(f.length)
   for (let i = 0; i < f.length; i++) {
@@ -378,7 +383,7 @@ function toPcm16(f: Float32Array): Int16Array {
   return out
 }
 
-/** 分块转 Base64。整段 apply 在长音频上会爆调用栈。 */
+/** Base64 in chunks. apply over a whole buffer blows the call stack on long audio. */
 function toBase64(pcm: Int16Array): string {
   const bytes = new Uint8Array(pcm.buffer)
   let s = ''
@@ -388,7 +393,7 @@ function toBase64(pcm: Int16Array): string {
   return btoa(s)
 }
 
-// ── 讯飞返回的形状 ──
+// -- Shapes returned by iFlytek --
 
 interface IatResponse {
   code: number
@@ -397,7 +402,7 @@ interface IatResponse {
     status: number
     result?: {
       ws: { cw: { w: string }[] }[]
-      /* 动态修正：pgs='apd' 追加、'rpl' 替换 rg 圈住的 sn 区间 */
+      /* Dynamic correction: pgs='apd' appends, 'rpl' replaces the sn range enclosed by rg */
       pgs?: 'apd' | 'rpl'
       rg?: [number, number]
       sn?: number

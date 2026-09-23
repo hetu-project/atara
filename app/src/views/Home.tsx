@@ -16,21 +16,22 @@ import type { MatchCandidate } from '../api/types'
 import { scoreText } from '../api/types'
 
 /**
- * 首页 = 一张空台面加一句问话。
+ * The home page = an empty desk plus one question.
  *
- * 打字的时候句子就长出来：说到的槽实心，没说到的按合理猜测填上并标虚线。
- * 与「把示例文本塞进输入框再让人回车」的差别是——用户不必先读懂一句
- * 自己没写过的话，再猜哪几个词能改；胶囊自己说明哪里能改。
+ * The sentence grows as you type: slots that were named are solid, ones that were not are filled by reasonable
+ * guess and marked dashed. The difference from "drop example text into the input and make them press enter" is
+ * that the user does not first have to parse a sentence they never wrote and then guess which words are editable;
+ * the pills explain for themselves where the edit points are.
  */
 const a0 = (a: { coin: string } | null) => a?.coin ?? 'USDT'
 
-/** 消息时间。格式与 Thread.tsx 一致——同一套视觉语言，两处不能各写各的。 */
+/** Message timestamp. The format matches Thread.tsx -- one visual language, and the two places must not each invent their own. */
 const clock = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 
-/* 毫秒进来，屏幕上那个整数出去。
-   不满一秒返回 0，调用方据此整行不印——「Thought for 0 seconds」是句废话，
-   而且半秒回来的时候根本没人觉得等过。 */
+/* Milliseconds in, the integer shown on screen out.
+   Under one second returns 0, from which the caller omits the whole line -- "Thought for 0 seconds" says nothing,
+   and at half a second nobody felt they waited at all. */
 const secsOf = (ms?: number) => (ms && ms >= 1000 ? Math.round(ms / 1000) : 0)
 
 export default function Home({ identity }: { identity: string; onNeedSignIn?: () => void }) {
@@ -40,34 +41,35 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   const [cands, setCands] = useState<MatchCandidate[]>([])
   const [chosen, setChosen] = useState<MatchCandidate | null>(null)
 
-  /* Atara AI 这条对话。chat 是已经定稿的消息，streaming 是正在长出来的那一段——
-     分开存是因为后者每收到几个字就要重画一次，混进 chat 会让整段列表跟着重渲染。
-     null 表示此刻没有人在说话。 */
+  /* The Atara AI conversation. chat holds finalised messages, streaming holds the piece currently growing --
+     kept apart because the latter repaints every few characters, and mixed into chat it would re-render the whole list.
+     null means nobody is speaking right now. */
   const [chat, setChat] = useState<
     { id: string; author: 'me' | 'them'; body: string; at: string; thought?: number }[]>([])
   const [streaming, setStreaming] = useState<string | null>(null)
 
-  /* 等待期间的走秒。只是进度，不是结论。
+  /* The counter ticking during the wait. Progress only, not a conclusion.
    *
-   * 写在回答上的那个数字由后端给（Message.thought_ms），因为它要落库，而落库
-   * 的数只能有一个来源。两边各量一份的话，刚才看到的和刷新之后看到的会差一
-   * 秒——同一件事说出两个数，比少说一个更糟。
+   * The number written on the answer comes from the backend (Message.thought_ms), because it has to be persisted,
+   * and a persisted number can only have one source. Measured on both sides, what was seen a moment ago and what
+   * is seen after a refresh would differ by a second -- two numbers for one thing, which is worse than one number fewer.
    *
-   * 这里这个只回答「已经等了几秒」，等的过程中后端还没法告诉我们答案。 */
+   * This one only answers "how long have I been waiting", during which the backend cannot yet tell us the answer. */
   const askedAt = useRef(0)
   const [waited, setWaited] = useState(0)
   const deskAbort = useRef<AbortController | null>(null)
-  /* 上一次失败的那句，连同原因。挂在消息流末尾，带一颗重试。 */
+  /* The last failed message, with its reason. Hung at the end of the message stream with a retry button. */
   const [failed, setFailed] = useState<{ q: string; why: string } | null>(null)
 
-  /* 滚动容器。#log 自己是那个滚动的元素（overflow-y:auto），所以引用它，
-     不是引用一个底部的锚点——要判断「用户是不是已经在底部」得读它的
-     scrollTop，锚点给不了这个信息。 */
+  /* The scroll container. #log is itself the scrolling element (overflow-y:auto), so it is what is referenced,
+     not an anchor at the bottom -- deciding "is the user already at the bottom" requires reading its scrollTop,
+     which an anchor cannot give. */
   const log = useRef<HTMLDivElement>(null)
-  /* 要不要跟着新内容往下滚。
-     只在「用户本来就在底部」时跟：他往上翻着读旧消息的时候，每来一个字
-     就把他拽回底部，比不滚还难受。这个值由滚动事件维护，不在渲染时算——
-     渲染时 DOM 已经变高了，那一刻永远算出「不在底部」。 */
+  /* Whether to follow new content downwards.
+     Only follow when the user was already at the bottom: while they are scrolled up reading old messages, being
+     yanked back to the bottom on every character is worse than not scrolling at all. This value is maintained by
+     the scroll event rather than computed at render time -- by render time the DOM has already grown taller, and
+     at that instant it always computes "not at the bottom". */
   const stick = useRef(true)
 
   const toBottom = (smooth = false) => {
@@ -79,39 +81,39 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     const el = log.current
     if (!el) return
     const onScroll = () => {
-      /* 80px 的容差：正好贴底才算「在底部」的话，一点点惯性滑动就会
-         把跟随关掉。 */
+      /* An 80px tolerance: requiring an exact bottom to count as "at the bottom" means a little inertial scrolling
+         switches following off. */
       stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
 
-  /* 屏幕上收起了前面多少条。0 = 全都显示。
+  /* How many earlier messages are collapsed on screen. 0 = show everything.
    *
-   * 「New order」按字面意思是开一张新台面，可这条对话是持久化的——只要跟
-   * Atara AI 说过一句话，屏幕上就永远挂着那串消息，那颗按钮点下去什么也
-   * 不会变。所以这里把已有的那些**从屏幕上**收起来，不是删：服务端那份
-   * 一直在，Chats 里的 Atara AI 点回来就全看得到（侧栏那条注释说的就是
-   * 这条退路，只是当时对话还只活在一次会话里，不需要专门收）。
+   * "New order" literally means opening a fresh desk, but this conversation is persistent -- having said one thing
+   * to Atara AI, that string of messages hangs on screen forever and clicking that button changes nothing. So this
+   * collapses the existing ones **on screen**, without deleting: the server-side copy is always there, and Atara AI
+   * under Chats brings it all back (that fallback is what the sidebar's comment refers to, except at the time the
+   * conversation only lived for one session and needed no explicit collapsing).
    *
-   * 记条数而不是记一个布尔：收起之后新说的话要照常出现在屏幕上，
-   * 而它们和历史在同一个数组里。 */
+   * A count rather than a boolean: after collapsing, newly said things must still appear on screen, and they share
+   * the array with the history. */
   const [folded, setFolded] = useState(0)
-  /* fresh 不能依赖 chat——它挂在一个 mount 就跑的 effect 上，
-     进 deps 会变成每来一条消息就重置一次台面。 */
+  /* fresh must not depend on chat -- it hangs off an effect that runs on mount, and in deps it would reset the desk
+     on every incoming message. */
   const chatLen = useRef(0)
   chatLen.current = chat.length
   const shown = folded ? chat.slice(folded) : chat
 
-  /* 新内容到了就跟到底（前提是用户还在底部）。流式回答每来一段都会触发，
-     所以不能用 smooth——那会让滚动永远追不上正在生成的文字。 */
+  /* Follow to the bottom when new content arrives (provided the user is still at the bottom). A streamed answer
+     triggers this on every chunk, so smooth is out -- that would leave the scroll permanently behind the text being generated. */
   useEffect(() => { if (stick.current) toBottom(false) }, [chat.length, streaming])
 
-  /* 等待期间走秒。只在一个字都还没来的时候走（streaming === ''）——字一开始
-     来就不是「在想」了，再让秒数往上跳是在说一件已经不成立的事。
-     250ms 一跳而不是 1000ms：整秒走的话，第一次跳变在 0 到 1 秒之间随机，
-     看起来像卡了一下。 */
+  /* Tick during the wait. Only while not a single character has arrived (streaming === '') -- once text starts
+     arriving it is no longer "thinking", and letting the seconds keep climbing asserts something no longer true.
+     A tick every 250ms rather than 1000ms: on whole seconds the first jump lands randomly between 0 and 1 second,
+     which looks like a stutter. */
   useEffect(() => {
     if (streaming !== '') return
     const t = setInterval(
@@ -119,13 +121,13 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     return () => clearInterval(t)
   }, [streaming])
 
-  /* 历史。以前这条对话只活在这一次会话里：刷新、切个视图再回来，屏幕上
-     就空了——而消息其实好好地存在库里。 */
+  /* History. This conversation used to live only for one session: refresh, or switch view and come back, and the
+     screen was empty -- while the messages were sitting safely in the database. */
   const { data: hist } = useApi(() => ep.thread(ep.DESK_ID, identity), [identity])
   const loaded = useRef('')
 
-  /* 换身份要先清干净再等新的历史。不清的话，切过去的那一瞬间屏幕上还是
-     上一个人的对话——而这套演示就是靠切身份看两侧的。 */
+  /* Switching identity has to clear first and then wait for the new history. Without clearing, the instant after
+     the switch the screen still shows the previous person's conversation -- and this demo works by switching identity to see both sides. */
   useEffect(() => {
     setChat([])
     setStreaming(null)
@@ -135,18 +137,18 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   useEffect(() => {
     if (!hist || loaded.current === identity) return
     loaded.current = identity
-    /* 只认 chat：这条线程里还混着准入流程播报的 system / order 消息，
-       那些由 MakerThread 自己渲染，这里再画一遍就是重影。 */
+    /* Only chat is recognised: this thread also carries system / order messages broadcast by the onboarding flow,
+       which MakerThread renders itself, and painting them again here would be a double image. */
     const past = hist.messages
       .filter(m => m.kind === 'chat')
       .map(m => ({ id: m.id, author: m.author === 'me' ? 'me' as const : 'them' as const,
                    body: m.body, at: m.created_at, thought: secsOf(m.thought_ms) }))
-    /* 已经开始说话了就不接管。历史是在挂载时拉的，要是这期间用户已经发出
-       一句，拿历史整个覆盖会把那句吞掉（服务端那份还没回来）。 */
+    /* Do not take over once speaking has begun. History is fetched on mount, and if the user has sent something in
+       the meantime, overwriting wholesale with history would swallow it (the server-side copy has not come back yet). */
     setChat(c => (c.length ? c : past))
-    /* 默认收起：首页就是「新建一单」那张台面，对话是从 Chats 里的 Atara AI
-       走进来才展开的。不收的话，只要跟它说过一句话，「你想结算什么」那句
-       空态标题就再也不出现——而那正是这个页面的起点。 */
+    /* Collapsed by default: the home page is the "new order" desk, and the conversation only expands when walked
+       into from Atara AI under Chats. Without collapsing, one sentence said to it means that "what would you like
+       to settle" empty-state heading never appears again -- and that is this page's starting point. */
     setFolded(isDeskOpen() ? 0 : past.length)
     requestAnimationFrame(() => toBottom(false))
   }, [hist, identity])
@@ -159,30 +161,31 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   const { run, start, reset } = useAssessment()
 
   /**
-   * 把台面清空。
+   * Clear the desk.
    *
-   * 评估状态挂在 App 级的 provider 上（右栏也读同一份），所以它跨视图一直活着——
-   * 而这个页面用 `run ? <Thinking/> : 空态标题` 分支，只要跑过一次评估，
-   * 那句「你想结算什么」就再也不出现，屏幕上永远挂着上一单的评估痕迹。
-   * 项目里一直有 reset()，但从来没有人调用过。
+   * Assessment state hangs off an App-level provider (the right column reads the same copy), so it stays alive
+   * across views -- while this page branches on `run ? <Thinking/> : empty-state heading`, so once an assessment
+   * has run even once, that "what would you like to settle" never appears again and the previous order's assessment
+   * trace hangs on screen forever.
+   * The project has always had reset(), and nobody had ever called it.
    *
-   * 不清对话：那是持久化的历史，从服务端拉回来的，和「这一单」无关。
+   * The conversation is not cleared: that is persistent history fetched from the server, unrelated to "this order".
    */
   const fresh = useCallback(() => {
     reset()
     setCands([])
     setChosen(null)
-    /* 只收屏幕，不碰 isDeskOpen：那个标志归侧栏所有（它在 Home 挂载之前就
-       表过态了）。这里跟着改的话，从 Chats 点进来的那一下会被 mount 时的
-       这次调用抹掉——刚说要看对话，转头又被收起来。 */
+    /* Collapse the screen only, do not touch isDeskOpen: that flag belongs to the sidebar (which stated its intent
+       before Home mounted). Changing it here means the click that walked in from Chats is wiped out by this call on
+       mount -- having just asked to see the conversation, it is collapsed again a moment later. */
     setFolded(chatLen.current)
   }, [reset])
 
-  /* 两个入口都要堵：
-     —— 从别处走进首页（组件重挂），
-     —— 人已经在首页时点 New order（路由不变、不重挂，只有事件能通知到）。 */
-  /* 展开回来。Chats 里的 Atara AI 和 New order 都落在 #/home，路由分不开
-     它们，所以各喊各的信号。 */
+  /* Both entry points have to be plugged:
+     -- walking into home from elsewhere (the component remounts),
+     -- clicking New order while already on home (no route change, no remount, only an event gets through). */
+  /* Expanding back. Atara AI under Chats and New order both land on #/home, which the route cannot tell apart, so
+     each shouts its own signal. */
   const openDesk = useCallback(() => { setDeskOpen(true); setFolded(0) }, [])
 
   useEffect(() => {
@@ -196,21 +199,22 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   }, [fresh, openDesk])
   const kyc = useKycGate()
 
-  /* 准入那块在对话里的位置：它一出现，就落在当时对话的末尾，然后不再动。
-     记的是当时的条数，不是时刻——时刻要拿服务器给的 created_at 去比，
-     两边的钟差一秒就会把一条新回复排到它上面。
+  /* Where the onboarding block sits in the conversation: once it appears, it lands at the conversation's end as it
+     was then, and does not move again.
+     What is recorded is the message count at the time, not a moment -- a moment would have to be compared against
+     the server's created_at, and a one-second clock difference between the two sides would sort a new reply above it.
 
-     为什么不继续钉在最底下：钉住的话它看着不动，实际上每来一条新消息，
-     它和上下文的相对位置就变一次——正在填的表单周围的内容在漂。落定之后
-     代价换成了「表单会被顶上去、要往回滚一点」，那是滚动，不是重排。
+     Why not keep pinning it to the bottom: pinned, it looks stationary while in fact its position relative to its
+     context changes with every new message -- the content around a form being filled in drifts. Once settled, the
+     cost becomes "the form gets pushed up and needs scrolling back to", which is scrolling, not reflow.
 
-     卡片收掉时一起清空：下次再打开它是一件新的待办，该重新落在那时的末尾。 */
+     Cleared along with the card: next time it opens it is a new to-do and should land at the end as it is then. */
   const [anchor, setAnchor] = useState<number | null>(null)
   useEffect(() => {
     setAnchor(a => (kyc.maker ? a ?? chat.length : null))
   }, [kyc.maker, chat.length])
-  /* 落点要换算到 shown 上：收起历史之后 chat 的下标和 shown 的对不上。
-     夹在两端之间——历史被收掉的那部分可能已经把落点甩到了前面。 */
+  /* The landing index has to be converted onto shown: after the history is collapsed, chat's indices no longer
+     match shown's. Clamped at both ends -- the collapsed part of the history may already have pushed the landing point ahead of it. */
   const cut = anchor == null ? shown.length
     : Math.max(0, Math.min(shown.length, anchor - folded))
   const { data: cdata } = useApi(() => ep.contacts(identity), [identity])
@@ -221,16 +225,16 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     k, amt: k === 'buy' ? 5000 : 3000, coin: 'USDT', fiat: 'CNY', peer: '', conds: [],
   })
 
-  /** 点胶囊入口：手动开的面板一律实心，打字不去抢。 */
+  /** Pill entry point: a manually opened panel is always solid, and typing does not take it over. */
   const toggle = (k: ActKind) => {
     setAct(a => (a && a.k === k && !a.auto ? null : { ...blank(k), auto: false }))
   }
 
-  /** 边打字边填句。清空输入就把自动开出来的句子收起。
-      语音转写也走这里：说出来的和打出来的同一条路，下面那排胶囊才会跟着长。 */
+  /** Fill the sentence as you type. Clearing the input collapses an auto-opened sentence.
+      Voice transcription goes through here too: what is spoken and what is typed take the same path, which is what makes the pills below grow. */
   const onType = (q: string) => {
     setText(q)
-    if (act && !act.auto) return               // 用户手动开的面板，打字不去抢
+    if (act && !act.auto) return               // A panel the user opened by hand; typing does not take it over
     if (!q.trim()) { setAct(a => (a?.auto ? null : a)); return }
     const r = liveParse(q, peers) as null | {
       k: string; amt?: number; coin?: string; fiat?: string; peer?: string
@@ -251,27 +255,27 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     })
   }
 
-  /* 离开首页时掐掉还在生成的回答。没人看的字还在一段一段地生成，每一段都在花钱。
-     麦克风由 Composer 自己在卸载时关掉。 */
+  /* Kill the answer still being generated when leaving home. Text nobody will read keeps arriving chunk by chunk, and every chunk costs money.
+     The microphone is closed by Composer itself on unmount. */
   useEffect(() => () => { deskAbort.current?.abort() }, [])
 
   /**
-   * 把一句话发给 Atara AI，边收边显示。
+   * Send a sentence to Atara AI and display it as it arrives.
    *
-   * 回答不等整段到齐再画——那是这次要做的事的全部意义。streaming 这个 state
-   * 装的是「正在长出来的那一段」，收完由 onDone 归位到消息列表里。
+   * The answer is not held back until it is complete -- that is the whole point of this. The streaming state holds
+   * "the piece currently growing", and onDone moves it into the message list once it is complete.
    */
   const ask = async (q: string) => {
     setFailed(null)
     setText('')
-    /* 自己那句先画出来。等后端确认再画的话，网络慢的时候输入框已经清空、
-       屏幕上却什么都没有，像是把话吞了。 */
+    /* Paint your own message first. Waiting for the backend to confirm means that on a slow network the input has
+       cleared while nothing is on screen, as if the words were swallowed. */
     setChat(c => [...c, { id: 'local-' + Date.now(), author: 'me', body: q, at: new Date().toISOString() }])
     askedAt.current = Date.now()
     setWaited(0)
     setStreaming('')
-    /* 自己发的这一下无条件滚到底，不看 stick——他刚刚往上翻着读旧消息，
-       然后打了一句发出去，那当然是想看这句和它的回答。 */
+    /* Your own send scrolls to the bottom unconditionally, ignoring stick -- they had just scrolled up reading old
+       messages and then typed and sent something, which obviously means they want to see it and its answer. */
     stick.current = true
     requestAnimationFrame(() => toBottom(true))
     const ctl = new AbortController()
@@ -280,9 +284,9 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
       await ep.deskSend(q, {
         onDelta: t => setStreaming(s => s + t),
         onDone: m => {
-          /* 秒数用后端给的，不用这边计时器读到的那个。两处各量一份的话，
-             刚才看到的和刷新之后看到的会差一秒——而它们本该是同一件事。
-             这边那个计时器只负责等待期间的进度。 */
+          /* The seconds figure comes from the backend, not from this side's timer. Measured in two places, what was
+             seen a moment ago and what is seen after a refresh differ by a second -- when they should be the same thing.
+             This side's timer only reports progress during the wait. */
           setChat(c => [...c, { id: m.id, author: 'them', body: m.body,
             at: m.created_at, thought: secsOf(m.thought_ms) }])
           setStreaming(null)
@@ -290,11 +294,11 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
       }, identity, ctl.signal)
     } catch (e) {
       setStreaming(null)
-      if (ctl.signal.aborted) return   // 是我们自己取消的，不是故障
-      /* 失败的那句挂在消息上，不是飘到列表底部那行灰字里——长对话里
-         那行字经常在屏幕外，而且它不说明是哪一句失败的。
-         重试直接重发同一句：用户那句已经进库了，再发一次会多一条记录，
-         但比让他自己重新打一遍强。 */
+      if (ctl.signal.aborted) return   // We cancelled it ourselves; not a fault
+      /* The failed message hangs on the message itself, not in a line of grey text floating at the bottom of the
+         list -- in a long conversation that line is often off screen, and it does not say which message failed.
+         Retry simply resends the same sentence: the user's message is already in the database, so resending adds a
+         second record, but that beats making them type it again. */
       setFailed({ q, why: e instanceof Error ? e.message : 'The desk could not answer' })
       toast('The desk could not answer', { kind: 'err', action: { label: 'Retry', onClick: () => void ask(q) } })
     } finally {
@@ -302,12 +306,12 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     }
   }
 
-  /** 掐掉正在生成的回答。每一段都在花钱，问错了不该只能干等它说完。 */
+  /** Kill the answer being generated. Every chunk costs money, and asking the wrong question should not mean waiting it out. */
   const stopAsk = () => {
     deskAbort.current?.abort()
     deskAbort.current = null
-    /* 已经吐出来的字留下——后端那边也会把「答了一半」存进库，
-       两边保持一致。丢掉的话刷新页面又会冒出来，更让人困惑。 */
+    /* Keep the text already emitted -- the backend also stores a half-finished answer, and the two sides stay
+       consistent. Discarding it means it reappears on refresh, which is more confusing still. */
     setStreaming(s => {
       if (s) setChat(c => [...c, { id: 'stop-' + Date.now(), author: 'them', body: s, at: new Date().toISOString() }])
       return null
@@ -317,30 +321,30 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   const submit = async () => {
     if (busy) return
     const a = act
-    /* 解析不出一张单就是在说话，不是在下单。
-       判据用 act 而不是猜：胶囊出现了用户就看得见自己这句被当成了交易。
-       原来这里直接报「Say what you want to trade」——占位符请人提问，
-       提了问却被要求去说一笔交易，那句报错答非所问。 */
+    /* Failing to parse an order means they are talking, not ordering.
+       The test is act rather than a guess: once the pills appear, the user can see their sentence was read as a trade.
+       This used to report "Say what you want to trade" outright -- the placeholder invites a question, and answering
+       a question with a demand to describe a trade is an error message that does not answer what was asked. */
     if (!a) { await ask(text.trim()); return }
-    /* 身份门在最前面：撮合、评估都跑完了才说「你还没验身份」，
-       那十几秒就白等了。 */
+    /* The identity door comes first: saying "you have not verified your identity" only after matching and
+       assessment have both run wastes those dozen-odd seconds. */
     if (kyc.require()) return
     setBusy(true)
     try {
-      /* 先撮合后评估：对手方还没出现就跑评估，评的是谁？
-         后端扫全池、按成绩排序，顺带把装不下这笔量的挡掉。 */
+      /* Match first, assess second: run the assessment before a counterparty exists and who is being assessed?
+         The backend scans the whole pool, sorts by record, and drops anyone who cannot take this volume along the way. */
       const m = await ep.match({
         intent: a.k, amount: String(a.amt), amount_kind: 'coin',
         asset: a.coin, fiat: a.fiat,
       })
       if (m.violation) { fail(m.violation.message); return }
       if (!m.candidates?.length) { fail('No live offers on that side right now'); return }
-      /* 指名了就用指名的，没指名交给撮合的头名——成绩最好的排在前面，
-         所以排序本身就是默认选择。
+      /* Use the named person when one was named; otherwise hand it to matching's top result -- the best record sorts
+         first, so the sort itself is the default choice.
 
-         指名的人不在结果里就停下，不换人。原来这里回落到头名，于是一句
-         「跟 Alice 买 500」会悄悄变成跟一个陌生人下单，而下单是即时的——
-         人看到卡片上的名字时，单已经在那个人手里了。 */
+         Stop rather than substitute when the named person is not in the results. This used to fall back to the top
+         result, so "buy 500 from Alice" quietly became an order with a stranger -- and ordering is immediate, so by
+         the time the name on the card is read, the order is already with that person. */
       const named = a.peer ? m.candidates.find(c => c.name === a.peer) : undefined
       if (a.peer && !named) {
         fail(`${a.peer} has nothing live on that side right now — pick someone else or leave the name out`)
@@ -350,7 +354,7 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
       if (!pick) { fail('No live offers on that side right now'); return }
       setCands(m.candidates)
       setChosen(pick)
-      // 评估当着面跑完，再开工单——不评就下单，那张卡就成了既成事实
+      // The assessment finishes in the open before the ticket opens -- ordering without assessing makes that card a fait accompli
       await start(pick.offer_id, pick.name)
       const ord = await ep.take(pick.offer_id, {
         amount: pick.coin_amount, amount_kind: 'coin', network: '',
@@ -361,16 +365,17 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
     } finally { setBusy(false) }
   }
 
-  /* 一条消息长什么样。提出来是因为它现在要渲染两遍——准入那块上面一段、
-     下面一段——而两段必须长得一模一样。 */
+  /* What a message looks like. Extracted because it now renders twice -- once above the onboarding block and once
+     below -- and the two have to look identical. */
   const bubble = (m: { id: string; author: 'me' | 'them'; body: string; at: string; thought?: number }) => (
     <div key={m.id} className={'msg ' + m.author}>
-      {/* 想了多久，留在回答上面。
-          只在满一秒时印：半秒回来的时候印「0s」是噪音，而且那种时候根本
-          没人觉得等过。
-          这一条**活在这次会话里**——刷新之后消息从库里读回来，没有这个数，
-          那一行就不再出现。落库要给 messages 加一列，为一行灰字不值当；
-          它交代的是「刚才那一下为什么慢」，而那件事刷新之后已经不重要了。 */}
+      {/* How long it thought, kept above the answer.
+          Printed only at a full second or more: printing "0s" for a half-second reply is noise, and at that speed
+          nobody felt they waited at all.
+          This one **lives only for this session** -- after a refresh the messages are read back from the database
+          without this number, and the line simply stops appearing. Persisting it would mean another column on
+          messages, which is not worth it for a line of grey text; it explains "why was that one slow", and after a
+          refresh that no longer matters. */}
       {m.author === 'them' && (m.thought ?? 0) >= 1 && (
         <span className="thought">✦ Thought for {m.thought} seconds</span>
       )}
@@ -385,12 +390,12 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
             <span className="thav deskav mav" aria-hidden><i /></span>
             <span className="bub">{m.body}</span>
           </span>
-          {/* 时间和动作在同一行：两者都是「关于这条消息」的元信息，
-              各占一行会让消息之间的间距忽大忽小。 */}
+          {/* Time and actions on one line: both are metadata "about this message", and on separate lines the gaps
+              between messages would vary. */}
           <span className="mact">
             <span className="mt">{clock(m.at)}</span>
-            {/* 只给它那一侧复制：自己刚打的那句没人会去复制，
-                两边都放只会让每一条消息下面都挂一排按钮。 */}
+            {/* Copy is offered on their side only: nobody copies the sentence they just typed themselves, and
+                offering both would hang a row of buttons under every single message. */}
             <CopyButton text={m.body} label="Copy reply" done="Reply copied"
               className="mactb" />
           </span>
@@ -402,25 +407,25 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
   return (
     <div className="view on" id="v-chat">
       <div id="log" ref={log}>
-        {/* 和 Atara AI 的对话。和准入那块同一条流——它们本来就是同一个台面上
-            的两种消息：那边是流程播报，这边是你问它答。
+        {/* The conversation with Atara AI. One stream with the onboarding block -- they were always two kinds of
+            message on the same desk: one is flow broadcast, the other is you asking and it answering.
 
-            分成两段渲染，中间夹着准入那块：见 cut。 */}
+            Rendered in two parts with the onboarding block between them: see cut. */}
         {shown.slice(0, cut).map(bubble)}
-        {/* 准入那块落在它出现时的位置，不再钉在对话最后。
+        {/* The onboarding block lands where it appeared and is no longer pinned to the end of the conversation.
 
-            钉在最后是为了让「要按的按钮、要填的表单」永远在眼皮底下，代价写
-            在当时的注释里：后来的聊天记录排在它上面。真正的毛病是那个代价没有
-            尽头——通过之后它早就不是待办了，却还压在每一句新消息下面，于是你
-            刚发的话出现在准入对话的**上方**。
+            Pinning it to the end was meant to keep "the button to press, the form to fill" always in view, and the
+            cost was written in the comment at the time: later chat messages sorted above it. The real problem was
+            that the cost had no end -- long after approval it was no longer a to-do, yet it still sat below every
+            new message, so what you had just said appeared **above** the onboarding conversation.
 
-            更要紧的是：钉住的东西看着不动，其实每来一条消息，它和上下文的相对
-            位置就变一次,正在填的表单周围的内容在漂。落定之后这件事没了,换来的
-            代价是表单可能被顶出屏幕——那是滚一下,比重排轻。 */}
+            More importantly: a pinned thing looks stationary while its position relative to its context changes
+            with every incoming message, and the content around a form being filled in drifts. Settled, that problem
+            is gone, and the cost becomes the form possibly being pushed off screen -- which is one scroll, and lighter than reflow. */}
         {kyc.maker ? (
           <>
-            {/* 样式挂在 #thhead 上，而且要 .show 才 display:flex——
-                写成 class 的话头像会掉到文字上面一行。 */}
+            {/* The styles hang off #thhead, and it needs .show to display:flex --
+                written as a class, the avatar drops onto the line above the text. */}
             <div id="thhead" className="show mkhead">
               <span className="thav deskav" aria-hidden><i /></span>
               <span className="thwho"><b>Atara AI</b><span>Verification and listing desk</span></span>
@@ -428,10 +433,10 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
             {kyc.maker}
           </>
         ) : null}
-        {/* 落点之后说的话。 */}
+        {/* Anything said after the landing point. */}
         {shown.slice(cut).map(bubble)}
-        {/* 失败的那句挂在它自己后面，不是飘到列表底部——那行字经常在屏幕外，
-            而且不说明是哪一句失败的。 */}
+        {/* A failed message hangs after itself rather than floating to the bottom of the list -- that line is often
+            off screen, and it does not say which message failed. */}
         {failed && (
           <div className="msg them">
             <span className="mrow">
@@ -445,10 +450,10 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
             </span>
           </div>
         )}
-        {/* 正在生成的那一段。
-            第一个字到之前放 Dither：那段等待有一两秒，气泡是空的，而一个空的
-            灰方块和「坏了」长得一模一样。字一开始来就换成文字 + 光标——
-            这时已经有东西在动了，再留着加载动画反而在说「还没开始」。 */}
+        {/* The piece currently being generated.
+            Dither shows until the first character arrives: that wait is a second or two with an empty bubble, and an
+            empty grey rectangle looks exactly like something broken. Once text starts arriving it switches to text
+            plus a cursor -- something is now moving, and leaving a loading animation there would say "not started yet". */}
         {streaming !== null && (
           <div className="msg them">
             <span className="mrow">
@@ -470,10 +475,10 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
             </span>
           </div>
         )}
-        {/* 评估一开始就撤掉空态标题：界面在提交那一刻就切进对话态，
-            中间那十几秒不该还挂着一句「你想结算什么」。 */}
+        {/* Drop the empty-state heading the moment the assessment starts: the UI switches into conversation mode at
+            submission, and those dozen-odd seconds should not still carry "what would you like to settle". */}
         {cands.length ? (
-          /* 先给候选再评估：直接跳评估是逻辑倒置——对手方还没出现，评的是谁？ */
+          /* Candidates before assessment: jumping straight to assessment inverts the logic -- with no counterparty yet, who is being assessed? */
           <div className="msg sys"><div className="matchcard">
             <div className="mcl">
               {chosen ? <>Matched · <b>{chosen.name}</b> — running the assessment</>
@@ -491,10 +496,10 @@ export default function Home({ identity }: { identity: string; onNeedSignIn?: ()
             </div>
           </div></div>
         ) : null}
-        {/* 空态标题只在台面真的空着时出现。
-            条件里必须带上对话：不带的话，没开准入向导就直接开聊的人，会在
-            自己那串消息**下面**看到一句「你想结算什么」——台面上明明已经有
-            东西了，它还在问你要不要开始。 */}
+        {/* The empty-state heading only appears while the desk is really empty.
+            The condition has to include the conversation: without it, someone who never opened the onboarding wizard
+            and just started chatting sees "what would you like to settle" **below** their own string of messages --
+            with things plainly already on the desk, it is still asking whether to begin. */}
         {run ? <Thinking /> : (!cands.length && !kyc.maker && !shown.length && streaming === null &&
           <div id="empty"><h3>What would you like to settle?</h3></div>)}
       </div>
