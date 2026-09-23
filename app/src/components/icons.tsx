@@ -60,6 +60,14 @@ export const IGo = () => (
   </svg>
 )
 
+/* Hamburger, for the mobile top bar. Same 16 viewBox and 1.3 stroke as IPanel beside it, so the two read as one set. */
+export const IMenu = () => (
+  <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+    strokeWidth="1.4" strokeLinecap="round" aria-hidden>
+    <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" />
+  </svg>
+)
+
 export const IPanel = ({ mirror }: { mirror?: boolean }) => (
   <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor"
     strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -209,5 +217,27 @@ export const IRetry = () => (
     strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" />
     <path d="M13.5 2.5v3h-3" />
+  </svg>
+)
+
+/* Reveal / hide a password field.
+
+   These exist because the only reveal control the product had was the browser's own: Edge draws
+   ::-ms-reveal inside the field, Chrome, Firefox and Safari draw nothing at all, and Edge's appears
+   only while the field holds text. So the affordance was there on one browser, absent on every phone,
+   and unthemeable wherever it did appear. */
+export const IEye = ({ size }: P = {}) => (
+  <svg {...S(size)}>
+    <path d="M1.6 8S4 4.2 8 4.2 14.4 8 14.4 8 12 11.8 8 11.8 1.6 8 1.6 8Z" />
+    <circle cx="8" cy="8" r="1.9" />
+  </svg>
+)
+
+export const IEyeOff = ({ size }: P = {}) => (
+  <svg {...S(size)}>
+    <path d="M6.6 6.6a2 2 0 0 0 2.8 2.8" />
+    <path d="M4.5 5A9.3 9.3 0 0 0 1.6 8s2.4 3.8 6.4 3.8a6.5 6.5 0 0 0 2.2-.4" />
+    <path d="M12.3 10.4A9.4 9.4 0 0 0 14.4 8S12 4.2 8 4.2a6.3 6.3 0 0 0-1.9.3" />
+    <path d="m3 3 10 10" />
   </svg>
 )

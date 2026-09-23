@@ -18,7 +18,7 @@ const NAVS: { view: Route['view']; label: string; icon: Icon }[] = [
 ]
 
 export default function Sidebar({
-  route, go, identity, folded, onFold, signed, onSignIn, onSignOut, onLock,
+  route, go: navigate, identity, folded, onFold, signed, onSignIn, onSignOut, onLock, onNavigate,
 }: {
   route: Route
   go: (r: Route) => void
@@ -29,7 +29,13 @@ export default function Sidebar({
   onSignIn: () => void
   onSignOut: () => void
   onLock: () => void
+  /** Phone width only: the drawer has to shut once you have gone somewhere. Absent on desktop, where the column is always in view. */
+  onNavigate?: () => void
 }) {
+  /* Wrapped once here rather than at each call site: every navigation in this column -- nav items, conversation
+     rows, the Atara AI row, the account menu -- should close the drawer, and threading a second call through all
+     of them is how one gets forgotten. */
+  const go = (r: Route) => { navigate(r); onNavigate?.() }
   const [menu, setMenu] = useState(false)
   const kyc = useKycGate()
   const row = useRef<HTMLDivElement>(null)
@@ -61,9 +67,9 @@ export default function Sidebar({
     if (!menu) return
     const away = (e: MouseEvent) => { if (!row.current?.contains(e.target as Node)) setMenu(false) }
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false) }
-    const t = setTimeout(() => addEventListener('mousedown', away), 0)
+    const t = setTimeout(() => addEventListener('pointerdown', away), 0)
     addEventListener('keydown', key)
-    return () => { clearTimeout(t); removeEventListener('mousedown', away); removeEventListener('keydown', key) }
+    return () => { clearTimeout(t); removeEventListener('pointerdown', away); removeEventListener('keydown', key) }
   }, [menu])
   const { data: me, reload: reloadMe } = useApi(() => ep.me(identity), [identity])
   const { data: allow, reload: reloadAllow } = useApi(() => ep.allowances(identity), [identity])

@@ -86,8 +86,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       <div className="tsts" role="status" aria-live="polite">
         {list.map(t => (
           <div key={t.id} className={'tst tst-' + t.kind + (t.leaving ? ' out' : '')}
-            onMouseEnter={() => { const x = timers.current.get(t.id); if (x) clearTimeout(x) }}
-            onMouseLeave={() => arm(t.id, 2000)}>
+            /* Hold on any press as well as on hover. A touch user never produces mouseenter, so a toast with a
+               Retry button would keep counting down while the finger was still travelling to it -- the one case
+               where the timer matters most. pointerenter covers the mouse; pointerdown covers the tap. */
+            onPointerEnter={() => { const x = timers.current.get(t.id); if (x) clearTimeout(x) }}
+            onPointerDown={() => { const x = timers.current.get(t.id); if (x) clearTimeout(x) }}
+            onPointerLeave={() => arm(t.id, 2000)}>
             <span className="tsti" aria-hidden>{t.kind === 'err' ? '!' : t.kind === 'ok' ? '✓' : 'i'}</span>
             <span className="tstx">{t.text}</span>
             {t.action && (

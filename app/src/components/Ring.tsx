@@ -13,7 +13,7 @@ import { consensusNet, consensusRing } from './rings'
  * the placeholder was.
  */
 export function Ring({
-  score = 0, passed, total, runId, stepMs = 620,
+  score = 0, passed, total, runId, settled = false, stepMs = 620,
 }: {
   score?: number
   /** How many agents agreed, for the line under the number. */
@@ -21,18 +21,27 @@ export function Ring({
   /** How many have to agree. Decides whether the tick is shown. */
   total?: number
   runId?: string
+  /**
+   * Draw the finished state at once, without sweeping up to it.
+   *
+   * For a stored assessment: it finished when the order was placed, and animating it again would stage a check
+   * that is not happening. Needed as its own flag because a record has no runId, and without one the ring took
+   * the idle path and painted 0 next to a verdict that read 66.
+   */
+  settled?: boolean
   stepMs?: number
 }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     if (!ref.current) return
     consensusRing(ref.current, RISK_AGENTS, runId ? 0 : null, stepMs, score, null,
-      passed, total)
-  }, [runId, score, passed, total, stepMs])
+      passed, total, settled)
+  }, [runId, score, passed, total, stepMs, settled])
   return (
-    <canvas ref={ref} className={'arring' + (runId ? '' : ' dim')}
+    <canvas ref={ref} className={'arring' + (runId || settled ? '' : ' dim')}
       width={220} height={220}
-      aria-label={runId ? 'Assessment running' : 'No assessment running'} />
+      aria-label={settled ? `Assessment result ${score} of 100`
+        : runId ? 'Assessment running' : 'No assessment running'} />
   )
 }
 

@@ -28,6 +28,9 @@ import { useEffect, useRef, useState } from 'react'
 const DELAY = 120
 /* The gap left between bubble and element. Too close and you cannot tell what it points at. */
 const GAP = 8
+/* A bubble opened by keyboard focus has no "leave" event coming if focus never moves, so it would sit there for
+   good. Hovering does have one, but this costs nothing there either -- the mouse leaving hides it long before. */
+const LINGER = 4000
 
 interface Show {
   text: string
@@ -43,6 +46,11 @@ export default function Tooltip() {
   /* The element whose title is currently lifted. It has to be given back on leave, so it is remembered. */
   const held = useRef<{ el: Element; title: string } | null>(null)
   const bubble = useRef<HTMLDivElement>(null)
+  /* What kind of pointer was last used. A tap fires focusin exactly like Tab does, so without knowing which it
+     was, every tap on an icon button would leave a bubble stuck to the screen -- a tooltip that cannot be
+     dismissed by the gesture that opened it. */
+  const touch = useRef(false)
+  const linger = useRef(0)
 
   useEffect(() => {
     const restore = () => {
@@ -54,11 +62,16 @@ export default function Tooltip() {
     }
     const hide = () => {
       clearTimeout(timer.current)
+      clearTimeout(linger.current)
       restore()
       setShow(null)
     }
 
     const enter = (e: Event) => {
+      /* Touch reaches here only as the focus that follows a tap. Suppress it: there is no pointer to move away
+         and no hover to end, so the bubble would never close. The label is still available -- see below, where
+         the title attribute is left in place for touch rather than lifted off. */
+      if (touch.current && e.type === 'focusin') return
       const t = e.target
       if (!(t instanceof Element)) return
       const el = t.closest('[data-tip], [title]')
@@ -70,8 +83,11 @@ export default function Tooltip() {
 
       hide()
       const native = el.getAttribute('title')
-      if (native) {
-        /* Lift it off first: without that the browser still stacks its own grey box on top a second later. */
+      /* Lift it off first: without that the browser still stacks its own grey box on top a second later.
+         Not on touch, though -- there is no native box to collide with, and a title that is removed and then
+         never given back (the restore runs on leave, which a tap does not produce) takes the element's only
+         accessible name with it. */
+      if (native && !touch.current) {
         el.removeAttribute('title')
         held.current = { el, title: native }
       } else {
@@ -90,9 +106,18 @@ export default function Tooltip() {
           y: Math.round(below ? r.bottom + GAP : r.top - GAP),
           below,
         })
+        linger.current = setTimeout(hide, LINGER) as unknown as number
       }, DELAY) as unknown as number
     }
 
+    const onDown = (e: PointerEvent) => {
+      touch.current = e.pointerType !== 'mouse'
+      /* Any press dismisses. On touch this is the only way out; on desktop it stops a bubble surviving a click
+         that moves focus somewhere the mouse is not. */
+      hide()
+    }
+
+    document.addEventListener('pointerdown', onDown, true)
     document.addEventListener('mouseover', enter, true)
     document.addEventListener('mouseout', hide, true)
     /* Elements reached by keyboard get a tooltip too -- mouse-only means people using Tab never see it. */
@@ -103,6 +128,7 @@ export default function Tooltip() {
     addEventListener('keydown', hide, true)
     return () => {
       hide()
+      document.removeEventListener('pointerdown', onDown, true)
       document.removeEventListener('mouseover', enter, true)
       document.removeEventListener('mouseout', hide, true)
       document.removeEventListener('focusin', enter, true)

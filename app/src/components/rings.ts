@@ -4,7 +4,7 @@
    React wrapper around them. */
 /* eslint-disable */
 // @ts-nocheck
-function consensusRing(canvas, agents, startDelay, stepMs, score, center, passed, threshold){
+function consensusRing(canvas, agents, startDelay, stepMs, score, center, passed, threshold, settled){
   /* `score||90` used to sit here as a default. It also swallowed a real 0:
      the ring is built once when a run starts, and at that instant the score is
      still 0 — so every assessment drew 90 no matter what came back, and a
@@ -149,6 +149,10 @@ function consensusRing(canvas, agents, startDelay, stepMs, score, center, passed
   }
   /* Empty state: draw one frame of "not started yet" and stop, without starting a loop.
      Pass null for startDelay -- only consensusRing honours that convention */
+  /* A stored assessment is a look back, not a run: draw the finished frame and stop. Without this the only ways
+     in were "idle" (startDelay null, which paints 0/0 whatever score it was given) and "animate from zero", and a
+     record rendered through the idle path showed a grey 0 next to a verdict that said 66. */
+  if(settled){ frame(1,1); return; }
   if(startDelay===null){ frame(0,0); return; }
   if(reduce){ frame(1,1); return; }
   const t0=performance.now()+startDelay;
@@ -171,7 +175,10 @@ function consensusNet(canvas, agents, base, voteStep, freezeAt, idle, hOpt){
      invalidated, or two loops draw onto one canvas and their frames overwrite each other */
   const gen=(canvas._gen=(canvas._gen||0)+1);
   const alive=()=>canvas.isConnected && canvas._gen===gen;
-  const measure=()=>Math.max(300,Math.min(560,canvas.parentElement?.clientWidth||460));
+  /* Never exceed the parent. A hard floor wider than its container does not make the chart bigger, it makes it
+     clipped -- .rsplit>.rtable is overflow:hidden, so the overhang is simply lost. Below the old 300 floor the
+     orbits still fit: their radii come from SC, which is derived from H, not from W. */
+  const measure=()=>Math.min(560,canvas.parentElement?.clientWidth||460);
   let W=measure();
   /* The height can be passed in. The orbit scale is not scaled proportionally as H/292 would -- that leaves a
      ring of wasted space. Instead the outermost radius is derived from the available height: an outer diameter

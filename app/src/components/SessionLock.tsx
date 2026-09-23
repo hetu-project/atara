@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMe } from '../hooks/useMe'
-import { ILock } from './icons'
+import { IEye, IEyeOff, ILock } from './icons'
 
 /**
  * Session lock.
@@ -63,6 +63,35 @@ export function useIdleLock(enabled: boolean, onIdle: () => void) {
   }, [enabled])
 }
 
+/**
+ * A password field with a reveal toggle.
+ *
+ * The product had no toggle of its own, so what people saw was whatever the browser drew: Edge paints
+ * ::-ms-reveal inside the field, and only while the field holds text -- which is why it kept appearing and
+ * vanishing -- while Chrome, Firefox, Safari and every phone browser but Edge paint nothing. A field you
+ * cannot read back is worst exactly where it is hardest to type, so the control is drawn here instead and
+ * the native one is hidden in CSS.
+ *
+ * The button is 44px square against a 44px field, so it is a comfortable target without a mobile-only rule.
+ * mousedown is suppressed so that revealing does not take the caret out of the field mid-word; tabbing to
+ * it still works.
+ */
+function PwField({ shake, ...rest }: { shake?: boolean }
+  & React.InputHTMLAttributes<HTMLInputElement>) {
+  const [show, setShow] = useState(false)
+  return (
+    <div className={'pwfield' + (shake ? ' shake' : '')}>
+      <input {...rest} type={show ? 'text' : 'password'} className="pwin" autoComplete="off" />
+      <button type="button" className="pweye" aria-pressed={show}
+        aria-label={show ? 'Hide password' : 'Show password'}
+        onMouseDown={e => e.preventDefault()}
+        onClick={() => setShow(v => !v)}>
+        {show ? <IEyeOff size={16} /> : <IEye size={16} />}
+      </button>
+    </div>
+  )
+}
+
 // -- Set password -------------------------------------------------------
 
 export function PwSetup({
@@ -94,13 +123,12 @@ export function PwSetup({
           this browser tab and is never sent anywhere.
         </p>
         {had && (
-          <input type="password" className="pwin" placeholder="Current password" autoComplete="off"
+          <PwField placeholder="Current password"
             value={old} onChange={e => { setOld(e.target.value); setErr('') }} />
         )}
-        <input type="password" className="pwin" autoFocus autoComplete="off"
-          placeholder={had ? 'New password' : 'Lock password'}
+        <PwField autoFocus placeholder={had ? 'New password' : 'Lock password'}
           value={a} onChange={e => { setA(e.target.value); setErr('') }} />
-        <input type="password" className="pwin" placeholder="Repeat it" autoComplete="off"
+        <PwField placeholder="Repeat it"
           value={b} onChange={e => { setB(e.target.value); setErr('') }}
           onKeyDown={e => { if (e.key === 'Enter') save() }} />
         <div className="pwerr">{err}</div>
@@ -235,8 +263,10 @@ export function LockScreen({
           <button className="btn btn-primary lkok" disabled>Checking your account…</button>
         ) : byPw ? (
           <>
-            <input type="password" className={'pwin' + (shake ? ' shake' : '')} key={shake}
-              autoFocus autoComplete="off" aria-label="Password" value={v}
+            {/* key restarts the shake animation on each wrong attempt; it sits on the wrapper so the
+                reveal button moves with the field rather than standing still inside a shaking border. */}
+            <PwField key={shake} shake={shake > 0}
+              autoFocus aria-label="Password" value={v}
               onChange={e => { setV(e.target.value); setErr('') }}
               onKeyDown={e => { if (e.key === 'Enter') submit() }} />
             <div className="pwerr">{err}</div>

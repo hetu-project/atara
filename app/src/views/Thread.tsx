@@ -4,6 +4,7 @@ import { LIVE_CHANGED } from '../api/events'
 import ActionBar, { type Act, type ActKind } from '../components/ActionBar'
 import { useAssessment } from '../hooks/useAssessment'
 import AssessCard from '../components/AssessCard'
+import Thinking from '../components/Thinking'
 import Avatar from '../components/Avatar'
 import Composer from '../components/Composer'
 import { useToast } from '../components/Toast'
@@ -143,6 +144,11 @@ export default function Thread({ identity, peer }: { identity: string; peer: str
 
       <div id="log">
         <div className="tfeed">
+          {/* The live trace, which until now only the desk (Home) rendered. Placing an order from inside a
+              conversation runs an assessment just the same, and without this the run happened with nothing on
+              screen to say so -- on a phone, where the right column is not rendered, nothing at all. It removes
+              itself when there is no run. */}
+          <Thinking />
           {stream.map(x => ('msg' in x
             ? <Bubble key={x.msg.id} m={x.msg} peer={name} />
             /* The ticket card gets no page shell, it goes straight into the stream. onBack is meaningless

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAssessment } from '../hooks/useAssessment'
+import AssessPanel from './AssessPanel'
+import { fromRun } from './assess'
 
 /**
  * The assessment trace in the middle column.
@@ -9,6 +11,11 @@ import { useAssessment } from '../hooks/useAssessment'
  * While running, the title shimmers and the current row spins; once done the title
  * becomes "Assessed in 14s" and collapses but can be reopened -- the process stays
  * inspectable after the conclusion lands.
+ *
+ * Below the rows sits the assessment itself (ring, constellation, the seven votes). That used to live only in the
+ * right column, which phone widths do not render -- so on a phone the trace said an assessment had happened while
+ * the thing it produced was nowhere on screen. It appears once there are votes to show: before that there is
+ * nothing in it but an empty ring.
  */
 export default function Thinking() {
   const { run, running } = useAssessment()
@@ -59,6 +66,7 @@ export default function Thinking() {
             </div>
           ))}
         </div>
+        {run.votes.length > 0 && <AssessPanel v={fromRun(run)} />}
       </div></div>
     </div>
   )

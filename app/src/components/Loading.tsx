@@ -52,3 +52,37 @@ export function Failed({
     </div>
   )
 }
+
+/**
+ * A spinner, for a wait with nothing to report but that it is still going.
+ *
+ * Ported from the loader set in docs/loading.md -- its `spinner` variant, kept to the same
+ * proportions (stroke at 9% of the box, a quarter arc over a track at a fifth opacity, one linear
+ * turn per `speed`). The original is built on motion/react and Tailwind, neither of which this
+ * project has, so the rotation is a CSS animation instead; nothing about how it looks changes.
+ *
+ * Why this variant and not one of the livelier ones: `percent` was the tempting one and is the one
+ * to refuse -- it draws a number climbing to 100 when nothing here knows how far along anything is,
+ * and an invented progress bar is a lie told precisely while someone is watching their money move.
+ * A spinner claims only what is true: still waiting.
+ *
+ * The reduced-motion fallback is the source's own -- an opacity pulse, no rotation -- and lives in
+ * the stylesheet beside the animation.
+ */
+export function Spinner({
+  size = 14, speed = 1, label = 'Working',
+}: { size?: number; speed?: number; label?: string }) {
+  const stroke = Math.max(2, size * 0.09)
+  const r = (size - stroke) / 2
+  const c = size / 2
+  return (
+    <svg className="spin" width={size} height={size} viewBox={`0 0 ${size} ${size}`}
+      style={{ animationDuration: `${speed}s` }} role="img" aria-label={label}>
+      <circle cx={c} cy={c} r={r} fill="none" stroke="currentColor"
+        strokeOpacity={0.2} strokeWidth={stroke} />
+      {/* Quarter arc, top to right, round-capped -- the moving part. */}
+      <path d={`M ${c} ${c - r} A ${r} ${r} 0 0 1 ${c + r} ${c}`} fill="none"
+        stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" />
+    </svg>
+  )
+}

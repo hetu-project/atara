@@ -791,8 +791,8 @@ function CountryBox({ value, onPick }: { value: string; onPick: (v: string) => v
     const away = (e: MouseEvent) => {
       if (box.current && !box.current.contains(e.target as Node)) setOpen(false)
     }
-    addEventListener('mousedown', away)
-    return () => removeEventListener('mousedown', away)
+    addEventListener('pointerdown', away)
+    return () => removeEventListener('pointerdown', away)
   }, [])
 
   const term = q.trim().toLowerCase()
@@ -812,7 +812,7 @@ function CountryBox({ value, onPick }: { value: string; onPick: (v: string) => v
       <div className="cblist" role="listbox" hidden={!open || !hits.length}>
         {hits.map(([c, n]) => (
           <button type="button" className="cbrow" key={c} role="option"
-            onMouseDown={e => { e.preventDefault(); onPick(c); setOpen(false) }}>
+            onPointerDown={e => { e.preventDefault(); onPick(c); setOpen(false) }}>
             <span className="cbn">{n}</span>
             <span className="cbc">{c}</span>
           </button>

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { OrderAssessment } from '../api/types'
+import AssessPanel from './AssessPanel'
+import { fromSnapshot, themeLines } from './assess'
 
 /**
  * The pre-order risk assessment, as the card that lands in the conversation.
@@ -14,15 +16,11 @@ import type { OrderAssessment } from '../api/types'
  * does not supply it, it is not shown.
  */
 
-/* Those four summary rows come from four specific agents. The reference picks Identity / Provenance /
-   Sanctions / Pricing; ours map to the four below -- different names, same questions. If one cannot be
-   fetched, that row is omitted rather than padded with something else. */
-const SUMMARY: [string, string][] = [
-  ['Counterparty', 'Counterparty history'],
-  ['Funds', 'Source of funds'],
-  ['Compliance', 'Sanctions screening'],
-  ['Market', 'Velocity check'],
-]
+/* The four summary rows come from assess.ts, which is also what the right column's verdict reads.
+   They used to be declared here on their own, keyed on Counterparty history / Source of funds / Sanctions
+   screening / Velocity check -- the naming from before the backend renamed its agents. RightPanel hit the same
+   problem, fixed its own copy and left a comment saying the names live in two places; this was the other place,
+   still matching nothing, so these four rows had been rendering empty. */
 
 export default function AssessCard({ a, peer }: { a: OrderAssessment; peer?: string }) {
   const [open, setOpen] = useState(false)
@@ -46,9 +44,8 @@ export default function AssessCard({ a, peer }: { a: OrderAssessment; peer?: str
     `${a.passed}/${a.total} agree · needs ${a.threshold} of ${a.total} — ${ok ? 'approved' : 'held'}`,
   ].filter(Boolean)
 
-  const summary = SUMMARY
-    .map(([label, agent]) => [label, a.votes.find(v => v.agent === agent)?.note] as const)
-    .filter((x): x is readonly [string, string] => !!x[1])
+  const view = fromSnapshot(a)
+  const summary = themeLines(view)
 
   return (
     <>
@@ -97,26 +94,18 @@ export default function AssessCard({ a, peer }: { a: OrderAssessment; peer?: str
           </button>
           {!open && (
             <div className="ascsum">
-              {summary.map(([k, v]) => (
-                <div className="ascr" key={k}><i /><span>{k}</span><em>{v}</em></div>
+              {summary.map(t => (
+                <div className="ascr" key={t.label}><i /><span>{t.label}</span><em>{t.body}</em></div>
               ))}
             </div>
           )}
           {open && (
             <div className="ascbody">
-              {/* Expanded shows all seven votes rather than a longer version of the four summary rows --
-                  collapsed for the conclusion, expanded for what each agent individually said. */}
-              <ul>
-                {a.votes.map(v => (
-                  <li key={v.agent} className={v.verdict === 'pass' ? '' : 'bnote'}>
-                    <b>{v.agent}</b> — {v.note}
-                  </li>
-                ))}
-              </ul>
-              <b>Verdict:</b> {a.passed}/{a.total} agents approve (needs {a.threshold} of {a.total}).
-              {notes.length
-                ? ' The note rides with the order record and does not block release.'
-                : ''}
+              {/* Collapsed gives the conclusion; expanded gives what each agent said, and the ring and
+                  constellation the right column draws -- rebuilt from the stored snapshot. On a phone this is the
+                  only place they exist at all. The per-agent list and the verdict live inside the panel, so
+                  neither is repeated here. */}
+              <AssessPanel v={view} />
             </div>
           )}
         </div>

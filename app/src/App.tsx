@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { openEventStream } from './api/events'
 import RightPanel from './components/RightPanel'
 import Sidebar from './components/Sidebar'
+import MobileBar from './components/MobileBar'
+import { useIsMobile } from './hooks/useMedia'
 import Home from './views/Home'
 import Contacts from './views/Contacts'
 import Thread from './views/Thread'
@@ -50,6 +52,14 @@ export default function App() {
     ? (privyUser?.linkedAccounts ?? []).some(a => a.type === 'passkey')
     : null
   const lk = useSessionLock(signed, hasPasskey)
+  /* Phone width gets its own flag rather than reusing `folded`.
+     `folded` means "collapsed to the 68px icon rail" and is persisted, so a drawer built on it would reopen itself
+     on every load and would inherit whatever the user last chose on a desktop. A drawer has to start closed and
+     stay out of localStorage. */
+  const mobile = useIsMobile()
+  const [drawer, setDrawer] = useState(false)
+  /* Leaving phone width with the drawer still open would strand the class on a layout that no longer has one. */
+  useEffect(() => { if (!mobile) setDrawer(false) }, [mobile])
   const [folded, setFolded] = useState(
     () => { try { return localStorage.getItem('atara-left') === '1' } catch { return false } })
 
@@ -111,9 +121,20 @@ export default function App() {
         Other views collapse it so the middle column gets the whole remaining width; .view's max-width:960px
         + align-self:center only take effect then, centring the cards. */}
     <main className={[(route.view === 'home' || route.view === 'thread') && signed
-      ? '' : 'rout', folded ? 'lout' : '',
-      rfold ? 'rfold' : ''].filter(Boolean).join(' ') || undefined}>
+      /* `lout` is the 68px icon rail, and 28 rules hang off it: centred icons, font-size:0 on every label,
+         the conversation list stripped to bare avatars. None of that means anything for a drawer, which is
+         either open at full width or not there -- but `folded` is persisted, so anyone who had collapsed the
+         column on a desktop got a label-less drawer on their phone. Withheld at this width rather than undone
+         rule by rule, which would also have to be redone for every rule added later. */
+      ? '' : 'rout', !mobile && folded ? 'lout' : '',
+      rfold ? 'rfold' : '', drawer ? 'drawer' : ''].filter(Boolean).join(' ') || undefined}>
+      {mobile && <MobileBar route={route} onMenu={() => setDrawer(true)} />}
+      {/* Tapping away closes the drawer. A real element rather than a ::backdrop so it can be the thing that catches
+          the tap, and it stays in the tree at every width so the fade has something to animate. */}
+      <button className="mscrim" type="button" tabIndex={drawer ? 0 : -1} aria-hidden={!drawer}
+        aria-label="Close navigation" onClick={() => setDrawer(false)} />
       <Sidebar route={route} go={go} identity={handle} folded={folded} onFold={setFolded}
+        onNavigate={() => setDrawer(false)}
         signed={signed} onSignIn={login}
         onSignOut={() => { signOutAll(signOut); go({ view: 'discover' }) }}
         onLock={lk.lock} />
@@ -138,12 +159,15 @@ export default function App() {
         {route.view === 'thread' && <Thread identity={handle} peer={route.peer} />}
       </section>
 
-      <RightPanel identity={handle}
+      {/* Not display:none -- mounting it would start its polling and render the whole assessment tree for a column
+          nobody can see. The assessment itself is reachable in the conversation flow; order status has its own page
+          at #/payments. */}
+      {!mobile && <RightPanel identity={handle}
         /* Orders with no counterparty (not yet matched) can only go to the ticket page -- there is no conversation to enter. */
         onOpen={o => (o.counterparty_id
           ? go({ view: 'thread', peer: o.counterparty_id })
           : go({ view: 'order', id: o.id }))}
-        onFold={() => setRfold(true)} />
+        onFold={() => setRfold(true)} />}
 
       {/* It has to be restorable once collapsed. This button only appears when "the user collapsed it and
           this view has a right column in the first place" -- offering an expand button on a view that never
@@ -155,7 +179,7 @@ export default function App() {
           away -- leaving no entry point anywhere in the conversation page to bring it back, short of going
           back to home, expanding, and walking in again. */}
       <button className="rshow" type="button" title="Show panel" aria-label="Show panel"
-        hidden={!rfold || !((route.view === 'home' || route.view === 'thread') && signed)}
+        hidden={mobile || !rfold || !((route.view === 'home' || route.view === 'thread') && signed)}
         onClick={() => setRfold(false)}>
         <IPanel mirror />
       </button>
